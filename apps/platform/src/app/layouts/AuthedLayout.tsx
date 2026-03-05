@@ -5,7 +5,6 @@ import { clearToken } from '../auth/token';
 import { PATHS } from '../navigation/paths';
 import { AppHeader } from './components/AppHeader';
 import { AppSider } from './components/AppSider';
-import styles from './layout.module.css';
 
 const { Content } = Layout;
 
@@ -26,17 +25,17 @@ export const AuthedLayout = () => {
   const selectedKey = location.pathname;
 
   return (
-    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+    <Layout className="h-screen overflow-hidden">
       <AppHeader onLogout={handleLogout} />
-      <Layout style={{ overflow: 'hidden' }}>
+      <Layout className="overflow-hidden">
         <AppSider
           collapsed={collapsed}
           onCollapse={setCollapsed}
           selectedKey={selectedKey}
           onNavigate={handleNavigate}
         />
-        <Layout className={styles.main}>
-          <Content className={styles.content}>
+        <Layout className="flex h-full flex-col overflow-hidden bg-gradient-to-b from-slate-50 to-slate-100">
+          <Content className="flex-1 overflow-y-auto p-5">
             <Outlet />
           </Content>
         </Layout>

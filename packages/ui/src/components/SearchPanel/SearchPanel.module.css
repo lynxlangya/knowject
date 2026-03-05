@@ -33,6 +33,10 @@
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  border: 0;
+  padding: 0;
+  line-height: 1;
+  background: transparent;
   color: var(--ant-color-primary, #1677ff);
   font-size: 14px;
   user-select: none;

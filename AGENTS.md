@@ -30,6 +30,14 @@ packages/
 - 新增后端接口默认放在 `apps/api/src/routes`，并保持 `/api/*` 路由前缀。
 - 涉及品牌文本必须使用：`知项 · Knowject` 与 `让项目知识，真正为团队所用。`。
 
+## 4. 页面与组件分层约定（2026-03-05）
+
+- 登录页采用“编排 + 视图组件 + 常量配置”分层：
+  - `apps/platform/src/pages/login/LoginPage.tsx` 仅负责状态、副作用与提交流程。
+  - `apps/platform/src/pages/login/components/*` 负责纯展示结构。
+  - `apps/platform/src/pages/login/constants.ts` 维护动画/文案/样式常量与本地存储工具函数。
+- `SearchPanel` 的字段渲染与显示策略统一沉淀到 `packages/ui/src/components/SearchPanel/searchPanel.helpers.tsx`，主组件仅保留状态编排与事件处理。
+
 ## JavaScript REPL (Node)
 - Use `js_repl` for Node-backed JavaScript with top-level await in a persistent kernel.
 - `js_repl` is a freeform/custom tool. Direct `js_repl` calls must send raw JavaScript tool input (optionally with first-line `// codex-js-repl: timeout_ms=15000`). Do not wrap code in JSON (for example `{"code":"..."}`), quotes, or markdown code fences.

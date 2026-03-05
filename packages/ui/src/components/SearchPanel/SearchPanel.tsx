@@ -1,82 +1,19 @@
-import { useState, useCallback } from 'react';
-import {
-  Form,
-  Row,
-  Col,
-  Input,
-  Select,
-  DatePicker,
-  InputNumber,
-  Button,
-  Space,
-} from 'antd';
+import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
+import { Form, Row, Col, Button, Space } from 'antd';
 import {
   DownOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import type { SearchField, SearchPanelProps } from './types';
+import type { SearchPanelProps } from './types';
+import {
+  getDefaultColProps,
+  getDisplayFields,
+  getVisibleFields,
+  renderFieldControl,
+  shouldShowExpandToggle,
+} from './searchPanel.helpers';
 import styles from './SearchPanel.module.css';
-
-const { RangePicker } = DatePicker;
-
-/**
- * 根据字段配置渲染对应控件
- */
-function renderFieldControl(
-  field: SearchField,
-  form: ReturnType<typeof Form.useForm>[0]
-) {
-  const { type, props = {}, options = [], render } = field;
-
-  switch (type) {
-    case 'input':
-      return (
-        <Input
-          placeholder={`请输入${typeof field.label === 'string' ? field.label : ''}`}
-          allowClear
-          {...props}
-        />
-      );
-    case 'select':
-      return (
-        <Select
-          placeholder={`请选择${typeof field.label === 'string' ? field.label : ''}`}
-          allowClear
-          options={options}
-          {...props}
-        />
-      );
-    case 'dateRange':
-    case 'rangePicker':
-      return <RangePicker style={{ width: '100%' }} {...props} />;
-    case 'number':
-      return (
-        <InputNumber
-          placeholder={`请输入${typeof field.label === 'string' ? field.label : ''}`}
-          style={{ width: '100%' }}
-          {...props}
-        />
-      );
-    case 'custom':
-      return render ? render(form) : null;
-    default:
-      return null;
-  }
-}
-
-/**
- * 获取默认栅格配置
- */
-function getDefaultColProps(): {
-  xs: number;
-  sm: number;
-  md: number;
-  lg: number;
-  xl: number;
-} {
-  return { xs: 24, sm: 12, md: 8, lg: 6, xl: 6 };
-}
 
 /**
  * SearchPanel 高可用搜索组件
@@ -105,18 +42,17 @@ export function SearchPanel({
   // 支持受控和非受控模式
   const isCollapsed = controlledCollapsed ?? internalCollapsed;
 
-  // 过滤可见字段
-  const visibleFields = fields.filter((f) => !f.hidden);
+  const visibleFields = useMemo(() => getVisibleFields(fields), [fields]);
 
   // 计算当前应该显示的字段
-  const displayFields = isCollapsed
-    ? visibleFields.filter((f, idx) => !f.advanced && idx < visibleCount)
-    : visibleFields;
+  const displayFields = useMemo(() => {
+    return getDisplayFields(visibleFields, isCollapsed, visibleCount);
+  }, [isCollapsed, visibleCount, visibleFields]);
 
   // 是否需要显示展开/收起按钮
-  const hasAdvancedFields = visibleFields.some((f) => f.advanced);
-  const hasHiddenFields = visibleFields.length > visibleCount;
-  const showExpandToggle = hasAdvancedFields || hasHiddenFields;
+  const showExpandToggle = useMemo(() => {
+    return shouldShowExpandToggle(visibleFields, visibleCount);
+  }, [visibleCount, visibleFields]);
 
   const handleToggle = useCallback(() => {
     if (controlledCollapsed === undefined) {
@@ -124,10 +60,9 @@ export function SearchPanel({
     }
   }, [controlledCollapsed]);
 
-  const handleSearch = useCallback(() => {
-    form.validateFields().then((values) => {
-      onSearch(values);
-    });
+  const handleSearch = useCallback(async () => {
+    const values = await form.validateFields();
+    onSearch(values);
   }, [form, onSearch]);
 
   const handleReset = useCallback(() => {
@@ -136,9 +71,9 @@ export function SearchPanel({
   }, [form, onReset]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        handleSearch();
+    (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        void handleSearch();
       }
     },
     [handleSearch]
@@ -185,7 +120,9 @@ export function SearchPanel({
               <Button
                 type="primary"
                 icon={<SearchOutlined />}
-                onClick={handleSearch}
+                onClick={() => {
+                  void handleSearch();
+                }}
                 loading={loading}
               >
                 查询
@@ -194,14 +131,18 @@ export function SearchPanel({
                 重置
               </Button>
               {showExpandToggle && (
-                <span className={styles.expandTrigger} onClick={handleToggle}>
+                <button
+                  type="button"
+                  className={styles.expandTrigger}
+                  onClick={handleToggle}
+                >
                   {isCollapsed ? expandText : collapseText}
                   <DownOutlined
                     className={`${styles.expandIcon} ${
                       !isCollapsed ? styles.expandIconRotated : ''
                     }`}
                   />
-                </span>
+                </button>
               )}
               {extraActions}
             </Space>

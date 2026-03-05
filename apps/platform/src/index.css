@@ -1,0 +1,110 @@
+@import 'tailwindcss';
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+  }
+}
+
+@keyframes flowMove {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -1200;
+  }
+}
+
+@keyframes liftIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hubPulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.78;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.14);
+    opacity: 1;
+  }
+}
+
+@keyframes ringPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.42;
+  }
+
+  80% {
+    opacity: 0.18;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1.28);
+    opacity: 0;
+  }
+}
+
+@keyframes sparkFloatA {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.35;
+  }
+
+  50% {
+    transform: translate(6px, -8px);
+    opacity: 0.95;
+  }
+}
+
+@keyframes sparkFloatB {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: translate(-8px, 5px);
+    opacity: 0.88;
+  }
+}
+
+@keyframes sparkFloatC {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.26;
+  }
+
+  50% {
+    transform: translate(4px, -6px);
+    opacity: 0.84;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-anim {
+    animation: none !important;
+    transition: none !important;
+  }
+}

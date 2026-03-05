@@ -11,9 +11,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/icons": "^6",
     "@knowject/request": "workspace:*",
     "@knowject/ui": "workspace:*",
-    "@ant-design/icons": "^6",
     "antd": "^6.1.4",
     "dayjs": "^1.11.19",
     "react": "^19.2.3",
@@ -21,9 +21,11 @@
     "react-router-dom": "^7.11.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^24.10.1",
     "@vitejs/plugin-react": "^5.1.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "tailwindcss": "^4.2.1",
     "vite": "^7.2.4"
   }
 }

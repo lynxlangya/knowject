@@ -9,10 +9,10 @@ export interface HttpClientOptions {
 export class ApiError extends Error {
   status: number;
   code?: string;
-  detail?: any;
+  detail?: unknown;
   requestId?: string;
 
-  constructor(message: string, status: number, code?: string, detail?: any, requestId?: string) {
+  constructor(message: string, status: number, code?: string, detail?: unknown, requestId?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;

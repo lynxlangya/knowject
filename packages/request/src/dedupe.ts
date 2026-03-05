@@ -1,5 +1,5 @@
 // Helper for stable stringify
-function stableStringify(obj: any): string {
+function stableStringify(obj: unknown): string {
   if (typeof obj !== 'object' || obj === null) {
     return String(obj);
   }
@@ -8,26 +8,27 @@ function stableStringify(obj: any): string {
     return `[${obj.map(stableStringify).join(',')}]`;
   }
 
-  const keys = Object.keys(obj).sort();
-  const parts = keys.map((key) => `${key}:${stableStringify(obj[key])}`);
+  const normalized = obj as Record<string, unknown>;
+  const keys = Object.keys(normalized).sort();
+  const parts = keys.map((key) => `${key}:${stableStringify(normalized[key])}`);
   return `{${parts.join(',')}}`;
 }
 
 export class RequestDeduper {
-  private inflight = new Map<string, Promise<any>>();
+  private inflight = new Map<string, Promise<unknown>>();
 
-  getKey(method: string, url: string, params?: any, data?: any): string {
+  getKey(method: string, url: string, params?: unknown, data?: unknown): string {
     return `${method.toUpperCase()}:${url}:${stableStringify(params)}:${stableStringify(data)}`;
   }
 
-  add(key: string, promise: Promise<any>): void {
+  add(key: string, promise: Promise<unknown>): void {
     this.inflight.set(key, promise);
     promise.finally(() => {
       this.inflight.delete(key);
     });
   }
 
-  get(key: string): Promise<any> | undefined {
+  get(key: string): Promise<unknown> | undefined {
     return this.inflight.get(key);
   }
 }
