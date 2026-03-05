@@ -29,6 +29,7 @@ packages/
 - 新增业务页面默认放在 `apps/platform/src/pages`。
 - 新增后端接口默认放在 `apps/api/src/routes`，并保持 `/api/*` 路由前缀。
 - 涉及品牌文本必须使用：`知项 · Knowject` 与 `让项目知识，真正为团队所用。`。
+- Tailwind 类名必须使用 canonical 写法：`!` 重要标记使用后缀形式（如 `mb-1!`），禁止前缀形式（如 `!mb-1`），避免触发 `suggestCanonicalClasses` 警告。
 
 ## 4. 页面与组件分层约定（2026-03-05）
 
@@ -37,6 +38,19 @@ packages/
   - `apps/platform/src/pages/login/components/*` 负责纯展示结构。
   - `apps/platform/src/pages/login/constants.ts` 维护动画/文案/样式常量与本地存储工具函数。
 - `SearchPanel` 的字段渲染与显示策略统一沉淀到 `packages/ui/src/components/SearchPanel/searchPanel.helpers.tsx`，主组件仅保留状态编排与事件处理。
+
+## 5. 前端工作台与项目态约定（2026-03-05）
+
+- 登录后默认落点调整为 `/home`，`/workspace` 仅保留为兼容入口并重定向到 `/home`。
+- 平台主导航固定为：`/home`、`/knowledge`、`/skills`、`/agents`、`/analytics`、`/settings`。
+- 登录后布局采用“左侧全局侧栏 + 右侧内容区”结构：
+  - 左侧固定包含品牌区、导航菜单、“我的项目”列表与添加入口。
+  - 顶部全局 Header 不再作为登录后主导航承载。
+- 项目状态由 `apps/platform/src/app/project/ProjectContext.tsx` 统一管理：
+  - `projects` 持久化到 `localStorage`（键：`knowject_projects`）。
+  - 当前激活项目与对话由路由参数驱动：`/home/project/:projectId/chat/:chatId`。
+- 主页 `apps/platform/src/pages/home/HomePage.tsx` 仅在已打开项目时展示“对话列表 + 对话框”，未打开项目时展示空状态引导。
+- 其它一级菜单页首版保持独立路由占位，不承载项目会话编排逻辑。
 
 ## JavaScript REPL (Node)
 - Use `js_repl` for Node-backed JavaScript with top-level await in a persistent kernel.

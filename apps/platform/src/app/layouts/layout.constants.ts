@@ -4,7 +4,7 @@
 export const HEADER_HEIGHT = 64;
 
 /** Sider 展开宽度 (px) */
-export const SIDER_WIDTH = 220;
+export const SIDER_WIDTH = 256;
 
 /** Sider 折叠宽度 (px) */
 export const SIDER_COLLAPSED_WIDTH = 65;

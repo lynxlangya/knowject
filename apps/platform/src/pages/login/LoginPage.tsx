@@ -45,7 +45,7 @@ export const LoginPage = () => {
 
       setToken(result.token);
       message.success(`欢迎回来，${result.user.name}`);
-      navigate(PATHS.workspace, { replace: true });
+      navigate(PATHS.home, { replace: true });
     } catch (error) {
       console.error(error);
       message.error('登录失败，请检查用户名和密码');

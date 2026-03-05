@@ -11,8 +11,8 @@ export const NotFoundPage = () => {
       title="404"
       subTitle="页面不存在或已被移动。"
       extra={
-        <Button type="primary" onClick={() => navigate(PATHS.workspace)}>
-          返回工作台
+        <Button type="primary" onClick={() => navigate(PATHS.home)}>
+          返回主页
         </Button>
       }
     />
