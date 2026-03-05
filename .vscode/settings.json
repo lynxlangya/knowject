@@ -1,0 +1,15 @@
+{
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
+  "cSpell.words": [
+    "Appstore",
+    "Deduper",
+    "haifang",
+    "Haijing",
+    "Sider",
+    "Zheliban"
+  ]
+}

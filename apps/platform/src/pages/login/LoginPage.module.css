@@ -1,0 +1,352 @@
+.page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 14% 20%, rgba(191, 219, 254, 0.42) 0, rgba(191, 219, 254, 0) 38%),
+    radial-gradient(circle at 86% 78%, rgba(219, 234, 254, 0.38) 0, rgba(219, 234, 254, 0) 42%),
+    linear-gradient(180deg, #f4f7fc 0%, #edf2fb 100%);
+}
+
+.content {
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px 24px;
+}
+
+.shell {
+  width: min(1180px, 100%);
+  height: min(720px, calc(100vh - 120px));
+  min-height: 580px;
+  display: grid;
+  grid-template-columns: 56% 44%;
+  border-radius: 26px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow:
+    0 10px 26px rgba(15, 23, 42, 0.06),
+    0 24px 56px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
+  animation: liftIn 260ms ease-out both;
+}
+
+.brandPane {
+  padding: clamp(36px, 4vw, 56px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(140deg, #f2f6ff 0%, #edf3ff 100%);
+  border-right: 1px solid rgba(148, 163, 184, 0.26);
+}
+
+.logoWrap {
+  width: 86px;
+  height: 86px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #dbeafe 0%, #c7ddff 100%);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 8px 22px rgba(59, 130, 246, 0.2);
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+}
+
+.brandTitle {
+  margin: 28px 0 0 !important;
+  color: #0f172a !important;
+  font-size: clamp(42px, 4.4vw, 64px) !important;
+  letter-spacing: -0.02em;
+  line-height: 1.04 !important;
+  font-weight: 780 !important;
+}
+
+.brandSubtitle {
+  margin: 14px 0 0 !important;
+  color: #475569 !important;
+  font-size: 19px;
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.featureList {
+  margin-top: 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.featureItem {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  padding: 10px 14px;
+  color: #1e3a8a;
+  font-size: 14px;
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(59, 130, 246, 0.16);
+}
+
+.featureItem :global(.anticon) {
+  font-size: 15px;
+}
+
+.loginPane {
+  padding: clamp(30px, 3.6vw, 52px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.panelHeader {
+  margin-bottom: 24px;
+}
+
+.welcomeTitle {
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-size: 52px !important;
+  line-height: 1.04 !important;
+  letter-spacing: -0.02em;
+  font-weight: 780 !important;
+}
+
+.welcomeDesc {
+  margin: 10px 0 0 !important;
+  color: #64748b !important;
+  font-size: 15px;
+}
+
+.form {
+  width: 100%;
+}
+
+.form :global(.ant-form-item-label > label) {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.form :global(.ant-form-item) {
+  margin-bottom: 18px;
+}
+
+.form :global(.ant-input-affix-wrapper),
+.form :global(.ant-input-password) {
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid #d6deea;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: none;
+  transition: all 160ms ease;
+}
+
+.field :global(.anticon) {
+  color: #94a3b8;
+}
+
+.form :global(.ant-input-affix-wrapper:hover),
+.form :global(.ant-input-password:hover) {
+  border-color: #bfd0ec;
+}
+
+.form :global(.ant-input-affix-wrapper:focus-within),
+.form :global(.ant-input-password:focus-within) {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.assistRow {
+  margin: 2px 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.linkBtn {
+  padding: 0 !important;
+  color: #3b82f6;
+  font-weight: 520;
+}
+
+.linkBtn:hover {
+  color: #2f6fe3 !important;
+}
+
+.submitItem {
+  margin-bottom: 16px !important;
+}
+
+.submitButton {
+  height: 56px;
+  border: none;
+  border-radius: 28px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: linear-gradient(90deg, #3b82f6 0%, #2f6fe3 100%) !important;
+  box-shadow:
+    0 8px 20px rgba(59, 130, 246, 0.24),
+    0 0 0 1px rgba(255, 255, 255, 0.34) inset;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.submitButton:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 24px rgba(59, 130, 246, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.34) inset;
+}
+
+.submitButton:active {
+  transform: translateY(0);
+}
+
+.supportText {
+  position: absolute;
+  bottom: clamp(30px, 3.6vw, 52px);
+  left: 0;
+  right: 0;
+  margin: 0 !important;
+  text-align: center;
+  color: #64748b !important;
+  font-size: 14px;
+}
+
+.supportText button {
+  color: #2f6fe3;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 620;
+}
+
+.supportText button:hover {
+  color: #1d4ed8;
+}
+
+@media (max-width: 1199px) {
+  .shell {
+    grid-template-columns: 52% 48%;
+  }
+
+  .welcomeTitle {
+    font-size: 46px !important;
+  }
+
+  .brandTitle {
+    font-size: clamp(36px, 4vw, 56px) !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .content {
+    padding: 14px;
+  }
+
+  .shell {
+    height: auto;
+    min-height: calc(100dvh - 28px);
+    grid-template-columns: 1fr;
+  }
+
+  .brandPane {
+    padding: 28px 22px;
+    border-right: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  .brandTitle {
+    margin-top: 16px !important;
+    font-size: 42px !important;
+  }
+
+  .brandSubtitle {
+    margin-top: 8px !important;
+    font-size: 16px;
+  }
+
+  .featureList {
+    margin-top: 18px;
+    gap: 10px;
+  }
+
+  .loginPane {
+    padding: 28px 22px;
+  }
+
+  .welcomeTitle {
+    font-size: 38px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .content {
+    padding: 8px;
+  }
+
+  .shell {
+    border-radius: 18px;
+    min-height: calc(100vh - 20px);
+  }
+
+  .logoWrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+  }
+
+  .logo {
+    width: 34px;
+    height: 34px;
+  }
+
+  .brandTitle {
+    font-size: 30px !important;
+  }
+
+  .brandSubtitle {
+    font-size: 14px;
+  }
+
+  .featureList {
+    display: none;
+  }
+
+  .loginPane {
+    padding: 22px 14px;
+  }
+
+  .welcomeTitle {
+    font-size: 30px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .shell,
+  .submitButton {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes liftIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

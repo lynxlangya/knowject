@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>知项 · Knowject</title>
+  </head>
+  <body>
+    <div id="root">
+      <style>
+        html,
+        body,
+        #root {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          background-color: #edf2fb;
+        }
+
+        .boot {
+          position: fixed;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: radial-gradient(circle at 20% 20%, #dbeafe 0%, #f8fafc 50%, #eef2ff 100%);
+          color: #0f172a;
+          font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+
+        .bootInner {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          text-align: center;
+        }
+
+        .bootSpinner {
+          width: 30px;
+          height: 30px;
+          border-radius: 999px;
+          border: 2px solid #c7d2fe;
+          border-top-color: #3b82f6;
+          animation: spin 0.9s linear infinite;
+        }
+
+        .boot h1 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 650;
+        }
+
+        .boot p {
+          margin: 0;
+          color: #475569;
+          font-size: 13px;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .bootSpinner {
+            animation: none;
+          }
+        }
+      </style>
+      <div class="boot">
+        <div class="bootInner">
+          <div class="bootSpinner" aria-hidden="true"></div>
+          <h1>知项 · Knowject</h1>
+          <p>正在加载项目工作台...</p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,52 @@
+.container {
+  /* padding: 16px 24px; */
+  /* background: var(--ant-color-bg-container, #fff); */
+  /* border: 1px solid var(--ant-color-border, #d9d9d9); */
+  /* border-radius: var(--ant-border-radius-lg, 8px); */
+}
+
+.formRow {
+  margin-bottom: 0;
+}
+
+.formItem {
+  margin-bottom: 16px;
+}
+
+.actionsCol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.actionsRight {
+  justify-content: flex-end;
+}
+
+.actionsLeft {
+  justify-content: flex-start;
+}
+
+.expandTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--ant-color-primary, #1677ff);
+  font-size: 14px;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.expandTrigger:hover {
+  color: var(--ant-color-primary-hover, #4096ff);
+}
+
+.expandIcon {
+  transition: transform 0.2s;
+}
+
+.expandIconRotated {
+  transform: rotate(180deg);
+}
