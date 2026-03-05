@@ -3,6 +3,7 @@ import {
   BookOutlined,
   AppstoreOutlined,
   RobotOutlined,
+  TeamOutlined,
   LineChartOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
@@ -31,6 +32,11 @@ export const menuItems: MenuItem[] = [
     key: PATHS.agents,
     icon: <RobotOutlined />,
     label: '智能体',
+  },
+  {
+    key: PATHS.members,
+    icon: <TeamOutlined />,
+    label: '成员',
   },
   {
     key: PATHS.analytics,
@@ -65,6 +71,10 @@ export const getMenuSelectedKey = (pathname: string): string | null => {
 
   if (pathname === PATHS.agents || pathname.startsWith(`${PATHS.agents}/`)) {
     return PATHS.agents;
+  }
+
+  if (pathname === PATHS.members || pathname.startsWith(`${PATHS.members}/`)) {
+    return PATHS.members;
   }
 
   if (pathname === PATHS.analytics || pathname.startsWith(`${PATHS.analytics}/`)) {

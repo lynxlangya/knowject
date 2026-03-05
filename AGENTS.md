@@ -42,14 +42,24 @@ packages/
 ## 5. 前端工作台与项目态约定（2026-03-05）
 
 - 登录后默认落点调整为 `/home`，`/workspace` 仅保留为兼容入口并重定向到 `/home`。
-- 平台主导航固定为：`/home`、`/knowledge`、`/skills`、`/agents`、`/analytics`、`/settings`。
+- 平台主导航固定为：`/home`、`/knowledge`、`/skills`、`/agents`、`/members`、`/analytics`、`/settings`。
 - 登录后布局采用“左侧全局侧栏 + 右侧内容区”结构：
   - 左侧固定包含品牌区、导航菜单、“我的项目”列表与添加入口。
   - 顶部全局 Header 不再作为登录后主导航承载。
 - 项目状态由 `apps/platform/src/app/project/ProjectContext.tsx` 统一管理：
   - `projects` 持久化到 `localStorage`（键：`knowject_projects`）。
-  - 当前激活项目与对话由路由参数驱动：`/project/:projectId/chat/:chatId`。
-- 主页 `apps/platform/src/pages/home/HomePage.tsx` 仅在已打开项目时展示“对话列表 + 对话框”，未打开项目时展示空状态引导。
+  - 项目创建入口采用弹框表单：项目名称 + 知识库/成员/智能体/技能（Mock 选择项）。
+  - 项目页 canonical 路由为 `/project/:projectId/*`，子路由包含：
+    - `/project/:projectId/chat`
+    - `/project/:projectId/chat/:chatId`
+    - `/project/:projectId/knowledge`
+    - `/project/:projectId/members`
+    - `/project/:projectId/agents`
+    - `/project/:projectId/skills`
+  - `/project/:projectId` 必须重定向到 `/project/:projectId/chat`。
+  - 旧路径 `/home/project/*` 仅做兼容重定向，不作为业务 canonical。
+- 主菜单在 `/project/*` 路由下不高亮“主页”（项目态与全局菜单态解耦）。
+- 主页 `apps/platform/src/pages/home/HomePage.tsx` 仅承载首页空态引导，不再承载项目会话编排。
 - 其它一级菜单页首版保持独立路由占位，不承载项目会话编排逻辑。
 
 ## JavaScript REPL (Node)

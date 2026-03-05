@@ -5,16 +5,27 @@ import {
   PATHS,
   ROUTE_PATTERNS,
   buildProjectChatPath,
-  buildProjectPath,
 } from './paths';
 import { LoginPage } from '../../pages/login/LoginPage';
 import { HomePage } from '../../pages/home/HomePage';
+import { ProjectWorkspacePage } from '../../pages/project/ProjectWorkspacePage';
 import { KnowledgePage } from '../../pages/knowledge/KnowledgePage';
 import { SkillsPage } from '../../pages/skills/SkillsPage';
 import { AgentsPage } from '../../pages/agents/AgentsPage';
+import { MembersPage } from '../../pages/members/MembersPage';
 import { AnalyticsPage } from '../../pages/analytics/AnalyticsPage';
 import { SettingsPage } from '../../pages/settings/SettingsPage';
 import { NotFoundPage } from '../../pages/notfound/NotFoundPage';
+
+const ProjectRootRedirect = () => {
+  const { projectId } = useParams<{ projectId?: string }>();
+
+  if (!projectId) {
+    return <Navigate to={PATHS.home} replace />;
+  }
+
+  return <Navigate to={buildProjectChatPath(projectId)} replace />;
+};
 
 const LegacyProjectRedirect = () => {
   const { projectId, chatId } = useParams<{
@@ -30,7 +41,7 @@ const LegacyProjectRedirect = () => {
     return <Navigate to={buildProjectChatPath(projectId, chatId)} replace />;
   }
 
-  return <Navigate to={buildProjectPath(projectId)} replace />;
+  return <Navigate to={buildProjectChatPath(projectId)} replace />;
 };
 
 export const routes: RouteObject[] = [
@@ -56,11 +67,31 @@ export const routes: RouteObject[] = [
       },
       {
         path: ROUTE_PATTERNS.project,
-        element: <HomePage />,
+        element: <ProjectRootRedirect />,
       },
       {
         path: ROUTE_PATTERNS.projectChat,
-        element: <HomePage />,
+        element: <ProjectWorkspacePage />,
+      },
+      {
+        path: ROUTE_PATTERNS.projectChatDetail,
+        element: <ProjectWorkspacePage />,
+      },
+      {
+        path: ROUTE_PATTERNS.projectKnowledge,
+        element: <ProjectWorkspacePage />,
+      },
+      {
+        path: ROUTE_PATTERNS.projectMembers,
+        element: <ProjectWorkspacePage />,
+      },
+      {
+        path: ROUTE_PATTERNS.projectAgents,
+        element: <ProjectWorkspacePage />,
+      },
+      {
+        path: ROUTE_PATTERNS.projectSkills,
+        element: <ProjectWorkspacePage />,
       },
       {
         path: ROUTE_PATTERNS.legacyHomeProject,
@@ -81,6 +112,10 @@ export const routes: RouteObject[] = [
       {
         path: PATHS.agents,
         element: <AgentsPage />,
+      },
+      {
+        path: PATHS.members,
+        element: <MembersPage />,
       },
       {
         path: PATHS.analytics,

@@ -10,11 +10,11 @@ import {
   loadProjects,
   saveProjects,
 } from './project.storage';
-import type { AddProjectResult, ProjectSummary } from './project.types';
+import type { AddProjectResult, CreateProjectInput, ProjectSummary } from './project.types';
 
 interface ProjectContextValue {
   projects: ProjectSummary[];
-  addProject: (name: string) => AddProjectResult;
+  addProject: (input: CreateProjectInput) => AddProjectResult;
   getProjectById: (projectId: string) => ProjectSummary | null;
 }
 
@@ -30,8 +30,8 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
   );
 
   const addProject = useCallback(
-    (name: string): AddProjectResult => {
-      const nextName = name.trim();
+    (input: CreateProjectInput): AddProjectResult => {
+      const nextName = input.name.trim();
       if (!nextName) {
         return 'empty';
       }
@@ -43,7 +43,10 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
         return 'duplicate';
       }
 
-      const nextProject = createProjectSummary(nextName);
+      const nextProject = createProjectSummary({
+        ...input,
+        name: nextName,
+      });
       const nextProjects = [nextProject, ...projects];
       setProjects(nextProjects);
       saveProjects(nextProjects);

@@ -1,4 +1,4 @@
-import type { ProjectSummary } from './project.types';
+import type { CreateProjectInput, ProjectSummary } from './project.types';
 
 const PROJECTS_STORAGE_KEY = 'knowject_projects';
 
@@ -7,18 +7,38 @@ const DEFAULT_PROJECTS: ProjectSummary[] = [
     id: 'project-mobile-rebuild',
     name: '移动端应用重构',
     createdAt: '2026-03-05T09:00:00.000Z',
+    knowledgeBaseIds: ['kb-arch', 'kb-mobile-ui'],
+    memberIds: ['member-alex', 'member-yuki', 'member-nina'],
+    agentIds: ['agent-requirement', 'agent-code-review'],
+    skillIds: ['skill-typescript', 'skill-routes'],
   },
   {
     id: 'project-api-v2',
     name: 'API V2 迁移',
     createdAt: '2026-03-05T09:10:00.000Z',
+    knowledgeBaseIds: ['kb-api'],
+    memberIds: ['member-leo', 'member-iris'],
+    agentIds: ['agent-api-design'],
+    skillIds: ['skill-api-contract'],
   },
   {
     id: 'project-marketing-site',
     name: '营销网站',
     createdAt: '2026-03-05T09:20:00.000Z',
+    knowledgeBaseIds: ['kb-brand'],
+    memberIds: ['member-olivia', 'member-jason'],
+    agentIds: ['agent-copywriter'],
+    skillIds: ['skill-brand-story'],
   },
 ];
+
+const normalizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === 'string');
+};
 
 const normalizeProject = (value: unknown): ProjectSummary | null => {
   if (!value || typeof value !== 'object') {
@@ -38,6 +58,10 @@ const normalizeProject = (value: unknown): ProjectSummary | null => {
     id: candidate.id,
     name: candidate.name,
     createdAt: candidate.createdAt,
+    knowledgeBaseIds: normalizeStringArray(candidate.knowledgeBaseIds),
+    memberIds: normalizeStringArray(candidate.memberIds),
+    agentIds: normalizeStringArray(candidate.agentIds),
+    skillIds: normalizeStringArray(candidate.skillIds),
   };
 };
 
@@ -65,12 +89,16 @@ export const saveProjects = (projects: ProjectSummary[]): void => {
   localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
 };
 
-export const createProjectSummary = (name: string): ProjectSummary => {
+export const createProjectSummary = (input: CreateProjectInput): ProjectSummary => {
   const now = new Date().toISOString();
   return {
     id: `project-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    name,
+    name: input.name,
     createdAt: now,
+    knowledgeBaseIds: input.knowledgeBaseIds,
+    memberIds: input.memberIds,
+    agentIds: input.agentIds,
+    skillIds: input.skillIds,
   };
 };
 
