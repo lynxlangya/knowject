@@ -1,6 +1,7 @@
 export const PATHS = {
   login: '/login',
   home: '/home',
+  project: '/project',
   knowledge: '/knowledge',
   skills: '/skills',
   agents: '/agents',
@@ -10,14 +11,16 @@ export const PATHS = {
 } as const;
 
 export const ROUTE_PATTERNS = {
-  homeProject: `${PATHS.home}/project/:projectId`,
-  homeProjectChat: `${PATHS.home}/project/:projectId/chat/:chatId`,
+  project: `${PATHS.project}/:projectId`,
+  projectChat: `${PATHS.project}/:projectId/chat/:chatId`,
+  legacyHomeProject: `${PATHS.home}/project/:projectId`,
+  legacyHomeProjectChat: `${PATHS.home}/project/:projectId/chat/:chatId`,
 } as const;
 
-export const buildHomeProjectPath = (projectId: string): string => {
-  return `${PATHS.home}/project/${encodeURIComponent(projectId)}`;
+export const buildProjectPath = (projectId: string): string => {
+  return `${PATHS.project}/${encodeURIComponent(projectId)}`;
 };
 
-export const buildHomeProjectChatPath = (projectId: string, chatId: string): string => {
-  return `${buildHomeProjectPath(projectId)}/chat/${encodeURIComponent(chatId)}`;
+export const buildProjectChatPath = (projectId: string, chatId: string): string => {
+  return `${buildProjectPath(projectId)}/chat/${encodeURIComponent(chatId)}`;
 };

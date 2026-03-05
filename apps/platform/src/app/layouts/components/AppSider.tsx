@@ -4,19 +4,19 @@ import { App, Button, Input, Layout, Menu, Space, Typography } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { SIDER_WIDTH } from '../layout.constants';
 import { getMenuPath, menuItems } from '../../navigation/menu';
-import { buildHomeProjectPath } from '../../navigation/paths';
+import { buildProjectPath } from '../../navigation/paths';
 import { useProjectContext } from '../../project/ProjectContext';
 
 const { Sider } = Layout;
 
 export interface AppSiderProps {
-  selectedKey: string;
+  selectedKey: string | null;
   onNavigate: (path: string) => void;
   onLogout: () => void;
 }
 
 const getActiveProjectIdFromPath = (pathname: string): string | null => {
-  const match = pathname.match(/^\/home\/project\/([^/]+)/);
+  const match = pathname.match(/^\/project\/([^/]+)/);
   return match ? decodeURIComponent(match[1]) : null;
 };
 
@@ -49,7 +49,7 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
   };
 
   const handleOpenProject = (projectId: string) => {
-    navigate(buildHomeProjectPath(projectId));
+    navigate(buildProjectPath(projectId));
   };
 
   return (
@@ -82,7 +82,7 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
           <Menu
             mode="inline"
             theme="light"
-            selectedKeys={[selectedKey]}
+            selectedKeys={selectedKey ? [selectedKey] : []}
             items={menuItems}
             onClick={({ key }) => onNavigate(getMenuPath(String(key)))}
             style={{ borderInlineEnd: 'none', background: 'transparent', paddingInline: 0 }}

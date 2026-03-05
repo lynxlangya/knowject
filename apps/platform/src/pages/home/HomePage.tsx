@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useProjectContext } from '../../app/project/ProjectContext';
 import {
-  buildHomeProjectChatPath,
-  buildHomeProjectPath,
+  buildProjectChatPath,
+  buildProjectPath,
   PATHS,
 } from '../../app/navigation/paths';
 import { getConversationsByProject, getMessagesByConversation } from './home.mock';
@@ -123,7 +123,7 @@ export const HomePage = () => {
                         active ? 'bg-blue-50' : 'hover:bg-slate-50',
                       ].join(' ')}
                       onClick={() =>
-                        navigate(buildHomeProjectChatPath(activeProject.id, conversation.id))
+                        navigate(buildProjectChatPath(activeProject.id, conversation.id))
                       }
                     >
                       <Typography.Text className="block truncate text-sm font-medium text-slate-800">
@@ -227,7 +227,7 @@ export const HomePage = () => {
             <button
               type="button"
               className="cursor-pointer text-[11px] text-slate-400 hover:text-slate-600"
-              onClick={() => navigate(buildHomeProjectPath(activeProject.id))}
+              onClick={() => navigate(buildProjectPath(activeProject.id))}
             >
               返回项目概览
             </button>

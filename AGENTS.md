@@ -48,7 +48,7 @@ packages/
   - 顶部全局 Header 不再作为登录后主导航承载。
 - 项目状态由 `apps/platform/src/app/project/ProjectContext.tsx` 统一管理：
   - `projects` 持久化到 `localStorage`（键：`knowject_projects`）。
-  - 当前激活项目与对话由路由参数驱动：`/home/project/:projectId/chat/:chatId`。
+  - 当前激活项目与对话由路由参数驱动：`/project/:projectId/chat/:chatId`。
 - 主页 `apps/platform/src/pages/home/HomePage.tsx` 仅在已打开项目时展示“对话列表 + 对话框”，未打开项目时展示空状态引导。
 - 其它一级菜单页首版保持独立路由占位，不承载项目会话编排逻辑。
 

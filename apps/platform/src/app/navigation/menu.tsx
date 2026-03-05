@@ -46,7 +46,11 @@ export const menuItems: MenuItem[] = [
 
 export const getMenuPath = (key: string): string => key;
 
-export const getMenuSelectedKey = (pathname: string): string => {
+export const getMenuSelectedKey = (pathname: string): string | null => {
+  if (pathname.startsWith(`${PATHS.project}/`)) {
+    return null;
+  }
+
   if (pathname === PATHS.home || pathname.startsWith(`${PATHS.home}/`)) {
     return PATHS.home;
   }
@@ -71,5 +75,5 @@ export const getMenuSelectedKey = (pathname: string): string => {
     return PATHS.settings;
   }
 
-  return PATHS.home;
+  return null;
 };

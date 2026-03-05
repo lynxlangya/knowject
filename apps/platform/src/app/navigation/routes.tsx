@@ -1,7 +1,12 @@
-import { Navigate, type RouteObject } from 'react-router-dom';
+import { Navigate, useParams, type RouteObject } from 'react-router-dom';
 import { RequireAuth } from '../guards/RequireAuth';
 import { AuthedLayout } from '../layouts/AuthedLayout';
-import { PATHS, ROUTE_PATTERNS } from './paths';
+import {
+  PATHS,
+  ROUTE_PATTERNS,
+  buildProjectChatPath,
+  buildProjectPath,
+} from './paths';
 import { LoginPage } from '../../pages/login/LoginPage';
 import { HomePage } from '../../pages/home/HomePage';
 import { KnowledgePage } from '../../pages/knowledge/KnowledgePage';
@@ -10,6 +15,23 @@ import { AgentsPage } from '../../pages/agents/AgentsPage';
 import { AnalyticsPage } from '../../pages/analytics/AnalyticsPage';
 import { SettingsPage } from '../../pages/settings/SettingsPage';
 import { NotFoundPage } from '../../pages/notfound/NotFoundPage';
+
+const LegacyProjectRedirect = () => {
+  const { projectId, chatId } = useParams<{
+    projectId?: string;
+    chatId?: string;
+  }>();
+
+  if (!projectId) {
+    return <Navigate to={PATHS.home} replace />;
+  }
+
+  if (chatId) {
+    return <Navigate to={buildProjectChatPath(projectId, chatId)} replace />;
+  }
+
+  return <Navigate to={buildProjectPath(projectId)} replace />;
+};
 
 export const routes: RouteObject[] = [
   {
@@ -33,12 +55,20 @@ export const routes: RouteObject[] = [
         element: <HomePage />,
       },
       {
-        path: ROUTE_PATTERNS.homeProject,
+        path: ROUTE_PATTERNS.project,
         element: <HomePage />,
       },
       {
-        path: ROUTE_PATTERNS.homeProjectChat,
+        path: ROUTE_PATTERNS.projectChat,
         element: <HomePage />,
+      },
+      {
+        path: ROUTE_PATTERNS.legacyHomeProject,
+        element: <LegacyProjectRedirect />,
+      },
+      {
+        path: ROUTE_PATTERNS.legacyHomeProjectChat,
+        element: <LegacyProjectRedirect />,
       },
       {
         path: PATHS.knowledge,
