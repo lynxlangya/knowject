@@ -92,20 +92,12 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
     >
       <div className="flex h-full flex-col px-4 py-5">
         <div className="border-b border-slate-200 pb-4">
-          <div className="flex items-start gap-2.5">
+          <div className="flex justify-center">
             <img
-              src="/favicon.png"
-              alt="知项图标"
-              className="mt-0.5 h-8 w-8 object-contain"
+              src="/brand/knowject-wordmark.svg"
+              alt="Knowject"
+              className="mx-auto h-12 w-auto object-contain"
             />
-            <div className="min-w-0">
-              <Typography.Title level={5} className="mb-0! text-[17px]! leading-tight! text-slate-900!">
-                知项 · Knowject
-              </Typography.Title>
-              <Typography.Text className="block text-[12px]! leading-[1.4]! text-slate-500!">
-                让项目知识，真正为团队所用。
-              </Typography.Text>
-            </div>
           </div>
         </div>
 

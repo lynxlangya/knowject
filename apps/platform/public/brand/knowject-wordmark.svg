@@ -1,0 +1,48 @@
+<svg width="1320" height="300" viewBox="0 0 1320 300" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Knowject Wordmark</title>
+  <desc id="desc">Transparent Knowject logo with rounded-square K icon and fused nowject wordmark.</desc>
+
+  <defs>
+    <linearGradient id="iconBg" x1="22" y1="40" x2="242" y2="262" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F2A57" />
+      <stop offset="0.58" stop-color="#173D8B" />
+      <stop offset="1" stop-color="#2D58C3" />
+    </linearGradient>
+
+    <linearGradient id="iconArm" x1="64" y1="82" x2="196" y2="214" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D7F8FF" />
+      <stop offset="1" stop-color="#88DEFF" />
+    </linearGradient>
+
+    <linearGradient id="textFill" x1="286" y1="90" x2="1180" y2="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#11357E" />
+      <stop offset="0.6" stop-color="#1B50B7" />
+      <stop offset="1" stop-color="#134291" />
+    </linearGradient>
+
+    <filter id="iconGlow" x="0" y="20" width="280" height="280" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#6BAEFF" flood-opacity="0.25" />
+    </filter>
+
+    <filter id="textShadow" x="248" y="48" width="1040" height="230" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="3" stdDeviation="3.5" flood-color="#2E7AE3" flood-opacity="0.2" />
+    </filter>
+  </defs>
+
+  <g filter="url(#iconGlow)">
+    <rect x="22" y="40" width="220" height="220" rx="52" fill="url(#iconBg)" />
+
+    <rect x="91" y="90" width="36" height="120" rx="18" fill="#EEF4FF" />
+    <circle cx="109" cy="150" r="24" fill="#EEF4FF" />
+
+    <line x1="109" y1="150" x2="191" y2="99" stroke="url(#iconArm)" stroke-width="28" stroke-linecap="round" />
+    <line x1="109" y1="150" x2="191" y2="201" stroke="url(#iconArm)" stroke-width="28" stroke-linecap="round" />
+    <circle cx="191" cy="99" r="13" fill="#B7EEFF" />
+    <circle cx="191" cy="201" r="13" fill="#8BDFFF" />
+    <rect x="43" y="141" width="18" height="18" rx="6" fill="#8CE6FF" />
+  </g>
+
+  <g filter="url(#textShadow)">
+    <text x="276" y="224" fill="url(#textFill)" style="font-family:'Avenir Next','SF Pro Display','Helvetica Neue',Arial,sans-serif;font-size:198px;font-weight:700;letter-spacing:-3.2px;">nowject</text>
+  </g>
+</svg>
