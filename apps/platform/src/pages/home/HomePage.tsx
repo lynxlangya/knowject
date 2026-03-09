@@ -8,7 +8,7 @@ export const HomePage = () => {
           主页
         </Typography.Title>
         <Typography.Paragraph className="mb-8! text-base! text-slate-500!">
-          在左侧「我的项目」中选择项目后，将进入项目概览与工作区。
+          在左侧「我的项目」中选择项目后，将进入项目概览、对话、资源与成员页。
         </Typography.Paragraph>
 
         <Empty
