@@ -36,6 +36,7 @@
 
 .project-header-shell {
   overflow: clip;
+  border-radius: 1.75rem;
   transform-origin: top center;
   transition:
     max-height 320ms cubic-bezier(0.22, 1, 0.36, 1),
