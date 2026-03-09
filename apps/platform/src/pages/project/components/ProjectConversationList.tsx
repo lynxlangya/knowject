@@ -1,5 +1,6 @@
 import { Empty, Typography } from 'antd';
 import type { ConversationSummary } from '../../../app/project/project.types';
+import { KNOWJECT_BRAND } from '../../../styles/brand';
 
 interface ProjectConversationListProps {
   conversations: ConversationSummary[];
@@ -32,9 +33,10 @@ export const ProjectConversationList = ({
               className={[
                 'w-full rounded-r-[18px] border-l-2 px-4 py-4 text-left transition-colors',
                 active
-                  ? 'border-l-blue-500 bg-white/90 shadow-[0_8px_20px_rgba(15,23,42,0.035)]'
+                  ? 'bg-white/90 shadow-[0_8px_20px_rgba(15,23,42,0.035)]'
                   : 'border-l-transparent hover:bg-white/85',
               ].join(' ')}
+              style={active ? { borderLeftColor: KNOWJECT_BRAND.primary } : undefined}
               onClick={() => onSelect(conversation.id)}
             >
               <div className="mb-1 flex items-start justify-between gap-3">

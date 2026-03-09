@@ -118,3 +118,10 @@ docs/
 - `apps/platform/README.md`：前端职责、路由与数据来源说明。
 - `apps/api/README.md`：接口与演示边界说明。
 - `docs/design/*`：品牌与视觉资料。
+
+## 8. 协作与提交约定
+
+- 当一次改动达到可审阅、可提交状态，且协作者请求提交记录或明确表示将自行提交代码时，默认输出符合仓库规范的 commit message 草案。
+- commit 草案遵循全局 `type(scope): summary` 与正文 `Why / What / Validation / Risk` 结构，验证结论必须与实际执行结果一致。
+- 若工作区同时存在多类独立改动，按单一目的拆分 commit 草案，而不是合并成一个不可回滚的提交。
+- 该约定属于项目协作规则的一部分，与 `AGENTS.md` 保持同步维护。
