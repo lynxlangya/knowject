@@ -1,6 +1,7 @@
 import { Layout } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearToken } from '../auth/token';
+import { clearAuthUser } from '../auth/user';
 import { getMenuSelectedKey } from '../navigation/menu';
 import { PATHS } from '../navigation/paths';
 import { ProjectProvider } from '../project/ProjectContext';
@@ -15,6 +16,7 @@ export const AuthedLayout = () => {
 
   const handleLogout = () => {
     clearToken();
+    clearAuthUser();
     navigate(PATHS.login, { replace: true });
   };
 

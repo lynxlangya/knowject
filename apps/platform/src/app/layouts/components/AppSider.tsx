@@ -8,16 +8,17 @@ import {
   PlusOutlined,
   PushpinOutlined,
   ShareAltOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import {
   App,
-  Button,
   Dropdown,
   Form,
   Input,
   Layout,
   Menu,
   Modal,
+  Popover,
   Select,
   Typography,
 } from 'antd';
@@ -26,6 +27,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { KNOWJECT_BRAND } from '../../../styles/brand';
 import { getMenuPath, menuItems } from '../../navigation/menu';
 import { buildProjectOverviewPath, PATHS } from '../../navigation/paths';
+import { getAuthUser } from '../../auth/user';
 import {
   GLOBAL_AGENT_OPTIONS,
   GLOBAL_KNOWLEDGE_OPTIONS,
@@ -82,10 +84,15 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [actionMenuOpenProjectId, setActionMenuOpenProjectId] = useState<string | null>(null);
+  const [accountPanelOpen, setAccountPanelOpen] = useState(false);
 
   const activeProjectId = useMemo(() => {
     return getActiveProjectIdFromPath(location.pathname);
   }, [location.pathname]);
+
+  const authUser = useMemo(() => {
+    return getAuthUser();
+  }, []);
 
   const orderedProjects = useMemo(() => {
     return getOrderedProjects(projects);
@@ -100,6 +107,10 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
   }, [editingProjectId, projects]);
 
   const isEditing = editingProject !== null;
+  const accountPrimary = authUser?.username || authUser?.name || 'current@knowject.ai';
+  const accountSecondary =
+    authUser?.name && authUser.name !== accountPrimary ? authUser.name : '当前登录账号';
+  const accountAvatar = (authUser?.name || authUser?.username || 'K').trim().charAt(0).toUpperCase();
 
   useEffect(() => {
     if (!projectModalOpen) {
@@ -288,6 +299,58 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
     }
   };
 
+  const accountPanelContent = (
+    <div className="w-68 rounded-[20px] p-2">
+      <div className="flex items-center gap-3 rounded-[16px] px-2.5 py-2">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] text-[14px] font-semibold text-white"
+          style={{
+            backgroundImage: KNOWJECT_BRAND.heroGradient,
+            boxShadow: `0 8px 14px ${KNOWJECT_BRAND.primaryGlow}`,
+          }}
+        >
+          {accountAvatar}
+        </div>
+        <div className="min-w-0">
+          <Typography.Text className="block truncate text-[13px] font-semibold text-slate-800">
+            {accountPrimary}
+          </Typography.Text>
+          <Typography.Text className="block truncate text-[11px] text-slate-500">
+            {accountSecondary}
+          </Typography.Text>
+        </div>
+      </div>
+
+      <div className="mx-2 my-1.5 h-px bg-slate-200/80" />
+
+      <button
+        type="button"
+        className="flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-slate-600 transition-colors hover:bg-white hover:text-slate-900"
+        onClick={() => {
+          setAccountPanelOpen(false);
+          onNavigate(PATHS.settings);
+        }}
+      >
+        <SettingOutlined className="text-[15px]" />
+        <span className="text-[14px] font-medium">设置</span>
+      </button>
+
+      <div className="mx-2 my-1.5 h-px bg-slate-200/80" />
+
+      <button
+        type="button"
+        className="flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-slate-600 transition-colors hover:bg-white hover:text-slate-900"
+        onClick={() => {
+          setAccountPanelOpen(false);
+          onLogout();
+        }}
+      >
+        <LogoutOutlined className="text-[15px]" />
+        <span className="text-[14px] font-medium">退出登录</span>
+      </button>
+    </div>
+  );
+
   return (
     <Sider
       width={SIDER_WIDTH}
@@ -344,7 +407,7 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
         </div>
 
         <div
-          className="mt-4 flex min-h-0 flex-1 flex-col rounded-[26px] border p-3"
+          className="mt-4 mb-[14px] flex min-h-0 flex-1 flex-col rounded-[26px] border p-3"
           style={{
             borderColor: 'rgba(255,255,255,0.68)',
             background: KNOWJECT_BRAND.shellSurface,
@@ -470,17 +533,35 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
           </div>
         </div>
 
-        <div className="mt-4 rounded-[22px] border p-1.5" style={{ borderColor: 'rgba(255,255,255,0.68)' }}>
-          <Button
-            block
-            type="text"
-            icon={<LogoutOutlined />}
-            onClick={onLogout}
-            className="h-11! rounded-[16px]! text-slate-600! hover:bg-white/80! hover:text-slate-900!"
+        <Popover
+          open={accountPanelOpen}
+          onOpenChange={setAccountPanelOpen}
+          placement="top"
+          trigger="click"
+          content={accountPanelContent}
+          arrow={false}
+          overlayInnerStyle={{
+            padding: 0,
+            borderRadius: 20,
+            background: KNOWJECT_BRAND.shellSurfaceStrong,
+            border: '1px solid rgba(255,255,255,0.72)',
+            boxShadow: '0 18px 36px rgba(15,42,38,0.08)',
+            backdropFilter: 'blur(18px)',
+          }}
+        >
+          <button
+            type="button"
+            className="flex h-10 w-full items-center gap-2 rounded-[16px] border px-3 text-left text-slate-700 transition-all duration-200 hover:-translate-y-px hover:border-slate-200 hover:bg-white/92 hover:text-slate-900 hover:shadow-[0_12px_24px_rgba(15,42,38,0.06)] active:translate-y-0 active:bg-white"
+            style={{
+              borderColor: 'rgba(255,255,255,0.72)',
+              background: KNOWJECT_BRAND.shellSurfaceStrong,
+              boxShadow: '0 10px 24px rgba(15,42,38,0.03)',
+            }}
           >
-            退出登录
-          </Button>
-        </div>
+            <SettingOutlined className="shrink-0 text-[16px] text-slate-500" />
+            <span className="text-[13px] font-semibold">设置</span>
+          </button>
+        </Popover>
       </div>
 
       <Modal

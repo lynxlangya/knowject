@@ -5,7 +5,6 @@ import {
   RobotOutlined,
   TeamOutlined,
   LineChartOutlined,
-  SettingOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { PATHS } from './paths';
@@ -43,11 +42,6 @@ export const menuItems: MenuItem[] = [
     icon: <LineChartOutlined />,
     label: '分析',
   },
-  {
-    key: PATHS.settings,
-    icon: <SettingOutlined />,
-    label: '设置',
-  },
 ];
 
 export const getMenuPath = (key: string): string => key;
@@ -79,10 +73,6 @@ export const getMenuSelectedKey = (pathname: string): string | null => {
 
   if (pathname === PATHS.analytics || pathname.startsWith(`${PATHS.analytics}/`)) {
     return PATHS.analytics;
-  }
-
-  if (pathname === PATHS.settings || pathname.startsWith(`${PATHS.settings}/`)) {
-    return PATHS.settings;
   }
 
   return null;

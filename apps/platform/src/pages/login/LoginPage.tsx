@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, type LoginRequest } from '../../api/auth';
 import { setToken } from '../../app/auth/token';
+import { setAuthUser } from '../../app/auth/user';
 import { PATHS } from '../../app/navigation/paths';
 import { LoginFlowBackground } from './components/LoginFlowBackground';
 import { LoginFormPanel } from './components/LoginFormPanel';
@@ -44,6 +45,7 @@ export const LoginPage = () => {
       persistRememberedUsername(payload.username, values.remember);
 
       setToken(result.token);
+      setAuthUser(result.user);
       message.success(`欢迎回来，${result.user.name}`);
       navigate(PATHS.home, { replace: true });
     } catch (error) {
