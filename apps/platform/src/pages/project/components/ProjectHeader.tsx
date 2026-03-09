@@ -1,4 +1,4 @@
-import { Tag, Typography } from 'antd';
+import { Typography } from 'antd';
 import type {
   ProjectMember,
   ProjectOverviewStats,
@@ -34,7 +34,7 @@ export const ProjectHeader = ({
   return (
     <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
       <div className="flex flex-col gap-5 bg-[linear-gradient(135deg,rgba(239,246,255,0.95),rgba(255,255,255,0.98))] px-6 py-6 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-start gap-4">
+        <div className="flex items-center gap-4">
           <div
             className="flex h-16 w-16 items-center justify-center rounded-[20px] border text-2xl font-semibold text-white"
             style={{
@@ -45,18 +45,8 @@ export const ProjectHeader = ({
           >
             {projectInitial}
           </div>
-          <div className="min-w-0">
-            <Tag
-              className="mb-3 rounded-full px-2.5 py-1 text-[12px] font-semibold"
-              style={{
-                color: KNOWJECT_BRAND.primaryText,
-                backgroundColor: KNOWJECT_BRAND.primarySurface,
-                borderColor: KNOWJECT_BRAND.primaryBorder,
-              }}
-            >
-              项目工作台
-            </Tag>
-            <Typography.Title level={2} className="mb-1! text-slate-900!">
+          <div className="flex min-w-0 flex-col justify-center gap-2">
+            <Typography.Title level={2} className="mb-0! mt-0! leading-[1.08]! text-slate-900!">
               {project.name}
             </Typography.Title>
             <Typography.Paragraph className="mb-0! max-w-2xl text-base! text-slate-600!">

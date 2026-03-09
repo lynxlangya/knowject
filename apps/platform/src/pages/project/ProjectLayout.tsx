@@ -74,6 +74,8 @@ export const ProjectLayout = () => {
   }
 
   const activeSection = resolveSectionByPathname(location.pathname);
+  const isOverviewSection = activeSection === 'overview';
+  const projectInitial = (activeProject.name.trim().slice(0, 1) || 'P').toUpperCase();
   const members = getProjectMembers(activeProject);
   const meta = getProjectMeta(activeProject.id);
   const stats = getProjectOverviewStats(activeProject);
@@ -98,10 +100,20 @@ export const ProjectLayout = () => {
   };
 
   return (
-    <section className="flex min-h-full flex-col gap-4">
-      <ProjectHeader project={activeProject} members={members} meta={meta} stats={stats} />
-      <ProjectSectionNav activeKey={activeSection} onSelect={handleSelectSection} />
-      <div className="min-h-0 flex-1">
+    <section className="flex min-h-full flex-col">
+      <div
+        aria-hidden={!isOverviewSection}
+        data-state={isOverviewSection ? 'expanded' : 'collapsed'}
+        className="project-header-shell"
+      >
+        <ProjectHeader project={activeProject} members={members} meta={meta} stats={stats} />
+      </div>
+      <ProjectSectionNav
+        activeKey={activeSection}
+        overviewProjectInitial={projectInitial}
+        onSelect={handleSelectSection}
+      />
+      <div className={`project-layout-outlet ${isOverviewSection ? '' : 'project-page-surface-enter'}`}>
         <Outlet
           context={{
             activeProject,

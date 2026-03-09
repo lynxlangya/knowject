@@ -5,7 +5,7 @@ export const ProjectMembersPage = () => {
   const { members, activeProject } = useProjectPageContext();
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex min-h-full flex-col gap-3">
       <Card
         className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
         styles={{ body: { padding: '20px 20px 18px' } }}
@@ -21,7 +21,7 @@ export const ProjectMembersPage = () => {
         </Typography.Paragraph>
       </Card>
 
-      <div className="grid gap-5 md:gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid min-h-0 flex-1 gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
         {members.map((member) => (
           <article
             key={member.id}

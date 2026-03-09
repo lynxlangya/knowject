@@ -39,7 +39,7 @@ export const ProjectResourcesPage = () => {
   }, [agentsRef, focus, knowledgeRef, skillsRef]);
 
   return (
-    <section className="space-y-4">
+    <section className="flex min-h-full flex-col gap-4">
       <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -94,7 +94,7 @@ export const ProjectResourcesPage = () => {
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         {groups.map((group) => (
           <div
             key={group.key}

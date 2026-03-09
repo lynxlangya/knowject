@@ -3,6 +3,7 @@ import { KNOWJECT_BRAND } from '../../../styles/brand';
 
 interface ProjectSectionNavProps {
   activeKey: ProjectSectionKey;
+  overviewProjectInitial: string;
   onSelect: (key: ProjectSectionKey) => void;
 }
 
@@ -31,22 +32,24 @@ const NAV_ITEMS: Array<{ key: ProjectSectionKey; label: string; description: str
 
 export const ProjectSectionNav = ({
   activeKey,
+  overviewProjectInitial,
   onSelect,
 }: ProjectSectionNavProps) => {
   return (
-    <nav className="rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_12px_30px_rgba(15,23,42,0.04)]">
+    <nav className="rounded-[24px] border border-slate-200 bg-white/92 p-2 shadow-[0_12px_30px_rgba(15,23,42,0.04)] backdrop-blur-sm transition-[box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
       <div className="grid gap-2 md:grid-cols-4">
         {NAV_ITEMS.map((item) => {
           const active = item.key === activeKey;
+          const showOverviewProjectIcon = item.key === 'overview' && activeKey !== 'overview';
           return (
             <button
               key={item.key}
               type="button"
               className={[
-                'rounded-[18px] border px-4 py-3 text-left transition-all',
+                'transform-gpu rounded-[18px] border px-4 py-3 text-left transition-[transform,box-shadow,background-color,color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
                 active
-                  ? 'text-white'
-                  : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                  ? '-translate-y-px text-white'
+                  : 'border-transparent text-slate-600 hover:-translate-y-px hover:bg-slate-50/90 hover:text-slate-900',
               ].join(' ')}
               style={
                 active
@@ -59,16 +62,47 @@ export const ProjectSectionNav = ({
               }
               onClick={() => onSelect(item.key)}
             >
-              <div className={active ? 'text-sm font-semibold text-white' : 'text-sm font-semibold text-slate-900'}>
-                {item.label}
-              </div>
-              <div
-                className={
-                  active ? 'mt-1 text-xs text-slate-300' : 'mt-1 text-xs text-slate-400'
-                }
-              >
-                {item.description}
-              </div>
+              {showOverviewProjectIcon ? (
+                <div className="flex items-center gap-3">
+                  <span
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] border text-lg font-semibold text-white"
+                    style={{
+                      borderColor: KNOWJECT_BRAND.primaryBorder,
+                      backgroundImage: KNOWJECT_BRAND.heroGradient,
+                      boxShadow: `0 10px 20px ${KNOWJECT_BRAND.primaryGlow}`,
+                    }}
+                  >
+                    {overviewProjectInitial}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-slate-900 transition-colors duration-300">
+                      {item.label}
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-400 transition-colors duration-300">
+                      {item.description}
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={[
+                      'flex items-center gap-2 text-sm font-semibold transition-colors duration-300',
+                      active ? 'text-white' : 'text-slate-900',
+                    ].join(' ')}
+                  >
+                    {item.label}
+                  </div>
+                  <div
+                    className={[
+                      'mt-1 text-xs transition-colors duration-300',
+                      active ? 'text-slate-300' : 'text-slate-400',
+                    ].join(' ')}
+                  >
+                    {item.description}
+                  </div>
+                </>
+              )}
             </button>
           );
         })}
