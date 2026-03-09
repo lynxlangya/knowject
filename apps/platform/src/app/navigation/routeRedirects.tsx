@@ -16,7 +16,11 @@ export const ProjectRootRedirect = () => {
   return <Navigate to={buildProjectOverviewPath(projectId)} replace />;
 };
 
-export const LegacyProjectRedirect = () => {
+export const LegacyProjectRedirect = ({
+  section = 'overview',
+}: {
+  section?: 'overview' | 'chat';
+}) => {
   const { projectId, chatId } = useParams<{
     projectId?: string;
     chatId?: string;
@@ -26,7 +30,7 @@ export const LegacyProjectRedirect = () => {
     return <Navigate to={PATHS.home} replace />;
   }
 
-  if (chatId) {
+  if (section === 'chat') {
     return <Navigate to={buildProjectChatPath(projectId, chatId)} replace />;
   }
 

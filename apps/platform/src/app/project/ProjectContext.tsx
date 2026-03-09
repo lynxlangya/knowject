@@ -29,12 +29,8 @@ const getUnpinnedProjects = (projects: ProjectSummary[]): ProjectSummary[] =>
 const normalizeProjectDescription = (value: string): string => value.trim();
 
 export const ProjectProvider = ({ children }: ProjectProviderProps) => {
-  const projectsRef = useRef<ProjectSummary[]>([]);
-  const [projects, setProjects] = useState<ProjectSummary[]>(() => {
-    const initialProjects = loadProjects();
-    projectsRef.current = initialProjects;
-    return initialProjects;
-  });
+  const [projects, setProjects] = useState<ProjectSummary[]>(loadProjects);
+  const projectsRef = useRef(projects);
 
   useEffect(() => {
     projectsRef.current = projects;

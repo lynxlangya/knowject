@@ -135,43 +135,36 @@ const TEAM_MEMBERS: MemberProfile[] = [
     id: 'member-alex',
     name: 'Alex Chen',
     avatarUrl: AVATAR_ALEX,
-    isActive: true,
   },
   {
     id: 'member-yuki',
     name: 'Yuki Zhang',
     avatarUrl: AVATAR_YUKI,
-    isActive: true,
   },
   {
     id: 'member-nina',
     name: 'Nina Song',
     avatarUrl: AVATAR_NINA,
-    isActive: true,
   },
   {
     id: 'member-leo',
     name: 'Leo Zhou',
     avatarUrl: AVATAR_LEO,
-    isActive: true,
   },
   {
     id: 'member-iris',
     name: 'Iris Wang',
     avatarUrl: AVATAR_IRIS,
-    isActive: true,
   },
   {
     id: 'member-olivia',
     name: 'Olivia Gu',
     avatarUrl: AVATAR_OLIVIA,
-    isActive: true,
   },
   {
     id: 'member-jason',
     name: 'Jason Fu',
     avatarUrl: AVATAR_JASON,
-    isActive: true,
   },
 ];
 

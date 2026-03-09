@@ -87,15 +87,15 @@ export const routes: RouteObject[] = [
       },
       {
         path: ROUTE_PATTERNS.legacyHomeProject,
-        element: <LegacyProjectRedirect />,
+        element: <LegacyProjectRedirect section="overview" />,
       },
       {
         path: ROUTE_PATTERNS.legacyHomeProjectChat,
-        element: <LegacyProjectRedirect />,
+        element: <LegacyProjectRedirect section="chat" />,
       },
       {
         path: ROUTE_PATTERNS.legacyHomeProjectChatDetail,
-        element: <LegacyProjectRedirect />,
+        element: <LegacyProjectRedirect section="chat" />,
       },
       {
         path: PATHS.knowledge,
