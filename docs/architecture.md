@@ -75,9 +75,9 @@ docs/
 - `apps/platform/src/app/project/project.storage.ts`
   - 定义默认项目与 `localStorage` 读写，并兼容置顶字段缺省值回填。
 - `apps/platform/src/app/project/project.catalog.ts`
-  - 定义全局知识库、技能、智能体、成员等共享 Mock 资产。
+  - 定义全局知识库、技能、智能体、成员基础档案等共享 Mock 资产。
 - `apps/platform/src/pages/project/project.mock.ts`
-  - 定义项目概览、对话、资源、成员等演示数据。
+  - 定义项目概览、对话、资源、成员协作信息等演示数据，成员侧重点包括角色、职责标签与最近动作。
 
 ### 4.3 全局态与项目态分层
 

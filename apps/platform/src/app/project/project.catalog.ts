@@ -1,7 +1,7 @@
 import type {
   GlobalAssetItem,
   GlobalCatalogOption,
-  ProjectMember,
+  MemberProfile,
   ProjectResourceFocus,
 } from './project.types';
 
@@ -130,7 +130,7 @@ const SKILL_ASSETS: GlobalAssetItem[] = [
   },
 ];
 
-const TEAM_MEMBERS: ProjectMember[] = [
+const TEAM_MEMBERS: MemberProfile[] = [
   {
     id: 'member-alex',
     name: 'Alex Chen',
@@ -217,6 +217,6 @@ export const getAllGlobalAssets = (): GlobalAssetItem[] => {
   return [...KNOWLEDGE_ASSETS, ...SKILL_ASSETS, ...AGENT_ASSETS];
 };
 
-export const getCatalogMembers = (): ProjectMember[] => {
+export const getCatalogMembers = (): MemberProfile[] => {
   return TEAM_MEMBERS;
 };

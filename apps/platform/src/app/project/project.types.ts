@@ -18,11 +18,38 @@ export interface ConversationSummary {
   preview: string;
 }
 
-export interface ProjectMember {
+export interface MemberProfile {
   id: string;
   name: string;
   avatarUrl: string;
+}
+
+export type ProjectMemberRole =
+  | 'owner'
+  | 'product'
+  | 'design'
+  | 'frontend'
+  | 'backend'
+  | 'marketing';
+
+export type ProjectMemberStatus = 'active' | 'syncing' | 'blocked' | 'idle';
+
+export type ProjectMemberActivityType = 'conversation' | 'resource' | 'delivery' | 'review';
+
+export interface ProjectMemberRecentActivity {
+  type: ProjectMemberActivityType;
+  summary: string;
+  occurredAt: string;
+  displayTime: string;
+}
+
+export interface ProjectMember extends MemberProfile {
   isActive: boolean;
+  role: ProjectMemberRole;
+  status: ProjectMemberStatus;
+  responsibilityTags: string[];
+  focusSummary: string;
+  recentActivity: ProjectMemberRecentActivity;
 }
 
 export type ProjectSectionKey = 'overview' | 'chat' | 'resources' | 'members';
