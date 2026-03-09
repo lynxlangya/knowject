@@ -1,14 +1,14 @@
-import { Navigate, useParams, type RouteObject } from 'react-router-dom';
+import { Navigate, type RouteObject } from 'react-router-dom';
 import { RequireAuth } from '../guards/RequireAuth';
 import { AuthedLayout } from '../layouts/AuthedLayout';
-import {
-  PATHS,
-  ROUTE_PATTERNS,
-  buildProjectChatPath,
-} from './paths';
+import { PATHS, ROUTE_PATTERNS } from './paths';
 import { LoginPage } from '../../pages/login/LoginPage';
 import { HomePage } from '../../pages/home/HomePage';
-import { ProjectWorkspacePage } from '../../pages/project/ProjectWorkspacePage';
+import { ProjectLayout } from '../../pages/project/ProjectLayout';
+import { ProjectOverviewPage } from '../../pages/project/ProjectOverviewPage';
+import { ProjectChatPage } from '../../pages/project/ProjectChatPage';
+import { ProjectResourcesPage } from '../../pages/project/ProjectResourcesPage';
+import { ProjectMembersPage } from '../../pages/project/ProjectMembersPage';
 import { KnowledgePage } from '../../pages/knowledge/KnowledgePage';
 import { SkillsPage } from '../../pages/skills/SkillsPage';
 import { AgentsPage } from '../../pages/agents/AgentsPage';
@@ -16,33 +16,11 @@ import { MembersPage } from '../../pages/members/MembersPage';
 import { AnalyticsPage } from '../../pages/analytics/AnalyticsPage';
 import { SettingsPage } from '../../pages/settings/SettingsPage';
 import { NotFoundPage } from '../../pages/notfound/NotFoundPage';
-
-const ProjectRootRedirect = () => {
-  const { projectId } = useParams<{ projectId?: string }>();
-
-  if (!projectId) {
-    return <Navigate to={PATHS.home} replace />;
-  }
-
-  return <Navigate to={buildProjectChatPath(projectId)} replace />;
-};
-
-const LegacyProjectRedirect = () => {
-  const { projectId, chatId } = useParams<{
-    projectId?: string;
-    chatId?: string;
-  }>();
-
-  if (!projectId) {
-    return <Navigate to={PATHS.home} replace />;
-  }
-
-  if (chatId) {
-    return <Navigate to={buildProjectChatPath(projectId, chatId)} replace />;
-  }
-
-  return <Navigate to={buildProjectChatPath(projectId)} replace />;
-};
+import {
+  LegacyProjectAssetRedirect,
+  LegacyProjectRedirect,
+  ProjectRootRedirect,
+} from './routeRedirects';
 
 export const routes: RouteObject[] = [
   {
@@ -67,31 +45,45 @@ export const routes: RouteObject[] = [
       },
       {
         path: ROUTE_PATTERNS.project,
-        element: <ProjectRootRedirect />,
+        element: <ProjectLayout />,
+        children: [
+          {
+            index: true,
+            element: <ProjectRootRedirect />,
+          },
+          {
+            path: 'overview',
+            element: <ProjectOverviewPage />,
+          },
+          {
+            path: 'chat',
+            element: <ProjectChatPage />,
+          },
+          {
+            path: 'chat/:chatId',
+            element: <ProjectChatPage />,
+          },
+          {
+            path: 'resources',
+            element: <ProjectResourcesPage />,
+          },
+          {
+            path: 'members',
+            element: <ProjectMembersPage />,
+          },
+        ],
       },
       {
-        path: ROUTE_PATTERNS.projectChat,
-        element: <ProjectWorkspacePage />,
+        path: ROUTE_PATTERNS.projectKnowledgeLegacy,
+        element: <LegacyProjectAssetRedirect focus="knowledge" />,
       },
       {
-        path: ROUTE_PATTERNS.projectChatDetail,
-        element: <ProjectWorkspacePage />,
+        path: ROUTE_PATTERNS.projectAgentsLegacy,
+        element: <LegacyProjectAssetRedirect focus="agents" />,
       },
       {
-        path: ROUTE_PATTERNS.projectKnowledge,
-        element: <ProjectWorkspacePage />,
-      },
-      {
-        path: ROUTE_PATTERNS.projectMembers,
-        element: <ProjectWorkspacePage />,
-      },
-      {
-        path: ROUTE_PATTERNS.projectAgents,
-        element: <ProjectWorkspacePage />,
-      },
-      {
-        path: ROUTE_PATTERNS.projectSkills,
-        element: <ProjectWorkspacePage />,
+        path: ROUTE_PATTERNS.projectSkillsLegacy,
+        element: <LegacyProjectAssetRedirect focus="skills" />,
       },
       {
         path: ROUTE_PATTERNS.legacyHomeProject,
@@ -99,6 +91,10 @@ export const routes: RouteObject[] = [
       },
       {
         path: ROUTE_PATTERNS.legacyHomeProjectChat,
+        element: <LegacyProjectRedirect />,
+      },
+      {
+        path: ROUTE_PATTERNS.legacyHomeProjectChatDetail,
         element: <LegacyProjectRedirect />,
       },
       {

@@ -1,132 +1,37 @@
+import {
+  getCatalogMembers,
+  getGlobalAssetById,
+} from '../../app/project/project.catalog';
 import type {
   ChatMessage,
   ConversationSummary,
   ProjectMember,
-  ProjectTabKey,
-  ProjectWorkspaceSectionItem,
+  ProjectOverviewStats,
+  ProjectResourceFocus,
+  ProjectResourceGroup,
+  ProjectResourceItem,
+  ProjectSummary,
 } from '../../app/project/project.types';
 
 export interface ProjectWorkspaceMeta {
   iconUrl: string;
-  members: ProjectMember[];
+  summary: string;
 }
 
-const AVATAR_ALEX = 'https://i.pravatar.cc/80?img=12';
-const AVATAR_MIA = 'https://i.pravatar.cc/80?img=32';
-const AVATAR_RYAN = 'https://i.pravatar.cc/80?img=51';
-const AVATAR_YUKI = 'https://i.pravatar.cc/80?img=23';
-const AVATAR_NINA = 'https://i.pravatar.cc/80?img=24';
-const AVATAR_EVAN = 'https://i.pravatar.cc/80?img=66';
-const AVATAR_LUNA = 'https://i.pravatar.cc/80?img=18';
-const AVATAR_KAI = 'https://i.pravatar.cc/80?img=68';
-const AVATAR_IRIS = 'https://i.pravatar.cc/80?img=48';
-const AVATAR_LEO = 'https://i.pravatar.cc/80?img=14';
-const AVATAR_TINA = 'https://i.pravatar.cc/80?img=37';
-const AVATAR_OLIVIA = 'https://i.pravatar.cc/80?img=5';
-const AVATAR_JASON = 'https://i.pravatar.cc/80?img=63';
-
-const DEFAULT_MEMBERS: ProjectMember[] = [
-  {
-    id: 'member-fallback-1',
-    name: 'Alex Chen',
-    avatarUrl: AVATAR_ALEX,
-    isActive: true,
-  },
-  {
-    id: 'member-fallback-2',
-    name: 'Mia Lin',
-    avatarUrl: AVATAR_MIA,
-    isActive: true,
-  },
-  {
-    id: 'member-fallback-3',
-    name: 'Ryan Wu',
-    avatarUrl: AVATAR_RYAN,
-    isActive: true,
-  },
-];
+const DEFAULT_MEMBERS = getCatalogMembers().slice(0, 3);
 
 const PROJECT_META_BY_ID: Record<string, ProjectWorkspaceMeta> = {
   'project-mobile-rebuild': {
     iconUrl: '/icon-128.png',
-    members: [
-      {
-        id: 'member-mobile-1',
-        name: 'Alex Chen',
-        avatarUrl: AVATAR_ALEX,
-        isActive: true,
-      },
-      {
-        id: 'member-mobile-2',
-        name: 'Yuki Zhang',
-        avatarUrl: AVATAR_YUKI,
-        isActive: true,
-      },
-      {
-        id: 'member-mobile-3',
-        name: 'Nina Song',
-        avatarUrl: AVATAR_NINA,
-        isActive: true,
-      },
-      {
-        id: 'member-mobile-4',
-        name: 'Evan He',
-        avatarUrl: AVATAR_EVAN,
-        isActive: true,
-      },
-      {
-        id: 'member-mobile-5',
-        name: 'Luna Xu',
-        avatarUrl: AVATAR_LUNA,
-        isActive: true,
-      },
-      {
-        id: 'member-mobile-6',
-        name: 'Kai Jiang',
-        avatarUrl: AVATAR_KAI,
-        isActive: true,
-      },
-    ],
+    summary: '聚焦移动端应用重构、体验统一与技术债梳理。',
   },
   'project-api-v2': {
     iconUrl: '/icon-128.png',
-    members: [
-      {
-        id: 'member-api-1',
-        name: 'Iris Wang',
-        avatarUrl: AVATAR_IRIS,
-        isActive: true,
-      },
-      {
-        id: 'member-api-2',
-        name: 'Leo Zhou',
-        avatarUrl: AVATAR_LEO,
-        isActive: true,
-      },
-      {
-        id: 'member-api-3',
-        name: 'Tina Fan',
-        avatarUrl: AVATAR_TINA,
-        isActive: false,
-      },
-    ],
+    summary: '推进 API V2 迁移切流、鉴权一致性和接口治理。',
   },
   'project-marketing-site': {
     iconUrl: '/icon-128.png',
-    members: [
-      {
-        id: 'member-marketing-1',
-        name: 'Olivia Gu',
-        avatarUrl: AVATAR_OLIVIA,
-        isActive: true,
-      },
-      {
-        id: 'member-marketing-2',
-        name: 'Jason Fu',
-        avatarUrl: AVATAR_JASON,
-        isActive: true,
-      },
-    ],
+    summary: '围绕品牌表达、转化路径和内容资产进行协作。',
   },
 };
 
@@ -256,58 +161,21 @@ const MESSAGES_BY_CONVERSATION: Record<string, ChatMessage[]> = {
   ],
 };
 
-const PLACEHOLDER_ITEMS: Record<ProjectTabKey, Record<string, ProjectWorkspaceSectionItem[]>> = {
-  chat: {},
+const RESOURCE_GROUP_COPY: Record<
+  ProjectResourceFocus,
+  { title: string; description: string }
+> = {
   knowledge: {
-    'project-mobile-rebuild': [
-      {
-        id: 'kb-mobile-1',
-        title: 'schema.sql 规范',
-        description: '用户表与身份表拆分设计说明。',
-        updatedAt: '今天',
-      },
-      {
-        id: 'kb-mobile-2',
-        title: 'UI 设计令牌',
-        description: '颜色、圆角、间距 token 基线。',
-        updatedAt: '昨天',
-      },
-    ],
-    default: [
-      {
-        id: 'kb-default-1',
-        title: '知识文档占位',
-        description: '该项目的知识条目将在这里展示。',
-        updatedAt: '待接入',
-      },
-    ],
-  },
-  members: {
-    default: [
-      {
-        id: 'member-default-1',
-        title: '成员列表占位',
-        description: '成员详情与角色权限将在此展示。',
-      },
-    ],
-  },
-  agents: {
-    default: [
-      {
-        id: 'agent-default-1',
-        title: '智能体占位',
-        description: '项目智能体配置与运行记录将在此展示。',
-      },
-    ],
+    title: '知识库',
+    description: '项目已接入的全局知识资产，可作为对话和协作的上下文基础。',
   },
   skills: {
-    default: [
-      {
-        id: 'skill-default-1',
-        title: '技能占位',
-        description: '项目技能资产将在此展示。',
-      },
-    ],
+    title: '技能',
+    description: '项目当前启用的全局技能能力，用于复用成熟工作流。',
+  },
+  agents: {
+    title: '智能体',
+    description: '项目已绑定的全局智能体，可参与分析、审查和执行协作。',
   },
 };
 
@@ -323,17 +191,60 @@ const buildFallbackConversations = (projectId: string): ConversationSummary[] =>
   ];
 };
 
+const mapMemberIdsToMembers = (memberIds: string[]): ProjectMember[] => {
+  const catalogMembers = getCatalogMembers();
+  const members = memberIds
+    .map((memberId) => catalogMembers.find((member) => member.id === memberId) ?? null)
+    .filter((member): member is ProjectMember => member !== null);
+
+  if (members.length > 0) {
+    return members;
+  }
+
+  return DEFAULT_MEMBERS;
+};
+
+const getResourceIdsByFocus = (
+  project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
+  focus: ProjectResourceFocus,
+): string[] => {
+  if (focus === 'knowledge') {
+    return project.knowledgeBaseIds;
+  }
+
+  if (focus === 'skills') {
+    return project.skillIds;
+  }
+
+  return project.agentIds;
+};
+
+const mapProjectResources = (
+  project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
+  focus: ProjectResourceFocus,
+): ProjectResourceItem[] => {
+  return getResourceIdsByFocus(project, focus)
+    .map((resourceId) => getGlobalAssetById(focus, resourceId))
+    .filter((resource): resource is ProjectResourceItem | Exclude<typeof resource, null> => resource !== null)
+    .map((resource) => ({
+      ...resource,
+      source: 'global' as const,
+    }));
+};
+
 export const getProjectMeta = (projectId: string): ProjectWorkspaceMeta => {
   return (
     PROJECT_META_BY_ID[projectId] ?? {
       iconUrl: '/icon-128.png',
-      members: DEFAULT_MEMBERS,
+      summary: '聚焦当前项目的知识沉淀、协作过程和 AI 能力接入。',
     }
   );
 };
 
-export const getProjectMembers = (projectId: string): ProjectMember[] => {
-  return getProjectMeta(projectId).members;
+export const getProjectMembers = (
+  project: Pick<ProjectSummary, 'memberIds'>,
+): ProjectMember[] => {
+  return mapMemberIdsToMembers(project.memberIds);
 };
 
 export const getConversationsByProject = (projectId: string): ConversationSummary[] => {
@@ -344,23 +255,44 @@ export const getMessagesByConversation = (conversationId: string): ChatMessage[]
   return MESSAGES_BY_CONVERSATION[conversationId] ?? [];
 };
 
-export const getWorkspaceSectionItems = (
+export const getProjectResourceGroups = (
+  project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
+): ProjectResourceGroup[] => {
+  return (['knowledge', 'skills', 'agents'] as const).map((focus) => ({
+    key: focus,
+    title: RESOURCE_GROUP_COPY[focus].title,
+    description: RESOURCE_GROUP_COPY[focus].description,
+    items: mapProjectResources(project, focus),
+  }));
+};
+
+export const getProjectOverviewStats = (
+  project: Pick<ProjectSummary, 'id' | 'knowledgeBaseIds' | 'skillIds' | 'agentIds' | 'memberIds'>,
+): ProjectOverviewStats => {
+  const members = getProjectMembers(project);
+  const conversations = getConversationsByProject(project.id);
+
+  return {
+    activeMembers: members.filter((member) => member.isActive).length,
+    conversationCount: conversations.length,
+    knowledgeCount: project.knowledgeBaseIds.length,
+    agentCount: project.agentIds.length,
+    skillCount: project.skillIds.length,
+  };
+};
+
+export const getRecentProjectConversations = (
   projectId: string,
-  tab: ProjectTabKey,
-): ProjectWorkspaceSectionItem[] => {
-  if (tab === 'members') {
-    const members = getProjectMembers(projectId);
-    return members.map((member) => ({
-      id: member.id,
-      title: member.name,
-      description: member.isActive ? '活跃成员' : '离线成员',
-    }));
-  }
+  limit = 3,
+): ConversationSummary[] => {
+  return getConversationsByProject(projectId).slice(0, limit);
+};
 
-  const map = PLACEHOLDER_ITEMS[tab];
-  if (!map) {
-    return [];
-  }
-
-  return map[projectId] ?? map.default ?? [];
+export const getRecentProjectResources = (
+  project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
+  limit = 4,
+): ProjectResourceItem[] => {
+  return getProjectResourceGroups(project)
+    .flatMap((group) => group.items)
+    .slice(0, limit);
 };

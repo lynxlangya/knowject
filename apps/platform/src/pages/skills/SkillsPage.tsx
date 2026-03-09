@@ -1,12 +1,11 @@
-import { Card, Typography } from 'antd';
+import { GlobalAssetManagementPage } from '../assets/GlobalAssetManagementPage';
 
 export const SkillsPage = () => {
   return (
-    <Card>
-      <Typography.Title level={4}>技能</Typography.Title>
-      <Typography.Paragraph>
-        技能模块正在建设中，当前为独立路由占位页，后续将接入团队技能资产与复用能力。
-      </Typography.Paragraph>
-    </Card>
+    <GlobalAssetManagementPage
+      title="技能"
+      assetType="skills"
+      description="全局技能是可跨项目复用的方法资产，用于沉淀成熟工作流和最佳实践，由全局统一治理并按项目接入。"
+    />
   );
 };

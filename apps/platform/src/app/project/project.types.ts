@@ -23,13 +23,42 @@ export interface ProjectMember {
   isActive: boolean;
 }
 
-export type ProjectTabKey = 'chat' | 'knowledge' | 'members' | 'agents' | 'skills';
+export type ProjectSectionKey = 'overview' | 'chat' | 'resources' | 'members';
 
-export interface ProjectWorkspaceSectionItem {
+export type ProjectResourceFocus = 'knowledge' | 'skills' | 'agents';
+
+export interface GlobalCatalogOption {
+  value: string;
+  label: string;
+}
+
+export interface GlobalAssetItem {
   id: string;
+  type: ProjectResourceFocus;
+  name: string;
+  description: string;
+  updatedAt: string;
+  owner: string;
+  usageCount: number;
+}
+
+export interface ProjectResourceItem extends GlobalAssetItem {
+  source: 'global';
+}
+
+export interface ProjectResourceGroup {
+  key: ProjectResourceFocus;
   title: string;
   description: string;
-  updatedAt?: string;
+  items: ProjectResourceItem[];
+}
+
+export interface ProjectOverviewStats {
+  activeMembers: number;
+  conversationCount: number;
+  knowledgeCount: number;
+  agentCount: number;
+  skillCount: number;
 }
 
 export interface CreateProjectInput {

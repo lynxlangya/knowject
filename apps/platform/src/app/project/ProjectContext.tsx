@@ -1,24 +1,12 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   createProjectSummary,
   loadProjects,
   saveProjects,
 } from './project.storage';
 import type { AddProjectResult, CreateProjectInput, ProjectSummary } from './project.types';
-
-interface ProjectContextValue {
-  projects: ProjectSummary[];
-  addProject: (input: CreateProjectInput) => AddProjectResult;
-  getProjectById: (projectId: string) => ProjectSummary | null;
-}
-
-const ProjectContext = createContext<ProjectContextValue | null>(null);
+import { ProjectContext } from './projectContext.shared';
+import type { ProjectContextValue } from './projectContext.shared';
 
 export interface ProjectProviderProps {
   children: React.ReactNode;
@@ -73,13 +61,4 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
   return (
     <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>
   );
-};
-
-export const useProjectContext = (): ProjectContextValue => {
-  const context = useContext(ProjectContext);
-  if (!context) {
-    throw new Error('useProjectContext 必须在 ProjectProvider 内使用');
-  }
-
-  return context;
 };

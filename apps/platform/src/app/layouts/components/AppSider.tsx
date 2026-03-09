@@ -4,14 +4,14 @@ import { App, Button, Form, Input, Layout, Menu, Modal, Select, Typography } fro
 import { useLocation, useNavigate } from 'react-router-dom';
 import { SIDER_WIDTH } from '../layout.constants';
 import { getMenuPath, menuItems } from '../../navigation/menu';
-import { buildProjectPath } from '../../navigation/paths';
-import { useProjectContext } from '../../project/ProjectContext';
+import { buildProjectOverviewPath } from '../../navigation/paths';
 import {
-  PROJECT_AGENT_OPTIONS,
-  PROJECT_KNOWLEDGE_OPTIONS,
-  PROJECT_MEMBER_OPTIONS,
-  PROJECT_SKILL_OPTIONS,
-} from '../../project/project.create.mock';
+  GLOBAL_AGENT_OPTIONS,
+  GLOBAL_KNOWLEDGE_OPTIONS,
+  GLOBAL_MEMBER_OPTIONS,
+  GLOBAL_SKILL_OPTIONS,
+} from '../../project/project.catalog';
+import { useProjectContext } from '../../project/useProjectContext';
 
 const { Sider } = Layout;
 
@@ -80,7 +80,7 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
   };
 
   const handleOpenProject = (projectId: string) => {
-    navigate(buildProjectPath(projectId));
+    navigate(buildProjectOverviewPath(projectId));
   };
 
   return (
@@ -200,20 +200,20 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
               mode="multiple"
               allowClear
               placeholder="可选"
-              options={PROJECT_KNOWLEDGE_OPTIONS}
+              options={GLOBAL_KNOWLEDGE_OPTIONS}
             />
           </Form.Item>
 
           <Form.Item name="memberIds" label="成员">
-            <Select mode="multiple" allowClear placeholder="可选" options={PROJECT_MEMBER_OPTIONS} />
+            <Select mode="multiple" allowClear placeholder="可选" options={GLOBAL_MEMBER_OPTIONS} />
           </Form.Item>
 
           <Form.Item name="agentIds" label="智能体">
-            <Select mode="multiple" allowClear placeholder="可选" options={PROJECT_AGENT_OPTIONS} />
+            <Select mode="multiple" allowClear placeholder="可选" options={GLOBAL_AGENT_OPTIONS} />
           </Form.Item>
 
           <Form.Item name="skillIds" label="技能">
-            <Select mode="multiple" allowClear placeholder="可选" options={PROJECT_SKILL_OPTIONS} />
+            <Select mode="multiple" allowClear placeholder="可选" options={GLOBAL_SKILL_OPTIONS} />
           </Form.Item>
         </Form>
       </Modal>

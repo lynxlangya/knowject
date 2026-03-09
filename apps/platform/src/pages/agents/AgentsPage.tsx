@@ -1,12 +1,11 @@
-import { Card, Typography } from 'antd';
+import { GlobalAssetManagementPage } from '../assets/GlobalAssetManagementPage';
 
 export const AgentsPage = () => {
   return (
-    <Card>
-      <Typography.Title level={4}>智能体</Typography.Title>
-      <Typography.Paragraph>
-        智能体模块正在建设中，当前为独立路由占位页，后续将接入 Agent 配置与协作流程。
-      </Typography.Paragraph>
-    </Card>
+    <GlobalAssetManagementPage
+      title="智能体"
+      assetType="agents"
+      description="全局智能体负责封装可复用的角色、提示词和协作流程，项目内仅做绑定和执行编排，不直接修改全局定义。"
+    />
   );
 };

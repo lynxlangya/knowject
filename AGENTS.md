@@ -48,19 +48,21 @@ packages/
   - 顶部全局 Header 不再作为登录后主导航承载。
 - 项目状态由 `apps/platform/src/app/project/ProjectContext.tsx` 统一管理：
   - `projects` 持久化到 `localStorage`（键：`knowject_projects`）。
-  - 项目创建入口采用弹框表单：项目名称 + 知识库/成员/智能体/技能（Mock 选择项）。
+  - 项目创建入口采用弹框表单：项目名称 + 知识库/成员/智能体/技能（共享 Mock 资产源）。
   - 项目页 canonical 路由为 `/project/:projectId/*`，子路由包含：
+    - `/project/:projectId/overview`
     - `/project/:projectId/chat`
     - `/project/:projectId/chat/:chatId`
-    - `/project/:projectId/knowledge`
+    - `/project/:projectId/resources`
     - `/project/:projectId/members`
-    - `/project/:projectId/agents`
-    - `/project/:projectId/skills`
-  - `/project/:projectId` 必须重定向到 `/project/:projectId/chat`。
+  - `/project/:projectId` 必须重定向到 `/project/:projectId/overview`。
+  - 旧路径 `/project/:projectId/knowledge|skills|agents` 仅做兼容重定向，统一跳转到 `/project/:projectId/resources?focus=*`。
   - 旧路径 `/home/project/*` 仅做兼容重定向，不作为业务 canonical。
+  - 项目内一级导航固定为：`概览`、`对话`、`资源`、`成员`。
+  - 项目内 `资源` 页只展示已接入的全局资产；全局 `知识库 / 技能 / 智能体` 页面负责资产治理、版本与复用，不承载项目内编排。
 - 主菜单在 `/project/*` 路由下不高亮“主页”（项目态与全局菜单态解耦）。
 - 主页 `apps/platform/src/pages/home/HomePage.tsx` 仅承载首页空态引导，不再承载项目会话编排。
-- 其它一级菜单页首版保持独立路由占位，不承载项目会话编排逻辑。
+- 全局 `知识库 / 技能 / 智能体` 页首版定位为“全局资产管理中心”，需明确区分于项目内 `资源` 页。
 
 ## JavaScript REPL (Node)
 - Use `js_repl` for Node-backed JavaScript with top-level await in a persistent kernel.
@@ -71,6 +73,10 @@ packages/
 - Top-level bindings persist across cells. If you hit `SyntaxError: Identifier 'x' has already been declared`, reuse the binding, pick a new name, wrap in `{ ... }` for block scope, or reset the kernel with `js_repl_reset`.
 - Top-level static import declarations (for example `import x from "pkg"`) are currently unsupported in `js_repl`; use dynamic imports with `await import("pkg")` instead.
 - Avoid direct access to `process.stdout` / `process.stderr` / `process.stdin`; it can corrupt the JSON line protocol. Use `console.log` and `codex.tool(...)`.
+
+# ExecPlans
+
+在编写复杂功能、迁移或重大重构时，从设计到实施阶段，请使用如.agent/PLANS.md中所述的执行计划。
 
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.

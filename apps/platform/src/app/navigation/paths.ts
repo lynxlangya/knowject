@@ -13,18 +13,25 @@ export const PATHS = {
 
 export const ROUTE_PATTERNS = {
   project: `${PATHS.project}/:projectId`,
+  projectOverview: `${PATHS.project}/:projectId/overview`,
   projectChat: `${PATHS.project}/:projectId/chat`,
   projectChatDetail: `${PATHS.project}/:projectId/chat/:chatId`,
-  projectKnowledge: `${PATHS.project}/:projectId/knowledge`,
+  projectResources: `${PATHS.project}/:projectId/resources`,
   projectMembers: `${PATHS.project}/:projectId/members`,
-  projectAgents: `${PATHS.project}/:projectId/agents`,
-  projectSkills: `${PATHS.project}/:projectId/skills`,
+  projectKnowledgeLegacy: `${PATHS.project}/:projectId/knowledge`,
+  projectAgentsLegacy: `${PATHS.project}/:projectId/agents`,
+  projectSkillsLegacy: `${PATHS.project}/:projectId/skills`,
   legacyHomeProject: `${PATHS.home}/project/:projectId`,
-  legacyHomeProjectChat: `${PATHS.home}/project/:projectId/chat/:chatId`,
+  legacyHomeProjectChat: `${PATHS.home}/project/:projectId/chat`,
+  legacyHomeProjectChatDetail: `${PATHS.home}/project/:projectId/chat/:chatId`,
 } as const;
 
 export const buildProjectPath = (projectId: string): string => {
   return `${PATHS.project}/${encodeURIComponent(projectId)}`;
+};
+
+export const buildProjectOverviewPath = (projectId: string): string => {
+  return `${buildProjectPath(projectId)}/overview`;
 };
 
 export const buildProjectChatPath = (projectId: string, chatId?: string): string => {
@@ -36,18 +43,18 @@ export const buildProjectChatPath = (projectId: string, chatId?: string): string
   return `${chatPath}/${encodeURIComponent(chatId)}`;
 };
 
-export const buildProjectKnowledgePath = (projectId: string): string => {
-  return `${buildProjectPath(projectId)}/knowledge`;
-};
-
 export const buildProjectMembersPath = (projectId: string): string => {
   return `${buildProjectPath(projectId)}/members`;
 };
 
-export const buildProjectAgentsPath = (projectId: string): string => {
-  return `${buildProjectPath(projectId)}/agents`;
-};
+export const buildProjectResourcesPath = (
+  projectId: string,
+  focus?: 'knowledge' | 'skills' | 'agents',
+): string => {
+  const basePath = `${buildProjectPath(projectId)}/resources`;
+  if (!focus) {
+    return basePath;
+  }
 
-export const buildProjectSkillsPath = (projectId: string): string => {
-  return `${buildProjectPath(projectId)}/skills`;
+  return `${basePath}?focus=${encodeURIComponent(focus)}`;
 };
