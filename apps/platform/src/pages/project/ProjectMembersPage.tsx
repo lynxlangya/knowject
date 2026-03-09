@@ -5,8 +5,11 @@ export const ProjectMembersPage = () => {
   const { members, activeProject } = useProjectPageContext();
 
   return (
-    <section className="space-y-4">
-      <Card className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!">
+    <section className="flex flex-col gap-3">
+      <Card
+        className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
+        styles={{ body: { padding: '20px 20px 18px' } }}
+      >
         <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
           项目成员
         </Typography.Text>
@@ -18,11 +21,11 @@ export const ProjectMembersPage = () => {
         </Typography.Paragraph>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-5 md:gap-6 md:grid-cols-2 xl:grid-cols-3">
         {members.map((member) => (
           <article
             key={member.id}
-            className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]"
+            className="flex h-full flex-col gap-5 rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.04)]"
           >
             <div className="flex items-center gap-4">
               <img
@@ -39,7 +42,7 @@ export const ProjectMembersPage = () => {
                 </Tag>
               </div>
             </div>
-            <Typography.Paragraph className="mb-0! mt-4 text-sm! text-slate-500!">
+            <Typography.Paragraph className="mb-0! text-sm! leading-7! text-slate-500!">
               当前为项目协作者占位视图，后续将补充角色分工、权限范围和最近协作动态。
             </Typography.Paragraph>
           </article>

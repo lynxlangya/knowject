@@ -4,6 +4,7 @@ import type {
   ProjectOverviewStats,
   ProjectSummary,
 } from '../../../app/project/project.types';
+import { KNOWJECT_BRAND } from '../../../styles/brand';
 import type { ProjectWorkspaceMeta } from '../project.mock';
 
 interface ProjectHeaderProps {
@@ -34,11 +35,25 @@ export const ProjectHeader = ({
     <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
       <div className="flex flex-col gap-5 bg-[linear-gradient(135deg,rgba(239,246,255,0.95),rgba(255,255,255,0.98))] px-6 py-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-slate-900 text-2xl font-semibold text-white shadow-[0_14px_28px_rgba(15,23,42,0.18)]">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-[20px] border text-2xl font-semibold text-white"
+            style={{
+              borderColor: KNOWJECT_BRAND.primaryBorder,
+              backgroundImage: KNOWJECT_BRAND.heroGradient,
+              boxShadow: `0 12px 24px ${KNOWJECT_BRAND.primaryGlow}`,
+            }}
+          >
             {projectInitial}
           </div>
           <div className="min-w-0">
-            <Tag color="blue" className="mb-3">
+            <Tag
+              className="mb-3 rounded-full px-2.5 py-1 text-[12px] font-semibold"
+              style={{
+                color: KNOWJECT_BRAND.primaryText,
+                backgroundColor: KNOWJECT_BRAND.primarySurface,
+                borderColor: KNOWJECT_BRAND.primaryBorder,
+              }}
+            >
               项目工作台
             </Tag>
             <Typography.Title level={2} className="mb-1! text-slate-900!">

@@ -1,5 +1,6 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Checkbox, Form, Input, Typography, type FormInstance } from 'antd';
+import { KNOWJECT_BRAND } from '../../../styles/brand';
 import { LOGIN_FORM_CLASS_NAME, type LoginFormValues } from '../constants';
 
 interface LoginFormPanelProps {
@@ -68,8 +69,9 @@ export const LoginFormPanel = ({
             </Form.Item>
 
             <Button
-              className="p-0! font-medium! text-[#3b82f6]! hover:text-[#2f6fe3]!"
+              className="p-0! font-medium! hover:opacity-90!"
               type="link"
+              style={{ color: KNOWJECT_BRAND.primary }}
               onClick={onForgotPassword}
             >
               忘记密码？
@@ -80,7 +82,11 @@ export const LoginFormPanel = ({
             <Button
               type="primary"
               htmlType="submit"
-              className="h-14! rounded-[28px]! border-none! bg-linear-to-r! from-[#3b82f6]! to-[#2f6fe3]! text-base! font-bold! tracking-[0.01em]! shadow-[0_8px_20px_rgba(59,130,246,0.24),inset_0_0_0_1px_rgba(255,255,255,0.34)]! transition-all! duration-200! hover:-translate-y-px! hover:shadow-[0_10px_24px_rgba(59,130,246,0.28),inset_0_0_0_1px_rgba(255,255,255,0.34)]! active:translate-y-0!"
+              className="h-14! rounded-[28px]! border-none! text-base! font-bold! tracking-[0.01em]! transition-all! duration-200! hover:-translate-y-px! active:translate-y-0!"
+              style={{
+                backgroundImage: KNOWJECT_BRAND.navGradient,
+                boxShadow: `0 8px 20px ${KNOWJECT_BRAND.primaryGlow}, inset 0 0 0 1px rgba(255,255,255,0.34)`,
+              }}
               loading={loading}
               block
             >
@@ -95,7 +101,8 @@ export const LoginFormPanel = ({
         <button
           type="button"
           onClick={onForgotPassword}
-          className="cursor-pointer border-none bg-transparent p-0 font-semibold text-[#2f6fe3] transition-colors hover:text-[#1d4ed8]"
+          className="cursor-pointer border-none bg-transparent p-0 font-semibold transition-opacity hover:opacity-90"
+          style={{ color: KNOWJECT_BRAND.primaryHover }}
         >
           联系技术支持
         </button>

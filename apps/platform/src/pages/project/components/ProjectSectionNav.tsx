@@ -1,4 +1,5 @@
 import type { ProjectSectionKey } from '../../../app/project/project.types';
+import { KNOWJECT_BRAND } from '../../../styles/brand';
 
 interface ProjectSectionNavProps {
   activeKey: ProjectSectionKey;
@@ -42,15 +43,30 @@ export const ProjectSectionNav = ({
               key={item.key}
               type="button"
               className={[
-                'rounded-[18px] px-4 py-3 text-left transition-all',
+                'rounded-[18px] border px-4 py-3 text-left transition-all',
                 active
-                  ? 'bg-slate-900 text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)]'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                  ? 'text-white'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900',
               ].join(' ')}
+              style={
+                active
+                  ? {
+                      borderColor: KNOWJECT_BRAND.primaryBorder,
+                      backgroundImage: KNOWJECT_BRAND.navGradient,
+                      boxShadow: `0 10px 20px ${KNOWJECT_BRAND.primaryGlow}`,
+                    }
+                  : undefined
+              }
               onClick={() => onSelect(item.key)}
             >
-              <div className="text-sm font-semibold">{item.label}</div>
-              <div className={active ? 'mt-1 text-xs text-slate-300' : 'mt-1 text-xs text-slate-400'}>
+              <div className={active ? 'text-sm font-semibold text-white' : 'text-sm font-semibold text-slate-900'}>
+                {item.label}
+              </div>
+              <div
+                className={
+                  active ? 'mt-1 text-xs text-slate-300' : 'mt-1 text-xs text-slate-400'
+                }
+              >
                 {item.description}
               </div>
             </button>

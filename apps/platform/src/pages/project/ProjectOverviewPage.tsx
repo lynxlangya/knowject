@@ -19,8 +19,11 @@ export const ProjectOverviewPage = () => {
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="space-y-4">
-        <Card className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!">
+      <div className="flex flex-col gap-3">
+        <Card
+          className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
+          styles={{ body: { padding: '20px 20px 18px' } }}
+        >
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <Typography.Title level={4} className="mb-1! text-slate-900!">
@@ -34,7 +37,7 @@ export const ProjectOverviewPage = () => {
           </div>
 
           {recentConversations.length > 0 ? (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {recentConversations.map((conversation) => (
                 <button
                   key={conversation.id}
@@ -61,7 +64,10 @@ export const ProjectOverviewPage = () => {
           )}
         </Card>
 
-        <Card className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!">
+        <Card
+          className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
+          styles={{ body: { padding: '20px 20px 20px' } }}
+        >
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <Typography.Title level={4} className="mb-1! text-slate-900!">
@@ -99,7 +105,10 @@ export const ProjectOverviewPage = () => {
         </Card>
       </div>
 
-      <Card className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!">
+      <Card
+        className="self-start rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
+        styles={{ body: { padding: '20px 20px 20px' } }}
+      >
         <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
           快捷操作
         </Typography.Text>
@@ -110,11 +119,12 @@ export const ProjectOverviewPage = () => {
           先看项目状态，再进入对话、资源和成员页，能显著降低工作台的认知切换成本。
         </Typography.Paragraph>
 
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <Button
             block
             type="primary"
             size="large"
+            className="h-12! rounded-[18px]! text-base! font-semibold!"
             onClick={() =>
               navigate(buildProjectChatPath(activeProject.id, recentConversations[0]?.id))
             }
@@ -124,6 +134,7 @@ export const ProjectOverviewPage = () => {
           <Button
             block
             size="large"
+            className="h-12! rounded-[18px]! text-base! font-medium!"
             onClick={() => navigate(buildProjectResourcesPath(activeProject.id))}
           >
             引入资源
@@ -131,6 +142,7 @@ export const ProjectOverviewPage = () => {
           <Button
             block
             size="large"
+            className="h-12! rounded-[18px]! text-base! font-medium!"
             onClick={() => navigate(buildProjectMembersPath(activeProject.id))}
           >
             查看成员

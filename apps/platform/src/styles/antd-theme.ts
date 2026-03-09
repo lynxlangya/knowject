@@ -1,8 +1,14 @@
 import { theme, type ThemeConfig } from 'antd';
+import { KNOWJECT_BRAND } from './brand';
 
 export const themeConfig: ThemeConfig = {
   token: {
-    colorPrimary: '#3B82F6',
+    colorPrimary: KNOWJECT_BRAND.primary,
+    colorPrimaryHover: KNOWJECT_BRAND.primaryHover,
+    colorPrimaryActive: KNOWJECT_BRAND.primaryActive,
+    colorLink: KNOWJECT_BRAND.primaryHover,
+    colorInfo: KNOWJECT_BRAND.primary,
+    controlOutline: KNOWJECT_BRAND.primaryGlow,
     borderRadius: 10,
     colorBgLayout: '#f8fafc',
     fontFamily:
@@ -16,10 +22,10 @@ export const themeConfig: ThemeConfig = {
     Menu: {
       itemBg: '#f8fafc',
       itemColor: '#0f172a',
-      itemHoverColor: '#1d4ed8',
-      itemHoverBg: '#eff6ff',
-      itemSelectedColor: '#2563eb',
-      itemSelectedBg: '#dbeafe',
+      itemHoverColor: KNOWJECT_BRAND.primaryHover,
+      itemHoverBg: KNOWJECT_BRAND.primarySurface,
+      itemSelectedColor: KNOWJECT_BRAND.primaryHover,
+      itemSelectedBg: KNOWJECT_BRAND.primarySurfaceStrong,
       activeBarBorderWidth: 0,
     },
   },
