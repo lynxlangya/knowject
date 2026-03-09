@@ -75,7 +75,6 @@ export const ProjectLayout = () => {
 
   const activeSection = resolveSectionByPathname(location.pathname);
   const isOverviewSection = activeSection === 'overview';
-  const projectInitial = (activeProject.name.trim().slice(0, 1) || 'P').toUpperCase();
   const members = getProjectMembers(activeProject);
   const meta = getProjectMeta(activeProject.id);
   const stats = getProjectOverviewStats(activeProject);
@@ -110,7 +109,6 @@ export const ProjectLayout = () => {
       </div>
       <ProjectSectionNav
         activeKey={activeSection}
-        overviewProjectInitial={projectInitial}
         onSelect={handleSelectSection}
       />
       <div className={`project-layout-outlet ${isOverviewSection ? '' : 'project-page-surface-enter'}`}>

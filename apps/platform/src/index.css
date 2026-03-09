@@ -67,7 +67,7 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
-  padding-top: 0.75rem;
+  padding-top: 0.5rem;
 }
 
 .project-layout-outlet > * {
