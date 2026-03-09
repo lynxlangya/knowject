@@ -21,6 +21,7 @@ export const ProjectHeader = ({
   stats,
 }: ProjectHeaderProps) => {
   const projectInitial = (project.name.trim().slice(0, 1) || 'P').toUpperCase();
+  const projectDescription = project.description.trim() || meta.summary;
   const visibleMembers = members.slice(0, 4);
   const hiddenMemberCount = Math.max(members.length - visibleMembers.length, 0);
   const statItems = [
@@ -32,8 +33,8 @@ export const ProjectHeader = ({
   ];
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
-      <div className="flex flex-col gap-5 bg-[linear-gradient(135deg,rgba(239,246,255,0.95),rgba(255,255,255,0.98))] px-6 py-6 lg:flex-row lg:items-start lg:justify-between">
+    <section className="overflow-hidden rounded-[28px] border border-slate-200/90 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.045)]">
+      <div className="flex flex-col gap-5 bg-[linear-gradient(145deg,rgba(246,249,253,0.98),rgba(237,244,255,0.92))] px-6 py-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-center gap-4">
           <div
             className="flex h-16 w-16 items-center justify-center rounded-[20px] border text-2xl font-semibold text-white"
@@ -46,17 +47,17 @@ export const ProjectHeader = ({
             {projectInitial}
           </div>
           <div className="flex min-w-0 flex-col justify-center gap-2">
-            <Typography.Title level={2} className="mb-0! mt-0! leading-[1.08]! text-slate-900!">
+            <Typography.Title level={2} className="mb-0! mt-0! leading-[1.08]! text-slate-800!">
               {project.name}
             </Typography.Title>
-            <Typography.Paragraph className="mb-0! max-w-2xl text-base! text-slate-600!">
-              {meta.summary}
+            <Typography.Paragraph className="mb-0! max-w-2xl text-base! text-slate-500!">
+              {projectDescription}
             </Typography.Paragraph>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-white/80 bg-white/70 px-4 py-4 shadow-[0_10px_30px_rgba(148,163,184,0.12)] backdrop-blur">
-          <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+        <div className="rounded-3xl border border-white/80 bg-white/78 px-4 py-4 shadow-[0_8px_24px_rgba(148,163,184,0.11)] backdrop-blur">
+          <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
             当前协作者
           </Typography.Text>
           <div className="mt-3 flex items-center">
@@ -78,7 +79,7 @@ export const ProjectHeader = ({
               </span>
             ) : null}
           </div>
-          <Typography.Paragraph className="mb-0! mt-3 max-w-[260px] text-sm! text-slate-500!">
+          <Typography.Paragraph className="mb-0! mt-3 max-w-[260px] text-sm! text-slate-600!">
             围绕当前项目的知识、对话、资源与协作关系进行统一编排。
           </Typography.Paragraph>
         </div>
@@ -87,10 +88,10 @@ export const ProjectHeader = ({
       <div className="grid gap-px border-t border-slate-200 bg-slate-200 sm:grid-cols-2 xl:grid-cols-5">
         {statItems.map((item) => (
           <div key={item.label} className="bg-white px-5 py-4">
-            <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+            <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
               {item.label}
             </Typography.Text>
-            <Typography.Title level={3} className="mb-0! mt-2 text-slate-900!">
+            <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
               {item.value}
             </Typography.Title>
           </div>

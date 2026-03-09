@@ -15,16 +15,16 @@ export const ProjectResourceGroup = ({
   return (
     <section
       className={[
-        'rounded-[24px] border bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)] transition-colors',
+        'rounded-[24px] border bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.035)] transition-colors',
         highlighted ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200',
       ].join(' ')}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Typography.Title level={4} className="mb-1! text-slate-900!">
+          <Typography.Title level={4} className="mb-1! text-slate-800!">
             {group.title}
           </Typography.Title>
-          <Typography.Paragraph className="mb-0! max-w-2xl text-sm! text-slate-500!">
+          <Typography.Paragraph className="mb-0! max-w-2xl text-sm! text-slate-600!">
             {group.description}
           </Typography.Paragraph>
         </div>
@@ -37,10 +37,10 @@ export const ProjectResourceGroup = ({
             {group.items.map((item) => (
               <article
                 key={item.id}
-                className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4"
+                className="rounded-[20px] border border-slate-200 bg-slate-50/55 p-4"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <Typography.Text className="text-base font-semibold text-slate-900">
+                  <Typography.Text className="text-base font-semibold text-slate-800">
                     {item.name}
                   </Typography.Text>
                   <Tag color="blue">来自全局</Tag>
@@ -48,7 +48,7 @@ export const ProjectResourceGroup = ({
                 <Typography.Paragraph className="mb-0! mt-3 text-sm! text-slate-600!">
                   {item.description}
                 </Typography.Paragraph>
-                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400">
+                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
                   <span>维护方：{item.owner}</span>
                   <span>最近更新：{item.updatedAt}</span>
                   <span>使用项目：{item.usageCount}</span>

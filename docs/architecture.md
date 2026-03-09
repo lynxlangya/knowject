@@ -66,14 +66,14 @@ docs/
 ### 4.1 本地存储
 
 - `knowject_token`：登录成功后的 Bearer Token。
-- `knowject_projects`：项目列表持久化数据。
+- `knowject_projects`：项目列表持久化数据，包含项目基础信息、项目说明、置顶状态与展示顺序。
 
 ### 4.2 项目态数据
 
 - `apps/platform/src/app/project/ProjectContext.tsx`
-  - 提供项目列表读写、按 ID 查找、项目创建能力。
+  - 提供项目列表读写、按 ID 查找、项目创建 / 编辑 / 置顶 / 删除能力。
 - `apps/platform/src/app/project/project.storage.ts`
-  - 定义默认项目与 `localStorage` 读写。
+  - 定义默认项目与 `localStorage` 读写，并兼容置顶字段缺省值回填。
 - `apps/platform/src/app/project/project.catalog.ts`
   - 定义全局知识库、技能、智能体、成员等共享 Mock 资产。
 - `apps/platform/src/pages/project/project.mock.ts`

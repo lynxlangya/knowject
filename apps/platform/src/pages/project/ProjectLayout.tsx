@@ -100,7 +100,7 @@ export const ProjectLayout = () => {
   };
 
   return (
-    <section className="flex min-h-full flex-col">
+    <section className="flex h-full min-h-0 flex-col">
       <div
         aria-hidden={!isOverviewSection}
         data-state={isOverviewSection ? 'expanded' : 'collapsed'}

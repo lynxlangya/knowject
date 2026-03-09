@@ -30,8 +30,10 @@ export const ProjectConversationList = ({
             <button
               type="button"
               className={[
-                'w-full border-l-2 px-4 py-4 text-left transition-colors',
-                active ? 'border-l-blue-500 bg-white' : 'border-l-transparent hover:bg-white',
+                'w-full rounded-r-[18px] border-l-2 px-4 py-4 text-left transition-colors',
+                active
+                  ? 'border-l-blue-500 bg-white/90 shadow-[0_8px_20px_rgba(15,23,42,0.035)]'
+                  : 'border-l-transparent hover:bg-white/85',
               ].join(' ')}
               onClick={() => onSelect(conversation.id)}
             >
@@ -43,7 +45,7 @@ export const ProjectConversationList = ({
                   {conversation.updatedAt}
                 </Typography.Text>
               </div>
-              <Typography.Text className="block text-sm text-slate-500">
+              <Typography.Text className="block text-sm text-slate-600">
                 {conversation.preview}
               </Typography.Text>
             </button>

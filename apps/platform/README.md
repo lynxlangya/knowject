@@ -16,13 +16,13 @@
 ## 布局与职责
 
 - 登录后主布局为“左侧全局侧栏 + 右侧内容区”。
-- 左侧侧栏负责品牌区、全局导航、“我的项目”列表、项目创建与退出登录。
+- 左侧侧栏负责品牌区、全局导航、“我的项目”列表、项目创建 / 编辑 / 置顶 / 删除与退出登录。
 - 项目态四个一级页固定为：`概览`、`对话`、`资源`、`成员`。
 - 全局 `知识库 / 技能 / 智能体` 页面负责资产治理壳层；项目内 `资源` 页只展示项目已接入的资产。
 
 ## 数据来源
 
-- `src/app/project/project.storage.ts`：默认项目与 `knowject_projects` 持久化。
+- `src/app/project/project.storage.ts`：默认项目与 `knowject_projects` 持久化（含置顶状态、排序、项目名称与项目说明）。
 - `src/app/project/project.catalog.ts`：全局资产与成员 Mock 源。
 - `src/pages/project/project.mock.ts`：项目概览、对话、资源、成员演示数据。
 - `src/api`：登录与记忆查询接口封装；项目页主体内容暂未接入真实后端。

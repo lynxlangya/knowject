@@ -21,12 +21,12 @@ export const ProjectOverviewPage = () => {
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex flex-col gap-3">
         <Card
-          className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
+          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
           styles={{ body: { padding: '20px 20px 18px' } }}
         >
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <Typography.Title level={4} className="mb-1! text-slate-900!">
+              <Typography.Title level={4} className="mb-1! text-slate-800!">
                 最近对话
               </Typography.Title>
               <Typography.Text className="text-sm text-slate-500">
@@ -42,18 +42,18 @@ export const ProjectOverviewPage = () => {
                 <button
                   key={conversation.id}
                   type="button"
-                  className="w-full rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4 text-left transition-colors hover:border-slate-300 hover:bg-white"
+                  className="w-full rounded-[20px] border border-slate-200 bg-slate-50/55 px-4 py-4 text-left transition-colors hover:border-slate-300 hover:bg-white"
                   onClick={() => navigate(buildProjectChatPath(activeProject.id, conversation.id))}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <Typography.Text className="text-base font-semibold text-slate-900">
+                    <Typography.Text className="text-base font-semibold text-slate-800">
                       {conversation.title}
                     </Typography.Text>
                     <Typography.Text className="text-xs text-slate-400">
                       {conversation.updatedAt}
                     </Typography.Text>
                   </div>
-                  <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
+                  <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-600!">
                     {conversation.preview}
                   </Typography.Paragraph>
                 </button>
@@ -65,12 +65,12 @@ export const ProjectOverviewPage = () => {
         </Card>
 
         <Card
-          className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
+          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
           styles={{ body: { padding: '20px 20px 20px' } }}
         >
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <Typography.Title level={4} className="mb-1! text-slate-900!">
+              <Typography.Title level={4} className="mb-1! text-slate-800!">
                 最近接入资源
               </Typography.Title>
               <Typography.Text className="text-sm text-slate-500">
@@ -85,15 +85,15 @@ export const ProjectOverviewPage = () => {
               {recentResources.map((resource) => (
                 <article
                   key={resource.id}
-                  className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
+                  className="rounded-[20px] border border-slate-200 bg-slate-50/55 px-4 py-4"
                 >
                   <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
                     {resource.type}
                   </Typography.Text>
-                  <Typography.Title level={5} className="mb-1! mt-2 text-slate-900!">
+                  <Typography.Title level={5} className="mb-1! mt-2 text-slate-800!">
                     {resource.name}
                   </Typography.Title>
-                  <Typography.Paragraph className="mb-0! text-sm! text-slate-500!">
+                  <Typography.Paragraph className="mb-0! text-sm! text-slate-600!">
                     {resource.description}
                   </Typography.Paragraph>
                 </article>
@@ -106,16 +106,16 @@ export const ProjectOverviewPage = () => {
       </div>
 
       <Card
-        className="self-start rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
+        className="self-start rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
         styles={{ body: { padding: '20px 20px 20px' } }}
       >
         <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
           快捷操作
         </Typography.Text>
-        <Typography.Title level={3} className="mb-2! mt-3 text-slate-900!">
+        <Typography.Title level={3} className="mb-2! mt-3 text-slate-800!">
           从项目概览进入下一步
         </Typography.Title>
-        <Typography.Paragraph className="mb-6! text-sm! text-slate-500!">
+        <Typography.Paragraph className="mb-6! text-sm! text-slate-600!">
           先看项目状态，再进入对话、资源和成员页，能显著降低工作台的认知切换成本。
         </Typography.Paragraph>
 

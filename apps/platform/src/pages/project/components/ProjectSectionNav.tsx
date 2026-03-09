@@ -36,7 +36,7 @@ export const ProjectSectionNav = ({
   onSelect,
 }: ProjectSectionNavProps) => {
   return (
-    <nav className="rounded-[24px] border border-slate-200 bg-white/92 p-2 shadow-[0_12px_30px_rgba(15,23,42,0.04)] backdrop-blur-sm transition-[box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
+    <nav className="rounded-[24px] border border-slate-200/90 bg-white/88 p-2 shadow-[0_8px_24px_rgba(15,23,42,0.035)] backdrop-blur-sm transition-[box-shadow,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]">
       <div className="grid gap-2 md:grid-cols-4">
         {NAV_ITEMS.map((item) => {
           const active = item.key === activeKey;
@@ -49,7 +49,7 @@ export const ProjectSectionNav = ({
                 'transform-gpu rounded-[18px] border px-4 py-3 text-left transition-[transform,box-shadow,background-color,color,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
                 active
                   ? '-translate-y-px text-white'
-                  : 'border-transparent text-slate-600 hover:-translate-y-px hover:bg-slate-50/90 hover:text-slate-900',
+                  : 'border-transparent text-slate-600 hover:-translate-y-px hover:bg-white/82 hover:text-slate-800',
               ].join(' ')}
               style={
                 active
@@ -75,10 +75,10 @@ export const ProjectSectionNav = ({
                     {overviewProjectInitial}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-slate-900 transition-colors duration-300">
+                    <span className="block text-sm font-semibold text-slate-800 transition-colors duration-300">
                       {item.label}
                     </span>
-                    <span className="mt-1 block text-xs text-slate-400 transition-colors duration-300">
+                    <span className="mt-1 block text-xs text-slate-500 transition-colors duration-300">
                       {item.description}
                     </span>
                   </span>
@@ -88,7 +88,7 @@ export const ProjectSectionNav = ({
                   <div
                     className={[
                       'flex items-center gap-2 text-sm font-semibold transition-colors duration-300',
-                      active ? 'text-white' : 'text-slate-900',
+                      active ? 'text-white' : 'text-slate-700',
                     ].join(' ')}
                   >
                     {item.label}
@@ -96,7 +96,7 @@ export const ProjectSectionNav = ({
                   <div
                     className={[
                       'mt-1 text-xs transition-colors duration-300',
-                      active ? 'text-slate-300' : 'text-slate-400',
+                      active ? 'text-slate-300' : 'text-slate-500',
                     ].join(' ')}
                   >
                     {item.description}

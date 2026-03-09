@@ -22,16 +22,16 @@ export const ProjectChatPage = () => {
   };
 
   return (
-    <section className="grid h-full min-h-full overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.04)] xl:grid-cols-[360px_minmax(0,1fr)]">
-      <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-slate-50/50 xl:border-b-0 xl:border-r">
+    <section className="grid h-full min-h-0 flex-1 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.035)] xl:grid-cols-[360px_minmax(0,1fr)]">
+      <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-slate-50/55 xl:border-b-0 xl:border-r">
         <div className="border-b border-slate-200 px-5 py-5">
           <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
             项目对话
           </Typography.Text>
-          <Typography.Title level={4} className="mb-1! mt-2 text-slate-900!">
+          <Typography.Title level={4} className="mb-1! mt-2 text-slate-800!">
             最近上下文
           </Typography.Title>
-          <Typography.Paragraph className="mb-0! text-sm! text-slate-500!">
+          <Typography.Paragraph className="mb-0! text-sm! text-slate-600!">
             对话仍是项目协作入口，但知识和资源不会再隐藏在聊天壳里。
           </Typography.Paragraph>
         </div>
@@ -65,7 +65,7 @@ export const ProjectChatPage = () => {
                 <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                   当前线程
                 </Typography.Text>
-                <Typography.Title level={4} className="mb-1! mt-2 text-slate-900!">
+                <Typography.Title level={4} className="mb-1! mt-2 text-slate-800!">
                   {activeConversation.title}
                 </Typography.Title>
                 <Typography.Text className="text-xs text-slate-400">

@@ -1,7 +1,9 @@
 export interface ProjectSummary {
   id: string;
   name: string;
+  description: string;
   createdAt: string;
+  isPinned: boolean;
   knowledgeBaseIds: string[];
   memberIds: string[];
   agentIds: string[];
@@ -63,10 +65,15 @@ export interface ProjectOverviewStats {
 
 export interface CreateProjectInput {
   name: string;
+  description: string;
   knowledgeBaseIds: string[];
   memberIds: string[];
   agentIds: string[];
   skillIds: string[];
+}
+
+export interface UpdateProjectInput extends CreateProjectInput {
+  projectId: string;
 }
 
 export type ChatMessageRole = 'user' | 'assistant';
@@ -80,3 +87,6 @@ export interface ChatMessage {
 }
 
 export type AddProjectResult = 'added' | 'empty' | 'duplicate';
+export type UpdateProjectResult = 'updated' | 'empty' | 'duplicate' | 'not_found';
+export type ToggleProjectPinResult = 'pinned' | 'unpinned' | 'not_found';
+export type DeleteProjectResult = 'deleted' | 'not_found';

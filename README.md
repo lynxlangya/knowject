@@ -47,7 +47,7 @@ docs/
 ## 数据与联调边界
 
 - `knowject_token`：登录 token 的本地存储键。
-- `knowject_projects`：项目列表的本地存储键。
+- `knowject_projects`：项目列表的本地存储键，包含排序、置顶状态、项目名称、项目说明与项目基础信息。
 - `apps/platform/src/app/project/project.catalog.ts`：全局资产与成员的共享 Mock 源。
 - `apps/platform/src/pages/project/project.mock.ts`：项目页演示数据源。
 - `apps/api` 当前不直接驱动项目态页面内容；`memory` 接口主要用于演示查询流程。
