@@ -1,15 +1,18 @@
-import { Button, Empty, Tag, Typography } from 'antd';
+import { ExportOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Empty, Tag, Tooltip, Typography } from 'antd';
 import type { ProjectResourceGroup as ProjectResourceGroupType } from '../../../app/project/project.types';
 
 interface ProjectResourceGroupProps {
   group: ProjectResourceGroupType;
   highlighted?: boolean;
+  onAddProjectResource: () => void;
   onOpenGlobal: () => void;
 }
 
 export const ProjectResourceGroup = ({
   group,
   highlighted = false,
+  onAddProjectResource,
   onOpenGlobal,
 }: ProjectResourceGroupProps) => {
   return (
@@ -28,7 +31,18 @@ export const ProjectResourceGroup = ({
             {group.description}
           </Typography.Paragraph>
         </div>
-        <Button onClick={onOpenGlobal}>查看全局{group.title}</Button>
+        <div className="flex items-center gap-2">
+          <Button icon={<PlusOutlined />} onClick={onAddProjectResource}>
+            新增
+          </Button>
+          <Tooltip title={`查看全局${group.title}`}>
+            <Button
+              aria-label={`查看全局${group.title}`}
+              icon={<ExportOutlined />}
+              onClick={onOpenGlobal}
+            />
+          </Tooltip>
+        </div>
       </div>
 
       <div className="mt-5">
@@ -37,13 +51,13 @@ export const ProjectResourceGroup = ({
             {group.items.map((item) => (
               <article
                 key={item.id}
-                className="rounded-[20px] border border-slate-200 bg-slate-50/55 p-4"
+                className="rounded-[20px] border border-slate-200 bg-slate-50/55 p-4 shadow-[0_4px_16px_rgba(15,23,42,0.02)]"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <Typography.Text className="text-base font-semibold text-slate-800">
                     {item.name}
                   </Typography.Text>
-                  <Tag color="blue">来自全局</Tag>
+                  <Tag color="blue">全局资产</Tag>
                 </div>
                 <Typography.Paragraph className="mb-0! mt-3 text-sm! text-slate-600!">
                   {item.description}

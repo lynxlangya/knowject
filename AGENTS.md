@@ -30,7 +30,7 @@ docs/
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
 - `docs`：沉淀当前架构、品牌和设计资料；`docs/architecture.md` 是项目结构与路由事实的主文档。
 
-## 3. 当前产品信息架构（2026-03-09）
+## 3. 当前产品信息架构（2026-03-10）
 
 - 登录页路径为 `/login`；登录后默认落点为 `/home`。
 - `/workspace` 仅保留为兼容入口，必须重定向到 `/home`。
@@ -46,7 +46,9 @@ docs/
 - 旧路径 `/project/:projectId/knowledge|skills|agents` 仅做兼容跳转，统一跳转到 `/project/:projectId/resources?focus=*`。
 - 旧路径 `/home/project/*` 仅做兼容跳转，不作为业务 canonical。
 - 项目内一级导航固定为：`概览`、`对话`、`资源`、`成员`。
-- 项目内 `资源` 页只展示项目已接入的全局资产；全局 `知识库 / 技能 / 智能体` 页面负责资产治理、版本与复用，不承载项目内编排。
+- 资产分为两层：`全局资产` 与 `项目资源`。
+- 全局 `知识库 / 技能 / 智能体` 页面负责跨项目资产治理、目录、版本与复用。
+- 项目内 `资源` 页负责展示和编排当前项目的知识、技能与智能体，只承载项目内消费态，不承担全局治理职责。
 
 ## 4. 状态与数据来源约定
 
@@ -55,6 +57,7 @@ docs/
 - `apps/platform/src/app/project/project.catalog.ts` 维护全局知识库、技能、智能体、成员等共享 Mock 资产源。
 - `apps/platform/src/app/project/project.storage.ts` 负责默认项目与项目持久化。
 - `apps/platform/src/pages/project/project.mock.ts` 负责项目概览、对话、资源、成员等页面的演示数据。
+- 项目资源数据当前由“项目绑定的全局资产”映射得到；因此项目资源和全局资产在概念上分层，但当前数据来源仍复用全局 Mock 资产目录。
 - `apps/api` 当前只提供演示接口能力；项目态页面的主数据流仍来自前端本地 Mock，而不是后端 API。
 
 ## 5. 开发与文档同步约束
@@ -75,7 +78,7 @@ docs/
   - `apps/platform/src/pages/login/components/*` 负责纯展示结构。
   - `apps/platform/src/pages/login/constants.ts` 维护动画、文案、样式常量与本地存储工具函数。
 - `SearchPanel` 的字段渲染与显示策略统一沉淀到 `packages/ui/src/components/SearchPanel/searchPanel.helpers.tsx`，主组件仅保留状态编排与事件处理。
-- 全局 `知识库 / 技能 / 智能体` 页面优先复用 `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 的共享壳层；项目内 `资源` 页只负责展示项目已接入资产。
+- 全局 `知识库 / 技能 / 智能体` 页面优先复用 `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 的共享壳层；项目内 `资源` 页只负责展示和编排当前项目资源。
 
 ## 7. 文档与协作入口
 

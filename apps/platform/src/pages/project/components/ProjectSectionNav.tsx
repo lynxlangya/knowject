@@ -20,7 +20,7 @@ const NAV_ITEMS: Array<{ key: ProjectSectionKey; label: string; description: str
   {
     key: 'resources',
     label: '资源',
-    description: '已接入的全局知识、技能与智能体',
+    description: '当前项目知识、技能与智能体',
   },
   {
     key: 'members',

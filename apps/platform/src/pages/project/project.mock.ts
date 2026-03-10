@@ -270,15 +270,15 @@ const RESOURCE_GROUP_COPY: Record<
 > = {
   knowledge: {
     title: '知识库',
-    description: '项目已接入的全局知识资产，可作为对话和协作的上下文基础。',
+    description: '当前项目已启用的知识资源，可作为对话和协作的上下文基础，来源仍来自全局资产库。',
   },
   skills: {
     title: '技能',
-    description: '项目当前启用的全局技能能力，用于复用成熟工作流。',
+    description: '当前项目可直接调用的技能能力，用于复用成熟工作流，来源仍来自全局技能资产。',
   },
   agents: {
     title: '智能体',
-    description: '项目已绑定的全局智能体，可参与分析、审查和执行协作。',
+    description: '当前项目已绑定的智能体能力，可参与分析、审查和执行协作，来源仍来自全局智能体资产。',
   },
 };
 

@@ -1,4 +1,4 @@
-import { App, Button, Typography } from 'antd';
+import { App, Typography } from 'antd';
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PATHS } from '../../app/navigation/paths';
@@ -38,58 +38,62 @@ export const ProjectResourcesPage = () => {
     });
   }, [agentsRef, focus, knowledgeRef, skillsRef]);
 
+  const summaryItems = [
+    {
+      label: '知识库',
+      value: `${stats.knowledgeCount} 个`,
+      hint: '当前项目已接入的知识上下文',
+    },
+    {
+      label: '技能',
+      value: `${stats.skillCount} 个`,
+      hint: '当前项目可直接复用的工作流能力',
+    },
+    {
+      label: '智能体',
+      value: `${stats.agentCount} 个`,
+      hint: '当前项目已绑定的协作智能体',
+    },
+    {
+      label: '资源分层',
+      value: '2 层',
+      hint: '全局资产治理，项目资源编排与消费',
+    },
+  ];
+
   return (
     <section className="flex min-h-full flex-col gap-4">
       <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
             <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
               项目资源
             </Typography.Text>
             <Typography.Title level={3} className="mb-1! mt-2 text-slate-800!">
-              当前项目已接入的全局资产
+              当前项目知识、技能与智能体
             </Typography.Title>
             <Typography.Paragraph className="mb-0! max-w-2xl text-sm! text-slate-600!">
-              这里展示的是已绑定到项目的全局知识库、技能和智能体。项目页负责编排和消费，全局页负责治理与复用。
+              这里展示的是当前项目内已经启用的知识库、技能和智能体。全局资产负责治理与复用，项目资源负责绑定、编排与消费。
             </Typography.Paragraph>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="primary"
-              onClick={() =>
-                message.info('下一步会在这里接入“从全局资产池选择并绑定到当前项目”的抽屉。')
-              }
-            >
-              引入资源
-            </Button>
-            <Button onClick={() => navigate(PATHS.knowledge)}>前往全局资产页</Button>
-          </div>
-        </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <div className="rounded-[20px] border border-slate-200 bg-slate-50/50 px-4 py-4">
-            <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-              已接入知识库
-            </Typography.Text>
-            <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
-              {stats.knowledgeCount}
-            </Typography.Title>
-          </div>
-          <div className="rounded-[20px] border border-slate-200 bg-slate-50/50 px-4 py-4">
-            <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-              已接入技能
-            </Typography.Text>
-            <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
-              {stats.skillCount}
-            </Typography.Title>
-          </div>
-          <div className="rounded-[20px] border border-slate-200 bg-slate-50/50 px-4 py-4">
-            <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-              已接入智能体
-            </Typography.Text>
-            <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
-              {stats.agentCount}
-            </Typography.Title>
+          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[620px] xl:grid-cols-4">
+            {summaryItems.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
+              >
+                <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+                  {item.label}
+                </Typography.Text>
+                <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
+                  {item.value}
+                </Typography.Title>
+                <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                  {item.hint}
+                </Typography.Paragraph>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -103,6 +107,9 @@ export const ProjectResourcesPage = () => {
             <ProjectResourceGroup
               group={group}
               highlighted={focus === group.key}
+              onAddProjectResource={() =>
+                message.info(`下一步会在这里接入“为当前项目新增${group.title}”的流程。`)
+              }
               onOpenGlobal={() => navigate(GLOBAL_PATH_BY_FOCUS[group.key])}
             />
           </div>
