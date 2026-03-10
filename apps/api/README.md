@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是本地联调与基础框架 API，使用 Express + TypeScript 实现。
-截至 2026-03-10，基础框架阶段已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录/注册接口、最小项目 CRUD 和成员管理接口，但项目态页面主数据仍未切到后端。
+截至 2026-03-10，基础框架阶段已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录/注册接口、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息与成员 roster 已切到后端。
 
 ## 当前接口
 
@@ -13,6 +13,12 @@
 - `POST /api/auth/login`
   - 接收 `username` 和 `password`。
   - 返回 JWT 与基础用户信息。
+- `GET /api/auth/users`
+  - 需要 `Authorization: Bearer <token>`。
+  - 按 `username / name` 模糊搜索已有注册用户，供项目成员添加下拉候选使用。
+- `GET /api/members`
+  - 需要 `Authorization: Bearer <token>`。
+  - 聚合当前登录用户可见项目中的成员基础信息、项目参与关系和最小权限摘要，供全局成员页使用。
 - `GET /api/projects`
   - 需要 `Authorization: Bearer <token>`。
   - 只返回当前用户参与的项目。
@@ -52,8 +58,8 @@
 
 ## 当前边界
 
-- 这是本地演示接口，不是项目态页面的主要数据源。
-- 项目概览、对话、资源、成员等内容目前仍由 `apps/platform` 本地 Mock 驱动。
+- 这是本地联调与基础框架接口；项目列表、项目基础信息与成员 roster 已由它提供正式数据源。
+- 项目概览、对话与资源等内容目前仍主要由 `apps/platform` 本地 Mock 驱动。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD；`memberships` 已落地最小成员管理闭环。
 - 当前已经有真实用户注册、登录、JWT 鉴权、项目 CRUD 和成员管理接口，但资产、资源与对话等正式后端接口仍未落地。
@@ -86,6 +92,7 @@
 - `src/config/env.ts`：环境变量加载与校验。
 - `src/db/mongo.ts`：MongoDB 连接管理与健康快照。
 - `src/modules/auth/*`：用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
+- `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。
 - `src/modules/projects/*`：项目模型、MongoDB 仓储、权限校验和 CRUD 接口。
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
 - `src/routes/health.ts`：健康检查。

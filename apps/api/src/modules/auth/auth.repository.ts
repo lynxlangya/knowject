@@ -14,6 +14,7 @@ interface CreateUserRecordInput {
 }
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+const REGEX_ESCAPE_PATTERN = /[.*+?^${}()|[\]\\]/g;
 
 const toObjectId = (value: string): ObjectId | null => {
   if (!OBJECT_ID_REGEX.test(value)) {
@@ -29,6 +30,10 @@ const toAuthUserProfile = (user: WithId<AuthUserDocument>): AuthUserProfile => {
     username: user.username,
     name: user.name,
   };
+};
+
+const escapeRegex = (value: string): string => {
+  return value.replace(REGEX_ESCAPE_PATTERN, '\\$&');
 };
 
 export const isDuplicateUsernameError = (error: unknown): boolean => {
@@ -57,6 +62,29 @@ export class AuthRepository {
 
     const collection = await this.getCollection();
     const users = await collection.find({ _id: { $in: objectIds } }).toArray();
+
+    return users.map(toAuthUserProfile);
+  }
+
+  async searchProfiles(query: string, limit: number): Promise<AuthUserProfile[]> {
+    const collection = await this.getCollection();
+    const normalizedLimit = Math.min(Math.max(limit, 1), 20);
+    const normalizedQuery = query.trim();
+
+    const filter = normalizedQuery
+      ? {
+          $or: [
+            { username: { $regex: escapeRegex(normalizedQuery), $options: 'i' } },
+            { name: { $regex: escapeRegex(normalizedQuery), $options: 'i' } },
+          ],
+        }
+      : {};
+
+    const users = await collection
+      .find(filter)
+      .sort({ username: 1, createdAt: -1 })
+      .limit(normalizedLimit)
+      .toArray();
 
     return users.map(toAuthUserProfile);
   }

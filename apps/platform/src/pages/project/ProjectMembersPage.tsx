@@ -7,7 +7,6 @@ import {
   Card,
   Empty,
   Form,
-  Input,
   Popconfirm,
   Select,
   Typography,
@@ -16,7 +15,9 @@ import { useMemo, useState } from "react";
 import {
   addProjectMember,
   removeProjectMember,
+  searchProjectMemberCandidates,
   updateProjectMemberRole,
+  type SearchProjectMemberCandidatesResponseItem,
   type ProjectRole,
 } from "@api/projects";
 import { getAuthUser } from "@app/auth/user";
@@ -26,8 +27,15 @@ import { useNavigate } from "react-router-dom";
 import { useProjectPageContext } from "./projectPageContext";
 
 interface AddMemberFormValues {
-  username: string;
+  usernames: string[];
   role: ProjectRole;
+}
+
+interface MemberCandidateOption {
+  value: string;
+  label: string;
+  name: string;
+  username: string;
 }
 
 const PROJECT_ROLE_LABELS: Record<ProjectRole, string> = {
@@ -49,23 +57,134 @@ export const ProjectMembersPage = () => {
   const { activeProject } = useProjectPageContext();
   const { projects, removeProjectSnapshot, syncProject } = useProjectContext();
   const authUser = getAuthUser();
+  const selectedUsernames = Form.useWatch("usernames", form) ?? [];
   const [submitting, setSubmitting] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [candidateOptions, setCandidateOptions] = useState<MemberCandidateOption[]>([]);
+  const [candidateSearching, setCandidateSearching] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
+
+  const currentMemberUsernameSet = useMemo(() => {
+    return new Set(activeProject.members.map((member) => member.username));
+  }, [activeProject.members]);
+
+  const mapCandidateToOption = (
+    candidate: SearchProjectMemberCandidatesResponseItem,
+  ): MemberCandidateOption => {
+    return {
+      value: candidate.username,
+      username: candidate.username,
+      name: candidate.name,
+      label: `${candidate.name} (@${candidate.username})`,
+    };
+  };
+
+  const mergeCandidateOptions = (
+    baseOptions: MemberCandidateOption[],
+    nextOptions: MemberCandidateOption[],
+  ): MemberCandidateOption[] => {
+    const optionMap = new Map<string, MemberCandidateOption>();
+
+    baseOptions.forEach((option) => {
+      optionMap.set(option.value, option);
+    });
+
+    nextOptions.forEach((option) => {
+      optionMap.set(option.value, option);
+    });
+
+    return Array.from(optionMap.values());
+  };
+
+  const loadMemberCandidates = async (query: string) => {
+    setCandidateSearching(true);
+
+      try {
+      const result = await searchProjectMemberCandidates(query);
+      const availableOptions = result.items
+        .filter((candidate) => !currentMemberUsernameSet.has(candidate.username))
+        .map(mapCandidateToOption);
+
+      setCandidateOptions((currentOptions) =>
+        mergeCandidateOptions(
+          currentOptions.filter((option) =>
+            selectedUsernames.includes(option.value),
+          ),
+          availableOptions,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+      message.error(
+        isApiError(error) ? error.message : "加载可添加成员失败，请稍后重试",
+      );
+    } finally {
+      setCandidateSearching(false);
+    }
+  };
 
   const handleAddMember = async (values: AddMemberFormValues) => {
     setSubmitting(true);
 
     try {
-      const result = await addProjectMember(activeProject.id, {
-        username: values.username.trim(),
-        role: values.role,
-      });
+      const usernames = Array.from(
+        new Set(values.usernames.map((username) => username.trim()).filter(Boolean)),
+      ).filter((username) => !currentMemberUsernameSet.has(username));
 
-      syncProject(result.project);
+      if (usernames.length === 0) {
+        message.warning("请至少选择一位可加入项目的用户");
+        return;
+      }
+
+      const failedMessages: string[] = [];
+      let latestProject = null;
+
+      for (const username of usernames) {
+        try {
+          const result = await addProjectMember(activeProject.id, {
+            username,
+            role: values.role,
+          });
+
+          latestProject = result.project;
+          syncProject(result.project);
+        } catch (error) {
+          console.error(error);
+          failedMessages.push(
+            `${username}：${isApiError(error) ? error.message : "添加失败"}`,
+          );
+        }
+      }
+
+      if (latestProject) {
+        syncProject(latestProject);
+      }
+
+      setCandidateOptions((currentOptions) =>
+        currentOptions.filter((option) => !usernames.includes(option.value)),
+      );
+
       form.resetFields();
-      form.setFieldsValue({ role: "member" });
-      message.success("成员已加入项目");
+      form.setFieldsValue({ role: "member", usernames: [] });
+      setSearchKeyword("");
+
+      if (failedMessages.length === 0) {
+        message.success(
+          usernames.length === 1 ? "成员已加入项目" : `已添加 ${usernames.length} 位成员`,
+        );
+        return;
+      }
+
+      const successCount = usernames.length - failedMessages.length;
+      if (successCount > 0) {
+        message.warning(
+          `已添加 ${successCount} 位成员，${failedMessages.length} 位失败：${failedMessages[0]}`,
+        );
+        return;
+      }
+
+      message.error(failedMessages[0] ?? "添加成员失败，请稍后重试");
     } catch (error) {
       console.error(error);
       message.error(
@@ -179,7 +298,7 @@ export const ProjectMembersPage = () => {
               当前项目的正式成员 roster
             </Typography.Title>
             <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-              这里展示的是后端正式项目中的成员关系，只支持最小闭环：按用户名添加已有用户、修改
+              这里展示的是后端正式项目中的成员关系，只支持最小闭环：按用户名 / 姓名搜索已有用户、多选加入项目、修改
               `admin / member` 角色、移除成员。
             </Typography.Paragraph>
           </div>
@@ -220,30 +339,68 @@ export const ProjectMembersPage = () => {
             </Typography.Title>
           </div>
           <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-            只允许把已注册用户按用户名加入当前项目，不引入邀请
-            token、邮件或外部通知链路。
+            只允许把已注册用户加入当前项目，不引入邀请 token、邮件或外部通知链路。
           </Typography.Paragraph>
 
           {canManageMembers ? (
             <Form<AddMemberFormValues>
               form={form}
               layout="vertical"
-              initialValues={{ role: "member" }}
+              initialValues={{ role: "member", usernames: [] }}
               onFinish={(values) => void handleAddMember(values)}
               className="mt-5"
             >
               <Form.Item
-                name="username"
-                label="用户名"
+                name="usernames"
+                label="用户"
                 rules={[
                   {
                     required: true,
-                    whitespace: true,
-                    message: "请输入要加入项目的用户名",
+                    type: "array",
+                    min: 1,
+                    message: "请至少选择一位要加入项目的用户",
                   },
                 ]}
               >
-                <Input placeholder="例如：alice" autoComplete="off" />
+                <Select
+                  mode="multiple"
+                  showSearch
+                  allowClear
+                  placeholder="搜索用户名或姓名，例如：langya / 琅邪"
+                  options={candidateOptions}
+                  filterOption={false}
+                  loading={candidateSearching}
+                  notFoundContent={
+                    candidateSearching
+                      ? "搜索中..."
+                      : searchKeyword.trim()
+                        ? "没有找到可添加的用户"
+                        : "输入用户名或姓名开始搜索"
+                  }
+                  onSearch={(value) => {
+                    setSearchKeyword(value);
+                    void loadMemberCandidates(value);
+                  }}
+                  onFocus={() => {
+                    if (candidateOptions.length === 0) {
+                      void loadMemberCandidates("");
+                    }
+                  }}
+                  optionRender={(option) => {
+                    const candidate = option.data as MemberCandidateOption;
+
+                    return (
+                      <div className="flex min-w-0 flex-col py-0.5">
+                        <span className="truncate text-sm font-medium text-slate-700">
+                          {candidate.name}
+                        </span>
+                        <span className="truncate text-xs text-slate-400">
+                          @{candidate.username}
+                        </span>
+                      </div>
+                    );
+                  }}
+                />
               </Form.Item>
 
               <Form.Item

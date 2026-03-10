@@ -36,6 +36,16 @@ export interface LoginInput {
   password?: string;
 }
 
+export interface SearchUsersInput {
+  query?: unknown;
+  limit?: unknown;
+}
+
+export interface SearchUsersResult {
+  total: number;
+  items: AuthUserProfile[];
+}
+
 export interface AccessTokenPayload {
   sub: string;
   username: string;

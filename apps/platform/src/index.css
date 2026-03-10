@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 
 @layer base {
+  html {
+    scrollbar-gutter: stable;
+  }
+
   html,
   body,
   #root {
@@ -77,6 +81,17 @@
 
 .project-page-surface-enter {
   animation: liftIn 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.members-scroll-area {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.members-scroll-area::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes hubPulse {

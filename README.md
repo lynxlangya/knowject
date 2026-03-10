@@ -36,7 +36,8 @@ docs/
 - `/project/:projectId/resources`：项目资源，只展示当前项目已接入资产。
 - `/project/:projectId/members`：项目成员。
 - `/knowledge`、`/skills`、`/agents`：全局资产管理页。
-- `/members`、`/analytics`、`/settings`：全局占位页。
+- `/members`：全局成员协作总览页。
+- `/analytics`、`/settings`：全局占位页。
 - `/workspace`：仅保留兼容重定向，当前统一跳转到 `/home`。
 
 ## 模块职责
@@ -100,6 +101,7 @@ pnpm build
 - `GET /api/health`（返回应用与数据库状态）
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `GET /api/auth/users`（需 Bearer Token，用于按用户名 / 姓名搜索已有用户）
 - `GET /api/projects`（需 Bearer Token）
 - `POST /api/projects`（需 Bearer Token）
 - `PATCH /api/projects/:projectId`（需 Bearer Token）
@@ -107,5 +109,6 @@ pnpm build
 - `POST /api/projects/:projectId/members`（需 Bearer Token）
 - `PATCH /api/projects/:projectId/members/:userId`（需 Bearer Token）
 - `DELETE /api/projects/:projectId/members/:userId`（需 Bearer Token）
+- `GET /api/members`（需 Bearer Token，返回当前账号可见项目中的成员概览）
 - `GET /api/memory/overview`（需 Bearer Token）
 - `POST /api/memory/query`（需 Bearer Token）

@@ -10,6 +10,8 @@ import { createRequireAuth } from '@modules/auth/auth.middleware.js';
 import { createAuthRepository } from '@modules/auth/auth.repository.js';
 import { createAuthRouter } from '@modules/auth/auth.router.js';
 import { createAuthService } from '@modules/auth/auth.service.js';
+import { createMembersRouter } from '@modules/members/members.router.js';
+import { createMembersService } from '@modules/members/members.service.js';
 import { createMembershipsRouter } from '@modules/memberships/memberships.router.js';
 import { createMembershipsService } from '@modules/memberships/memberships.service.js';
 import { createProjectsRepository } from '@modules/projects/projects.repository.js';
@@ -36,6 +38,10 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
     projectsRepository,
     authRepository,
   });
+  const membersService = createMembersService({
+    projectsRepository,
+    authRepository,
+  });
   const requireAuth = createRequireAuth(authService);
   const sensitiveRouteTransportGuard = createSensitiveRouteTransportGuard(env);
 
@@ -46,7 +52,12 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   app.use(express.json());
 
   app.use('/api/health', createHealthRouter({ env, mongo }));
-  app.use('/api/auth', sensitiveRouteTransportGuard, createAuthRouter(authService));
+  app.use(
+    '/api/auth',
+    sensitiveRouteTransportGuard,
+    createAuthRouter(authService, requireAuth),
+  );
+  app.use('/api/members', createMembersRouter(membersService, requireAuth));
   app.use('/api/projects', createProjectsRouter(projectsService, requireAuth));
   app.use('/api/projects', createMembershipsRouter(membershipsService, requireAuth));
   app.use('/api/memory', sensitiveRouteTransportGuard, createMemoryRouter(requireAuth));
@@ -60,6 +71,8 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/health',
         '/api/auth/register',
         '/api/auth/login',
+        '/api/auth/users',
+        '/api/members',
         '/api/projects',
         '/api/projects/:projectId/members',
         '/api/memory/overview',

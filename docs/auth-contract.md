@@ -18,6 +18,7 @@
 - `argon2id` 密码哈希
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `GET /api/auth/users`
 - JWT 鉴权中间件
 - `memory` 路由 JWT 保护
 - `/login` 同页登录 / 注册模式切换
@@ -196,6 +197,43 @@
 - 登录成功和注册成功都回到当前登录后壳层入口
 - 客户端可以在 DevTools 中看到请求 JSON，这是正常现象；安全边界在 HTTPS 传输和服务端 `argon2id` 哈希，而不在前端再次哈希
 
+### `GET /api/auth/users`
+
+用途：
+
+- 供已登录用户按 `username / name` 模糊搜索已有注册用户，作为项目成员添加候选。
+
+请求参数：
+
+- `query`：可选，搜索关键字；同时匹配 `username` 与 `name`
+- `limit`：可选，默认 `10`，最大 `20`
+
+成功响应：`200`
+
+```json
+{
+  "total": 2,
+  "items": [
+    {
+      "id": "user_123",
+      "username": "langya",
+      "name": "琅邪"
+    },
+    {
+      "id": "user_456",
+      "username": "langya-dev",
+      "name": "琅邪王"
+    }
+  ]
+}
+```
+
+约束：
+
+- 需要 `Authorization: Bearer <token>`
+- 只返回用户基础档案，不返回密码哈希、JWT 或其他敏感信息
+- 当前成员页会基于该接口做前端过滤，避免把已在项目中的成员重复展示为可选项
+
 ## 7. 错误响应契约
 
 统一结构：
@@ -278,6 +316,7 @@
 - 只允许 `admin / member`
 - 只有项目级 `admin` 可以新增成员、修改角色、移除成员
 - 项目至少保留一位 `admin`
+- 前端当前通过 `GET /api/auth/users` 提供的候选列表，支持按用户名 / 姓名模糊搜索后多选添加
 
 ## 9. 本阶段明确不做
 

@@ -54,8 +54,35 @@ export interface RemoveProjectMemberResponse {
   removedCurrentUser: boolean;
 }
 
+export interface SearchProjectMemberCandidatesResponseItem {
+  id: string;
+  username: string;
+  name: string;
+}
+
+export interface SearchProjectMemberCandidatesResponse {
+  total: number;
+  items: SearchProjectMemberCandidatesResponseItem[];
+}
+
 export const listProjects = async (): Promise<ProjectsListResponse> => {
   const response = await client.get<ProjectsListResponse>("/projects");
+  return response.data;
+};
+
+export const searchProjectMemberCandidates = async (
+  query: string,
+): Promise<SearchProjectMemberCandidatesResponse> => {
+  const response = await client.get<SearchProjectMemberCandidatesResponse>(
+    "/auth/users",
+    {
+      params: {
+        query,
+        limit: 10,
+      },
+    },
+  );
+
   return response.data;
 };
 

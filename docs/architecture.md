@@ -81,7 +81,7 @@ docs/
 - `/knowledge`：全局知识库管理页壳层。
 - `/skills`：全局技能管理页壳层。
 - `/agents`：全局智能体管理页壳层。
-- `/members`：全局成员页占位。
+- `/members`：全局成员协作总览页，聚合当前账号可见项目中的成员信息。
 - `/analytics`：全局分析页占位。
 - `/settings`：全局设置页占位。
 - `/project/:projectId/overview`：项目概览页。
@@ -166,10 +166,11 @@ docs/
 ### 5.6 成员数据分层
 
 - 全局成员基础档案维护在 `project.catalog.ts`。
+- `/members` 当前已接入 `/api/members`，展示当前账号可见项目中的成员基础信息、项目参与关系与最小权限摘要。
 - 项目成员的职责、状态、最近动作等协作快照维护在 `project.mock.ts`。
 - `/project/:projectId/members` 当前已切到正式后端成员 roster 管理页。
-- 页面支持按用户名添加已有用户、修改 `admin / member`、移除成员。
-- 成员协作快照仍保留在 `project.mock.ts`，只用于项目概览头部等演示展示，不再作为成员页主数据源。
+- 页面支持按用户名 / 姓名模糊搜索已有用户，通过多选下拉框批量加入项目，并支持修改 `admin / member`、移除成员。
+- 成员协作快照仍保留在 `project.mock.ts`，当前用于全局成员页与项目概览中的协作状态补充展示，不作为正式成员关系主数据源。
 
 ## 6. API 边界
 
@@ -178,6 +179,8 @@ docs/
 - `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `GET /api/auth/users`
+- `GET /api/members`
 - `GET /api/projects`
 - `POST /api/projects`
 - `PATCH /api/projects/:projectId`
@@ -193,6 +196,8 @@ docs/
 - `health`：返回应用状态、数据库状态和最小诊断信息。
 - `auth/register`：创建用户、写入 `passwordHash`、签发 JWT 并返回登录态。
 - `auth/login`：校验用户名与密码，签发 JWT 并返回登录态。
+- `auth/users`：按用户名 / 姓名模糊搜索已有注册用户，供项目成员添加下拉候选使用。
+- `members`：聚合当前用户可见项目中的成员基础信息、项目参与关系和最小权限摘要。
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
@@ -200,7 +205,7 @@ docs/
 
 ### 6.3 当前鉴权约定
 
-- `projects`、`memberships` 与 `memory` 路由要求 `Authorization: Bearer <token>`。
+- `auth/users`、`projects`、`memberships` 与 `memory` 路由要求 `Authorization: Bearer <token>`。
 - 服务端当前通过 JWT 中间件校验 `iss / aud / exp / sub / username`。
 - 当前 API 已接入统一错误处理中间件，失败响应包含 `error` 与 `meta.requestId`。
 - 当前已具备正式用户体系、`argon2id` 密码哈希、JWT、最小项目权限模型和成员管理接口。
@@ -216,6 +221,7 @@ docs/
   - 本地联调与基础框架接口，当前已承担项目列表、项目基础信息与成员 roster 的正式主数据源。
   - 已具备 `config / db / middleware / modules` 基础骨架。
   - `modules/auth` 当前已承载用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
+  - `modules/members` 当前已承载全局成员聚合只读接口。
   - `modules/projects` 当前已承载项目模型、MongoDB 仓储、权限校验与 CRUD 接口。
   - `modules/memberships` 当前已承载项目成员增删改接口与最小角色规则。
 - `packages/request`

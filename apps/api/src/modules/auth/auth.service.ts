@@ -14,11 +14,14 @@ import type {
   AuthenticatedRequestUser,
   LoginInput,
   RegisterInput,
+  SearchUsersInput,
+  SearchUsersResult,
 } from './auth.types.js';
 
 export interface AuthService {
   register(input: RegisterInput): Promise<AuthSuccessResponse>;
   login(input: LoginInput): Promise<AuthSuccessResponse>;
+  searchUsers(input: SearchUsersInput): Promise<SearchUsersResult>;
   verifyAccessToken(token: string): Promise<AuthenticatedRequestUser>;
 }
 
@@ -64,6 +67,25 @@ const normalizeUsername = (value: string | undefined): string => {
 
 const normalizeName = (value: string | undefined): string => {
   return value?.trim() ?? '';
+};
+
+const normalizeSearchQuery = (value: unknown): string => {
+  return typeof value === 'string' ? value.trim() : '';
+};
+
+const normalizeSearchLimit = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.min(Math.max(Math.trunc(value), 1), 20);
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed)) {
+      return Math.min(Math.max(parsed, 1), 20);
+    }
+  }
+
+  return 10;
 };
 
 const validatePassword = (password: string | undefined): string => {
@@ -184,6 +206,17 @@ export const createAuthService = ({
       }
 
       return toAuthResponse(env, user);
+    },
+
+    searchUsers: async (input) => {
+      const query = normalizeSearchQuery(input.query);
+      const limit = normalizeSearchLimit(input.limit);
+      const items = await repository.searchProfiles(query, limit);
+
+      return {
+        total: items.length,
+        items,
+      };
     },
 
     verifyAccessToken: async (token) => {
