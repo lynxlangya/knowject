@@ -85,7 +85,7 @@
 
 .members-scroll-area {
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
