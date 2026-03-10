@@ -518,13 +518,15 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
           trigger="click"
           content={accountPanelContent}
           arrow={false}
-          overlayInnerStyle={{
-            padding: 0,
-            borderRadius: 20,
-            background: KNOWJECT_BRAND.shellSurfaceStrong,
-            border: '1px solid rgba(255,255,255,0.72)',
-            boxShadow: '0 18px 36px rgba(15,42,38,0.08)',
-            backdropFilter: 'blur(18px)',
+          styles={{
+            container: {
+              padding: 0,
+              borderRadius: 20,
+              background: KNOWJECT_BRAND.shellSurfaceStrong,
+              border: '1px solid rgba(255,255,255,0.72)',
+              boxShadow: '0 18px 36px rgba(15,42,38,0.08)',
+              backdropFilter: 'blur(18px)',
+            },
           }}
         >
           <button
