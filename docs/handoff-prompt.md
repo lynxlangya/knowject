@@ -25,6 +25,7 @@
    - `docs/architecture.md`
    - `docs/gap-analysis.md`
    - `docs/auth-contract.md`
+   - `docs/tasks-foundation-framework.md`
 2. 只有在需要理解目标态或阶段路线时，再读：
    - `docs/target-architecture.md`
 3. 核对这些源码入口：
@@ -39,6 +40,7 @@
    - `apps/platform/src/pages/project/ProjectMembersPage.tsx`
    - `apps/api/src/app/create-app.ts`
    - `apps/api/src/modules/auth/*`
+   - `apps/api/src/modules/members/*`
    - `apps/api/src/modules/projects/*`
    - `apps/api/src/modules/memberships/*`
    - `apps/api/src/routes/memory.ts`
@@ -46,12 +48,12 @@
 在开始实施前，必须先明确以下结论：
 
 - 当前项目列表、项目基础信息和成员 roster 已来自后端 `/api/projects*`，但概览 / 对话 / 资源仍部分依赖前端 Mock 与本地绑定。
-- 后端已经落地 MongoDB、JWT、注册 / 登录、最小项目 CRUD、成员接口、健康检查和 memory 演示接口。
+- 后端已经落地 MongoDB、JWT、注册 / 登录、全局成员概览、最小项目 CRUD、成员接口、健康检查和 memory 演示接口。
 - `/workspace`、`/home/project/*` 和旧 `knowledge|skills|agents` 项目路由都只是兼容入口。
 - 项目资源页只负责消费项目已绑定的全局资产，全局资产页仍是治理壳层，占位交互未落地真实写操作。
 - `knowject_project_pins` 当前承载前端置顶偏好，`knowject_project_resource_bindings` 当前承载前端资源绑定。
 - `knowject_projects` 已退为历史本地 Mock 缓存键，当前只在首次刷新时作为一次性迁移源读取。
-- 项目成员正式管理接口已经落地，前端成员页当前已切到正式后端 roster。
+- 项目成员正式管理接口已经落地，前端成员页当前已切到正式后端 roster，全局成员页也已切到 `/api/members`。
 
 你的输出必须先包含：
 
@@ -80,6 +82,7 @@
    - `docs/handoff-guide.md`
    - `docs/architecture.md`
    - `docs/gap-analysis.md`
+   - 如果涉及基础框架阶段边界，再读 `docs/tasks-foundation-framework.md`
    - 如果涉及登录或环境，再读 `docs/auth-contract.md`
 2. 打开以下源码确认文档没有过时：
    - `apps/platform/src/app/navigation/routes.tsx`
@@ -89,6 +92,7 @@
    - `apps/platform/src/pages/project/ProjectMembersPage.tsx`
    - `apps/api/src/app/create-app.ts`
    - `apps/api/src/modules/auth/auth.service.ts`
+   - `apps/api/src/modules/members/*`
    - `apps/api/src/modules/memberships/*`
 3. 在动手前先写清楚：
    - 当前真实已完成到哪里
@@ -102,7 +106,7 @@
 请始终记住：
 
 - 当前最稳定的是信息架构、产品壳和项目主数据主链路；资源绑定、对话与 AI 能力仍未正式化。
-- 当前 auth、最小项目 CRUD、项目主数据和成员接口已经落地；剩余主要断层在资源绑定与会话数据链路。
+- 当前 auth、全局成员概览、最小项目 CRUD、项目主数据和成员接口已经落地；剩余主要断层在资源绑定与会话数据链路。
 - 如果你的改动影响路由、主数据来源、认证契约或存储键，文档必须同步更新。
 ```
 

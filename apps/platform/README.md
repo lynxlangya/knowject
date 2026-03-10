@@ -1,6 +1,6 @@
 # Knowject Frontend (`apps/platform`)
 
-前端采用 React + Vite + Ant Design，当前职责是提供登录后产品壳、项目态页面与全局资产管理页。
+前端采用 React + Vite + Ant Design，当前职责是提供登录后产品壳、项目态页面与全局资产管理页；截至 2026-03-10，基础框架阶段已完成认证接入、项目主数据接入、项目成员 roster 管理与全局成员协作总览接入。
 
 ## 当前路由
 
@@ -12,6 +12,7 @@
 - `/project/:projectId/members`：项目成员。
 - `/knowledge`、`/skills`、`/agents`：全局资产管理页。
 - `/members`：全局成员协作总览页。
+- `/analytics`、`/settings`：全局占位页。
 - `/workspace`：兼容入口，重定向到 `/home`。
 
 ## 布局与职责
@@ -29,6 +30,7 @@
 - `src/app/project/project.catalog.ts`：全局资产与成员 Mock 源。
 - `src/pages/project/project.mock.ts`：项目概览、对话、资源、成员演示数据。
 - `src/api`：登录、项目、成员与记忆查询接口封装；项目列表、项目基础信息、全局成员概览与成员 roster 已接入真实后端。
+- `/members` 主要消费 `GET /api/members`；`/project/:projectId/members` 主要消费 `GET /api/auth/users` 与 `/api/projects/:projectId/members*`。
 
 ## 核心目录
 

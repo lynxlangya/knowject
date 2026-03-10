@@ -8,9 +8,10 @@
 
 1. 先读 `docs/handoff-guide.md`
 2. 再读 `docs/architecture.md`
-3. 然后读 `docs/gap-analysis.md`
-4. 涉及认证与环境时再读 `docs/auth-contract.md`
-5. 需要把任务交给下一位 AI 或人类时，使用 `docs/handoff-prompt.md`
+3. 涉及基础框架范围与完成记录时再读 `docs/tasks-foundation-framework.md`
+4. 然后读 `docs/gap-analysis.md`
+5. 涉及认证与环境时再读 `docs/auth-contract.md`
+6. 需要把任务交给下一位 AI 或人类时，使用 `docs/handoff-prompt.md`
 
 ### 理解产品现状与目标
 
@@ -30,7 +31,7 @@
 | `docs/doc-iteration-handoff-plan.md` | 本轮文档执行计划 | 交付规划 | 本轮文档迭代打算做什么、范围和验证方式是什么 |
 | `docs/handoff-guide.md` | 快速接手指南 | 高 | 新 AI / 新同学如何在 15 分钟内建立当前事实并继续推进 |
 | `docs/handoff-prompt.md` | 接手提示模板 | 高 | 如何把仓库和当前上下文准确交给下一位 AI 或人类 |
-| `docs/tasks-foundation-framework.md` | 基础框架任务清单 | 交付规划 | Week 1-2 基础框架阶段具体做什么、按什么顺序拆票 |
+| `docs/tasks-foundation-framework.md` | 基础框架任务归档 | 阶段复盘 | Week 1-2 基础框架做了什么、完成到哪里、遗留什么 |
 | `docs/auth-contract.md` | 基础框架实施契约 | 实施约束 | MongoDB、JWT、密码哈希、注册登录、错误响应具体怎么定 |
 | `docs/知项Knowject-项目认知总结-v2.md` | 输入材料 / 工作底稿 | 参考 | 最新认知总结原文是什么，哪些内容需要被吸收到正式文档 |
 | `docs/design/*` | 品牌与视觉资料 | 专项参考 | 品牌表达、图标、字标、视觉方向是什么 |
@@ -61,7 +62,7 @@
   - 交接方式需要从“阅读事实”调整为“执行某一类任务”。
 - 更新 `docs/tasks-foundation-framework.md`
   - 基础框架阶段的任务范围、顺序、依赖关系或 DoD 发生变化。
-  - 基础框架阶段已经落地或被明确延后，需同步更新状态与边界。
+  - 基础框架阶段状态从“进行中”变为“已完成 / 延后 / 拆到下一阶段”时，需同步更新完成记录与边界。
 - 更新 `docs/auth-contract.md`
   - 基础框架阶段的环境变量、JWT、密码哈希、注册登录契约发生变化。
   - 错误响应格式、状态码语义或安全边界发生变化。
@@ -80,10 +81,10 @@
 
 ## 5. 当前结论
 
-- 当前仓库主线仍是“前端壳层 + 本地 Mock + 演示 API”。
-- 后端基础框架已具备 auth、最小项目 CRUD 与成员接口，前端项目列表、项目基础信息与成员 roster 也已切到后端接口。
+- 当前仓库已经进入“前后端基础框架已接通、局部能力仍依赖 Mock”的阶段，而不是单纯“前端壳层 + 演示 API”。
+- 基础框架阶段已经完成；后端已具备 auth、members、最小项目 CRUD 与成员接口，前端项目列表、项目基础信息、成员 roster 与全局成员概览也已切到后端接口。
 - 成员管理当前支持按用户名 / 姓名模糊搜索已有用户，并通过多选下拉框批量加入项目。
 - 当前剩余的主要 mock 仍集中在项目概览、对话、资源绑定与协作演示数据。
 - 目标蓝图已经形成，但大量 AI、数据层和部署能力还未进入实现阶段。
 - 本轮已把“当前事实”“接手路径”“交接 Prompt”拆成单独文档，减少后续接手时的误读成本。
-- 后续开发前，建议先读 `docs/gap-analysis.md`，再决定是继续补前端产品骨架，还是开始推进后端 / RAG / Skill 能力。
+- 若需要回顾基础框架阶段到底交付了什么，先读 `docs/tasks-foundation-framework.md`；若要决定下一阶段优先级，再读 `docs/gap-analysis.md`。

@@ -7,17 +7,18 @@
 ## 先记住 4 个判断
 
 1. 当前事实以 `docs/architecture.md` 和源码为准，不以蓝图文档为准。
-2. 当前产品主线仍是“前端产品壳 + 本地 Mock + 演示 API”。
-3. 后端已经完成 auth、最小项目 CRUD 和成员接口，前端项目列表、项目基础信息和成员 roster 也已切到数据库接口。
+2. 当前产品主线已经进入“前后端基础框架已接通、局部能力仍依赖 Mock”的阶段，而不是单纯“前端产品壳 + 演示 API”。
+3. 后端已经完成 auth、members、最小项目 CRUD 和成员接口，前端项目列表、项目基础信息、成员 roster 与全局成员概览也已切到数据库接口。
 4. canonical 路由已经稳定，兼容路由只做跳转，不应再回退成业务主入口。
 
 ## 10 到 15 分钟阅读顺序
 
 1. 先读 `docs/architecture.md`
 2. 再读 `docs/gap-analysis.md`
-3. 涉及登录、JWT、环境变量时读 `docs/auth-contract.md`
-4. 只有需要理解目标态时，再读 `docs/target-architecture.md`
-5. 最后核对以下源码入口：
+3. 涉及基础框架阶段范围与完成记录时读 `docs/tasks-foundation-framework.md`
+4. 涉及登录、JWT、环境变量时读 `docs/auth-contract.md`
+5. 只有需要理解目标态时，再读 `docs/target-architecture.md`
+6. 最后核对以下源码入口：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/navigation/routeRedirects.tsx`
    - `apps/platform/src/app/layouts/components/AppSider.tsx`
@@ -29,6 +30,7 @@
    - `apps/platform/src/pages/project/ProjectMembersPage.tsx`
    - `apps/api/src/app/create-app.ts`
    - `apps/api/src/modules/auth/*`
+   - `apps/api/src/modules/members/*`
    - `apps/api/src/modules/projects/*`
    - `apps/api/src/modules/memberships/*`
    - `apps/api/src/routes/memory.ts`
@@ -87,10 +89,12 @@
   - 用户注册 / 登录
   - `argon2id` 密码哈希
   - JWT 鉴权中间件
+  - 全局成员概览 `GET /api/members`
   - 项目模型与 `GET/POST/PATCH/DELETE /api/projects`
   - 项目成员管理接口 `/api/projects/:projectId/members*`
+  - 已注册用户搜索 `GET /api/auth/users`
   - `memory/overview` 与 `memory/query` 演示接口
-- 因此当前项目页内容应写成“项目主数据与成员关系已经切到后端，但资源绑定、对话与协作演示数据仍在前端本地层”。
+- 因此当前项目页内容应写成“项目主数据与成员关系已经切到后端，但资源绑定、对话与协作演示数据仍在前端本地层”；基础框架阶段本身已完成。
 
 ## 如果你要继续开发，先按这个顺序推进
 

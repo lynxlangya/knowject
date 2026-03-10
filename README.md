@@ -7,16 +7,17 @@
 ## 当前状态
 
 - 前端 `apps/platform` 已形成登录后产品壳、项目态页面与全局资产管理页。
-- 后端 `apps/api` 当前提供本地联调与基础框架接口，覆盖 `health`、`auth`、`projects`、`memberships`、`memory`，并已完成 MongoDB、用户注册/登录、JWT 鉴权、最小项目 CRUD 和成员管理接口基线。
+- 基础框架阶段已完成；后端 `apps/api` 当前提供可继续叠加开发的最小正式 API 基线，覆盖 `health`、`auth`、`members`、`projects`、`memberships`、`memory`，并已完成 MongoDB、用户注册 / 登录、JWT 鉴权、最小项目 CRUD、成员管理与成员搜索接口。
 - 项目列表、项目基础信息与成员 roster 已接入 `/api/projects*`；项目概览、对话与资源页仍部分依赖前端 Mock 与本地绑定数据。
 - 全局 `知识库 / 技能 / 智能体` 页面当前为管理壳层，资产创建与引入流程仍是占位行为。
+- 当前最小本地开发拓扑已经明确为 `platform + api + mongodb`；`docker-compose` 仍只停留在规划，不是当前交付物。
 
 ## 项目结构
 
 ```text
 apps/
   platform/   前端应用（React + Vite + Ant Design）
-  api/        本地联调与演示 API（Express + TypeScript）
+  api/        基础框架 API（Express + TypeScript）
 packages/
   request/    HTTP 请求封装（@knowject/request）
   ui/         通用 UI 组件（@knowject/ui）
@@ -43,7 +44,7 @@ docs/
 ## 模块职责
 
 - `apps/platform`：页面、路由、鉴权状态、项目态编排、全局资产管理页。
-- `apps/api`：本地联调与演示 API，当前已具备 `config / db / modules / middleware` 基础骨架。
+- `apps/api`：基础框架 API，当前已具备 `config / db / modules / middleware` 基础骨架和最小正式数据链路。
 - `packages/request`：Axios 请求能力封装。
 - `packages/ui`：通用 UI 组件与搜索面板等共享能力。
 
@@ -63,6 +64,8 @@ docs/
 
 - [项目规则](./AGENTS.md)
 - [架构事实](./docs/architecture.md)
+- [基础框架任务归档](./docs/tasks-foundation-framework.md)
+- [认证与环境契约](./docs/auth-contract.md)
 - [快速接手指南](./docs/handoff-guide.md)
 - [交接 Prompt 模板](./docs/handoff-prompt.md)
 - [前端说明](./apps/platform/README.md)
@@ -78,6 +81,8 @@ docs/
 ## 本地开发
 
 ```bash
+cp .env.example .env.local
+# 准备本地 MongoDB，并按 .env.local 注入连接串
 pnpm install
 pnpm dev
 ```

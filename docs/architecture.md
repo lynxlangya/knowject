@@ -1,6 +1,7 @@
 # Knowject 架构事实（2026-03-10）
 
 本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `docs/target-architecture.md` 与 `docs/gap-analysis.md`。
+截至 2026-03-10，`docs/tasks-foundation-framework.md` 中定义的基础框架阶段（`BF-01` ~ `BF-10`）已经完成。
 
 ## 1. 文档角色
 
@@ -16,8 +17,9 @@
 - 共享包：
   - `packages/request`：Axios 请求封装。
   - `packages/ui`：通用 UI 组件，当前已包含 `SearchPanel` 及其 helper 分层。
-- 当前产品主线：登录后产品壳、项目态页面、全局资产管理页、本地演示 API。
+- 当前产品主线：登录后产品壳、项目态页面、全局资产管理页、基础框架 API 基线。
 - 当前项目态主数据流：项目列表、项目基础信息与成员 roster 来自后端 `/api/projects*`；概览 / 对话 / 资源仍部分依赖前端 Mock 与本地绑定数据。
+- 当前最小本地开发拓扑：`platform + api + mongodb`；可运行的 `docker-compose` 编排文件仍未交付。
 - 当前运行要求：仓库要求 Node.js >= 22、pnpm 10；若本机版本过低，`pnpm check-types` 会先被环境阻塞。
 
 ## 3. 目录结构
@@ -26,13 +28,13 @@
 apps/
   platform/
     src/app/        鉴权、布局、导航、项目上下文
-    src/api/        auth / memory 前端请求封装
-    src/pages/      登录页、主页、项目页、全局资产页
+    src/api/        auth / projects / members / memory 前端请求封装
+    src/pages/      登录页、主页、成员页、项目页、全局资产页
   api/
     src/app/        Express 应用组装
     src/config/     环境变量加载与校验
     src/db/         MongoDB 连接与健康快照
-    src/modules/    auth / projects / memberships 模块边界
+    src/modules/    auth / members / projects / memberships 模块边界
     src/routes/     health / memory 当前接口
     src/middleware/ 请求上下文、404、统一错误处理
     src/server.ts   启动入口
@@ -41,9 +43,11 @@ packages/
   ui/               通用 UI 组件
 docs/
   architecture.md         当前事实源
+  auth-contract.md        认证与环境实施契约
   doc-iteration-handoff-plan.md  本轮文档执行计划
   handoff-guide.md        快速接手指南
   handoff-prompt.md       交接 Prompt 模板
+  tasks-foundation-framework.md  基础框架阶段任务归档
   target-architecture.md  目标蓝图
   gap-analysis.md         current vs target 对照
   design/                 品牌与视觉资料
@@ -239,7 +243,7 @@ docs/
 - 文档上传、Git 仓库接入、Figma 接入、代码解析与向量化。
 - 真实的 Knowledge / Skill / Agent 创建、绑定、执行与调度能力。
 - 项目私有知识库持久化、全局资产复用的正式后端流程。
-- docker-compose 私有化部署方案。
+- 可运行的 `docker-compose` 私有化部署编排文件（当前只有最小服务拓扑规划，不是已交付能力）。
 - Zustand、React Query 等额外状态管理层。
 
 ## 9. 相关文档
