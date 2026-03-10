@@ -21,19 +21,47 @@ export const ProjectChatPage = () => {
     message.info('新建对话将于后续版本接入真实对话能力。');
   };
 
+  const renderCreateChatButton = ({
+    block = false,
+    compact = false,
+  }: {
+    block?: boolean;
+    compact?: boolean;
+  }) => (
+    <Button
+      block={block}
+      icon={<PlusOutlined />}
+      size="large"
+      onClick={handleCreateChat}
+      className={[
+        compact
+          ? 'h-11! w-full rounded-full! border-slate-200! bg-white! px-5! text-sm! font-semibold! text-slate-700! shadow-none! md:w-auto'
+          : 'h-12! rounded-full! border-dashed! border-slate-300! text-lg! font-semibold! text-slate-700!',
+      ].join(' ')}
+    >
+      新建对话
+    </Button>
+  );
+
   return (
     <section className="grid h-full min-h-0 flex-1 overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.035)] xl:grid-cols-[360px_minmax(0,1fr)]">
       <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-slate-50/55 xl:border-b-0 xl:border-r">
         <div className="border-b border-slate-200 px-5 py-5">
-          <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-            项目对话
-          </Typography.Text>
-          <Typography.Title level={4} className="mb-1! mt-2 text-slate-800!">
-            最近上下文
-          </Typography.Title>
-          <Typography.Paragraph className="mb-0! text-sm! text-slate-600!">
-            对话仍是项目协作入口，但知识和资源不会再隐藏在聊天壳里。
-          </Typography.Paragraph>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0 flex-1">
+              <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                项目对话
+              </Typography.Text>
+              <Typography.Title level={4} className="mb-1! mt-2 text-slate-800!">
+                最近上下文
+              </Typography.Title>
+              <Typography.Paragraph className="mb-0! text-sm! text-slate-600!">
+                对话仍是项目协作入口，但知识和资源不会再隐藏在聊天壳里。
+              </Typography.Paragraph>
+            </div>
+
+            <div className="xl:hidden">{renderCreateChatButton({ compact: true })}</div>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
@@ -44,16 +72,8 @@ export const ProjectChatPage = () => {
           />
         </div>
 
-        <footer className="border-t border-slate-200 p-3">
-          <Button
-            block
-            icon={<PlusOutlined />}
-            size="large"
-            onClick={handleCreateChat}
-            className="h-12! rounded-full! border-dashed! border-slate-300! text-lg! font-semibold! text-slate-700!"
-          >
-            新建对话
-          </Button>
+        <footer className="hidden border-t border-slate-200 p-3 xl:block">
+          {renderCreateChatButton({ block: true })}
         </footer>
       </aside>
 

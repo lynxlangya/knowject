@@ -62,18 +62,24 @@ export const ProjectHeader = ({
               活跃成员
             </Typography.Text>
             <div className="mt-1.5 flex items-center">
-              {visibleMembers.map((member, index) => (
-                <Tooltip key={member.id} title={member.name}>
-                  <div
+	              {visibleMembers.map((member, index) => (
+	                <Tooltip key={member.id} title={member.name}>
+	                  <div
                     className={[
                       'relative h-5 w-5 shrink-0 overflow-hidden rounded-full ring-1 ring-white shadow-[0_4px_10px_rgba(15,23,42,0.12)] transition-transform duration-200 hover:z-10 hover:-translate-y-0.5',
-                      index === 0 ? '' : '-ml-1',
-                    ].join(' ')}
-                  >
-                    <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
-                  </div>
-                </Tooltip>
-              ))}
+	                      index === 0 ? '' : '-ml-1',
+	                    ].join(' ')}
+	                  >
+	                    {member.avatarUrl ? (
+	                      <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
+	                    ) : (
+	                      <span className="flex h-full w-full items-center justify-center bg-slate-200 text-[9px] font-semibold text-slate-600">
+	                        {(member.name.trim().charAt(0) || 'M').toUpperCase()}
+	                      </span>
+	                    )}
+	                  </div>
+	                </Tooltip>
+	              ))}
               {hiddenMemberCount > 0 ? (
                 <span className="-ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[9px] font-semibold text-slate-600 ring-1 ring-white shadow-[0_4px_10px_rgba(15,23,42,0.08)]">
                   +{hiddenMemberCount}

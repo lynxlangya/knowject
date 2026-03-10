@@ -21,13 +21,13 @@
 - 当前实现摘要：
   - 前端产品壳、项目页 canonical 路由、全局资产治理壳层和项目资源消费层已经收敛。
   - 前端登录页已经接入正式注册 / 登录、JWT、用户快照和“记住用户名”。
-  - 后端已经完成 `health / auth / memory` 最小链路，但项目主数据仍未切到后端。
-  - 项目页主数据仍由 `localStorage + Mock` 驱动，`knowject_projects` 继续承载项目基础信息和资源绑定字段。
+  - 后端已经完成 `health / auth / projects / memberships / memory` 最小链路，前端项目列表、项目基础信息与成员 roster 已接到后端。
+  - 项目资源绑定仍由前端本地状态维护，`knowject_projects` 已退为历史 Mock 缓存键。
 - 已确认的路由 / 接口 / 数据来源：
   - canonical 路由：`/home`、`/project/:projectId/*`
   - 兼容路由：`/workspace`、`/home/project/*`、`/project/:projectId/knowledge|skills|agents`
-  - 现有接口：`GET /api/health`、`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/memory/overview`、`POST /api/memory/query`
-  - 项目态页面主数据来源：前端 `ProjectContext + project.storage + project.catalog + project.mock`
+  - 现有接口：`GET /api/health`、`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/projects`、`POST /api/projects`、`PATCH /api/projects/:projectId`、`DELETE /api/projects/:projectId`、`POST /api/projects/:projectId/members`、`PATCH /api/projects/:projectId/members/:userId`、`DELETE /api/projects/:projectId/members/:userId`、`GET /api/memory/overview`、`POST /api/memory/query`
+  - 项目态页面主数据来源：后端 `ProjectContext + /api/projects*`，辅以前端 `project.storage + project.catalog + project.mock`
 - 已知历史兼容或废弃项：
   - `/workspace` 仅作兼容入口，必须重定向到 `/home`
   - `/home/project/*` 仅作兼容跳转，不再作为业务 canonical

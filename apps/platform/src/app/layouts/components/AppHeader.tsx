@@ -9,7 +9,7 @@ export interface AppHeaderProps {
 
 export const AppHeader = ({ onLogout }: AppHeaderProps) => {
   return (
-    <Header className="flex! items-center justify-between border-b! border-white/10! bg-gradient-to-r! from-slate-900! via-slate-800! to-slate-700! px-5!">
+    <Header className="flex! items-center justify-between border-b! border-white/10! bg-linear-to-r! from-slate-900! via-slate-800! to-slate-700! px-5!">
       <div className="flex min-w-0 flex-col gap-0.5">
         <Typography.Text className="text-[18px] leading-tight text-slate-50!">知项 · Knowject</Typography.Text>
         <Typography.Text className="text-xs leading-tight text-slate-100/85!">

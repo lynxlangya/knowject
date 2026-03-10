@@ -14,20 +14,20 @@
   - `apps/platform/src/app/layouts/components/AppSider.tsx`
   - `apps/platform/src/pages/login/LoginPage.tsx`
   - `apps/api/src/server.ts`
-  - `apps/api/src/routes/auth.ts`
+  - `apps/api/src/modules/auth/*`
+  - `apps/api/src/modules/projects/*`
   - `apps/api/src/routes/memory.ts`
 - 当前已存在：
   - 前端 Monorepo、登录页、登录后产品壳、项目侧栏、项目页 canonical 路由。
-  - `apps/api` 演示服务和 `health / auth / memory` 三组接口。
-  - 前端项目列表创建 / 编辑 / 删除 / 置顶交互，但数据来自 `localStorage + Mock`。
+  - `apps/api` 已落地 `health / auth / projects / memberships / memory` 五组接口。
+  - 前端项目列表创建 / 编辑 / 删除 / 置顶交互；项目列表、项目基础信息与成员 roster 已切到正式后端接口。
 - 当前明确未完成：
-  - 用户注册、真实 JWT 鉴权、正式后端用户体系。
-  - 项目正式持久化、项目成员关系、项目级角色模型。
-  - MongoDB 接入与运行环境契约。
+  - 项目资源绑定、对话列表与消息链路仍未切到正式后端。
+  - 基础文档、接口样例与 `docker-compose` 拓扑规划收口。
 - 当前不应重复立项：
   - 前端初始化、Monorepo 初始化、全局资产系统、RAG / Skill / Agent、SSE 对话链路。
 - 当前需要显式处理的结构冲突：
-  - `ProjectSummary` 仍混合了项目主数据、资产绑定字段和前端展示偏好字段。
+  - `ProjectSummary` 当前是“后端项目基础信息 + 本地 pin / 资源绑定”的前端消费模型，后续仍要继续收敛边界。
   - 项目成员页当前使用 `owner / product / design / frontend / backend / marketing` 这类展示型 mock 角色，不是基础框架阶段的正式权限模型。
 
 ## 基础框架完成定义
@@ -229,7 +229,7 @@
   - 登录和注册都能落到现有登录后壳层。
   - 现有 `knowject_token`、`knowject_auth_user` 存储策略继续可用。
 
-### BF-06 TODO · Project 领域模型
+### BF-06 DONE（2026-03-10）· Project 领域模型
 
 - 目标：建立基础框架阶段最小可用的正式项目模型。
 - 输出：
@@ -238,12 +238,16 @@
   - 项目级 `admin / member` 权限规则。
   - 当前用户参与项目的查询规则。
 - 依赖：`BF-03`。
+- 已完成记录：
+  - 已新增 `projects` 集合模型：`name / description / ownerId / members / createdAt / updatedAt`。
+  - 已明确成员关系内嵌在项目文档中，角色只支持 `admin / member`。
+  - 已落地“项目创建者自动成为首个 `admin`”和“按当前用户查询参与项目”的基础规则。
 - 验收：
   - 项目创建者自动成为 `admin`。
   - 后端项目模型不再混入 `isPinned`、资产绑定数组和展示型协作角色。
   - 项目权限边界可支撑 CRUD 和成员管理。
 
-### BF-07 TODO · Project CRUD API
+### BF-07 DONE（2026-03-10）· Project CRUD API
 
 - 目标：让项目列表和项目基础信息具备正式后端读写能力。
 - 输出：
@@ -253,12 +257,16 @@
   - `DELETE /api/projects/:projectId`
   - 面向前端的项目响应适配约定。
 - 依赖：`BF-06`。
+- 已完成记录：
+  - 已落地 `GET /api/projects`、`POST /api/projects`、`PATCH /api/projects/:projectId`、`DELETE /api/projects/:projectId`。
+  - 已接入登录态校验，所有项目接口都要求 `Authorization: Bearer <token>`。
+  - 已落地“仅返回当前用户参与项目”和“只有项目级 `admin` 可更新 / 删除”的最小权限约束。
 - 验收：
   - 当前用户只能看到自己参与的项目。
   - 项目级 `admin` 能更新 / 删除项目。
   - 前端可基于接口结果恢复当前侧栏项目列表能力。
 
-### BF-08 TODO · 既有用户加入项目
+### BF-08 DONE（2026-03-10）· 既有用户加入项目
 
 - 目标：完成“已有注册用户加入项目并分配 `admin / member` 角色”的最小闭环。
 - 输出：
@@ -267,12 +275,16 @@
   - `DELETE /api/projects/:projectId/members/:userId`
   - `/project/:projectId/members` 页面的最小成员管理入口。
 - 依赖：`BF-06`、`BF-07`。
+- 已完成记录：
+  - 已落地按用户名添加已有注册用户、修改 `admin / member` 角色、移除成员三组接口。
+  - 已补充“项目至少保留一位 `admin`”的最小防护，避免项目进入无管理者状态。
+  - `/project/:projectId/members` 已切到最小 roster 管理页，并作为 BF-09 后的正式成员管理入口。
 - 验收：
   - 项目级 `admin` 可以按用户名添加已有用户。
   - 项目级 `admin` 可以修改角色、移除成员。
   - 不引入邀请 token、邀请邮件或外部通知链路。
 
-### BF-09 TODO · 前端项目数据源切换
+### BF-09 DONE（2026-03-10）· 前端项目数据源切换
 
 - 目标：把项目主数据从 `localStorage + Mock` 切换到正式后端 API，同时保住现有 canonical 路由和产品壳层。
 - 输出：
@@ -281,6 +293,11 @@
   - 项目创建 / 编辑弹框收敛为项目基础信息表单。
   - 项目成员页切到最小 roster 管理视图。
 - 依赖：`BF-05`、`BF-07`、`BF-08`。
+- 已完成记录：
+  - `ProjectContext` 已切到 `/api/projects` 驱动，侧栏项目列表和项目基础信息不再从 `knowject_projects` 读取。
+  - `isPinned` 已拆到 `knowject_project_pins`，项目资源绑定已拆到 `knowject_project_resource_bindings`。
+  - `AppSider` 的项目创建 / 编辑弹框已收敛为 `name / description` 基础信息表单。
+  - `/project/:projectId/members` 已移除 legacy mock 兼容分支，统一使用正式后端 roster。
 - 验收：
   - `knowject_projects` 不再作为项目主数据源。
   - 创建 / 编辑项目不再把知识库、技能、智能体绑定字段写入后端。
@@ -327,12 +344,12 @@
 
 ## 主要风险与阻塞
 
-- 当前成员页的 rich mock 协作卡片与基础框架阶段的 `admin / member` 权限模型并不一致。
-  - 处理方式：本阶段先切到最小 roster 管理视图，把 rich 协作快照留到后续阶段恢复。
-- 当前项目创建弹框包含知识库、技能、智能体和成员字段，超出了基础框架正式后端范围。
-  - 处理方式：本阶段只保留项目基础信息，成员管理迁到成员页，资产绑定明确延后。
-- 当前 `ProjectSummary` 同时承担项目实体、展示偏好和资产绑定字段。
-  - 处理方式：前端切 API 时同步拆分实体数据与本地 UI 偏好。
+- 项目概览中的 rich mock 协作快照与基础框架阶段的 `admin / member` 正式权限模型仍不一致。
+  - 处理方式：当前先保留为演示展示数据，不再作为成员页主数据源，后续单独收口。
+- 项目资源绑定仍停留在前端本地状态，尚未形成正式后端写路径。
+  - 处理方式：在 BF-09 已完成的主数据基线上，后续继续补正式绑定链路。
+- 当前 `ProjectSummary` 仍是前端合并视图，不是最终的纯后端实体类型。
+  - 处理方式：后续在资源绑定正式化时继续收敛前端消费模型边界。
 - 当前没有一键本地基础设施编排。
   - 处理方式：本阶段先把 `api + mongodb` 的服务拓扑和环境契约写清楚，不把 `docker-compose` 本体作为阻塞项。
 - JWT、MongoDB 和前端现有壳层切换会带来一次集中联调成本。

@@ -36,17 +36,22 @@
    - `apps/platform/src/app/project/project.catalog.ts`
    - `apps/platform/src/pages/project/project.mock.ts`
    - `apps/platform/src/pages/project/ProjectResourcesPage.tsx`
+   - `apps/platform/src/pages/project/ProjectMembersPage.tsx`
    - `apps/api/src/app/create-app.ts`
    - `apps/api/src/modules/auth/*`
+   - `apps/api/src/modules/projects/*`
+   - `apps/api/src/modules/memberships/*`
    - `apps/api/src/routes/memory.ts`
 
 在开始实施前，必须先明确以下结论：
 
-- 当前项目页主数据仍来自前端 `localStorage + Mock`，不是后端数据库。
-- 后端已经落地 MongoDB、JWT、注册 / 登录、健康检查和 memory 演示接口。
+- 当前项目列表、项目基础信息和成员 roster 已来自后端 `/api/projects*`，但概览 / 对话 / 资源仍部分依赖前端 Mock 与本地绑定。
+- 后端已经落地 MongoDB、JWT、注册 / 登录、最小项目 CRUD、成员接口、健康检查和 memory 演示接口。
 - `/workspace`、`/home/project/*` 和旧 `knowledge|skills|agents` 项目路由都只是兼容入口。
 - 项目资源页只负责消费项目已绑定的全局资产，全局资产页仍是治理壳层，占位交互未落地真实写操作。
-- `knowject_projects` 当前仍混合承载项目基础信息和前端资源绑定字段。
+- `knowject_project_pins` 当前承载前端置顶偏好，`knowject_project_resource_bindings` 当前承载前端资源绑定。
+- `knowject_projects` 已退为历史本地 Mock 缓存键，当前只在首次刷新时作为一次性迁移源读取。
+- 项目成员正式管理接口已经落地，前端成员页当前已切到正式后端 roster。
 
 你的输出必须先包含：
 
@@ -61,7 +66,7 @@
 - 以最小可行改动推进，不做未来抽象，不为了“显得完整”引入新层级。
 - 改路由、数据来源、localStorage 键、API 边界或文档角色时，必须同步更新 `docs/architecture.md` 和 `docs/README.md`，必要时更新 `README.md` 与 `docs/auth-contract.md`。
 - 不要把 `docs/target-architecture.md` 中的目标能力表述成当前现状。
-- 在没有正式项目主数据模型前，不要继续把更多真实业务逻辑堆进 `project.mock.ts` 和 `project.catalog.ts`。
+- 在没有完成正式资源绑定 / 对话数据切换前，不要继续把更多真实业务逻辑堆进 `project.mock.ts` 和 `project.catalog.ts`。
 ```
 
 ## 人类接手 Prompt
@@ -81,8 +86,10 @@
    - `apps/platform/src/app/layouts/components/AppSider.tsx`
    - `apps/platform/src/app/project/project.storage.ts`
    - `apps/platform/src/pages/project/project.mock.ts`
+   - `apps/platform/src/pages/project/ProjectMembersPage.tsx`
    - `apps/api/src/app/create-app.ts`
    - `apps/api/src/modules/auth/auth.service.ts`
+   - `apps/api/src/modules/memberships/*`
 3. 在动手前先写清楚：
    - 当前真实已完成到哪里
    - 本次任务准备只改哪些文件
@@ -94,8 +101,8 @@
 
 请始终记住：
 
-- 当前最稳定的是信息架构和产品壳，不是正式后端数据链路。
-- 当前 auth 已经落地，项目主数据还没有。
+- 当前最稳定的是信息架构、产品壳和项目主数据主链路；资源绑定、对话与 AI 能力仍未正式化。
+- 当前 auth、最小项目 CRUD、项目主数据和成员接口已经落地；剩余主要断层在资源绑定与会话数据链路。
 - 如果你的改动影响路由、主数据来源、认证契约或存储键，文档必须同步更新。
 ```
 

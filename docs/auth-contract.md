@@ -230,9 +230,12 @@
 | `401` | `AUTH_INVALID_CREDENTIALS` | 用户不存在或密码错误 |
 | `401` | `AUTH_TOKEN_INVALID` | token 缺失、非法、过期 |
 | `403` | `PROJECT_FORBIDDEN` | 已登录但无项目级操作权限 |
+| `404` | `AUTH_USER_NOT_FOUND` | 按用户名添加项目成员时，目标用户不存在 |
 | `404` | `PROJECT_NOT_FOUND` | 访问不存在或不可见的项目 |
+| `404` | `PROJECT_MEMBER_NOT_FOUND` | 修改或移除不存在的项目成员 |
 | `409` | `AUTH_USERNAME_CONFLICT` | 注册时用户名冲突 |
 | `409` | `PROJECT_MEMBER_ALREADY_EXISTS` | 成员重复加入项目 |
+| `409` | `PROJECT_LAST_ADMIN_REQUIRED` | 尝试降级或移除项目中最后一位 `admin` |
 | `500` | `INTERNAL_SERVER_ERROR` | 未处理异常或基础设施错误 |
 
 暴露规则：
@@ -245,7 +248,36 @@
 
 - JWT 只表达“当前用户是谁”，不直接承载项目角色列表
 - 项目级 `admin / member` 权限判断由项目接口和成员关系完成
-- 当前成员页中的 `owner / product / design / frontend / backend / marketing` 仍视为展示型 mock，不进入正式认证模型
+- 当前前端中的 `owner / product / design / frontend / backend / marketing` 仍视为协作演示数据里的展示型角色，不进入正式认证模型
+
+## 8.1 项目成员接口契约
+
+已落地的最小项目成员接口：
+
+- `POST /api/projects/:projectId/members`
+- `PATCH /api/projects/:projectId/members/:userId`
+- `DELETE /api/projects/:projectId/members/:userId`
+
+请求体约定：
+
+- 新增成员：`{ "username": "alice", "role": "member" }`
+- 修改角色：`{ "role": "admin" }`
+
+响应约定：
+
+- 三个接口当前都返回最新项目快照：`{ project }`
+- `project.members[]` 中每个成员至少包含：
+  - `userId`
+  - `username`
+  - `name`
+  - `role`
+  - `joinedAt`
+
+角色规则：
+
+- 只允许 `admin / member`
+- 只有项目级 `admin` 可以新增成员、修改角色、移除成员
+- 项目至少保留一位 `admin`
 
 ## 9. 本阶段明确不做
 
@@ -266,6 +298,6 @@
 
 ## 11. 当前遗留边界
 
-- 当前只完成 auth 闭环，未完成项目 / 成员 / 资源正式后端接口。
+- 当前已完成 auth、项目 CRUD 和项目成员接口，前端项目列表、项目基础信息与成员 roster 也已切到正式后端接口。
 - JWT 当前只验证身份，不校验“用户是否已被系统禁用”之类更复杂状态。
-- 前端仍主要依赖本地 Mock 驱动项目主数据；auth 只是先行切到正式后端。
+- 项目资源绑定、对话列表与协作演示数据仍主要停留在前端本地层。

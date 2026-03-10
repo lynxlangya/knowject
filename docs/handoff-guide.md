@@ -8,7 +8,7 @@
 
 1. 当前事实以 `docs/architecture.md` 和源码为准，不以蓝图文档为准。
 2. 当前产品主线仍是“前端产品壳 + 本地 Mock + 演示 API”。
-3. 后端已经完成 auth 基线，但项目主数据还没有切到数据库。
+3. 后端已经完成 auth、最小项目 CRUD 和成员接口，前端项目列表、项目基础信息和成员 roster 也已切到数据库接口。
 4. canonical 路由已经稳定，兼容路由只做跳转，不应再回退成业务主入口。
 
 ## 10 到 15 分钟阅读顺序
@@ -26,8 +26,11 @@
    - `apps/platform/src/app/project/project.catalog.ts`
    - `apps/platform/src/pages/project/project.mock.ts`
    - `apps/platform/src/pages/project/ProjectResourcesPage.tsx`
+   - `apps/platform/src/pages/project/ProjectMembersPage.tsx`
    - `apps/api/src/app/create-app.ts`
    - `apps/api/src/modules/auth/*`
+   - `apps/api/src/modules/projects/*`
+   - `apps/api/src/modules/memberships/*`
    - `apps/api/src/routes/memory.ts`
 
 ## 当前业务逻辑的最小事实包
@@ -59,21 +62,23 @@
 
 ### 3. 项目数据模型和前端状态
 
-- 项目列表由 `ProjectContext` 管理，并持久化在 `knowject_projects`。
-- 当前 `ProjectSummary` 同时承载两类信息：
-  - 项目基础字段：`id / name / description / createdAt / isPinned`
-  - 前端资源绑定字段：`knowledgeBaseIds / memberIds / agentIds / skillIds`
-- 这意味着当前项目创建 / 编辑弹框不仅在改项目基础信息，也在改“项目绑定了哪些全局资产和成员”的前端 mock 配置。
-- `isPinned` 目前只是前端展示偏好，不是后端模型事实。
+- 项目列表由 `ProjectContext` 管理，并直接消费 `GET /api/projects`。
+- 当前前端本地只保留两类项目相关状态：
+  - `knowject_project_pins`：项目置顶偏好
+  - `knowject_project_resource_bindings`：项目资源绑定
+- 当前运行时 `ProjectSummary` 会把后端项目基础字段、成员 roster 与前端本地 pin / 资源绑定合并成页面消费模型。
+- `isPinned` 仍只是前端展示偏好，不进入后端正式项目模型。
+- 项目创建 / 编辑弹框当前只提交 `name / description`，不再承担资源绑定与成员配置。
 
 ### 4. 项目页与全局资产页
 
-- 项目页的 `概览 / 对话 / 资源 / 成员` 四页都还主要依赖 `project.mock.ts` 和 `project.catalog.ts`。
+- 项目页的 `概览 / 对话 / 资源` 三页仍主要依赖 `project.mock.ts` 和 `project.catalog.ts`。
 - 项目 `资源` 页只消费“当前项目已绑定的全局资产”，不是全局治理入口。
 - 全局 `知识库 / 技能 / 智能体` 页面已经有治理壳层，但“新建资产 / 引入到项目”仍是占位交互，没有真实数据写入。
 - 成员数据现在分两层：
   - 全局成员基础档案在 `project.catalog.ts`
   - 项目成员协作快照在 `project.mock.ts`
+- 成员页当前已完全切到正式后端 roster 管理；`project.mock.ts` 里的成员协作快照只保留给概览头部等演示展示。
 
 ### 5. 后端当前边界
 
@@ -82,18 +87,19 @@
   - 用户注册 / 登录
   - `argon2id` 密码哈希
   - JWT 鉴权中间件
+  - 项目模型与 `GET/POST/PATCH/DELETE /api/projects`
+  - 项目成员管理接口 `/api/projects/:projectId/members*`
   - `memory/overview` 与 `memory/query` 演示接口
-- `projects` 和 `memberships` 只建立了模块边界，正式 CRUD 还没做。
-- 因此当前项目页内容不能被误写成“后端已接管”。
+- 因此当前项目页内容应写成“项目主数据与成员关系已经切到后端，但资源绑定、对话与协作演示数据仍在前端本地层”。
 
 ## 如果你要继续开发，先按这个顺序推进
 
 1. 保持当前 canonical 路由和信息架构稳定，不再做大幅重命名。
-2. 先补 `projects / memberships` 的正式后端模型和接口。
-3. 再把前端 `knowject_projects` 主数据源逐步切换到后端。
+2. 优先继续收口项目资源绑定的真实写路径。
+3. 再推进对话列表、消息链路和 memory 演示接口之外的正式数据源。
 4. 最后再考虑真实 Knowledge / Skill / Agent 数据结构和对话链路。
 
-这个顺序的理由很简单：当前最大断层不在 UI，而在正式项目主数据和权限主线。
+这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“资源绑定、对话和 AI 能力仍未形成正式主链路”。
 
 ## 这一轮文档迭代做了什么
 
@@ -111,8 +117,8 @@
 ## 接手后最容易犯的错
 
 - 把 `docs/target-architecture.md` 当成当前实现说明。
-- 忽略 `knowject_projects` 里其实还混着资源绑定字段，直接按正式后端模型理解前端行为。
-- 看到 `/api/projects` 模块边界就误判“项目 CRUD 已完成”。
+- 忽略 `knowject_project_pins` / `knowject_project_resource_bindings` 这两个前端本地状态，直接把所有项目页行为都理解为后端事实。
+- 看到 `/api/projects` 和成员接口已落地，就误判“项目概览 / 对话 / 资源也已经完全切到后端”。
 - 把 `/project/:projectId/resources?focus=*` 当成新的 canonical 设计，而不是兼容跳转。
 - 在没有正式项目数据模型前，继续往 `project.mock.ts` 和 `project.catalog.ts` 里堆更多业务逻辑。
 
@@ -144,4 +150,4 @@ pnpm build
 
 ## 一句话结论
 
-现在最重要的不是“继续美化壳层”，而是让接手者清楚：前端壳层已经稳定，auth 已落地，项目主数据主线还没真正进入后端。
+现在最重要的不是“继续美化壳层”，而是让接手者清楚：前端壳层已经稳定，auth、项目 CRUD、项目主数据与成员接口已落地，剩余主要断层在资源绑定、对话和 AI 正式数据链路。

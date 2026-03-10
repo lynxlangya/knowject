@@ -1,4 +1,4 @@
-import { Alert, Button } from 'antd';
+import { Alert, Button, Skeleton } from 'antd';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   PATHS,
@@ -14,7 +14,7 @@ export const ProjectLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
-  const { getProjectById } = useProjectContext();
+  const { getProjectById, loading, error, refreshProjects } = useProjectContext();
 
   if (!projectId) {
     return (
@@ -36,18 +36,34 @@ export const ProjectLayout = () => {
 
   const activeProject = getProjectById(projectId);
 
+  if (loading && !activeProject) {
+    return (
+      <section className="h-full rounded-[24px] border border-slate-200 bg-white p-6">
+        <Skeleton active paragraph={{ rows: 6 }} />
+      </section>
+    );
+  }
+
   if (!activeProject) {
     return (
       <section className="h-full rounded-[24px] border border-slate-200 bg-white p-6">
         <Alert
-          type="warning"
+          type={error ? 'error' : 'warning'}
           showIcon
-          message="项目不存在或已被删除"
-          description="请从左侧“我的项目”重新选择。"
+          message={error ? '项目列表加载失败' : '项目不存在或已被删除'}
+          description={
+            error ? '当前无法从后端同步项目列表，请稍后重试。' : '请从左侧“我的项目”重新选择。'
+          }
           action={
-            <Button size="small" onClick={() => navigate(PATHS.home)}>
-              返回主页
-            </Button>
+            error ? (
+              <Button size="small" onClick={() => void refreshProjects()}>
+                重新加载
+              </Button>
+            ) : (
+              <Button size="small" onClick={() => navigate(PATHS.home)}>
+                返回主页
+              </Button>
+            )
           }
         />
       </section>

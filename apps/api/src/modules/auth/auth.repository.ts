@@ -1,16 +1,35 @@
 import {
   MongoServerError,
+  ObjectId,
   type Collection,
   type WithId,
 } from 'mongodb';
 import type { MongoDatabaseManager } from '@db/mongo.js';
-import type { AuthUserDocument } from './auth.types.js';
+import type { AuthUserDocument, AuthUserProfile } from './auth.types.js';
 
 interface CreateUserRecordInput {
   username: string;
   name: string;
   passwordHash: string;
 }
+
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+const toObjectId = (value: string): ObjectId | null => {
+  if (!OBJECT_ID_REGEX.test(value)) {
+    return null;
+  }
+
+  return new ObjectId(value);
+};
+
+const toAuthUserProfile = (user: WithId<AuthUserDocument>): AuthUserProfile => {
+  return {
+    id: user._id.toHexString(),
+    username: user.username,
+    name: user.name,
+  };
+};
 
 export const isDuplicateUsernameError = (error: unknown): boolean => {
   return error instanceof MongoServerError && error.code === 11000;
@@ -25,6 +44,21 @@ export class AuthRepository {
   async findByUsername(username: string): Promise<WithId<AuthUserDocument> | null> {
     const collection = await this.getCollection();
     return collection.findOne({ username });
+  }
+
+  async findProfilesByIds(userIds: string[]): Promise<AuthUserProfile[]> {
+    const objectIds = Array.from(new Set(userIds))
+      .map((userId) => toObjectId(userId))
+      .filter((objectId): objectId is ObjectId => objectId !== null);
+
+    if (objectIds.length === 0) {
+      return [];
+    }
+
+    const collection = await this.getCollection();
+    const users = await collection.find({ _id: { $in: objectIds } }).toArray();
+
+    return users.map(toAuthUserProfile);
   }
 
   async createUser(input: CreateUserRecordInput): Promise<WithId<AuthUserDocument>> {
@@ -72,3 +106,11 @@ export class AuthRepository {
     await this.ensureIndexesPromise;
   }
 }
+
+export const createAuthRepository = ({
+  mongo,
+}: {
+  mongo: MongoDatabaseManager;
+}): AuthRepository => {
+  return new AuthRepository(mongo);
+};

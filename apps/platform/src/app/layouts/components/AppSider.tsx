@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
+import { isApiError } from "@knowject/request";
 import {
   DeleteOutlined,
   EditOutlined,
@@ -9,7 +10,7 @@ import {
   PushpinOutlined,
   ShareAltOutlined,
   SettingOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 import {
   App,
   Dropdown,
@@ -20,27 +21,27 @@ import {
   Modal,
   Popover,
   Select,
+  Skeleton,
   Typography,
-} from 'antd';
-import type { MenuProps } from 'antd';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { KNOWJECT_BRAND } from '@styles/brand';
-import { getMenuPath, menuItems } from '@app/navigation/menu';
+} from "antd";
+import type { MenuProps } from "antd";
+import { useLocation, useNavigate } from "react-router-dom";
+import { KNOWJECT_BRAND } from "@styles/brand";
+import { getMenuPath, menuItems } from "@app/navigation/menu";
 import {
   PATHS,
   buildProjectOverviewPath,
   getProjectIdFromPathname,
-} from '@app/navigation/paths';
-import { getAuthUser } from '@app/auth/user';
+} from "@app/navigation/paths";
+import { getAuthUser } from "@app/auth/user";
 import {
   GLOBAL_AGENT_OPTIONS,
   GLOBAL_KNOWLEDGE_OPTIONS,
-  GLOBAL_MEMBER_OPTIONS,
   GLOBAL_SKILL_OPTIONS,
-} from '@app/project/project.catalog';
-import type { ProjectSummary } from '@app/project/project.types';
-import { useProjectContext } from '@app/project/useProjectContext';
-import { SIDER_WIDTH } from '@app/layouts/layout.constants';
+} from "@app/project/project.catalog";
+import type { ProjectSummary } from "@app/project/project.types";
+import { useProjectContext } from "@app/project/useProjectContext";
+import { SIDER_WIDTH } from "@app/layouts/layout.constants";
 
 const { Sider } = Layout;
 
@@ -54,7 +55,6 @@ interface ProjectFormValues {
   name: string;
   description?: string;
   knowledgeBaseIds?: string[];
-  memberIds?: string[];
   agentIds?: string[];
   skillIds?: string[];
 }
@@ -63,32 +63,53 @@ const toProjectFormValues = (project: ProjectSummary): ProjectFormValues => ({
   name: project.name,
   description: project.description,
   knowledgeBaseIds: project.knowledgeBaseIds,
-  memberIds: project.memberIds,
   agentIds: project.agentIds,
   skillIds: project.skillIds,
 });
 
-export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) => {
+export const AppSider = ({
+  selectedKey,
+  onNavigate,
+  onLogout,
+}: AppSiderProps) => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<ProjectFormValues>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { projects, addProject, updateProject, toggleProjectPin, deleteProject } = useProjectContext();
+  const {
+    projects,
+    loading,
+    error,
+    addProject,
+    updateProject,
+    toggleProjectPin,
+    deleteProject,
+    refreshProjects,
+  } = useProjectContext();
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [projectSubmitting, setProjectSubmitting] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [actionMenuOpenProjectId, setActionMenuOpenProjectId] = useState<string | null>(null);
+  const [actionMenuOpenProjectId, setActionMenuOpenProjectId] = useState<
+    string | null
+  >(null);
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const activeProjectId = getProjectIdFromPathname(location.pathname);
   const authUser = getAuthUser();
   const editingProject = editingProjectId
-    ? projects.find((project) => project.id === editingProjectId) ?? null
+    ? (projects.find((project) => project.id === editingProjectId) ?? null)
     : null;
 
   const isEditing = editingProject !== null;
-  const accountPrimary = authUser?.username || authUser?.name || 'current@knowject.ai';
+  const accountPrimary =
+    authUser?.username || authUser?.name || "current@knowject.ai";
   const accountSecondary =
-    authUser?.name && authUser.name !== accountPrimary ? authUser.name : '当前登录账号';
-  const accountAvatar = (authUser?.name || authUser?.username || 'K').trim().charAt(0).toUpperCase();
+    authUser?.name && authUser.name !== accountPrimary
+      ? authUser.name
+      : "当前登录账号";
+  const accountAvatar = (authUser?.name || authUser?.username || "K")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
 
   useEffect(() => {
     if (!projectModalOpen) {
@@ -126,68 +147,80 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
     form.resetFields();
   };
 
-  const handleSubmitProject = (values: ProjectFormValues) => {
+  const handleSubmitProject = async (values: ProjectFormValues) => {
     const nextValues = {
       name: values.name,
-      description: values.description?.trim() ?? '',
+      description: values.description?.trim() ?? "",
       knowledgeBaseIds: values.knowledgeBaseIds ?? [],
-      memberIds: values.memberIds ?? [],
       agentIds: values.agentIds ?? [],
       skillIds: values.skillIds ?? [],
     };
 
-    if (editingProjectId) {
-      const result = updateProject({
-        projectId: editingProjectId,
-        ...nextValues,
-      });
+    setProjectSubmitting(true);
 
-      if (result === 'empty') {
-        message.warning('请输入项目名称');
-        return;
-      }
+    try {
+      if (editingProjectId) {
+        const result = await updateProject({
+          projectId: editingProjectId,
+          ...nextValues,
+        });
 
-      if (result === 'duplicate') {
-        message.warning('项目名称已存在，请更换后重试');
-        return;
-      }
+        if (result === "empty") {
+          message.warning("请输入项目名称");
+          return;
+        }
 
-      if (result === 'not_found') {
-        message.warning('项目不存在或已被删除');
+        if (result === "duplicate") {
+          message.warning("项目名称已存在，请更换后重试");
+          return;
+        }
+
+        if (result === "not_found") {
+          message.warning("项目不存在或已被删除");
+          handleCloseProjectModal();
+          return;
+        }
+
+        message.success("项目已更新");
         handleCloseProjectModal();
         return;
       }
 
-      message.success('项目已更新');
+      const result = await addProject(nextValues);
+      if (result === "empty") {
+        message.warning("请输入项目名称");
+        return;
+      }
+
+      if (result === "duplicate") {
+        message.warning("项目名称已存在，请更换后重试");
+        return;
+      }
+
+      message.success("项目已添加到“我的项目”");
       handleCloseProjectModal();
-      return;
+    } catch (submitError) {
+      console.error(submitError);
+      message.error(
+        isApiError(submitError)
+          ? submitError.message
+          : "保存项目失败，请稍后重试",
+      );
+    } finally {
+      setProjectSubmitting(false);
     }
-
-    const result = addProject(nextValues);
-    if (result === 'empty') {
-      message.warning('请输入项目名称');
-      return;
-    }
-
-    if (result === 'duplicate') {
-      message.warning('项目名称已存在，请更换后重试');
-      return;
-    }
-
-    message.success('项目已添加到“我的项目”');
-    handleCloseProjectModal();
   };
 
   const handleToggleProjectPin = (project: ProjectSummary) => {
     const result = toggleProjectPin(project.id);
     setActionMenuOpenProjectId(null);
 
-    if (result === 'not_found') {
-      message.warning('项目不存在或已被删除');
+    if (result === "not_found") {
+      message.warning("项目不存在或已被删除");
       return;
     }
 
-    if (result === 'pinned') {
+    if (result === "pinned") {
       message.success(`已置顶「${project.name}」`);
       return;
     }
@@ -201,85 +234,99 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
     const remainingProjects = projects.filter((item) => item.id !== project.id);
 
     modal.confirm({
-      title: '删除项目',
+      title: "删除项目",
       content: `确定删除「${project.name}」吗？此操作不可撤销。`,
-      okText: '删除',
+      okText: "删除",
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: "取消",
       onOk: () => {
-        const result = deleteProject(project.id);
+        return (async () => {
+          try {
+            const result = await deleteProject(project.id);
 
-        if (result === 'not_found') {
-          message.warning('项目不存在或已被删除');
-          return;
-        }
+            if (result === "not_found") {
+              message.warning("项目不存在或已被删除");
+              return;
+            }
 
-        message.success(`已删除「${project.name}」`);
+            message.success(`已删除「${project.name}」`);
 
-        if (project.id !== activeProjectId) {
-          return;
-        }
+            if (project.id !== activeProjectId) {
+              return;
+            }
 
-        if (remainingProjects[0]) {
-          navigate(buildProjectOverviewPath(remainingProjects[0].id));
-          return;
-        }
+            if (remainingProjects[0]) {
+              navigate(buildProjectOverviewPath(remainingProjects[0].id));
+              return;
+            }
 
-        navigate(PATHS.home);
+            navigate(PATHS.home);
+          } catch (deleteError) {
+            console.error(deleteError);
+            message.error(
+              isApiError(deleteError)
+                ? deleteError.message
+                : "删除项目失败，请稍后重试",
+            );
+            throw deleteError;
+          }
+        })();
       },
     });
   };
 
-  const getProjectActionItems = (project: ProjectSummary): MenuProps['items'] => [
+  const getProjectActionItems = (
+    project: ProjectSummary,
+  ): MenuProps["items"] => [
     {
-      key: 'share',
+      key: "share",
       icon: <ShareAltOutlined />,
-      label: '分享',
+      label: "分享",
       disabled: true,
     },
     {
-      key: 'edit',
+      key: "edit",
       icon: <EditOutlined />,
-      label: '编辑',
+      label: "编辑",
     },
     {
-      key: 'pin',
+      key: "pin",
       icon: <PushpinOutlined />,
-      label: project.isPinned ? '取消置顶' : '置顶',
+      label: project.isPinned ? "取消置顶" : "置顶",
     },
     {
-      key: 'archive',
+      key: "archive",
       icon: <InboxOutlined />,
-      label: '归档',
+      label: "归档",
       disabled: true,
     },
     {
-      key: 'delete',
+      key: "delete",
       icon: <DeleteOutlined />,
-      label: '删除',
+      label: "删除",
       danger: true,
     },
   ];
 
   const handleProjectActionClick = (project: ProjectSummary, key: string) => {
-    if (key === 'edit') {
+    if (key === "edit") {
       handleOpenEditProject(project);
       return;
     }
 
-    if (key === 'pin') {
+    if (key === "pin") {
       handleToggleProjectPin(project);
       return;
     }
 
-    if (key === 'delete') {
+    if (key === "delete") {
       handleDeleteProject(project);
     }
   };
 
   const accountPanelContent = (
     <div className="w-68 rounded-[20px] p-2">
-      <div className="flex items-center gap-3 rounded-[16px] px-2.5 py-2">
+      <div className="flex items-center gap-3 rounded-2xl px-2.5 py-2">
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] text-[14px] font-semibold text-white"
           style={{
@@ -343,7 +390,7 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
         <div
           className="rounded-[26px] border px-4 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.035)]"
           style={{
-            borderColor: 'rgba(255,255,255,0.72)',
+            borderColor: "rgba(255,255,255,0.72)",
             background: KNOWJECT_BRAND.shellSurfaceStrong,
           }}
         >
@@ -359,9 +406,9 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
         <div
           className="mt-4 rounded-[26px] border p-2"
           style={{
-            borderColor: 'rgba(255,255,255,0.68)',
+            borderColor: "rgba(255,255,255,0.68)",
             background: KNOWJECT_BRAND.shellSurface,
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)',
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4)",
           }}
         >
           <Menu
@@ -370,24 +417,28 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
             selectedKeys={selectedKey ? [selectedKey] : []}
             items={menuItems}
             onClick={({ key }) => onNavigate(getMenuPath(String(key)))}
-            style={{ borderInlineEnd: 'none', background: 'transparent', paddingInline: 0 }}
+            style={{
+              borderInlineEnd: "none",
+              background: "transparent",
+              paddingInline: 0,
+            }}
             className={[
-              '[&_.ant-menu-item]:mx-0',
-              '[&_.ant-menu-item]:my-1',
-              '[&_.ant-menu-item]:px-3',
-              '[&_.ant-menu-item]:text-[14px]',
-              '[&_.ant-menu-item]:font-medium',
-              '[&_.ant-menu-item_.ant-menu-title-content]:tracking-[0.01em]',
-              '[&_.ant-menu-item-selected]:shadow-[0_10px_18px_rgba(27,80,183,0.10)]',
-              '[&_.ant-menu-item_.anticon]:text-[15px]',
-            ].join(' ')}
+              "[&_.ant-menu-item]:mx-0",
+              "[&_.ant-menu-item]:my-1",
+              "[&_.ant-menu-item]:px-3",
+              "[&_.ant-menu-item]:text-[14px]",
+              "[&_.ant-menu-item]:font-medium",
+              "[&_.ant-menu-item_.ant-menu-title-content]:tracking-[0.01em]",
+              "[&_.ant-menu-item-selected]:shadow-[0_10px_18px_rgba(27,80,183,0.10)]",
+              "[&_.ant-menu-item_.anticon]:text-[15px]",
+            ].join(" ")}
           />
         </div>
 
         <div
-          className="mt-4 mb-[14px] flex min-h-0 flex-1 flex-col rounded-[26px] border p-3"
+          className="mt-4 mb-3.5 flex min-h-0 flex-1 flex-col rounded-[26px] border p-3"
           style={{
-            borderColor: 'rgba(255,255,255,0.68)',
+            borderColor: "rgba(255,255,255,0.68)",
             background: KNOWJECT_BRAND.shellSurface,
           }}
         >
@@ -400,7 +451,7 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
               aria-label="添加项目"
               className="flex h-9 w-9 items-center justify-center rounded-[14px] border text-slate-600 transition-all duration-200 hover:-translate-y-px hover:text-slate-900"
               style={{
-                borderColor: 'rgba(255,255,255,0.72)',
+                borderColor: "rgba(255,255,255,0.72)",
                 background: KNOWJECT_BRAND.shellSurfaceStrong,
               }}
               onClick={handleOpenProjectModal}
@@ -410,12 +461,36 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
-            {projects.length === 0 ? (
+            {loading && projects.length === 0 ? (
+              <div className="px-2 py-1">
+                <Skeleton active paragraph={{ rows: 3 }} title={false} />
+              </div>
+            ) : error && projects.length === 0 ? (
+              <div className="flex flex-col gap-2 px-2 py-1">
+                <Typography.Text className="text-xs text-rose-500">
+                  {error}
+                </Typography.Text>
+                <button
+                  type="button"
+                  className="self-start text-xs font-medium text-slate-600 transition-colors hover:text-slate-900"
+                  onClick={() => void refreshProjects()}
+                >
+                  重新加载
+                </button>
+              </div>
+            ) : projects.length === 0 ? (
               <Typography.Text className="px-2 text-xs text-slate-500">
-                暂无项目，可先添加一个。
+                暂无正式项目，可先创建一个。
               </Typography.Text>
             ) : (
               <div className="space-y-1.5">
+                {error ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2">
+                    <Typography.Text className="text-[11px] leading-5 text-amber-700">
+                      项目列表最近一次同步失败，当前显示本地已加载结果。
+                    </Typography.Text>
+                  </div>
+                ) : null}
                 {projects.map((project) => {
                   const active = project.id === activeProjectId;
                   const actionMenuOpen = actionMenuOpenProjectId === project.id;
@@ -425,11 +500,11 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
                       <button
                         type="button"
                         className={[
-                          'flex w-full items-center gap-3 rounded-[16px] border px-3 py-2.5 pr-14 text-left text-[13px] transition-all duration-200',
+                          "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 pr-14 text-left text-[13px] transition-all duration-200",
                           active
-                            ? 'text-slate-900 shadow-[0_10px_18px_rgba(27,80,183,0.10)]'
-                            : 'text-slate-600 hover:-translate-y-px hover:text-slate-900',
-                        ].join(' ')}
+                            ? "text-slate-900 shadow-[0_10px_18px_rgba(27,80,183,0.10)]"
+                            : "text-slate-600 hover:-translate-y-px hover:text-slate-900",
+                        ].join(" ")}
                         style={
                           active
                             ? {
@@ -437,19 +512,19 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
                                 background: KNOWJECT_BRAND.shellSurfaceStrong,
                               }
                             : {
-                                borderColor: 'transparent',
-                                background: 'transparent',
+                                borderColor: "transparent",
+                                background: "transparent",
                               }
                         }
                         onClick={() => handleOpenProject(project.id)}
                       >
                         <span
                           className={[
-                            'flex h-8 w-8 shrink-0 items-center justify-center text-[12px] font-semibold',
+                            "flex h-8 w-8 shrink-0 items-center justify-center text-[12px] font-semibold",
                             active || project.isPinned
-                              ? 'rounded-[14px] border text-white'
-                              : 'rounded-[12px] bg-slate-200/90 text-slate-600',
-                          ].join(' ')}
+                              ? "rounded-[14px] border text-white"
+                              : "rounded-xl bg-slate-200/90 text-slate-600",
+                          ].join(" ")}
                           style={
                             active || project.isPinned
                               ? {
@@ -460,13 +535,15 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
                               : undefined
                           }
                         >
-                          {(project.name.trim().charAt(0) || 'P').toUpperCase()}
+                          {(project.name.trim().charAt(0) || "P").toUpperCase()}
                         </span>
-                        <span className="truncate font-medium">{project.name}</span>
+                        <span className="truncate font-medium">
+                          {project.name}
+                        </span>
                       </button>
 
                       <Dropdown
-                        trigger={['click']}
+                        trigger={["click"]}
                         placement="bottomRight"
                         open={actionMenuOpen}
                         onOpenChange={(open) => {
@@ -484,13 +561,15 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
                           type="button"
                           aria-label={`${project.name} 的项目操作`}
                           className={[
-                            'absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-[12px] border text-slate-500 transition-all duration-200',
-                            'opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto',
-                            'group-focus-within:opacity-100 group-focus-within:scale-100 group-focus-within:pointer-events-auto',
-                            actionMenuOpen ? 'opacity-100 scale-100 pointer-events-auto' : '',
-                          ].join(' ')}
+                            "absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border text-slate-500 transition-all duration-200",
+                            "opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto",
+                            "group-focus-within:opacity-100 group-focus-within:scale-100 group-focus-within:pointer-events-auto",
+                            actionMenuOpen
+                              ? "opacity-100 scale-100 pointer-events-auto"
+                              : "",
+                          ].join(" ")}
                           style={{
-                            borderColor: 'rgba(255,255,255,0.78)',
+                            borderColor: "rgba(255,255,255,0.78)",
                             background: KNOWJECT_BRAND.shellSurfaceStrong,
                           }}
                           onClick={(event) => {
@@ -523,19 +602,19 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
               padding: 0,
               borderRadius: 20,
               background: KNOWJECT_BRAND.shellSurfaceStrong,
-              border: '1px solid rgba(255,255,255,0.72)',
-              boxShadow: '0 18px 36px rgba(15,42,38,0.08)',
-              backdropFilter: 'blur(18px)',
+              border: "1px solid rgba(255,255,255,0.72)",
+              boxShadow: "0 18px 36px rgba(15,42,38,0.08)",
+              backdropFilter: "blur(18px)",
             },
           }}
         >
           <button
             type="button"
-            className="flex h-10 w-full items-center gap-2 rounded-[16px] border px-3 text-left text-slate-700 transition-all duration-200 hover:-translate-y-px hover:border-slate-200 hover:bg-white/92 hover:text-slate-900 hover:shadow-[0_12px_24px_rgba(15,42,38,0.06)] active:translate-y-0 active:bg-white"
+            className="flex h-10 w-full items-center gap-2 rounded-2xl border px-3 text-left text-slate-700 transition-all duration-200 hover:-translate-y-px hover:border-slate-200 hover:bg-white/92 hover:text-slate-900 hover:shadow-[0_12px_24px_rgba(15,42,38,0.06)] active:translate-y-0 active:bg-white"
             style={{
-              borderColor: 'rgba(255,255,255,0.72)',
+              borderColor: "rgba(255,255,255,0.72)",
               background: KNOWJECT_BRAND.shellSurfaceStrong,
-              boxShadow: '0 10px 24px rgba(15,42,38,0.03)',
+              boxShadow: "0 10px 24px rgba(15,42,38,0.03)",
             }}
           >
             <SettingOutlined className="shrink-0 text-[16px] text-slate-500" />
@@ -545,19 +624,26 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
       </div>
 
       <Modal
-        title={isEditing ? '编辑项目' : '创建项目'}
+        title={isEditing ? "编辑项目" : "创建项目"}
         open={projectModalOpen}
         onCancel={handleCloseProjectModal}
         onOk={() => form.submit()}
-        okText={isEditing ? '保存修改' : '创建项目'}
+        okText={isEditing ? "保存修改" : "创建项目"}
         cancelText="取消"
         destroyOnHidden
+        confirmLoading={projectSubmitting}
       >
-        <Form<ProjectFormValues> form={form} layout="vertical" onFinish={handleSubmitProject}>
+        <Form<ProjectFormValues>
+          form={form}
+          layout="vertical"
+          onFinish={(values) => void handleSubmitProject(values)}
+        >
           <Form.Item
             name="name"
             label="项目名称"
-            rules={[{ required: true, whitespace: true, message: '请输入项目名称' }]}
+            rules={[
+              { required: true, whitespace: true, message: "请输入项目名称" },
+            ]}
           >
             <Input maxLength={40} placeholder="例如：移动端应用重构" />
           </Form.Item>
@@ -580,16 +666,22 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
             />
           </Form.Item>
 
-          <Form.Item name="memberIds" label="成员">
-            <Select mode="multiple" allowClear placeholder="可选" options={GLOBAL_MEMBER_OPTIONS} />
-          </Form.Item>
-
           <Form.Item name="agentIds" label="智能体">
-            <Select mode="multiple" allowClear placeholder="可选" options={GLOBAL_AGENT_OPTIONS} />
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="可选"
+              options={GLOBAL_AGENT_OPTIONS}
+            />
           </Form.Item>
 
           <Form.Item name="skillIds" label="技能">
-            <Select mode="multiple" allowClear placeholder="可选" options={GLOBAL_SKILL_OPTIONS} />
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="可选"
+              options={GLOBAL_SKILL_OPTIONS}
+            />
           </Form.Item>
         </Form>
       </Modal>

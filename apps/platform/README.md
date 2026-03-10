@@ -22,10 +22,10 @@
 
 ## 数据来源
 
-- `src/app/project/project.storage.ts`：默认项目与 `knowject_projects` 持久化（含置顶状态、排序、项目名称与项目说明）。
+- `src/app/project/project.storage.ts`：`knowject_project_pins`、`knowject_project_resource_bindings` 的本地持久化，以及旧 `knowject_projects` 的一次性迁移读取。
 - `src/app/project/project.catalog.ts`：全局资产与成员 Mock 源。
 - `src/pages/project/project.mock.ts`：项目概览、对话、资源、成员演示数据。
-- `src/api`：登录与记忆查询接口封装；项目页主体内容暂未接入真实后端。
+- `src/api`：登录、项目、成员与记忆查询接口封装；项目列表、项目基础信息与成员 roster 已接入真实后端。
 
 ## 核心目录
 
@@ -34,7 +34,7 @@
 - `src/app/layouts`：登录后布局与侧栏。
 - `src/app/navigation`：路由、路径构建与兼容重定向。
 - `src/app/project`：项目状态、共享类型、Mock 资产目录。
-- `src/api`：前端 API 封装（auth / memory）。
+- `src/api`：前端 API 封装（auth / projects / memory）。
 - `src/pages`：登录页、主页、项目页、全局资产页。
 
 ## 开发

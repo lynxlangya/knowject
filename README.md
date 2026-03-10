@@ -7,8 +7,8 @@
 ## 当前状态
 
 - 前端 `apps/platform` 已形成登录后产品壳、项目态页面与全局资产管理页。
-- 后端 `apps/api` 当前提供本地联调与演示接口，覆盖 `health`、`auth`、`memory`，并已完成 MongoDB、用户注册/登录和 JWT 鉴权基线。
-- 项目概览、对话、资源、成员等页面仍主要由前端本地 Mock 数据驱动。
+- 后端 `apps/api` 当前提供本地联调与基础框架接口，覆盖 `health`、`auth`、`projects`、`memberships`、`memory`，并已完成 MongoDB、用户注册/登录、JWT 鉴权、最小项目 CRUD 和成员管理接口基线。
+- 项目列表、项目基础信息与成员 roster 已接入 `/api/projects*`；项目概览、对话与资源页仍部分依赖前端 Mock 与本地绑定数据。
 - 全局 `知识库 / 技能 / 智能体` 页面当前为管理壳层，资产创建与引入流程仍是占位行为。
 
 ## 项目结构
@@ -49,10 +49,13 @@ docs/
 ## 数据与联调边界
 
 - `knowject_token`：登录 token 的本地存储键。
-- `knowject_projects`：项目列表的本地存储键，包含排序、置顶状态、项目名称、项目说明与项目基础信息。
+- `knowject_project_pins`：项目置顶偏好的本地存储键。
+- `knowject_project_resource_bindings`：项目资源绑定的本地存储键。
+- `knowject_projects`：历史本地 Mock 项目缓存键，当前仅用于一次性迁移旧项目到后端主链路。
 - `apps/platform/src/app/project/project.catalog.ts`：全局资产与成员的共享 Mock 源。
 - `apps/platform/src/pages/project/project.mock.ts`：项目页演示数据源。
-- `apps/api` 当前不直接驱动项目态页面内容；`memory` 接口主要用于演示查询流程。
+- `AppSider` 的项目创建 / 编辑表单当前提交 `name / description`，并继续维护本地资源绑定。
+- `apps/api` 当前已具备项目正式写模型、CRUD 和成员管理接口；`memory` 接口主要用于演示查询流程。
 - 后端环境变量模板位于仓库根 `/.env.example`，认证与环境实施合同位于 `docs/auth-contract.md`。
 
 ## 文档入口
@@ -92,10 +95,17 @@ pnpm build
 - 前端：`http://localhost:5173`
 - 后端：`http://localhost:3001`
 
-## 当前演示接口
+## 当前接口
 
 - `GET /api/health`（返回应用与数据库状态）
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `GET /api/projects`（需 Bearer Token）
+- `POST /api/projects`（需 Bearer Token）
+- `PATCH /api/projects/:projectId`（需 Bearer Token）
+- `DELETE /api/projects/:projectId`（需 Bearer Token）
+- `POST /api/projects/:projectId/members`（需 Bearer Token）
+- `PATCH /api/projects/:projectId/members/:userId`（需 Bearer Token）
+- `DELETE /api/projects/:projectId/members/:userId`（需 Bearer Token）
 - `GET /api/memory/overview`（需 Bearer Token）
 - `POST /api/memory/query`（需 Bearer Token）

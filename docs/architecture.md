@@ -17,8 +17,8 @@
   - `packages/request`：Axios 请求封装。
   - `packages/ui`：通用 UI 组件，当前已包含 `SearchPanel` 及其 helper 分层。
 - 当前产品主线：登录后产品壳、项目态页面、全局资产管理页、本地演示 API。
-- 当前项目态主数据流：前端本地 Mock + `localStorage`，不是后端数据库。
-- 已验证基线：2026-03-10 已执行 `pnpm check-types` 与 `pnpm build` 并通过；前端构建仍有既有 chunk size warning。
+- 当前项目态主数据流：项目列表、项目基础信息与成员 roster 来自后端 `/api/projects*`；概览 / 对话 / 资源仍部分依赖前端 Mock 与本地绑定数据。
+- 当前运行要求：仓库要求 Node.js >= 22、pnpm 10；若本机版本过低，`pnpm check-types` 会先被环境阻塞。
 
 ## 3. 目录结构
 
@@ -120,7 +120,9 @@ docs/
 - `knowject_token`：登录 token。
 - `knowject_auth_user`：当前登录用户信息。
 - `knowject_remembered_username`：登录页“记住用户名”缓存。
-- `knowject_projects`：项目列表及项目基础配置。
+- `knowject_project_pins`：项目置顶偏好。
+- `knowject_project_resource_bindings`：项目资源绑定。
+- `knowject_projects`：历史本地 Mock 项目缓存键，当前仅作为一次性迁移源，不再作为项目主数据源。
 
 ### 5.2 鉴权与登录态
 
@@ -134,28 +136,29 @@ docs/
 ### 5.3 API 环境与数据库基线
 
 - `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`。
-- 当前 API 已建立 MongoDB 连接管理基线，但还没有把项目主数据切到数据库。
+- 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
 - `GET /api/health` 会联动返回数据库状态，因此服务可在数据库不可达时以 `degraded` 状态启动并提供诊断。
 
 ### 5.4 项目状态与 Mock 资产
 
 - `apps/platform/src/app/project/ProjectContext.tsx`
-  - 管理项目列表的增删改查、置顶和按 ID 查询。
+  - 通过 `/api/projects` 管理项目列表的增删改查、置顶和按 ID 查询。
 - `apps/platform/src/app/project/project.storage.ts`
-  - 定义默认项目与 `knowject_projects` 的读写逻辑。
-  - 当前 `ProjectSummary` 除基础项目信息外，还持久化 `knowledgeBaseIds / memberIds / agentIds / skillIds` 这些前端资源绑定字段。
+  - 管理 `knowject_project_pins` 与 `knowject_project_resource_bindings` 两类前端本地状态。
+  - 在首次刷新时会读取旧 `knowject_projects`，把历史本地项目迁移到后端项目主链路，并补写 pin / 资源绑定。
+  - 当前运行时 `ProjectSummary` 会把后端项目基础信息、成员 roster、本地 pin 偏好与资源绑定做前端只读合并。
 - `apps/platform/src/app/project/project.catalog.ts`
   - 维护全局知识库、技能、智能体、成员基础档案等共享 Mock 目录。
 - `apps/platform/src/pages/project/project.mock.ts`
   - 维护项目概览、对话、资源、成员协作快照等演示数据。
 - `apps/platform/src/app/layouts/components/AppSider.tsx`
-  - 当前项目创建 / 编辑流程会直接读写上述绑定字段，因此“项目配置”和“项目资源绑定”仍混在前端本地模型里。
+  - 当前项目创建 / 编辑流程提交 `name / description` 到后端，并继续维护本地知识库 / 技能 / 智能体绑定。
 
 ### 5.5 全局资产与项目资源分层
 
 - 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理壳层。
 - 项目 `资源` 页当前只展示“该项目已绑定的资产”。
-- 项目资源的实际来源仍是“项目配置中记录的全局资产 ID”映射而来。
+- 项目资源的实际来源仍是“前端本地资源绑定中记录的全局资产 ID”映射而来。
 - 兼容跳转会临时落到 `/project/:projectId/resources?focus=*`；页面完成滚动定位后会回写 canonical URL `/project/:projectId/resources`。
 - `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 中的“新建资产 / 引入到项目”仍为占位交互，只提示后续接入，不产生真实状态变更。
 - 当前不存在项目私有知识库的真实持久化或索引流程；“项目资源分层”目前是信息架构和前端数据组织上的分层。
@@ -164,7 +167,9 @@ docs/
 
 - 全局成员基础档案维护在 `project.catalog.ts`。
 - 项目成员的职责、状态、最近动作等协作快照维护在 `project.mock.ts`。
-- 成员页当前已经表达“基础身份 + 项目协作信息”的两层结构，但数据仍为前端 mock。
+- `/project/:projectId/members` 当前已切到正式后端成员 roster 管理页。
+- 页面支持按用户名添加已有用户、修改 `admin / member`、移除成员。
+- 成员协作快照仍保留在 `project.mock.ts`，只用于项目概览头部等演示展示，不再作为成员页主数据源。
 
 ## 6. API 边界
 
@@ -173,6 +178,13 @@ docs/
 - `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `GET /api/projects`
+- `POST /api/projects`
+- `PATCH /api/projects/:projectId`
+- `DELETE /api/projects/:projectId`
+- `POST /api/projects/:projectId/members`
+- `PATCH /api/projects/:projectId/members/:userId`
+- `DELETE /api/projects/:projectId/members/:userId`
 - `GET /api/memory/overview`
 - `POST /api/memory/query`
 
@@ -181,28 +193,31 @@ docs/
 - `health`：返回应用状态、数据库状态和最小诊断信息。
 - `auth/register`：创建用户、写入 `passwordHash`、签发 JWT 并返回登录态。
 - `auth/login`：校验用户名与密码，签发 JWT 并返回登录态。
+- `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色。
+- `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
 - `memory/query`：基于本地 `DEMO_ITEMS` 做简单关键词匹配，返回演示检索结果。
 
 ### 6.3 当前鉴权约定
 
-- `memory` 路由要求 `Authorization: Bearer <token>`。
+- `projects`、`memberships` 与 `memory` 路由要求 `Authorization: Bearer <token>`。
 - 服务端当前通过 JWT 中间件校验 `iss / aud / exp / sub / username`。
 - 当前 API 已接入统一错误处理中间件，失败响应包含 `error` 与 `meta.requestId`。
-- 当前已具备正式用户体系、`argon2id` 密码哈希和 JWT。
+- 当前已具备正式用户体系、`argon2id` 密码哈希、JWT、最小项目权限模型和成员管理接口。
 - 生产环境下，`/api/auth/*` 与 `/api/memory/*` 会拒绝非 HTTPS 请求，并返回 `SECURE_TRANSPORT_REQUIRED`。
 - `auth` 与 `memory` 响应默认附带 `Cache-Control: no-store`，避免敏感响应被缓存。
-- 当前仍没有项目权限模型、项目 CRUD 和会话刷新机制。
+- 当前前端项目列表、项目基础信息与成员 roster 已切到 `/api/projects*`；会话刷新与资源绑定正式持久化仍未落地。
 
 ## 7. 模块职责
 
 - `apps/platform`
   - 登录页、产品壳、路由、项目态页面、全局资产页壳层。
 - `apps/api`
-  - 本地联调与演示接口，不直接承担项目页面主数据源。
+  - 本地联调与基础框架接口，当前已承担项目列表、项目基础信息与成员 roster 的正式主数据源。
   - 已具备 `config / db / middleware / modules` 基础骨架。
   - `modules/auth` 当前已承载用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
-  - `modules/projects` 与 `modules/memberships` 当前只建立边界，尚未落正式 CRUD。
+  - `modules/projects` 当前已承载项目模型、MongoDB 仓储、权限校验与 CRUD 接口。
+  - `modules/memberships` 当前已承载项目成员增删改接口与最小角色规则。
 - `packages/request`
   - 请求客户端、错误封装、去重、下载能力。
 - `packages/ui`
@@ -212,7 +227,6 @@ docs/
 
 以下能力在认知总结或目标蓝图中出现过，但当前仓库未落地，不应视为现状：
 
-- MongoDB 上的正式用户、项目、成员数据模型与 CRUD。
 - Chroma 或其他向量检索基础设施。
 - SSE 流式对话链路与来源引用渲染。
 - RBAC、成员邀请权限流、refresh token。

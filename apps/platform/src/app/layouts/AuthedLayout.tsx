@@ -29,7 +29,7 @@ export const AuthedLayout = () => {
       <Layout className="h-screen overflow-hidden" style={{ backgroundColor: KNOWJECT_BRAND.shellBg }}>
         <AppSider selectedKey={selectedKey} onNavigate={handleNavigate} onLogout={handleLogout} />
         <Layout
-          className="h-full min-w-0 overflow-hidden bg-gradient-to-b"
+          className="h-full min-w-0 overflow-hidden bg-linear-to-b"
           style={{
             backgroundImage:
               'linear-gradient(180deg, rgba(249,251,254,0.98) 0%, rgba(245,247,251,0.98) 56%, rgba(238,243,250,0.9) 100%)',

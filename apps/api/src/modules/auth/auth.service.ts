@@ -1,7 +1,6 @@
 import argon2 from 'argon2';
 import type { WithId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
-import type { MongoDatabaseManager } from '@db/mongo.js';
 import { AppError } from '@lib/app-error.js';
 import { signAccessToken, verifyAccessToken } from './auth.jwt.js';
 import {
@@ -106,13 +105,11 @@ const toAuthResponse = async (
 
 export const createAuthService = ({
   env,
-  mongo,
+  repository,
 }: {
   env: AppEnv;
-  mongo: MongoDatabaseManager;
+  repository: AuthRepository;
 }): AuthService => {
-  const repository = new AuthRepository(mongo);
-
   return {
     register: async (input) => {
       const username = normalizeUsername(input.username);

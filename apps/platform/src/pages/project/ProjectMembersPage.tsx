@@ -1,145 +1,186 @@
-import { ClockCircleOutlined } from '@ant-design/icons';
-import { Card, Empty, Typography } from 'antd';
-import type {
-  ProjectMember,
-  ProjectMemberRole,
-  ProjectMemberStatus,
-} from '@app/project/project.types';
-import { KNOWJECT_BRAND } from '@styles/brand';
-import { useProjectPageContext } from './projectPageContext';
+import { DeleteOutlined, UserAddOutlined } from "@ant-design/icons";
+import { isApiError } from "@knowject/request";
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Empty,
+  Form,
+  Input,
+  Popconfirm,
+  Select,
+  Typography,
+} from "antd";
+import { useMemo, useState } from "react";
+import {
+  addProjectMember,
+  removeProjectMember,
+  updateProjectMemberRole,
+  type ProjectRole,
+} from "@api/projects";
+import { getAuthUser } from "@app/auth/user";
+import { PATHS, buildProjectOverviewPath } from "@app/navigation/paths";
+import { useProjectContext } from "@app/project/useProjectContext";
+import { useNavigate } from "react-router-dom";
+import { useProjectPageContext } from "./projectPageContext";
 
-const ROLE_LABELS: Record<ProjectMemberRole, string> = {
-  owner: '项目负责人',
-  product: '产品',
-  design: '设计',
-  frontend: '前端',
-  backend: '后端',
-  marketing: '品牌 / 市场',
+interface AddMemberFormValues {
+  username: string;
+  role: ProjectRole;
+}
+
+const PROJECT_ROLE_LABELS: Record<ProjectRole, string> = {
+  admin: "管理员",
+  member: "成员",
 };
 
-const STATUS_META: Record<ProjectMemberStatus, { label: string; className: string }> = {
-  active: {
-    label: '推进中',
-    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  },
-  syncing: {
-    label: '待同步',
-    className: 'border-sky-200 bg-sky-50 text-sky-700',
-  },
-  blocked: {
-    label: '有阻塞',
-    className: 'border-rose-200 bg-rose-50 text-rose-700',
-  },
-  idle: {
-    label: '待响应',
-    className: 'border-slate-200 bg-slate-50 text-slate-600',
-  },
-};
-
-const ACTIVITY_TYPE_LABELS: Record<ProjectMember['recentActivity']['type'], string> = {
-  conversation: '对话同步',
-  resource: '资源更新',
-  delivery: '推进决策',
-  review: '评审反馈',
-};
-
-const buildRoleCoverage = (members: ProjectMember[]) => {
-  const roleMap = new Map<ProjectMemberRole, { count: number; memberNames: string[] }>();
-
-  members.forEach((member) => {
-    const current = roleMap.get(member.role) ?? {
-      count: 0,
-      memberNames: [],
-    };
-
-    roleMap.set(member.role, {
-      count: current.count + 1,
-      memberNames: [...current.memberNames, member.name],
-    });
-  });
-
-  return Array.from(roleMap.entries())
-    .map(([role, value]) => ({
-      role,
-      label: ROLE_LABELS[role],
-      count: value.count,
-      memberNames: value.memberNames,
-    }))
-    .sort((left, right) => right.count - left.count);
-};
-
-const getRecentActivities = (members: ProjectMember[]) => {
-  return [...members]
-    .sort(
-      (left, right) =>
-        new Date(right.recentActivity.occurredAt).getTime() -
-        new Date(left.recentActivity.occurredAt).getTime(),
-    )
-    .slice(0, 4)
-    .map((member) => ({
-      memberId: member.id,
-      memberName: member.name,
-      roleLabel: ROLE_LABELS[member.role],
-      activityLabel: ACTIVITY_TYPE_LABELS[member.recentActivity.type],
-      summary: member.recentActivity.summary,
-      displayTime: member.recentActivity.displayTime,
-    }));
+const formatDateTime = (value: string): string => {
+  return new Intl.DateTimeFormat("zh-CN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 };
 
 export const ProjectMembersPage = () => {
-  const { members, activeProject } = useProjectPageContext();
+  const { message } = App.useApp();
+  const [form] = Form.useForm<AddMemberFormValues>();
+  const navigate = useNavigate();
+  const { activeProject } = useProjectPageContext();
+  const { projects, removeProjectSnapshot, syncProject } = useProjectContext();
+  const authUser = getAuthUser();
+  const [submitting, setSubmitting] = useState(false);
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
-  if (members.length === 0) {
-    return (
-      <section className="grid min-h-full place-items-center rounded-[24px] border border-slate-200 bg-white">
-        <Empty description="当前项目暂无协作成员" />
-      </section>
+  const handleAddMember = async (values: AddMemberFormValues) => {
+    setSubmitting(true);
+
+    try {
+      const result = await addProjectMember(activeProject.id, {
+        username: values.username.trim(),
+        role: values.role,
+      });
+
+      syncProject(result.project);
+      form.resetFields();
+      form.setFieldsValue({ role: "member" });
+      message.success("成员已加入项目");
+    } catch (error) {
+      console.error(error);
+      message.error(
+        isApiError(error) ? error.message : "添加成员失败，请稍后重试",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateRole = async (userId: string, role: ProjectRole) => {
+    const currentMember = activeProject.members.find(
+      (member) => member.userId === userId,
     );
-  }
+    if (!currentMember || currentMember.role === role) {
+      return;
+    }
 
-  const roleCoverage = buildRoleCoverage(members);
-  const recentActivities = getRecentActivities(members);
-  const activeMembers = members.filter((member) => member.isActive).length;
-  const responsibilityCount = new Set(members.flatMap((member) => member.responsibilityTags)).size;
-  const summaryItems = [
-    {
-      label: '协作成员',
-      value: `${members.length} 位`,
-      hint: '已接入当前项目的人力协作角色',
-    },
-    {
-      label: '活跃推进',
-      value: `${activeMembers} 位`,
-      hint: '当前仍在推进或同步中的成员',
-    },
-    {
-      label: '角色覆盖',
-      value: `${roleCoverage.length} 类`,
-      hint: '项目当前已覆盖的关键协作职能',
-    },
-    {
-      label: '负责领域',
-      value: `${responsibilityCount} 项`,
-      hint: '用于定位责任人与协作边界',
-    },
-  ];
+    setUpdatingUserId(userId);
+
+    try {
+      const result = await updateProjectMemberRole(activeProject.id, userId, {
+        role,
+      });
+
+      syncProject(result.project);
+      message.success("成员角色已更新");
+    } catch (error) {
+      console.error(error);
+      message.error(
+        isApiError(error) ? error.message : "更新成员角色失败，请稍后重试",
+      );
+    } finally {
+      setUpdatingUserId(null);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    setRemovingUserId(userId);
+
+    try {
+      const nextProject =
+        projects.find((project) => project.id !== activeProject.id) ?? null;
+      const result = await removeProjectMember(activeProject.id, userId);
+
+      if (result.removedCurrentUser || !result.project) {
+        removeProjectSnapshot(activeProject.id);
+        message.success("你已退出当前项目");
+        navigate(
+          nextProject ? buildProjectOverviewPath(nextProject.id) : PATHS.home,
+        );
+        return;
+      }
+
+      syncProject(result.project);
+      message.success("成员已移出项目");
+    } catch (error) {
+      console.error(error);
+      message.error(
+        isApiError(error) ? error.message : "移除成员失败，请稍后重试",
+      );
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
+
+  const summaryItems = useMemo(() => {
+    const adminCount = activeProject.members.filter(
+      (member) => member.role === "admin",
+    ).length;
+    const regularMemberCount = activeProject.members.length - adminCount;
+
+    return [
+      {
+        label: "项目成员",
+        value: `${activeProject.members.length} 位`,
+        hint: "当前已加入正式后端项目的成员数量",
+      },
+      {
+        label: "管理员",
+        value: `${adminCount} 位`,
+        hint: "具备项目级更新与成员管理权限",
+      },
+      {
+        label: "普通成员",
+        value: `${regularMemberCount} 位`,
+        hint: "拥有项目访问权限，不具备管理权限",
+      },
+      {
+        label: "我的权限",
+        value: PROJECT_ROLE_LABELS[activeProject.currentUserRole],
+        hint: "以当前登录账号在该项目中的正式角色为准",
+      },
+    ];
+  }, [activeProject]);
+
+  const canManageMembers = activeProject.currentUserRole === "admin";
 
   return (
     <section className="flex min-h-full flex-col gap-4">
       <Card
         className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
-        styles={{ body: { padding: '22px 22px 20px' } }}
+        styles={{ body: { padding: "22px 22px 20px" } }}
       >
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
             <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              项目成员
+              成员管理
             </Typography.Text>
-            <Typography.Title level={3} className="mb-1! mt-2 text-slate-800!">
-              {activeProject.name} 的协作分工
+            <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
+              当前项目的正式成员 roster
             </Typography.Title>
-            <Typography.Paragraph className="mb-0! text-sm! text-slate-600!">
-              展示项目成员的身份、职责与最近动作，帮助团队快速判断谁在推进、谁负责什么、最近发生了什么。
+            <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
+              这里展示的是后端正式项目中的成员关系，只支持最小闭环：按用户名添加已有用户、修改
+              `admin / member` 角色、移除成员。
             </Typography.Paragraph>
           </div>
 
@@ -152,7 +193,10 @@ export const ProjectMembersPage = () => {
                 <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
                   {item.label}
                 </Typography.Text>
-                <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
+                <Typography.Title
+                  level={4}
+                  className="mb-0! mt-2 text-slate-800!"
+                >
                   {item.value}
                 </Typography.Title>
                 <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
@@ -164,159 +208,179 @@ export const ProjectMembersPage = () => {
         </div>
       </Card>
 
-      <div className="grid min-h-0 flex-1 content-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="grid content-start gap-4 md:grid-cols-2">
-          {members.map((member) => {
-            const statusMeta = STATUS_META[member.status];
+      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <Card
+          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+          styles={{ body: { padding: "20px" } }}
+        >
+          <div className="flex items-center gap-2">
+            <UserAddOutlined className="text-slate-400" />
+            <Typography.Title level={5} className="mb-0! text-slate-800!">
+              添加已有用户
+            </Typography.Title>
+          </div>
+          <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
+            只允许把已注册用户按用户名加入当前项目，不引入邀请
+            token、邮件或外部通知链路。
+          </Typography.Paragraph>
 
-            return (
-              <article
-                key={member.id}
-                className="flex flex-col gap-5 rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.035)]"
+          {canManageMembers ? (
+            <Form<AddMemberFormValues>
+              form={form}
+              layout="vertical"
+              initialValues={{ role: "member" }}
+              onFinish={(values) => void handleAddMember(values)}
+              className="mt-5"
+            >
+              <Form.Item
+                name="username"
+                label="用户名"
+                rules={[
+                  {
+                    required: true,
+                    whitespace: true,
+                    message: "请输入要加入项目的用户名",
+                  },
+                ]}
               >
-                <div className="flex items-start gap-4">
-                  <img
-                    src={member.avatarUrl}
-                    alt={member.name}
-                    className="h-14 w-14 rounded-full object-cover ring-2 ring-white shadow-[0_6px_14px_rgba(15,23,42,0.08)]"
-                  />
-                  <div className="min-w-0 flex-1">
+                <Input placeholder="例如：alice" autoComplete="off" />
+              </Form.Item>
+
+              <Form.Item
+                name="role"
+                label="项目角色"
+                rules={[{ required: true, message: "请选择项目角色" }]}
+              >
+                <Select
+                  options={[
+                    { value: "member", label: PROJECT_ROLE_LABELS.member },
+                    { value: "admin", label: PROJECT_ROLE_LABELS.admin },
+                  ]}
+                />
+              </Form.Item>
+
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={submitting}
+                block
+              >
+                添加成员
+              </Button>
+            </Form>
+          ) : (
+            <Alert
+              className="mt-5"
+              type="warning"
+              showIcon
+              message="当前账号不是项目 admin"
+              description="你可以查看正式成员 roster，但不能添加、改角色或移除成员。"
+            />
+          )}
+        </Card>
+
+        <Card
+          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+          styles={{ body: { padding: "20px" } }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                正式成员列表
+              </Typography.Text>
+              <Typography.Title
+                level={5}
+                className="mb-0! mt-2 text-slate-800!"
+              >
+                当前项目已加入成员
+              </Typography.Title>
+            </div>
+            <Typography.Text className="text-sm text-slate-400">
+              项目：{activeProject.name}
+            </Typography.Text>
+          </div>
+
+          {activeProject.members.length === 0 ? (
+            <div className="mt-6">
+              <Empty description="当前项目暂无正式成员" />
+            </div>
+          ) : (
+            <div className="mt-6 flex flex-col gap-3">
+              {activeProject.members.map((member) => {
+                const isCurrentUser = authUser?.id === member.userId;
+                const actionLoading =
+                  updatingUserId === member.userId ||
+                  removingUserId === member.userId;
+
+                return (
+                  <article
+                    key={member.userId}
+                    className="flex flex-col gap-4 rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4 lg:flex-row lg:items-center lg:justify-between"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Typography.Text className="text-sm font-semibold text-slate-700">
+                          {member.name}
+                        </Typography.Text>
+                        {isCurrentUser ? (
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-500">
+                            当前账号
+                          </span>
+                        ) : null}
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
+                          {PROJECT_ROLE_LABELS[member.role]}
+                        </span>
+                      </div>
+                      <Typography.Text className="mt-2 block text-xs text-slate-400">
+                        @{member.username}
+                      </Typography.Text>
+                      <Typography.Text className="mt-1 block text-xs text-slate-400">
+                        加入时间：{formatDateTime(member.joinedAt)}
+                      </Typography.Text>
+                    </div>
+
                     <div className="flex flex-wrap items-center gap-2">
-                      <Typography.Title level={5} className="mb-0! truncate text-slate-800!">
-                        {member.name}
-                      </Typography.Title>
-                      <span
-                        className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium"
-                        style={{
-                          borderColor: KNOWJECT_BRAND.primaryBorder,
-                          backgroundColor: KNOWJECT_BRAND.primarySurfaceStrong,
-                          color: KNOWJECT_BRAND.primaryText,
-                        }}
+                      <Select<ProjectRole>
+                        value={member.role}
+                        disabled={!canManageMembers || actionLoading}
+                        loading={updatingUserId === member.userId}
+                        onChange={(nextRole) =>
+                          void handleUpdateRole(member.userId, nextRole)
+                        }
+                        options={[
+                          {
+                            value: "member",
+                            label: PROJECT_ROLE_LABELS.member,
+                          },
+                          { value: "admin", label: PROJECT_ROLE_LABELS.admin },
+                        ]}
+                        className="min-w-[120px]"
+                      />
+
+                      <Popconfirm
+                        title="移除成员"
+                        description={`确定将 ${member.name} 移出当前项目吗？`}
+                        okText="移除"
+                        cancelText="取消"
+                        disabled={!canManageMembers}
+                        onConfirm={() => void handleRemoveMember(member.userId)}
                       >
-                        {ROLE_LABELS[member.role]}
-                      </span>
-                      <span
-                        className={[
-                          'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium',
-                          statusMeta.className,
-                        ].join(' ')}
-                      >
-                        {statusMeta.label}
-                      </span>
+                        <Button
+                          danger
+                          icon={<DeleteOutlined />}
+                          loading={removingUserId === member.userId}
+                          disabled={!canManageMembers || actionLoading}
+                        >
+                          移除
+                        </Button>
+                      </Popconfirm>
                     </div>
-                    <Typography.Paragraph className="mb-0! mt-2 text-sm! leading-6! text-slate-600!">
-                      {member.focusSummary}
-                    </Typography.Paragraph>
-                  </div>
-                </div>
-
-                <div>
-                  <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    负责领域
-                  </Typography.Text>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {member.responsibilityTags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                      <ClockCircleOutlined className="text-slate-400" />
-                      最近动作
-                    </div>
-                    <Typography.Text className="text-xs text-slate-400">
-                      {member.recentActivity.displayTime}
-                    </Typography.Text>
-                  </div>
-                  <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-                    <span className="font-medium text-slate-700">
-                      {ACTIVITY_TYPE_LABELS[member.recentActivity.type]}
-                    </span>
-                    {' · '}
-                    {member.recentActivity.summary}
-                  </Typography.Paragraph>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-
-        <aside className="flex min-h-0 flex-col gap-4">
-          <Card
-            className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
-            styles={{ body: { padding: '20px' } }}
-          >
-            <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              协作结构
-            </Typography.Text>
-            <Typography.Title level={5} className="mb-0! mt-2 text-slate-800!">
-              角色覆盖与分工
-            </Typography.Title>
-            <div className="mt-4 flex flex-col gap-3">
-              {roleCoverage.map((item) => (
-                <div
-                  key={item.role}
-                  className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <Typography.Text className="text-sm font-semibold text-slate-700">
-                      {item.label}
-                    </Typography.Text>
-                    <Typography.Text className="text-xs text-slate-400">
-                      {item.count} 人
-                    </Typography.Text>
-                  </div>
-                  <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                    {item.memberNames.join(' · ')}
-                  </Typography.Paragraph>
-                </div>
-              ))}
+                  </article>
+                );
+              })}
             </div>
-          </Card>
-
-          <Card
-            className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
-            styles={{ body: { padding: '20px' } }}
-          >
-            <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              最近动态
-            </Typography.Text>
-            <Typography.Title level={5} className="mb-0! mt-2 text-slate-800!">
-              成员最近一次协作记录
-            </Typography.Title>
-            <div className="mt-4 flex flex-col gap-3">
-              {recentActivities.map((activity) => (
-                <div
-                  key={activity.memberId}
-                  className="rounded-[18px] border border-slate-200 bg-white px-4 py-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <Typography.Text className="text-sm font-semibold text-slate-700">
-                      {activity.memberName}
-                    </Typography.Text>
-                    <Typography.Text className="text-xs text-slate-400">
-                      {activity.displayTime}
-                    </Typography.Text>
-                  </div>
-                  <Typography.Text className="mt-1 block text-xs text-slate-400">
-                    {activity.roleLabel} · {activity.activityLabel}
-                  </Typography.Text>
-                  <Typography.Paragraph className="mb-0! mt-2 text-sm! leading-6! text-slate-600!">
-                    {activity.summary}
-                  </Typography.Paragraph>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </aside>
+          )}
+        </Card>
       </div>
     </section>
   );

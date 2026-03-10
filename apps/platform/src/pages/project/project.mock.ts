@@ -5,7 +5,6 @@ import {
 import type {
   ChatMessage,
   ConversationSummary,
-  MemberProfile,
   ProjectMember,
   ProjectResourceFocus,
   ProjectResourceGroup,
@@ -14,8 +13,6 @@ import type {
   ProjectWorkspaceMeta,
   ProjectWorkspaceSnapshot,
 } from '@app/project/project.types';
-
-const DEFAULT_MEMBERS = getCatalogMembers().slice(0, 3);
 
 type ProjectMemberSnapshot = Omit<ProjectMember, 'id' | 'name' | 'avatarUrl'>;
 
@@ -335,28 +332,22 @@ const buildDefaultMemberSnapshot = (index: number): ProjectMemberSnapshot => {
   return defaultSnapshots[index] ?? defaultSnapshots[defaultSnapshots.length - 1];
 };
 
-const buildFallbackMembers = (members: MemberProfile[]): ProjectMember[] => {
-  return members.map((member, index) => ({
-    ...member,
-    ...buildDefaultMemberSnapshot(index),
-  }));
+const resolveCatalogMemberAvatar = (name: string): string | undefined => {
+  const catalogMembers = getCatalogMembers();
+  return catalogMembers.find((member) => member.name === name)?.avatarUrl;
 };
 
-const mapMemberIdsToMembers = (projectId: string, memberIds: string[]): ProjectMember[] => {
-  const catalogMembers = getCatalogMembers();
-  const members = memberIds
-    .map((memberId) => catalogMembers.find((member) => member.id === memberId) ?? null)
-    .filter((member): member is MemberProfile => member !== null);
-
-  if (members.length === 0) {
-    return buildFallbackMembers(DEFAULT_MEMBERS);
-  }
-
+const mapProjectRosterMembers = (
+  projectId: string,
+  rosterMembers: ProjectSummary['members'],
+): ProjectMember[] => {
   const projectSnapshots = PROJECT_MEMBER_SNAPSHOTS_BY_PROJECT[projectId] ?? {};
 
-  return members.map((member, index) => ({
-    ...member,
-    ...(projectSnapshots[member.id] ?? buildDefaultMemberSnapshot(index)),
+  return rosterMembers.map((member, index) => ({
+    id: member.userId,
+    name: member.name,
+    avatarUrl: resolveCatalogMemberAvatar(member.name),
+    ...(projectSnapshots[member.userId] ?? buildDefaultMemberSnapshot(index)),
   }));
 };
 
@@ -398,9 +389,9 @@ const getProjectMeta = (
 };
 
 export const getProjectMembers = (
-  project: Pick<ProjectSummary, 'id' | 'memberIds'>,
+  project: Pick<ProjectSummary, 'id' | 'members'>,
 ): ProjectMember[] => {
-  return mapMemberIdsToMembers(project.id, project.memberIds);
+  return mapProjectRosterMembers(project.id, project.members);
 };
 
 export const getConversationsByProject = (projectId: string): ConversationSummary[] => {
@@ -425,7 +416,7 @@ export const getProjectResourceGroups = (
 export const getProjectWorkspaceSnapshot = (
   project: Pick<
     ProjectSummary,
-    'id' | 'description' | 'knowledgeBaseIds' | 'skillIds' | 'agentIds' | 'memberIds'
+    'id' | 'description' | 'knowledgeBaseIds' | 'skillIds' | 'agentIds' | 'members'
   >,
 ): ProjectWorkspaceSnapshot => {
   const members = getProjectMembers(project);
