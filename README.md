@@ -22,6 +22,8 @@ packages/
   ui/         通用 UI 组件（@knowject/ui）
 docs/
   architecture.md   当前架构事实源
+  handoff-guide.md  快速接手指南
+  handoff-prompt.md 交接 Prompt 模板
   design/           品牌与视觉资料
 ```
 
@@ -57,6 +59,8 @@ docs/
 
 - [项目规则](./AGENTS.md)
 - [架构事实](./docs/architecture.md)
+- [快速接手指南](./docs/handoff-guide.md)
+- [交接 Prompt 模板](./docs/handoff-prompt.md)
 - [前端说明](./apps/platform/README.md)
 - [API 说明](./apps/api/README.md)
 - [设计资料](./docs/design)

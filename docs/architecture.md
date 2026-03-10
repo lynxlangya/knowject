@@ -41,6 +41,9 @@ packages/
   ui/               通用 UI 组件
 docs/
   architecture.md         当前事实源
+  doc-iteration-handoff-plan.md  本轮文档执行计划
+  handoff-guide.md        快速接手指南
+  handoff-prompt.md       交接 Prompt 模板
   target-architecture.md  目标蓝图
   gap-analysis.md         current vs target 对照
   design/                 品牌与视觉资料
@@ -116,12 +119,14 @@ docs/
 
 - `knowject_token`：登录 token。
 - `knowject_auth_user`：当前登录用户信息。
+- `knowject_remembered_username`：登录页“记住用户名”缓存。
 - `knowject_projects`：项目列表及项目基础配置。
 
 ### 5.2 鉴权与登录态
 
 - 前端通过 `apps/platform/src/api/auth.ts` 调用 `POST /api/auth/register` 与 `POST /api/auth/login`。
 - `/login` 页面当前已支持同页登录 / 注册模式切换，不新增 `/register` 路由。
+- `/login` 页面可选记住用户名，并通过 `knowject_remembered_username` 回填下次登录表单。
 - 登录成功或注册成功后会写入 `knowject_token` 与 `knowject_auth_user`，再由受保护路由守卫控制登录后访问。
 - 当前 token 已切到正式 JWT，不再使用演示 token 前缀。
 - 登录 / 注册请求体中的 `password` 保持原始口令语义，由 HTTPS 负责传输保护；服务端在落库前使用 `argon2id` 做哈希。
@@ -138,16 +143,21 @@ docs/
   - 管理项目列表的增删改查、置顶和按 ID 查询。
 - `apps/platform/src/app/project/project.storage.ts`
   - 定义默认项目与 `knowject_projects` 的读写逻辑。
+  - 当前 `ProjectSummary` 除基础项目信息外，还持久化 `knowledgeBaseIds / memberIds / agentIds / skillIds` 这些前端资源绑定字段。
 - `apps/platform/src/app/project/project.catalog.ts`
   - 维护全局知识库、技能、智能体、成员基础档案等共享 Mock 目录。
 - `apps/platform/src/pages/project/project.mock.ts`
   - 维护项目概览、对话、资源、成员协作快照等演示数据。
+- `apps/platform/src/app/layouts/components/AppSider.tsx`
+  - 当前项目创建 / 编辑流程会直接读写上述绑定字段，因此“项目配置”和“项目资源绑定”仍混在前端本地模型里。
 
 ### 5.5 全局资产与项目资源分层
 
 - 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理壳层。
 - 项目 `资源` 页当前只展示“该项目已绑定的资产”。
 - 项目资源的实际来源仍是“项目配置中记录的全局资产 ID”映射而来。
+- 兼容跳转会临时落到 `/project/:projectId/resources?focus=*`；页面完成滚动定位后会回写 canonical URL `/project/:projectId/resources`。
+- `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 中的“新建资产 / 引入到项目”仍为占位交互，只提示后续接入，不产生真实状态变更。
 - 当前不存在项目私有知识库的真实持久化或索引流程；“项目资源分层”目前是信息架构和前端数据组织上的分层。
 
 ### 5.6 成员数据分层
@@ -215,6 +225,8 @@ docs/
 ## 9. 相关文档
 
 - `docs/README.md`：文档导航与维护边界。
+- `docs/handoff-guide.md`：新协作者快速建立当前事实的入口。
+- `docs/handoff-prompt.md`：把当前上下文继续交给下一位协作者的模板。
 - `docs/target-architecture.md`：目标蓝图与阶段能力。
 - `docs/gap-analysis.md`：现状与目标差距、风险和建议优先级。
 - `docs/知项Knowject-项目认知总结-v2.md`：目标蓝图输入材料，不是当前事实源。

@@ -1,8 +1,18 @@
 # Knowject 文档导航
 
-`docs/` 目录按“当前事实 / 目标蓝图 / 差距分析”分层维护，避免把已落地实现、未来方案和路线设想继续混写。
+`docs/` 目录按“当前事实 / 目标蓝图 / 差距分析 / 接手交接”分层维护，避免把已落地实现、未来方案和路线设想继续混写，也避免把接手说明散落在多个入口里。
 
 ## 1. 阅读顺序
+
+### 快速接手当前工作
+
+1. 先读 `docs/handoff-guide.md`
+2. 再读 `docs/architecture.md`
+3. 然后读 `docs/gap-analysis.md`
+4. 涉及认证与环境时再读 `docs/auth-contract.md`
+5. 需要把任务交给下一位 AI 或人类时，使用 `docs/handoff-prompt.md`
+
+### 理解产品现状与目标
 
 1. 先读 `docs/architecture.md`
 2. 再读 `docs/target-architecture.md`
@@ -17,6 +27,9 @@
 | `docs/architecture.md` | 当前事实源 | 最高 | 现在的路由、数据来源、模块边界、API 边界是什么 |
 | `docs/target-architecture.md` | 目标蓝图源 | 高 | 产品最终想做成什么，Knowledge / Skill / Agent 如何分层 |
 | `docs/gap-analysis.md` | current vs target 对照 | 高 | 现在离目标差多少，先补什么，风险在哪里 |
+| `docs/doc-iteration-handoff-plan.md` | 本轮文档执行计划 | 交付规划 | 本轮文档迭代打算做什么、范围和验证方式是什么 |
+| `docs/handoff-guide.md` | 快速接手指南 | 高 | 新 AI / 新同学如何在 15 分钟内建立当前事实并继续推进 |
+| `docs/handoff-prompt.md` | 接手提示模板 | 高 | 如何把仓库和当前上下文准确交给下一位 AI 或人类 |
 | `docs/tasks-foundation-framework.md` | 基础框架任务清单 | 交付规划 | Week 1-2 基础框架阶段具体做什么、按什么顺序拆票 |
 | `docs/auth-contract.md` | 基础框架实施契约 | 实施约束 | MongoDB、JWT、密码哈希、注册登录、错误响应具体怎么定 |
 | `docs/知项Knowject-项目认知总结-v2.md` | 输入材料 / 工作底稿 | 参考 | 最新认知总结原文是什么，哪些内容需要被吸收到正式文档 |
@@ -37,6 +50,15 @@
   - 当前事实和目标蓝图之间的主要差距发生变化。
   - 优先级、风险判断或阶段性建议发生明显调整。
   - 关键 git 演进节点需要补充新的里程碑。
+- 更新 `docs/doc-iteration-handoff-plan.md`
+  - 需要补充新的文档迭代范围、里程碑或验证结果。
+  - 本轮计划已完成，需要记录结果总结与残余风险。
+- 更新 `docs/handoff-guide.md`
+  - 当前最重要的接手路径、阅读顺序、继续开发建议发生变化。
+  - 有新的业务事实容易被误读，需要显式提醒接手者。
+- 更新 `docs/handoff-prompt.md`
+  - 接手 Prompt 中引用的关键文档、源码入口或输出格式发生变化。
+  - 交接方式需要从“阅读事实”调整为“执行某一类任务”。
 - 更新 `docs/tasks-foundation-framework.md`
   - 基础框架阶段的任务范围、顺序、依赖关系或 DoD 发生变化。
   - 基础框架阶段已经落地或被明确延后，需同步更新状态与边界。
@@ -47,8 +69,10 @@
 ## 4. 使用规则
 
 - 关于“当前是什么”的判断，以 `docs/architecture.md` 和源码为准。
+- 关于“怎么最快接手当前工作”的判断，以 `docs/handoff-guide.md` 为准。
 - 关于“未来要做什么”的判断，以 `docs/target-architecture.md` 为准。
 - 关于“为什么现在不这么写、下一步先做什么”的判断，以 `docs/gap-analysis.md` 为准。
+- 关于“如何把上下文交给下一位协作者”的判断，以 `docs/handoff-prompt.md` 为准。
 - 关于“基础框架阶段先拆哪些任务”的判断，以 `docs/tasks-foundation-framework.md` 为准。
 - 关于“基础框架阶段的环境变量和认证协议具体怎么实现”的判断，以 `docs/auth-contract.md` 为准。
 - `docs/知项Knowject-项目认知总结-v2.md` 不直接作为当前事实源引用；引用其中内容时，必须先判断它属于已落地事实、目标态还是待决策。
@@ -57,4 +81,5 @@
 
 - 当前仓库主线仍是“前端壳层 + 本地 Mock + 演示 API”。
 - 目标蓝图已经形成，但大量 AI、数据层和部署能力还未进入实现阶段。
+- 本轮已把“当前事实”“接手路径”“交接 Prompt”拆成单独文档，减少后续接手时的误读成本。
 - 后续开发前，建议先读 `docs/gap-analysis.md`，再决定是继续补前端产品骨架，还是开始推进后端 / RAG / Skill 能力。
