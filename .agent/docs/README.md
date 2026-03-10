@@ -1,0 +1,124 @@
+# Knowject 文档索引
+
+`.agent/docs/` 是 Knowject 当前唯一的项目文档根目录，用于统一收敛“事实、规划、交接、契约、设计、输入材料与模板”。
+
+本次收敛的目标不是单纯挪文件，而是把文档入口、分类和维护边界一起稳定下来，避免后续继续出现“知道有文档，但不知道该去哪里找”的问题。
+
+## 1. 分类结构
+
+```text
+.agent/docs/
+  README.md                     文档总索引
+  current/
+    architecture.md            当前事实源
+  contracts/
+    auth-contract.md           认证与环境契约
+  roadmap/
+    target-architecture.md     目标蓝图
+    gap-analysis.md            current vs target 差距分析
+  plans/
+    doc-iteration-handoff-plan.md
+    tasks-foundation-framework.md
+    tasks-global-assets-foundation.md
+  handoff/
+    handoff-guide.md
+    handoff-prompt.md
+  inputs/
+    知项Knowject-项目认知总结-v2.md
+  design/
+    ...
+  templates/
+    PLANS.md
+```
+
+## 2. 阅读顺序
+
+### 快速接手当前工作
+
+1. 先读 `.agent/docs/handoff/handoff-guide.md`
+2. 再读 `.agent/docs/current/architecture.md`
+3. 涉及基础框架阶段范围与完成记录时，再读 `.agent/docs/plans/tasks-foundation-framework.md`
+4. 涉及 Week 3-4 全局资产阶段拆分时，再读 `.agent/docs/plans/tasks-global-assets-foundation.md`
+5. 然后读 `.agent/docs/roadmap/gap-analysis.md`
+6. 涉及认证与环境时，再读 `.agent/docs/contracts/auth-contract.md`
+7. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
+
+### 理解产品现状与目标
+
+1. 先读 `.agent/docs/current/architecture.md`
+2. 再读 `.agent/docs/roadmap/target-architecture.md`
+3. 最后读 `.agent/docs/roadmap/gap-analysis.md`
+
+如果只需要快速判断当前仓库状态，只读 `.agent/docs/current/architecture.md` 即可。
+
+## 3. 分类索引
+
+| 分类     | 目录                    | 主要文件                                                                                              | 适合回答的问题                                       |
+| -------- | ----------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 当前事实 | `.agent/docs/current`   | `architecture.md`                                                                                     | 现在的路由、数据来源、模块边界、API 边界是什么       |
+| 实施契约 | `.agent/docs/contracts` | `auth-contract.md`                                                                                    | MongoDB、JWT、密码哈希、注册登录、错误响应具体怎么定 |
+| 路线蓝图 | `.agent/docs/roadmap`   | `target-architecture.md`、`gap-analysis.md`                                                           | 产品最终想做成什么、现在差多少、先补什么             |
+| 阶段计划 | `.agent/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md` | 当前阶段具体怎么拆、顺序如何、DoD 怎么定             |
+| 接手交接 | `.agent/docs/handoff`   | `handoff-guide.md`、`handoff-prompt.md`                                                               | 新协作者如何快速建立事实并继续推进                   |
+| 输入材料 | `.agent/docs/inputs`    | `知项Knowject-项目认知总结-v2.md`                                                                     | 认知总结原文是什么，哪些内容需要吸收为正式文档       |
+| 设计资料 | `.agent/docs/design`    | 品牌与视觉资料                                                                                        | 品牌表达、图标、字标、视觉方向是什么                 |
+| 模板     | `.agent/docs/templates` | `PLANS.md`                                                                                            | 复杂任务、迁移和高风险变更该如何写执行计划           |
+
+## 4. 维护边界
+
+- 更新 `.agent/docs/current/architecture.md`
+  - 路由、重定向、页面命名变化。
+  - 项目数据来源、localStorage 键、Mock 组织方式变化。
+  - 模块职责边界、API 边界、当前运行基线变化。
+- 更新 `.agent/docs/contracts/auth-contract.md`
+  - 基础框架阶段的环境变量、JWT、密码哈希、注册登录契约发生变化。
+  - 错误响应格式、状态码语义或安全边界发生变化。
+- 更新 `.agent/docs/roadmap/target-architecture.md`
+  - 产品三层架构定义变化。
+  - Knowledge / Skill / Agent 定义变化。
+  - MVP / 第二阶段 / 第三阶段目标变化。
+  - 重要待决策项被确认或被废弃。
+- 更新 `.agent/docs/roadmap/gap-analysis.md`
+  - 当前事实和目标蓝图之间的主要差距发生变化。
+  - 优先级、风险判断或阶段性建议发生明显调整。
+  - 关键 git 演进节点需要补充新的里程碑。
+- 更新 `.agent/docs/plans/doc-iteration-handoff-plan.md`
+  - 需要补充新的文档迭代范围、里程碑或验证结果。
+  - 本轮计划已完成，需要记录结果总结与残余风险。
+- 更新 `.agent/docs/plans/tasks-foundation-framework.md`
+  - 基础框架阶段的任务范围、顺序、依赖关系或 DoD 发生变化。
+  - 基础框架阶段状态从“进行中”变为“已完成 / 延后 / 拆到下一阶段”时，需同步更新完成记录与边界。
+- 更新 `.agent/docs/plans/tasks-global-assets-foundation.md`
+  - Week 3-4 全局资产阶段的范围、顺序、依赖关系或 DoD 发生变化。
+  - 已确认的前置决策、阶段取舍或风险止损策略发生变化。
+  - 阶段状态从“待启动”变为“进行中 / 已完成 / 延后”时，需同步更新。
+- 更新 `.agent/docs/handoff/handoff-guide.md`
+  - 当前最重要的接手路径、阅读顺序、继续开发建议发生变化。
+  - 有新的业务事实容易被误读，需要显式提醒接手者。
+- 更新 `.agent/docs/handoff/handoff-prompt.md`
+  - 接手 Prompt 中引用的关键文档、源码入口或输出格式发生变化。
+  - 交接方式需要从“阅读事实”调整为“执行某一类任务”。
+- 更新 `.agent/docs/templates/PLANS.md`
+  - 执行计划模板结构、里程碑格式、验证项或回滚项需要调整。
+- 更新根 `README.md`
+  - 文档入口、目录结构或对外阅读顺序发生变化。
+
+## 5. 使用规则
+
+- 关于“当前是什么”的判断，以 `.agent/docs/current/architecture.md` 和源码为准。
+- 关于“怎么最快接手当前工作”的判断，以 `.agent/docs/handoff/handoff-guide.md` 为准。
+- 关于“未来要做什么”的判断，以 `.agent/docs/roadmap/target-architecture.md` 为准。
+- 关于“为什么现在不这么写、下一步先做什么”的判断，以 `.agent/docs/roadmap/gap-analysis.md` 为准。
+- 关于“如何把上下文交给下一位协作者”的判断，以 `.agent/docs/handoff/handoff-prompt.md` 为准。
+- 关于“基础框架阶段先拆哪些任务”的判断，以 `.agent/docs/plans/tasks-foundation-framework.md` 为准。
+- 关于“全局资产阶段先拆哪些任务、执行顺序和 DoD 怎么定”的判断，以 `.agent/docs/plans/tasks-global-assets-foundation.md` 为准。
+- 关于“基础框架阶段的环境变量和认证协议具体怎么实现”的判断，以 `.agent/docs/contracts/auth-contract.md` 为准。
+- `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 不直接作为当前事实源引用；引用其中内容时，必须先判断它属于已落地事实、目标态还是待决策。
+
+## 6. 当前结论
+
+- 当前仓库已经进入“前后端基础框架已接通、局部能力仍依赖 Mock”的阶段，而不是单纯“前端壳层 + 演示 API”。
+- 基础框架阶段已经完成；后端已具备 `auth`、`members`、最小项目 CRUD 与成员接口，前端项目列表、项目基础信息、成员 roster 与全局成员概览也已切到后端接口。
+- 当前剩余的主要 Mock 仍集中在项目概览、对话、资源绑定与协作演示数据。
+- 目标蓝图已经形成，但大量 AI、数据层和部署能力还未进入实现阶段。
+- 现在所有项目文档已统一收口到 `.agent/docs/`；后续若再新增项目级文档，应优先纳入这里的既有分类，而不是在仓库根部重新散落新入口。

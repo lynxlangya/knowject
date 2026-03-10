@@ -11,24 +11,29 @@
 ```text
 apps/
   platform/  前端应用（React + Vite + Ant Design）
-  api/       本地联调与演示 API（Express + TypeScript）
+  api/       基础框架 API（Express + TypeScript）
 packages/
   request/   请求库（@knowject/request）
   ui/        UI 组件库（@knowject/ui）
-docs/
-  architecture.md   当前架构事实源
-  design/           品牌与视觉设计资料
 .agent/
-  PLANS.md          复杂任务执行计划模板
+  docs/
+    current/        当前事实与架构文档
+    contracts/      实施契约
+    roadmap/        目标蓝图与 gap 分析
+    plans/          阶段任务与文档计划
+    handoff/        接手与交接文档
+    inputs/         输入材料与认知原稿
+    design/         品牌与视觉设计资料
+    templates/      模板与计划骨架
 ```
 
 ## 2. 模块职责边界
 
 - `apps/platform`：承载登录后产品壳、路由、鉴权状态、项目态页面与全局资产管理页；当前主要由本地 Mock 数据和 `localStorage` 驱动。
-- `apps/api`：提供 `health`、`auth`、`memory` 三组本地联调与演示接口，不直接作为项目态页面的数据主源。
+- `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`memory` 六组接口；其中项目列表、项目基础信息、成员 roster 与全局成员概览已经接入正式后端主链路。
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
-- `docs`：沉淀当前架构、品牌和设计资料；`docs/architecture.md` 是项目结构与路由事实的主文档。
+- `.agent/docs`：项目文档统一根目录；`.agent/docs/current/architecture.md` 是项目结构与路由事实的主文档。
 
 ## 3. 当前产品信息架构（2026-03-10）
 
@@ -58,18 +63,18 @@ docs/
 - `apps/platform/src/app/project/project.storage.ts` 负责默认项目与项目持久化。
 - `apps/platform/src/pages/project/project.mock.ts` 负责项目概览、对话、资源、成员等页面的演示数据。
 - 项目资源数据当前由“项目绑定的全局资产”映射得到；因此项目资源和全局资产在概念上分层，但当前数据来源仍复用全局 Mock 资产目录。
-- `apps/api` 当前只提供演示接口能力；项目态页面的主数据流仍来自前端本地 Mock，而不是后端 API。
+- `apps/api` 已经承载 auth、项目主数据和成员关系的正式接口；当前仍保留演示性质的部分主要是 `memory` 与项目概览 / 对话 / 资源相关的前端 Mock 数据。
 
 ## 5. 开发与文档同步约束
 
 - 新增业务页面默认放在 `apps/platform/src/pages`。
-- 新增后端接口默认放在 `apps/api/src/routes`，并保持 `/api/*` 路由前缀。
+- 新增正式业务后端接口默认按模块放在 `apps/api/src/modules/*`，并在 `apps/api/src/app/create-app.ts` 统一挂载 `/api/*` 路由；`health`、`memory` 这类系统 / 演示路由可继续放在 `apps/api/src/routes`。
 - 涉及品牌文本必须使用：`知项 · Knowject` 与 `让项目知识，真正为团队所用。`
 - Tailwind 类名必须使用 canonical 写法：`!` 重要标记使用后缀形式（如 `mb-1!`），禁止前缀形式（如 `!mb-1`）。
 - 涉及以下变化时，必须同步检查并更新文档：
-  - 路由、重定向、页面命名变化：同步 `README.md`、`docs/architecture.md`、相关子模块 README。
-  - Mock 数据源、示例路径、存储键变化：同步 `docs/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
-  - 模块边界、目录结构、协作规则变化：同步本文件与 `docs/architecture.md`。
+  - 路由、重定向、页面命名变化：同步 `README.md`、`.agent/docs/current/architecture.md`、相关子模块 README。
+  - Mock 数据源、示例路径、存储键变化：同步 `.agent/docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
+  - 模块边界、目录结构、协作规则变化：同步本文件与 `.agent/docs/current/architecture.md`。
 
 ## 6. 页面与组件分层约定
 
@@ -83,10 +88,10 @@ docs/
 ## 7. 文档与协作入口
 
 - `README.md`：面向仓库协作者的总入口，说明当前定位、启动方式、信息架构与文档索引。
-- `docs/architecture.md`：项目结构、路由矩阵、数据来源、兼容策略的事实源。
-- `docs/design/*`：品牌与视觉设计资料。
+- `.agent/docs/current/architecture.md`：项目结构、路由矩阵、数据来源、兼容策略的事实源。
+- `.agent/docs/design/*`：品牌与视觉设计资料。
 - `apps/platform/README.md`、`apps/api/README.md`：分别说明前端与 API 子系统的当前职责与边界。
-- `.agent/PLANS.md`：复杂功能、迁移或高风险任务的执行计划模板。
+- `.agent/docs/templates/PLANS.md`：复杂功能、迁移或高风险任务的执行计划模板。
 
 ## 8. 提交信息协作约定
 

@@ -24,7 +24,7 @@
   - 将项目态页面从旧工作台形态拆成概览、对话、资源、成员四页，并引入当前 canonical 路由体系。
   - 含义：产品信息架构开始稳定，项目页模型从单页工作台转向多页协作结构。
 - `3d747c6`（2026-03-09）
-  - 新增 `docs/architecture.md` 与子系统 README，第一次把“当前事实”显式沉淀下来。
+  - 新增 `.agent/docs/current/architecture.md` 与子系统 README，第一次把“当前事实”显式沉淀下来。
   - 含义：文档治理开始从零散说明转向正式事实源。
 - `dd59806`（2026-03-09）
   - 成员页从占位名片墙升级为协作视图，并区分全局成员档案和项目协作快照。
@@ -33,7 +33,7 @@
   - 审计路由和文档，删除部分与当前架构不一致的内容。
   - 含义：开始主动清理“实现已经变了、文档没跟上”的问题。
 - `3d9101b`（2026-03-10）
-  - 新增 `docs/知项Knowject-项目认知总结-v2.md`，系统化提出全局层 / 项目层 / 对话层三层蓝图。
+  - 新增 `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`，系统化提出全局层 / 项目层 / 对话层三层蓝图。
   - 含义：产品目标和技术蓝图已经被清晰表达，但尚未与当前事实完全分离。
 
 ## 3. 六个核心 gap
@@ -95,7 +95,7 @@
   - `apps/api/src/db/mongo.ts`
   - `apps/api/src/modules/auth/*`
   - `apps/api/src/routes/memory.ts`
-  - `docs/target-architecture.md`
+  - `.agent/docs/roadmap/target-architecture.md`
   - `36835ed`
 - 风险
   - 如果后端继续扩项目与 AI 能力，而前端仍长期保留资源绑定与对话的本地假数据层，仓库会停留在“主链路已接通、剩余入口继续割裂”的中间态。
@@ -116,7 +116,7 @@
 - 证据来源
   - `apps/api/src/routes/memory.ts`
   - `apps/platform/src/app/project/project.catalog.ts`
-  - `docs/知项Knowject-项目认知总结-v2.md`
+  - `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`
   - `3d9101b`
 - 风险
   - 如果直接从当前演示接口跳到完整 Agent 编排，跨度过大，容易在检索质量、工具边界和接口设计上一次性失控。
@@ -137,7 +137,7 @@
   - 根 `package.json`
   - `pnpm-workspace.yaml`
   - `turbo.json`
-  - `docs/知项Knowject-项目认知总结-v2.md`
+  - `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`
 - 风险
   - 如果后续引入数据库和检索基础设施，但没有统一部署与环境治理，开发和演示环境会迅速分叉。
 - 建议优先级
@@ -148,15 +148,15 @@
 ### 3.6 文档治理
 
 - 当前状态
-  - `docs/architecture.md`、README、AGENTS、认知总结同时存在，之前有部分事实和目标态混写。
-  - 本轮已经把 `docs/` 内文档角色重新拆开。
+  - `.agent/docs/current/architecture.md`、README、AGENTS、认知总结同时存在，之前有部分事实和目标态混写。
+  - 本轮已经把 `.agent/docs/` 内文档角色重新拆开。
 - 目标状态
   - 当前事实、目标蓝图、差距分析三份核心文档各司其职。
   - 协作者能快速判断“该看哪份文档回答什么问题”。
 - 证据来源
-  - `docs/README.md`
-  - `docs/architecture.md`
-  - `docs/target-architecture.md`
+  - `.agent/docs/README.md`
+  - `.agent/docs/current/architecture.md`
+  - `.agent/docs/roadmap/target-architecture.md`
   - `5682e7c`
   - 本轮文档重构
 - 风险
@@ -164,7 +164,7 @@
 - 建议优先级
   - P1，需要持续执行。
 - 下一步动作
-  - 后续任何路由、数据源、架构边界调整，先更新 `docs/architecture.md`；产品目标变化再更新 `docs/target-architecture.md`。
+  - 后续任何路由、数据源、架构边界调整，先更新 `.agent/docs/current/architecture.md`；产品目标变化再更新 `.agent/docs/roadmap/target-architecture.md`。
 
 ## 4. 推荐开发顺序
 
@@ -184,6 +184,6 @@
 
 ## 6. 使用方式
 
-- 想看当前真实状态：读 `docs/architecture.md`。
-- 想看最终想做成什么：读 `docs/target-architecture.md`。
+- 想看当前真实状态：读 `.agent/docs/current/architecture.md`。
+- 想看最终想做成什么：读 `.agent/docs/roadmap/target-architecture.md`。
 - 想决定下一个迭代该做什么：先看本文，再落执行计划。

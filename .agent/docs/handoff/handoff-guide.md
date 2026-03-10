@@ -6,18 +6,18 @@
 
 ## 先记住 4 个判断
 
-1. 当前事实以 `docs/architecture.md` 和源码为准，不以蓝图文档为准。
+1. 当前事实以 `.agent/docs/current/architecture.md` 和源码为准，不以蓝图文档为准。
 2. 当前产品主线已经进入“前后端基础框架已接通、局部能力仍依赖 Mock”的阶段，而不是单纯“前端产品壳 + 演示 API”。
 3. 后端已经完成 auth、members、最小项目 CRUD 和成员接口，前端项目列表、项目基础信息、成员 roster 与全局成员概览也已切到数据库接口。
 4. canonical 路由已经稳定，兼容路由只做跳转，不应再回退成业务主入口。
 
 ## 10 到 15 分钟阅读顺序
 
-1. 先读 `docs/architecture.md`
-2. 再读 `docs/gap-analysis.md`
-3. 涉及基础框架阶段范围与完成记录时读 `docs/tasks-foundation-framework.md`
-4. 涉及登录、JWT、环境变量时读 `docs/auth-contract.md`
-5. 只有需要理解目标态时，再读 `docs/target-architecture.md`
+1. 先读 `.agent/docs/current/architecture.md`
+2. 再读 `.agent/docs/roadmap/gap-analysis.md`
+3. 涉及基础框架阶段范围与完成记录时读 `.agent/docs/plans/tasks-foundation-framework.md`
+4. 涉及登录、JWT、环境变量时读 `.agent/docs/contracts/auth-contract.md`
+5. 只有需要理解目标态时，再读 `.agent/docs/roadmap/target-architecture.md`
 6. 最后核对以下源码入口：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/navigation/routeRedirects.tsx`
@@ -107,20 +107,20 @@
 
 ## 这一轮文档迭代做了什么
 
-- 补齐了 `docs/architecture.md` 里遗漏的新业务事实：
+- 补齐了 `.agent/docs/current/architecture.md` 里遗漏的新业务事实：
   - 记住用户名缓存
   - 项目本地模型中的资源绑定字段
   - `resources?focus=*` 的兼容定位逻辑
   - 全局资产页占位交互现状
 - 新增了三份文档：
-  - `docs/doc-iteration-handoff-plan.md`
-  - `docs/handoff-guide.md`
-  - `docs/handoff-prompt.md`
-- 更新了 `docs/README.md` 和根 `README.md`，把“事实 / 接手 / 交接”入口收口到 `docs/`。
+  - `.agent/docs/plans/doc-iteration-handoff-plan.md`
+  - `.agent/docs/handoff/handoff-guide.md`
+  - `.agent/docs/handoff/handoff-prompt.md`
+- 更新了 `.agent/docs/README.md` 和根 `README.md`，把“事实 / 接手 / 交接”入口收口到 `.agent/docs/`。
 
 ## 接手后最容易犯的错
 
-- 把 `docs/target-architecture.md` 当成当前实现说明。
+- 把 `.agent/docs/roadmap/target-architecture.md` 当成当前实现说明。
 - 忽略 `knowject_project_pins` / `knowject_project_resource_bindings` 这两个前端本地状态，直接把所有项目页行为都理解为后端事实。
 - 看到 `/api/projects` 和成员接口已落地，就误判“项目概览 / 对话 / 资源也已经完全切到后端”。
 - 把 `/project/:projectId/resources?focus=*` 当成新的 canonical 设计，而不是兼容跳转。
@@ -129,16 +129,16 @@
 ## 文档同步规则
 
 - 路由、重定向、页面命名、localStorage 键、主数据来源变化：
-  - 先改 `docs/architecture.md`
-  - 再改 `docs/README.md`
+  - 先改 `.agent/docs/current/architecture.md`
+  - 再改 `.agent/docs/README.md`
   - 必要时改根 `README.md`
 - JWT、认证、环境变量、安全边界变化：
-  - 同步 `docs/auth-contract.md`
+  - 同步 `.agent/docs/contracts/auth-contract.md`
 - 目标态、阶段规划、蓝图边界变化：
-  - 同步 `docs/target-architecture.md` 与 `docs/gap-analysis.md`
+  - 同步 `.agent/docs/roadmap/target-architecture.md` 与 `.agent/docs/roadmap/gap-analysis.md`
 - 需要把工作继续交给下一位协作者：
-  - 更新 `docs/handoff-guide.md`
-  - 视情况更新 `docs/handoff-prompt.md`
+  - 更新 `.agent/docs/handoff/handoff-guide.md`
+  - 视情况更新 `.agent/docs/handoff/handoff-prompt.md`
 
 ## 最小验证
 

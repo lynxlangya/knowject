@@ -1,6 +1,6 @@
 # Knowject 目标架构蓝图（2026-03-10）
 
-本文档回答“Knowject 想做成什么”，以 `docs/知项Knowject-项目认知总结-v2.md` 为主要输入，并结合当前仓库现状做状态标注。它不是当前实现事实源。
+本文档回答“Knowject 想做成什么”，以 `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 为主要输入，并结合当前仓库现状做状态标注。它不是当前实现事实源。
 
 ## 1. 北极星
 
@@ -176,6 +176,6 @@
 
 ## 8. 与当前事实的关系
 
-- 当前事实请以 `docs/architecture.md` 为准。
+- 当前事实请以 `.agent/docs/current/architecture.md` 为准。
 - 本文档只描述目标方向和阶段边界。
-- 一旦某项蓝图进入实现并稳定落地，需要先更新 `docs/architecture.md`，再回头更新这里的状态标注。
+- 一旦某项蓝图进入实现并稳定落地，需要先更新 `.agent/docs/current/architecture.md`，再回头更新这里的状态标注。

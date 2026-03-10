@@ -414,7 +414,7 @@ interface User {
   passwordHash: string;
   name: string;
   avatar?: string;
-  role: 'admin' | 'member'; // 全局角色
+  role: "admin" | "member"; // 全局角色
 }
 
 // 全局知识库
@@ -422,8 +422,8 @@ interface GlobalKnowledge {
   _id: ObjectId;
   name: string;
   description: string;
-  type: 'document' | 'git';
-  indexStatus: 'pending' | 'processing' | 'completed' | 'failed';
+  type: "document" | "git";
+  indexStatus: "pending" | "processing" | "completed" | "failed";
   chunkCount: number;
   usedByProjects: number; // 被多少项目引用
   maintainer: string; // 维护方
@@ -437,7 +437,7 @@ interface GlobalSkill {
   description: string;
 
   // Skill 实现类型
-  type: 'function_calling' | 'api_call' | 'deep_rag' | 'code_exec' | 'workflow';
+  type: "function_calling" | "api_call" | "deep_rag" | "code_exec" | "workflow";
 
   // Function Calling 类型：工具参数定义
   functionDef?: {
@@ -454,7 +454,7 @@ interface GlobalSkill {
   };
 
   // 来源
-  source: 'custom' | 'global' | 'public'; // 自建 / 全局共享 / 公网引入
+  source: "custom" | "global" | "public"; // 自建 / 全局共享 / 公网引入
 
   // 实际执行逻辑（内置 Skill 在后端实现，自定义 Skill 用户配置）
   handler: string;
@@ -493,7 +493,7 @@ interface Project {
   members: [
     {
       userId: ObjectId;
-      role: 'admin' | 'member';
+      role: "admin" | "member";
       joinedAt: Date;
     },
   ];
@@ -512,7 +512,7 @@ interface Conversation {
 interface Message {
   _id: ObjectId;
   conversationId: ObjectId;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   sources?: [
     {
@@ -521,7 +521,7 @@ interface Message {
       documentName: string;
       chunkContent: string;
       score: number;
-      type: 'document' | 'code';
+      type: "document" | "code";
     },
   ];
   toolCalls?: [

@@ -21,11 +21,14 @@ apps/
 packages/
   request/    HTTP 请求封装（@knowject/request）
   ui/         通用 UI 组件（@knowject/ui）
-docs/
-  architecture.md   当前架构事实源
-  handoff-guide.md  快速接手指南
-  handoff-prompt.md 交接 Prompt 模板
-  design/           品牌与视觉资料
+.agent/
+  docs/
+    current/        当前架构事实
+    handoff/        接手与交接文档
+    roadmap/        目标蓝图与 gap 分析
+    plans/          阶段任务与执行计划
+    design/         品牌与视觉资料
+    templates/      模板文档
 ```
 
 ## 当前信息架构
@@ -58,20 +61,22 @@ docs/
 - `apps/platform/src/pages/project/project.mock.ts`：项目页演示数据源。
 - `AppSider` 的项目创建 / 编辑表单当前提交 `name / description`，并继续维护本地资源绑定。
 - `apps/api` 当前已具备项目正式写模型、CRUD 和成员管理接口；`memory` 接口主要用于演示查询流程。
-- 后端环境变量模板位于仓库根 `/.env.example`，认证与环境实施合同位于 `docs/auth-contract.md`。
+- 后端环境变量模板位于仓库根 `/.env.example`，认证与环境实施合同位于 `.agent/docs/contracts/auth-contract.md`。
 
 ## 文档入口
 
 - [项目规则](./AGENTS.md)
-- [架构事实](./docs/architecture.md)
-- [基础框架任务归档](./docs/tasks-foundation-framework.md)
-- [认证与环境契约](./docs/auth-contract.md)
-- [快速接手指南](./docs/handoff-guide.md)
-- [交接 Prompt 模板](./docs/handoff-prompt.md)
+- [文档索引](./.agent/docs/README.md)
+- [架构事实](./.agent/docs/current/architecture.md)
+- [基础框架任务归档](./.agent/docs/plans/tasks-foundation-framework.md)
+- [全局资产阶段任务拆分](./.agent/docs/plans/tasks-global-assets-foundation.md)
+- [认证与环境契约](./.agent/docs/contracts/auth-contract.md)
+- [快速接手指南](./.agent/docs/handoff/handoff-guide.md)
+- [交接 Prompt 模板](./.agent/docs/handoff/handoff-prompt.md)
 - [前端说明](./apps/platform/README.md)
 - [API 说明](./apps/api/README.md)
-- [设计资料](./docs/design)
-- [执行计划模板](./.agent/PLANS.md)
+- [设计资料](./.agent/docs/design)
+- [执行计划模板](./.agent/docs/templates/PLANS.md)
 
 ## 运行要求
 

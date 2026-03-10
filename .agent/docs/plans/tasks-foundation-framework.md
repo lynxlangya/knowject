@@ -4,14 +4,14 @@
 
 ## 目标
 
-本文件最初用于把 `docs/知项Knowject-项目认知总结-v2.md` 中的 `Week 1-2 基础框架` 收敛成可拆票执行的任务清单；当前阶段已完成，因此保留为任务归档与完成记录。
+本文件最初用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 中的 `Week 1-2 基础框架` 收敛成可拆票执行的任务清单；当前阶段已完成，因此保留为任务归档与完成记录。
 本阶段的本质不是“重新初始化前后端”，而是在现有前端壳层和基础 API 起点上，补齐真正进入产品开发所需的认证、项目主数据、项目成员关系和运行约定。
 
 ## 当前事实基线
 
 - 真相源文件：
-  - `docs/architecture.md`
-  - `docs/target-architecture.md`
+  - `.agent/docs/current/architecture.md`
+  - `.agent/docs/roadmap/target-architecture.md`
   - `apps/platform/src/app/navigation/routes.tsx`
   - `apps/platform/src/app/layouts/components/AppSider.tsx`
   - `apps/platform/src/pages/login/LoginPage.tsx`
@@ -316,7 +316,7 @@
   - `docker-compose` 服务拓扑规划稿。
 - 依赖：`BF-02`、`BF-04`、`BF-07`、`BF-08`。
 - 已完成记录：
-  - 已补齐 `README.md`、`docs/README.md`、`docs/architecture.md`、`docs/auth-contract.md`、`apps/platform/README.md`、`apps/api/README.md` 的阶段状态与运行约定说明。
+  - 已补齐 `README.md`、`.agent/docs/README.md`、`.agent/docs/current/architecture.md`、`.agent/docs/contracts/auth-contract.md`、`apps/platform/README.md`、`apps/api/README.md` 的阶段状态与运行约定说明。
   - 已明确本阶段最小本地服务拓扑为 `platform + api + mongodb`，并说明 `docker-compose` 当前只做规划，不是已交付能力。
   - 已把基础框架任务状态从执行清单收口为归档记录，便于后续协作者直接判断“这一阶段已经完成到哪里”。
 - 验收：

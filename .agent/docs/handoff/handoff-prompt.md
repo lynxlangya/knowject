@@ -21,13 +21,13 @@
 请严格按以下顺序执行：
 
 1. 先读这些文档：
-   - `docs/handoff-guide.md`
-   - `docs/architecture.md`
-   - `docs/gap-analysis.md`
-   - `docs/auth-contract.md`
-   - `docs/tasks-foundation-framework.md`
+   - `.agent/docs/handoff/handoff-guide.md`
+   - `.agent/docs/current/architecture.md`
+   - `.agent/docs/roadmap/gap-analysis.md`
+   - `.agent/docs/contracts/auth-contract.md`
+   - `.agent/docs/plans/tasks-foundation-framework.md`
 2. 只有在需要理解目标态或阶段路线时，再读：
-   - `docs/target-architecture.md`
+   - `.agent/docs/roadmap/target-architecture.md`
 3. 核对这些源码入口：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/navigation/routeRedirects.tsx`
@@ -66,8 +66,8 @@
 执行约束：
 
 - 以最小可行改动推进，不做未来抽象，不为了“显得完整”引入新层级。
-- 改路由、数据来源、localStorage 键、API 边界或文档角色时，必须同步更新 `docs/architecture.md` 和 `docs/README.md`，必要时更新 `README.md` 与 `docs/auth-contract.md`。
-- 不要把 `docs/target-architecture.md` 中的目标能力表述成当前现状。
+- 改路由、数据来源、localStorage 键、API 边界或文档角色时，必须同步更新 `.agent/docs/current/architecture.md` 和 `.agent/docs/README.md`，必要时更新 `README.md` 与 `.agent/docs/contracts/auth-contract.md`。
+- 不要把 `.agent/docs/roadmap/target-architecture.md` 中的目标能力表述成当前现状。
 - 在没有完成正式资源绑定 / 对话数据切换前，不要继续把更多真实业务逻辑堆进 `project.mock.ts` 和 `project.catalog.ts`。
 ```
 
@@ -79,11 +79,11 @@
 请按以下步骤操作：
 
 1. 阅读：
-   - `docs/handoff-guide.md`
-   - `docs/architecture.md`
-   - `docs/gap-analysis.md`
-   - 如果涉及基础框架阶段边界，再读 `docs/tasks-foundation-framework.md`
-   - 如果涉及登录或环境，再读 `docs/auth-contract.md`
+   - `.agent/docs/handoff/handoff-guide.md`
+   - `.agent/docs/current/architecture.md`
+   - `.agent/docs/roadmap/gap-analysis.md`
+   - 如果涉及基础框架阶段边界，再读 `.agent/docs/plans/tasks-foundation-framework.md`
+   - 如果涉及登录或环境，再读 `.agent/docs/contracts/auth-contract.md`
 2. 打开以下源码确认文档没有过时：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/layouts/components/AppSider.tsx`
@@ -122,4 +122,4 @@
 
 把这句话加在你的交接消息开头，能显著降低误解：
 
-> 请先根据 `docs/handoff-guide.md` 建立当前事实，再开始修改代码；不要把蓝图文档当成现状。
+> 请先根据 `.agent/docs/handoff/handoff-guide.md` 建立当前事实，再开始修改代码；不要把蓝图文档当成现状。

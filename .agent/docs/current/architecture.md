@@ -1,7 +1,7 @@
 # Knowject 架构事实（2026-03-10）
 
-本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `docs/target-architecture.md` 与 `docs/gap-analysis.md`。
-截至 2026-03-10，`docs/tasks-foundation-framework.md` 中定义的基础框架阶段（`BF-01` ~ `BF-10`）已经完成。
+本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `.agent/docs/roadmap/target-architecture.md` 与 `.agent/docs/roadmap/gap-analysis.md`。
+截至 2026-03-10，`.agent/docs/plans/tasks-foundation-framework.md` 中定义的基础框架阶段（`BF-01` ~ `BF-10`）已经完成。
 
 ## 1. 文档角色
 
@@ -41,16 +41,18 @@ apps/
 packages/
   request/          Axios 请求能力封装
   ui/               通用 UI 组件
-docs/
-  architecture.md         当前事实源
-  auth-contract.md        认证与环境实施契约
-  doc-iteration-handoff-plan.md  本轮文档执行计划
-  handoff-guide.md        快速接手指南
-  handoff-prompt.md       交接 Prompt 模板
-  tasks-foundation-framework.md  基础框架阶段任务归档
-  target-architecture.md  目标蓝图
-  gap-analysis.md         current vs target 对照
-  design/                 品牌与视觉资料
+.agent/
+  docs/
+    current/architecture.md      当前事实源
+    contracts/auth-contract.md   认证与环境实施契约
+    plans/doc-iteration-handoff-plan.md  本轮文档执行计划
+    handoff/handoff-guide.md     快速接手指南
+    handoff/handoff-prompt.md    交接 Prompt 模板
+    plans/tasks-foundation-framework.md  基础框架阶段任务归档
+    plans/tasks-global-assets-foundation.md  全局资产阶段任务拆分
+    roadmap/target-architecture.md  目标蓝图
+    roadmap/gap-analysis.md      current vs target 对照
+    design/                      品牌与视觉资料
 ```
 
 ## 3.1 当前导入别名约定
@@ -248,9 +250,9 @@ docs/
 
 ## 9. 相关文档
 
-- `docs/README.md`：文档导航与维护边界。
-- `docs/handoff-guide.md`：新协作者快速建立当前事实的入口。
-- `docs/handoff-prompt.md`：把当前上下文继续交给下一位协作者的模板。
-- `docs/target-architecture.md`：目标蓝图与阶段能力。
-- `docs/gap-analysis.md`：现状与目标差距、风险和建议优先级。
-- `docs/知项Knowject-项目认知总结-v2.md`：目标蓝图输入材料，不是当前事实源。
+- `.agent/docs/README.md`：文档索引、分类导航与维护边界。
+- `.agent/docs/handoff/handoff-guide.md`：新协作者快速建立当前事实的入口。
+- `.agent/docs/handoff/handoff-prompt.md`：把当前上下文继续交给下一位协作者的模板。
+- `.agent/docs/roadmap/target-architecture.md`：目标蓝图与阶段能力。
+- `.agent/docs/roadmap/gap-analysis.md`：现状与目标差距、风险和建议优先级。
+- `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`：目标蓝图输入材料，不是当前事实源。

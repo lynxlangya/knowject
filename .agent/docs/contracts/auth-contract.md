@@ -1,6 +1,6 @@
 # 基础框架认证与环境契约
 
-状态：基础框架阶段已完成（截至 2026-03-10，`BF-03` ~ `BF-10` 已按本文件及相关文档落地）；当前事实仍以 `docs/architecture.md` 为准，本文件负责解释 auth 与环境约定。
+状态：基础框架阶段已完成（截至 2026-03-10，`BF-03` ~ `BF-10` 已按本文件及相关文档落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责解释 auth 与环境约定。
 
 ## 1. 目标
 
@@ -43,24 +43,24 @@
 
 变量清单：
 
-| 变量 | 必填 | 示例 / 默认值 | 说明 |
-| --- | --- | --- | --- |
-| `NODE_ENV` | 是 | `development` | 运行环境标识 |
-| `APP_NAME` | 是 | `knowject-api` | 日志和健康检查里的应用名 |
-| `PORT` | 是 | `3001` | API 监听端口 |
-| `LOG_LEVEL` | 是 | `info` | 运行日志等级 |
-| `CORS_ORIGIN` | 是 | `http://localhost:5173` | 允许访问 API 的前端来源 |
-| `MONGODB_URI` | 是 | `mongodb://knowject_app:***@127.0.0.1:27017/knowject?authSource=knowject` | MongoDB 连接串 |
-| `MONGODB_DB_NAME` | 是 | `knowject` | 默认数据库名 |
-| `JWT_SECRET` | 是 | `CHANGE_ME_WITH_OPENSSL_BASE64_48` | JWT 签名 secret，至少 48 字节随机串 |
-| `JWT_EXPIRES_IN` | 是 | `12h` | access token 有效期 |
-| `JWT_ISSUER` | 是 | `knowject-api` | JWT `iss` |
-| `JWT_AUDIENCE` | 是 | `knowject-platform` | JWT `aud` |
-| `ARGON2_MEMORY_COST` | 是 | `65536` | `argon2id` 内存成本 |
-| `ARGON2_TIME_COST` | 是 | `3` | `argon2id` 迭代次数 |
-| `ARGON2_PARALLELISM` | 是 | `1` | `argon2id` 并行度 |
-| `API_ERROR_EXPOSE_DETAILS` | 是 | `false` | 是否向客户端暴露安全可公开的字段级细节 |
-| `API_ERROR_INCLUDE_STACK` | 是 | `false` | 是否在服务端错误日志中附带 stack，默认必须关闭 |
+| 变量                       | 必填 | 示例 / 默认值                                                             | 说明                                           |
+| -------------------------- | ---- | ------------------------------------------------------------------------- | ---------------------------------------------- |
+| `NODE_ENV`                 | 是   | `development`                                                             | 运行环境标识                                   |
+| `APP_NAME`                 | 是   | `knowject-api`                                                            | 日志和健康检查里的应用名                       |
+| `PORT`                     | 是   | `3001`                                                                    | API 监听端口                                   |
+| `LOG_LEVEL`                | 是   | `info`                                                                    | 运行日志等级                                   |
+| `CORS_ORIGIN`              | 是   | `http://localhost:5173`                                                   | 允许访问 API 的前端来源                        |
+| `MONGODB_URI`              | 是   | `mongodb://knowject_app:***@127.0.0.1:27017/knowject?authSource=knowject` | MongoDB 连接串                                 |
+| `MONGODB_DB_NAME`          | 是   | `knowject`                                                                | 默认数据库名                                   |
+| `JWT_SECRET`               | 是   | `CHANGE_ME_WITH_OPENSSL_BASE64_48`                                        | JWT 签名 secret，至少 48 字节随机串            |
+| `JWT_EXPIRES_IN`           | 是   | `12h`                                                                     | access token 有效期                            |
+| `JWT_ISSUER`               | 是   | `knowject-api`                                                            | JWT `iss`                                      |
+| `JWT_AUDIENCE`             | 是   | `knowject-platform`                                                       | JWT `aud`                                      |
+| `ARGON2_MEMORY_COST`       | 是   | `65536`                                                                   | `argon2id` 内存成本                            |
+| `ARGON2_TIME_COST`         | 是   | `3`                                                                       | `argon2id` 迭代次数                            |
+| `ARGON2_PARALLELISM`       | 是   | `1`                                                                       | `argon2id` 并行度                              |
+| `API_ERROR_EXPOSE_DETAILS` | 是   | `false`                                                                   | 是否向客户端暴露安全可公开的字段级细节         |
+| `API_ERROR_INCLUDE_STACK`  | 是   | `false`                                                                   | 是否在服务端错误日志中附带 stack，默认必须关闭 |
 
 安全约束：
 
@@ -262,19 +262,19 @@
 
 状态码与错误码：
 
-| HTTP 状态码 | 错误码 | 触发场景 |
-| --- | --- | --- |
-| `400` | `VALIDATION_ERROR` | 参数缺失、字段格式非法、请求体不是合法 JSON |
-| `401` | `AUTH_INVALID_CREDENTIALS` | 用户不存在或密码错误 |
-| `401` | `AUTH_TOKEN_INVALID` | token 缺失、非法、过期 |
-| `403` | `PROJECT_FORBIDDEN` | 已登录但无项目级操作权限 |
-| `404` | `AUTH_USER_NOT_FOUND` | 按用户名添加项目成员时，目标用户不存在 |
-| `404` | `PROJECT_NOT_FOUND` | 访问不存在或不可见的项目 |
-| `404` | `PROJECT_MEMBER_NOT_FOUND` | 修改或移除不存在的项目成员 |
-| `409` | `AUTH_USERNAME_CONFLICT` | 注册时用户名冲突 |
-| `409` | `PROJECT_MEMBER_ALREADY_EXISTS` | 成员重复加入项目 |
-| `409` | `PROJECT_LAST_ADMIN_REQUIRED` | 尝试降级或移除项目中最后一位 `admin` |
-| `500` | `INTERNAL_SERVER_ERROR` | 未处理异常或基础设施错误 |
+| HTTP 状态码 | 错误码                          | 触发场景                                    |
+| ----------- | ------------------------------- | ------------------------------------------- |
+| `400`       | `VALIDATION_ERROR`              | 参数缺失、字段格式非法、请求体不是合法 JSON |
+| `401`       | `AUTH_INVALID_CREDENTIALS`      | 用户不存在或密码错误                        |
+| `401`       | `AUTH_TOKEN_INVALID`            | token 缺失、非法、过期                      |
+| `403`       | `PROJECT_FORBIDDEN`             | 已登录但无项目级操作权限                    |
+| `404`       | `AUTH_USER_NOT_FOUND`           | 按用户名添加项目成员时，目标用户不存在      |
+| `404`       | `PROJECT_NOT_FOUND`             | 访问不存在或不可见的项目                    |
+| `404`       | `PROJECT_MEMBER_NOT_FOUND`      | 修改或移除不存在的项目成员                  |
+| `409`       | `AUTH_USERNAME_CONFLICT`        | 注册时用户名冲突                            |
+| `409`       | `PROJECT_MEMBER_ALREADY_EXISTS` | 成员重复加入项目                            |
+| `409`       | `PROJECT_LAST_ADMIN_REQUIRED`   | 尝试降级或移除项目中最后一位 `admin`        |
+| `500`       | `INTERNAL_SERVER_ERROR`         | 未处理异常或基础设施错误                    |
 
 暴露规则：
 
@@ -333,7 +333,7 @@
 2. 用户模型、`argon2id` 密码哈希、JWT 签发与鉴权中间件已落地。
 3. `POST /api/auth/register`、`POST /api/auth/login` 与 `GET /api/auth/users` 已落地，并接入前端 `/login` 与项目成员添加流程。
 4. 项目最小 CRUD、项目成员接口与全局成员概览接口已经接入当前基础框架主链路。
-5. 环境变量、错误响应、最小服务拓扑和阶段边界已经沉淀到 `README.md`、`docs/architecture.md`、`docs/tasks-foundation-framework.md` 与本文件。
+5. 环境变量、错误响应、最小服务拓扑和阶段边界已经沉淀到 `README.md`、`.agent/docs/current/architecture.md`、`.agent/docs/plans/tasks-foundation-framework.md` 与本文件。
 
 ## 11. 当前遗留边界
 

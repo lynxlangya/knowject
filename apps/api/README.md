@@ -84,7 +84,7 @@
   - `ARGON2_PARALLELISM`
   - `API_ERROR_EXPOSE_DETAILS`
   - `API_ERROR_INCLUDE_STACK`
-- 认证和环境的详细实施合同见 [docs/auth-contract.md](/Users/langya/Documents/CodeHub/ai/knowject/docs/auth-contract.md)。
+- 认证和环境的详细实施合同见 [.agent/docs/contracts/auth-contract.md](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/auth-contract.md)。
 
 ## 关键文件
 
