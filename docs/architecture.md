@@ -1,128 +1,174 @@
 # Knowject 架构事实（2026-03-10）
 
-本文档记录当前仓库中已经落地的结构、路由、数据来源与兼容策略。若代码与其他说明不一致，以这里和对应源码为准。
+本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `docs/target-architecture.md` 与 `docs/gap-analysis.md`。
 
-## 1. 总览
+## 1. 文档角色
 
-- Knowject 采用 Monorepo 结构，当前由 `apps/platform`、`apps/api`、`packages/request`、`packages/ui` 四个主要工作区组成。
-- `apps/platform` 是当前产品壳与交互主入口，但项目态内容仍主要依赖前端本地 Mock 数据与 `localStorage`。
-- `apps/api` 提供本地联调与演示接口，重点覆盖健康检查、登录和项目记忆查询，不承担项目页的实时数据源职责。
+- 权威级别：当前实现事实源。
+- 适用范围：仓库结构、当前路由、当前数据来源、当前 API 边界、当前限制。
+- 不包含内容：MongoDB、Chroma、SSE、docker-compose、JWT、真实 RAG、Skill 执行引擎等未落地能力。
 
-## 2. 目录结构
+## 2. 当前基线
+
+- 仓库形态：pnpm workspace + Turborepo Monorepo。
+- 前端主应用：`apps/platform`，基于 React 19、Vite 7、Ant Design 6、Tailwind CSS 4。
+- 本地 API：`apps/api`，基于 Express 4 + TypeScript。
+- 共享包：
+  - `packages/request`：Axios 请求封装。
+  - `packages/ui`：通用 UI 组件，当前已包含 `SearchPanel` 及其 helper 分层。
+- 当前产品主线：登录后产品壳、项目态页面、全局资产管理页、本地演示 API。
+- 当前项目态主数据流：前端本地 Mock + `localStorage`，不是后端数据库。
+- 已验证基线：2026-03-10 已执行 `pnpm check-types` 与 `pnpm build` 并通过；前端构建仍有既有 chunk size warning。
+
+## 3. 目录结构
 
 ```text
 apps/
   platform/
-    src/app/        路由、布局、鉴权、项目状态
-    src/api/        前端 API 封装
-    src/pages/      登录页、主页、项目态页面、全局资产页
+    src/app/        鉴权、布局、导航、项目上下文
+    src/api/        auth / memory 前端请求封装
+    src/pages/      登录页、主页、项目页、全局资产页
   api/
-    src/routes/     health / auth / memory 路由
+    src/routes/     health / auth / memory 演示接口
     src/server.ts   Express 入口
 packages/
-  request/          Axios 请求封装
+  request/          Axios 请求能力封装
   ui/               通用 UI 组件
 docs/
-  architecture.md   当前架构事实源
-  design/           品牌与视觉资料
+  architecture.md         当前事实源
+  target-architecture.md  目标蓝图
+  gap-analysis.md         current vs target 对照
+  design/                 品牌与视觉资料
 ```
 
-## 3. 前端运行模型
+## 4. 前端信息架构
 
-### 3.1 路由矩阵
+### 4.1 Canonical 路由
 
 - `/login`：登录页。
-- `/home`：登录后的默认首页，当前只承载空态引导。
+- `/home`：登录后默认首页，当前承载空态引导。
+- `/knowledge`：全局知识库管理页壳层。
+- `/skills`：全局技能管理页壳层。
+- `/agents`：全局智能体管理页壳层。
+- `/members`：全局成员页占位。
+- `/analytics`：全局分析页占位。
+- `/settings`：全局设置页占位。
 - `/project/:projectId/overview`：项目概览页。
 - `/project/:projectId/chat`：项目对话页。
 - `/project/:projectId/chat/:chatId`：项目对话详情页。
-- `/project/:projectId/resources`：项目资源页，展示当前项目内的知识、技能与智能体。
+- `/project/:projectId/resources`：项目资源页。
 - `/project/:projectId/members`：项目成员页。
-- `/knowledge`、`/skills`、`/agents`：全局资产管理页。
-- `/members`、`/analytics`、`/settings`：全局占位页。
 
-### 3.2 兼容与重定向
+### 4.2 兼容与重定向
 
 - `/` 重定向到 `/home`。
 - `/workspace` 重定向到 `/home`。
 - `/project/:projectId` 重定向到 `/project/:projectId/overview`。
-- `/project/:projectId/knowledge|skills|agents` 重定向到 `/project/:projectId/resources?focus=*`。
-- `/home/project/:projectId/*` 旧路径重定向到 `/project/:projectId/*`。
-- 旧的项目工作台页实现已退出 canonical 路由，不再作为当前信息架构的一部分。
+- `/project/:projectId/knowledge` 重定向到 `/project/:projectId/resources?focus=knowledge`。
+- `/project/:projectId/skills` 重定向到 `/project/:projectId/resources?focus=skills`。
+- `/project/:projectId/agents` 重定向到 `/project/:projectId/resources?focus=agents`。
+- `/home/project/:projectId` 重定向到 `/project/:projectId/overview`。
+- `/home/project/:projectId/chat` 与 `/home/project/:projectId/chat/:chatId` 重定向到新的项目对话路径。
 
-### 3.3 布局与导航
+### 4.3 布局与导航
 
-- 登录后布局由 `apps/platform/src/app/layouts/AuthedLayout.tsx` 驱动，结构为“左侧全局侧栏 + 右侧内容区”。
-- 左侧侧栏由 `apps/platform/src/app/layouts/components/AppSider.tsx` 提供，负责：
-  - 品牌区展示
-  - 全局导航切换
-  - “我的项目”列表
-  - 项目创建弹框入口
-  - 退出登录
-- 顶部全局 Header 当前不作为登录后主导航入口。
+- 登录后主布局由 `apps/platform/src/app/layouts/AuthedLayout.tsx` 提供，结构为“左侧全局侧栏 + 右侧内容区”。
+- 左侧侧栏 `AppSider` 负责：
+  - 品牌区。
+  - 全局导航。
+  - “我的项目”列表。
+  - 项目创建、编辑、置顶、删除。
+  - 当前账号展示与退出登录。
+- 项目页布局由 `apps/platform/src/pages/project/ProjectLayout.tsx` 驱动，结构为“项目头部 + 项目内一级导航 + 页面内容区”。
+- 项目内一级导航固定为：`概览`、`对话`、`资源`、`成员`。
 
-## 4. 前端状态与数据来源
+## 5. 当前状态与数据来源
 
-### 4.1 本地存储
+### 5.1 本地存储
 
-- `knowject_token`：登录成功后的 Bearer Token。
-- `knowject_projects`：项目列表持久化数据，包含项目基础信息、项目说明、置顶状态与展示顺序。
+- `knowject_token`：登录 token。
+- `knowject_auth_user`：当前登录用户信息。
+- `knowject_projects`：项目列表及项目基础配置。
 
-### 4.2 项目态数据
+### 5.2 鉴权与登录态
+
+- 前端通过 `apps/platform/src/api/auth.ts` 调用 `POST /api/auth/login`。
+- 登录成功后会写入 token 和当前用户信息，再由受保护路由守卫控制登录后访问。
+- 当前 token 只是本地演示 token，不是正式 JWT。
+
+### 5.3 项目状态与 Mock 资产
 
 - `apps/platform/src/app/project/ProjectContext.tsx`
-  - 提供项目列表读写、按 ID 查找、项目创建 / 编辑 / 置顶 / 删除能力。
+  - 管理项目列表的增删改查、置顶和按 ID 查询。
 - `apps/platform/src/app/project/project.storage.ts`
-  - 定义默认项目与 `localStorage` 读写，并兼容置顶字段缺省值回填。
+  - 定义默认项目与 `knowject_projects` 的读写逻辑。
 - `apps/platform/src/app/project/project.catalog.ts`
-  - 定义全局知识库、技能、智能体、成员基础档案等共享 Mock 资产。
+  - 维护全局知识库、技能、智能体、成员基础档案等共享 Mock 目录。
 - `apps/platform/src/pages/project/project.mock.ts`
-  - 定义项目概览、对话、资源、成员协作信息等演示数据，成员侧重点包括角色、职责标签与最近动作。
-  - 项目资源当前由“项目绑定的全局资产”映射得到，因此前端已经区分“全局资产目录”和“项目资源实例”两层概念。
+  - 维护项目概览、对话、资源、成员协作快照等演示数据。
 
-### 4.3 全局态与项目态分层
+### 5.4 全局资产与项目资源分层
 
-- 全局 `知识库 / 技能 / 智能体` 页面负责展示跨项目资产目录与治理入口。
-- 项目资源是项目维度下实际启用的知识、技能与智能体，强调“当前项目可消费的资源集合”。
-- 当前项目资源仍由项目绑定的全局资产映射生成，因此“新增项目资源”仍是占位行为，尚未接入真实后端流程。
+- 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理壳层。
+- 项目 `资源` 页当前只展示“该项目已绑定的资产”。
+- 项目资源的实际来源仍是“项目配置中记录的全局资产 ID”映射而来。
+- 当前不存在项目私有知识库的真实持久化或索引流程；“项目资源分层”目前是信息架构和前端数据组织上的分层。
 
-## 5. API 边界
+### 5.5 成员数据分层
 
-### 5.1 现有接口
+- 全局成员基础档案维护在 `project.catalog.ts`。
+- 项目成员的职责、状态、最近动作等协作快照维护在 `project.mock.ts`。
+- 成员页当前已经表达“基础身份 + 项目协作信息”的两层结构，但数据仍为前端 mock。
+
+## 6. API 边界
+
+### 6.1 现有接口
 
 - `GET /api/health`
 - `POST /api/auth/login`
 - `GET /api/memory/overview`
 - `POST /api/memory/query`
 
-### 5.2 鉴权约定
+### 6.2 当前接口职责
 
-- 登录接口返回 `knowject-token-*` 形式的 token。
-- `memory` 路由要求请求头携带 `Authorization: Bearer <token>`。
-- Bearer Token 的前缀校验发生在 `apps/api/src/routes/memory.ts`。
+- `health`：返回服务状态和时间戳。
+- `auth/login`：校验 `username` 与 `password` 是否存在，返回演示 token 和基础用户信息。
+- `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
+- `memory/query`：基于本地 `DEMO_ITEMS` 做简单关键词匹配，返回演示检索结果。
 
-### 5.3 当前边界
+### 6.3 当前鉴权约定
 
-- `apps/api` 目前是本地联调与演示 API，不是项目态页面的主要数据提供方。
-- `apps/platform/src/api` 中的 `auth` 与 `memory` 封装面向演示接口，项目概览、对话、资源、成员等内容仍来自前端本地 Mock。
+- `memory` 路由要求 `Authorization: Bearer <token>`。
+- 服务端只校验 token 是否以 `knowject-token-` 开头。
+- 当前没有用户体系、权限模型、数据库持久化和会话管理。
 
-## 6. 模块职责
+## 7. 模块职责
 
-- `apps/platform`：页面、路由、鉴权状态、项目态编排、全局资产管理页。
-- `apps/api`：演示接口与本地联调入口。
-- `packages/request`：Axios 请求能力封装。
-- `packages/ui`：通用 UI 组件与 helper。
+- `apps/platform`
+  - 登录页、产品壳、路由、项目态页面、全局资产页壳层。
+- `apps/api`
+  - 本地联调与演示接口，不直接承担项目页面主数据源。
+- `packages/request`
+  - 请求客户端、错误封装、去重、下载能力。
+- `packages/ui`
+  - 通用组件与 helper，当前已包含搜索面板能力。
 
-## 7. 文档索引
+## 8. 当前明确未落地能力
 
-- `README.md`：仓库协作总入口。
-- `apps/platform/README.md`：前端职责、路由与数据来源说明。
-- `apps/api/README.md`：接口与演示边界说明。
-- `docs/design/*`：品牌与视觉资料。
+以下能力在认知总结或目标蓝图中出现过，但当前仓库未落地，不应视为现状：
 
-## 8. 协作与提交约定
+- MongoDB、Chroma 或其他正式数据存储与向量检索基础设施。
+- SSE 流式对话链路与来源引用渲染。
+- JWT、RBAC、成员邀请权限流。
+- 文档上传、Git 仓库接入、Figma 接入、代码解析与向量化。
+- 真实的 Knowledge / Skill / Agent 创建、绑定、执行与调度能力。
+- 项目私有知识库持久化、全局资产复用的正式后端流程。
+- docker-compose 私有化部署方案。
+- Zustand、React Query 等额外状态管理层。
 
-- 当一次改动达到可审阅、可提交状态，且协作者请求提交记录或明确表示将自行提交代码时，默认输出符合仓库规范的 commit message 草案。
-- commit 草案遵循全局 `type(scope): summary` 与正文 `Why / What / Validation / Risk` 结构，验证结论必须与实际执行结果一致。
-- 若工作区同时存在多类独立改动，按单一目的拆分 commit 草案，而不是合并成一个不可回滚的提交。
-- 该约定属于项目协作规则的一部分，与 `AGENTS.md` 保持同步维护。
+## 9. 相关文档
+
+- `docs/README.md`：文档导航与维护边界。
+- `docs/target-architecture.md`：目标蓝图与阶段能力。
+- `docs/gap-analysis.md`：现状与目标差距、风险和建议优先级。
+- `docs/知项Knowject-项目认知总结-v2.md`：目标蓝图输入材料，不是当前事实源。
