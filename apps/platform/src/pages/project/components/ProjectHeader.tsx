@@ -3,9 +3,9 @@ import type {
   ProjectMember,
   ProjectOverviewStats,
   ProjectSummary,
-} from '../../../app/project/project.types';
-import { KNOWJECT_BRAND } from '../../../styles/brand';
-import type { ProjectWorkspaceMeta } from '../project.mock';
+  ProjectWorkspaceMeta,
+} from '@app/project/project.types';
+import { KNOWJECT_BRAND } from '@styles/brand';
 
 interface ProjectHeaderProps {
   project: ProjectSummary;

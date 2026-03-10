@@ -8,7 +8,7 @@ import {
   LEFT_HUB,
   RIGHT_HUB,
   toPercent,
-} from '../constants';
+} from '@pages/login/constants';
 
 const HUB_POINTS = [LEFT_HUB, RIGHT_HUB] as const;
 

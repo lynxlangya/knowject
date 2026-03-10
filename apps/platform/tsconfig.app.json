@@ -6,7 +6,13 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@app/*": ["src/app/*"],
+      "@api/*": ["src/api/*"],
+      "@pages/*": ["src/pages/*"],
+      "@styles/*": ["src/styles/*"],
+      "@ui/*": ["../../packages/ui/src/*"],
+      "@request/*": ["../../packages/request/src/*"]
     }
   },
   "include": ["src"]

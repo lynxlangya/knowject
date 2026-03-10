@@ -1,16 +1,17 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { getToken } from '../auth/token';
-import { PATHS } from '../navigation/paths';
+import { clearAuthSession, getAuthSession } from '@app/auth/user';
+import { PATHS } from '@app/navigation/paths';
 
 interface RequireAuthProps {
   children: React.ReactNode;
 }
 
 export const RequireAuth = ({ children }: RequireAuthProps) => {
-  const token = getToken();
+  const authSession = getAuthSession();
   const location = useLocation();
 
-  if (!token) {
+  if (!authSession) {
+    clearAuthSession();
     return <Navigate to={PATHS.login} state={{ from: location }} replace />;
   }
 

@@ -1,7 +1,7 @@
 import { App, Alert, Button, Empty, Input, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { buildProjectChatPath, buildProjectResourcesPath } from '../../app/navigation/paths';
+import { buildProjectChatPath, buildProjectResourcesPath } from '@app/navigation/paths';
 import { ProjectConversationList } from './components/ProjectConversationList';
 import { useProjectPageContext } from './projectPageContext';
 import { getConversationsByProject, getMessagesByConversation } from './project.mock';

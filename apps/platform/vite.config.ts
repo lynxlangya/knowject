@@ -13,9 +13,36 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-    },
+    alias: [
+      {
+        find: '@app',
+        replacement: fileURLToPath(new URL('./src/app', import.meta.url)),
+      },
+      {
+        find: '@api',
+        replacement: fileURLToPath(new URL('./src/api', import.meta.url)),
+      },
+      {
+        find: '@pages',
+        replacement: fileURLToPath(new URL('./src/pages', import.meta.url)),
+      },
+      {
+        find: '@styles',
+        replacement: fileURLToPath(new URL('./src/styles', import.meta.url)),
+      },
+      {
+        find: '@ui',
+        replacement: fileURLToPath(new URL('../../packages/ui/src', import.meta.url)),
+      },
+      {
+        find: '@request',
+        replacement: fileURLToPath(new URL('../../packages/request/src', import.meta.url)),
+      },
+      {
+        find: '@',
+        replacement: fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    ],
   },
   server: {
     host: '0.0.0.0',

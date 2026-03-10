@@ -18,6 +18,7 @@
 | `docs/target-architecture.md` | 目标蓝图源 | 高 | 产品最终想做成什么，Knowledge / Skill / Agent 如何分层 |
 | `docs/gap-analysis.md` | current vs target 对照 | 高 | 现在离目标差多少，先补什么，风险在哪里 |
 | `docs/tasks-foundation-framework.md` | 基础框架任务清单 | 交付规划 | Week 1-2 基础框架阶段具体做什么、按什么顺序拆票 |
+| `docs/auth-contract.md` | 基础框架实施契约 | 实施约束 | MongoDB、JWT、密码哈希、注册登录、错误响应具体怎么定 |
 | `docs/知项Knowject-项目认知总结-v2.md` | 输入材料 / 工作底稿 | 参考 | 最新认知总结原文是什么，哪些内容需要被吸收到正式文档 |
 | `docs/design/*` | 品牌与视觉资料 | 专项参考 | 品牌表达、图标、字标、视觉方向是什么 |
 
@@ -39,6 +40,9 @@
 - 更新 `docs/tasks-foundation-framework.md`
   - 基础框架阶段的任务范围、顺序、依赖关系或 DoD 发生变化。
   - 基础框架阶段已经落地或被明确延后，需同步更新状态与边界。
+- 更新 `docs/auth-contract.md`
+  - 基础框架阶段的环境变量、JWT、密码哈希、注册登录契约发生变化。
+  - 错误响应格式、状态码语义或安全边界发生变化。
 
 ## 4. 使用规则
 
@@ -46,6 +50,7 @@
 - 关于“未来要做什么”的判断，以 `docs/target-architecture.md` 为准。
 - 关于“为什么现在不这么写、下一步先做什么”的判断，以 `docs/gap-analysis.md` 为准。
 - 关于“基础框架阶段先拆哪些任务”的判断，以 `docs/tasks-foundation-framework.md` 为准。
+- 关于“基础框架阶段的环境变量和认证协议具体怎么实现”的判断，以 `docs/auth-contract.md` 为准。
 - `docs/知项Knowject-项目认知总结-v2.md` 不直接作为当前事实源引用；引用其中内容时，必须先判断它属于已落地事实、目标态还是待决策。
 
 ## 5. 当前结论

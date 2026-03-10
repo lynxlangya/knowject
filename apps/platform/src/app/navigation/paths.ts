@@ -1,3 +1,8 @@
+import type {
+  ProjectResourceFocus,
+  ProjectSectionKey,
+} from '@app/project/project.types';
+
 export const PATHS = {
   login: '/login',
   home: '/home',
@@ -26,6 +31,10 @@ export const ROUTE_PATTERNS = {
   legacyHomeProjectChatDetail: `${PATHS.home}/project/:projectId/chat/:chatId`,
 } as const;
 
+const PROJECT_ROOT_SEGMENT = PATHS.project.slice(1);
+
+const PROJECT_SECTION_KEYS = ['overview', 'chat', 'resources', 'members'] as const;
+
 export const buildProjectPath = (projectId: string): string => {
   return `${PATHS.project}/${encodeURIComponent(projectId)}`;
 };
@@ -47,9 +56,23 @@ export const buildProjectMembersPath = (projectId: string): string => {
   return `${buildProjectPath(projectId)}/members`;
 };
 
+const PROJECT_SECTION_PATH_BUILDERS: Record<ProjectSectionKey, (projectId: string) => string> = {
+  overview: buildProjectOverviewPath,
+  chat: (projectId) => buildProjectChatPath(projectId),
+  resources: (projectId) => buildProjectResourcesPath(projectId),
+  members: buildProjectMembersPath,
+};
+
+export const buildProjectSectionPath = (
+  projectId: string,
+  section: ProjectSectionKey,
+): string => {
+  return PROJECT_SECTION_PATH_BUILDERS[section](projectId);
+};
+
 export const buildProjectResourcesPath = (
   projectId: string,
-  focus?: 'knowledge' | 'skills' | 'agents',
+  focus?: ProjectResourceFocus,
 ): string => {
   const basePath = `${buildProjectPath(projectId)}/resources`;
   if (!focus) {
@@ -57,4 +80,27 @@ export const buildProjectResourcesPath = (
   }
 
   return `${basePath}?focus=${encodeURIComponent(focus)}`;
+};
+
+export const getProjectIdFromPathname = (pathname: string): string | null => {
+  const [, rootSegment, rawProjectId] = pathname.split('/');
+  if (rootSegment !== PROJECT_ROOT_SEGMENT || !rawProjectId) {
+    return null;
+  }
+
+  return decodeURIComponent(rawProjectId);
+};
+
+// 项目页 canonical section 固定在第三段，避免页面层继续写 includes 补丁判断。
+export const getProjectSectionFromPathname = (pathname: string): ProjectSectionKey => {
+  const [, rootSegment, , section] = pathname.split('/');
+  if (rootSegment !== PROJECT_ROOT_SEGMENT) {
+    return 'overview';
+  }
+
+  if (PROJECT_SECTION_KEYS.includes(section as ProjectSectionKey)) {
+    return section as ProjectSectionKey;
+  }
+
+  return 'overview';
 };

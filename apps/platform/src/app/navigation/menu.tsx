@@ -5,6 +5,7 @@ import {
   RobotOutlined,
   TeamOutlined,
   LineChartOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { PATHS } from './paths';
@@ -42,6 +43,11 @@ export const menuItems: MenuItem[] = [
     icon: <LineChartOutlined />,
     label: '分析',
   },
+  {
+    key: PATHS.settings,
+    icon: <SettingOutlined />,
+    label: '设置',
+  },
 ];
 
 export const getMenuPath = (key: string): string => key;
@@ -51,29 +57,13 @@ export const getMenuSelectedKey = (pathname: string): string | null => {
     return null;
   }
 
-  if (pathname === PATHS.home || pathname.startsWith(`${PATHS.home}/`)) {
-    return PATHS.home;
-  }
+  const matchedItem = menuItems.find((item) => {
+    if (!item || typeof item.key !== 'string') {
+      return false;
+    }
 
-  if (pathname === PATHS.knowledge || pathname.startsWith(`${PATHS.knowledge}/`)) {
-    return PATHS.knowledge;
-  }
+    return pathname === item.key || pathname.startsWith(`${item.key}/`);
+  });
 
-  if (pathname === PATHS.skills || pathname.startsWith(`${PATHS.skills}/`)) {
-    return PATHS.skills;
-  }
-
-  if (pathname === PATHS.agents || pathname.startsWith(`${PATHS.agents}/`)) {
-    return PATHS.agents;
-  }
-
-  if (pathname === PATHS.members || pathname.startsWith(`${PATHS.members}/`)) {
-    return PATHS.members;
-  }
-
-  if (pathname === PATHS.analytics || pathname.startsWith(`${PATHS.analytics}/`)) {
-    return PATHS.analytics;
-  }
-
-  return null;
+  return typeof matchedItem?.key === 'string' ? matchedItem.key : null;
 };

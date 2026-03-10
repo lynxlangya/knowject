@@ -4,12 +4,14 @@
 
 ## 1. 关键结论
 
-- 当前仓库已经完成产品信息架构、前端壳层和演示数据组织的第一轮收敛，但仍处在“高保真前端原型 + 演示 API”阶段。
+- 当前仓库已经完成产品信息架构、前端壳层和演示数据组织的第一轮收敛，并开始进入“前端原型 + 后端基础框架起步”阶段。
 - 当前最清晰、最有价值的已落地能力是：
   - 登录后产品壳。
   - 项目与全局资产的页面分层。
   - 项目成员协作信息展示结构。
   - 前端本地 Mock 的组织边界。
+  - `apps/api` 的配置、MongoDB、健康检查基础骨架。
+  - 用户注册 / 登录、`argon2id`、JWT 与前端 `/login` 双模式入口。
 - 与目标蓝图之间的最大断层不在 UI，而在正式数据层、RAG / Skill / Agent 核心能力、部署与权限体系。
 - 因此后续开发不应继续把目标态文案写成现状，而应在“前端壳层补完”和“后端 / AI 主链路启动”之间做阶段取舍。
 
@@ -80,23 +82,26 @@
 ### 3.3 后端与数据层
 
 - 当前状态
-  - `apps/api` 只提供 health、login、memory overview、memory query 4 个演示接口。
-  - 没有用户、项目、资产、对话的正式存储与 CRUD。
+  - `apps/api` 当前已暴露 health、register、login、memory overview、memory query 5 个接口。
+  - 已经建立 `config / db / modules / middleware` 骨架，并接入 MongoDB、用户模型、`argon2id` 与 JWT。
+  - 仍没有项目、资产、对话的正式存储与 CRUD。
 - 目标状态
   - 需要完整承载用户、项目、成员、对话、知识资产、Skill 配置、Agent 配置的正式后端。
   - 需要结构化数据存储和向量检索基础设施。
 - 证据来源
   - `apps/api/src/server.ts`
-  - `apps/api/src/routes/auth.ts`
+  - `apps/api/src/config/env.ts`
+  - `apps/api/src/db/mongo.ts`
+  - `apps/api/src/modules/auth/*`
   - `apps/api/src/routes/memory.ts`
   - `docs/target-architecture.md`
   - `36835ed`
 - 风险
-  - 如果没有正式数据层，前端 UI 再完整也无法支撑真实协作和 AI 能力接入。
+  - 如果停留在“只有 auth 闭环，没有项目领域模型”，前端 UI 仍无法支撑真实协作和 AI 能力接入。
 - 建议优先级
   - P0，与前端状态切换同级。
 - 下一步动作
-  - 先补最小后端领域模型与接口边界，不必一次做完所有 AI 能力，但至少要建立项目、资产、对话的正式主线。
+  - auth 已经落地，下一步应直接补项目 / 成员正式接口，不必一次做完所有 AI 能力，但至少要建立项目主数据主线。
 
 ### 3.4 AI / RAG / Skill / Agent
 
@@ -123,7 +128,8 @@
 
 - 当前状态
   - 当前仓库可本地 `pnpm dev`、`pnpm check-types`、`pnpm build`。
-  - 没有正式的私有化部署编排、环境变量治理、运行监控与回滚策略。
+  - 根目录已经有 `/.env.example`，API 侧已形成最小环境变量治理和本地 MongoDB 运行契约。
+  - 没有正式的私有化部署编排、运行监控与回滚策略。
 - 目标状态
   - 具备可复现的本地 / 服务器部署方案，支持数据库、向量库和后端服务联动。
 - 证据来源

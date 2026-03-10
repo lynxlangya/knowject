@@ -1,6 +1,6 @@
 import { ExportOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Empty, Tag, Tooltip, Typography } from 'antd';
-import type { ProjectResourceGroup as ProjectResourceGroupType } from '../../../app/project/project.types';
+import type { ProjectResourceGroup as ProjectResourceGroupType } from '@app/project/project.types';
 
 interface ProjectResourceGroupProps {
   group: ProjectResourceGroupType;

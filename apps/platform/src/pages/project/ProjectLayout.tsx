@@ -2,32 +2,13 @@ import { Alert, Button } from 'antd';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   PATHS,
-  buildProjectChatPath,
-  buildProjectMembersPath,
-  buildProjectOverviewPath,
-  buildProjectResourcesPath,
-} from '../../app/navigation/paths';
-import type { ProjectSectionKey } from '../../app/project/project.types';
-import { useProjectContext } from '../../app/project/useProjectContext';
+  buildProjectSectionPath,
+  getProjectSectionFromPathname,
+} from '@app/navigation/paths';
+import { useProjectContext } from '@app/project/useProjectContext';
 import { ProjectHeader } from './components/ProjectHeader';
 import { ProjectSectionNav } from './components/ProjectSectionNav';
-import { getProjectMembers, getProjectMeta, getProjectOverviewStats } from './project.mock';
-
-const resolveSectionByPathname = (pathname: string): ProjectSectionKey => {
-  if (pathname.includes('/resources')) {
-    return 'resources';
-  }
-
-  if (pathname.includes('/members')) {
-    return 'members';
-  }
-
-  if (pathname.includes('/chat')) {
-    return 'chat';
-  }
-
-  return 'overview';
-};
+import { getProjectWorkspaceSnapshot } from './project.mock';
 
 export const ProjectLayout = () => {
   const navigate = useNavigate();
@@ -73,30 +54,9 @@ export const ProjectLayout = () => {
     );
   }
 
-  const activeSection = resolveSectionByPathname(location.pathname);
+  const activeSection = getProjectSectionFromPathname(location.pathname);
   const isOverviewSection = activeSection === 'overview';
-  const members = getProjectMembers(activeProject);
-  const meta = getProjectMeta(activeProject.id);
-  const stats = getProjectOverviewStats(activeProject);
-
-  const handleSelectSection = (section: ProjectSectionKey) => {
-    if (section === 'overview') {
-      navigate(buildProjectOverviewPath(activeProject.id));
-      return;
-    }
-
-    if (section === 'chat') {
-      navigate(buildProjectChatPath(activeProject.id));
-      return;
-    }
-
-    if (section === 'resources') {
-      navigate(buildProjectResourcesPath(activeProject.id));
-      return;
-    }
-
-    navigate(buildProjectMembersPath(activeProject.id));
-  };
+  const workspaceSnapshot = getProjectWorkspaceSnapshot(activeProject);
 
   return (
     <section className="flex h-full min-h-0 flex-col">
@@ -105,19 +65,22 @@ export const ProjectLayout = () => {
         data-state={isOverviewSection ? 'expanded' : 'collapsed'}
         className="project-header-shell"
       >
-        <ProjectHeader project={activeProject} members={members} meta={meta} stats={stats} />
+        <ProjectHeader
+          project={activeProject}
+          members={workspaceSnapshot.members}
+          meta={workspaceSnapshot.meta}
+          stats={workspaceSnapshot.stats}
+        />
       </div>
       <ProjectSectionNav
         activeKey={activeSection}
-        onSelect={handleSelectSection}
+        onSelect={(section) => navigate(buildProjectSectionPath(activeProject.id, section))}
       />
       <div className={`project-layout-outlet ${isOverviewSection ? '' : 'project-page-surface-enter'}`}>
         <Outlet
           context={{
             activeProject,
-            members,
-            meta,
-            stats,
+            ...workspaceSnapshot,
           }}
         />
       </div>

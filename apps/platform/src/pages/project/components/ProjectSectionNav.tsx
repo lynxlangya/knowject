@@ -1,5 +1,5 @@
-import type { ProjectSectionKey } from '../../../app/project/project.types';
-import { KNOWJECT_BRAND } from '../../../styles/brand';
+import type { ProjectSectionKey } from '@app/project/project.types';
+import { KNOWJECT_BRAND } from '@styles/brand';
 
 interface ProjectSectionNavProps {
   activeKey: ProjectSectionKey;

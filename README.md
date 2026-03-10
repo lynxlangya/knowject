@@ -7,7 +7,7 @@
 ## 当前状态
 
 - 前端 `apps/platform` 已形成登录后产品壳、项目态页面与全局资产管理页。
-- 后端 `apps/api` 当前提供本地联调与演示接口，覆盖 `health`、`auth`、`memory`。
+- 后端 `apps/api` 当前提供本地联调与演示接口，覆盖 `health`、`auth`、`memory`，并已完成 MongoDB、用户注册/登录和 JWT 鉴权基线。
 - 项目概览、对话、资源、成员等页面仍主要由前端本地 Mock 数据驱动。
 - 全局 `知识库 / 技能 / 智能体` 页面当前为管理壳层，资产创建与引入流程仍是占位行为。
 
@@ -40,7 +40,7 @@ docs/
 ## 模块职责
 
 - `apps/platform`：页面、路由、鉴权状态、项目态编排、全局资产管理页。
-- `apps/api`：本地联调与演示 API。
+- `apps/api`：本地联调与演示 API，当前已具备 `config / db / modules / middleware` 基础骨架。
 - `packages/request`：Axios 请求能力封装。
 - `packages/ui`：通用 UI 组件与搜索面板等共享能力。
 
@@ -51,6 +51,7 @@ docs/
 - `apps/platform/src/app/project/project.catalog.ts`：全局资产与成员的共享 Mock 源。
 - `apps/platform/src/pages/project/project.mock.ts`：项目页演示数据源。
 - `apps/api` 当前不直接驱动项目态页面内容；`memory` 接口主要用于演示查询流程。
+- 后端环境变量模板位于仓库根 `/.env.example`，认证与环境实施合同位于 `docs/auth-contract.md`。
 
 ## 文档入口
 
@@ -89,7 +90,8 @@ pnpm build
 
 ## 当前演示接口
 
-- `GET /api/health`
+- `GET /api/health`（返回应用与数据库状态）
+- `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/memory/overview`（需 Bearer Token）
 - `POST /api/memory/query`（需 Bearer Token）

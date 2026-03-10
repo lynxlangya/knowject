@@ -1,7 +1,14 @@
+import { clearToken, getToken, setToken } from './token';
+
 export interface AuthUser {
   id: string;
   username: string;
   name: string;
+}
+
+export interface AuthSession {
+  token: string;
+  user: AuthUser;
 }
 
 const AUTH_USER_STORAGE_KEY = 'knowject_auth_user';
@@ -46,9 +53,42 @@ export const getAuthUser = (): AuthUser | null => {
 };
 
 export const setAuthUser = (user: AuthUser): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
 };
 
 export const clearAuthUser = (): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+};
+
+// 当前产品壳依赖 token 和 user snapshot 同时存在，因此把它们视为同一个 session 单元。
+export const getAuthSession = (): AuthSession | null => {
+  const token = getToken();
+  const user = getAuthUser();
+
+  if (!token || !user) {
+    return null;
+  }
+
+  return {
+    token,
+    user,
+  };
+};
+
+export const setAuthSession = (session: AuthSession): void => {
+  setToken(session.token);
+  setAuthUser(session.user);
+};
+
+export const clearAuthSession = (): void => {
+  clearToken();
+  clearAuthUser();
 };

@@ -9,6 +9,14 @@ import { RequestDeduper } from './dedupe';
 import { ApiError, type HttpClientOptions } from './types';
 
 interface ApiErrorResponseBody {
+  error?: {
+    message?: string;
+    code?: string;
+    details?: unknown;
+  };
+  meta?: {
+    requestId?: string;
+  };
   message?: string;
   code?: string;
   detail?: unknown;
@@ -67,12 +75,18 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
         | AxiosResponse<ApiErrorResponseBody>
         | undefined;
 
-      const requestId = config?._requestId;
+      const requestId = response?.data?.meta?.requestId || config?._requestId;
       const status = response?.status || 0;
       const message =
-        response?.data?.message || axiosError.message || 'Unknown Error';
-      const code = response?.data?.code;
-      const detail = response?.data?.detail || response?.data;
+        response?.data?.error?.message ||
+        response?.data?.message ||
+        axiosError.message ||
+        'Unknown Error';
+      const code = response?.data?.error?.code || response?.data?.code;
+      const detail =
+        response?.data?.error?.details ??
+        response?.data?.detail ??
+        response?.data;
 
       // Handle 401
       if (status === 401 && onUnauthorized) {

@@ -2,24 +2,18 @@ import { Navigate, useParams } from 'react-router-dom';
 import {
   PATHS,
   buildProjectChatPath,
-  buildProjectOverviewPath,
+  buildProjectSectionPath,
   buildProjectResourcesPath,
 } from './paths';
+import type {
+  ProjectResourceFocus,
+  ProjectSectionKey,
+} from '@app/project/project.types';
 
-export const ProjectRootRedirect = () => {
-  const { projectId } = useParams<{ projectId?: string }>();
-
-  if (!projectId) {
-    return <Navigate to={PATHS.home} replace />;
-  }
-
-  return <Navigate to={buildProjectOverviewPath(projectId)} replace />;
-};
-
-export const LegacyProjectRedirect = ({
+export const ProjectSectionRedirect = ({
   section = 'overview',
 }: {
-  section?: 'overview' | 'chat';
+  section?: ProjectSectionKey;
 }) => {
   const { projectId, chatId } = useParams<{
     projectId?: string;
@@ -34,13 +28,13 @@ export const LegacyProjectRedirect = ({
     return <Navigate to={buildProjectChatPath(projectId, chatId)} replace />;
   }
 
-  return <Navigate to={buildProjectOverviewPath(projectId)} replace />;
+  return <Navigate to={buildProjectSectionPath(projectId, section)} replace />;
 };
 
-export const LegacyProjectAssetRedirect = ({
+export const ProjectResourceRedirect = ({
   focus,
 }: {
-  focus: 'knowledge' | 'skills' | 'agents';
+  focus: ProjectResourceFocus;
 }) => {
   const { projectId } = useParams<{ projectId?: string }>();
 

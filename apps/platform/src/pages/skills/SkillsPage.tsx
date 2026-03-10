@@ -1,4 +1,4 @@
-import { GlobalAssetManagementPage } from '../assets/GlobalAssetManagementPage';
+import { GlobalAssetManagementPage } from '@pages/assets/GlobalAssetManagementPage';
 
 export const SkillsPage = () => {
   return (

@@ -1,6 +1,6 @@
 import { App, Button, Card, Tag, Typography } from 'antd';
-import type { ProjectResourceFocus } from '../../app/project/project.types';
-import { getGlobalAssetsByType } from '../../app/project/project.catalog';
+import type { ProjectResourceFocus } from '@app/project/project.types';
+import { getGlobalAssetsByType } from '@app/project/project.catalog';
 
 interface GlobalAssetManagementPageProps {
   title: string;

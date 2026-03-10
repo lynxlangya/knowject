@@ -1,6 +1,6 @@
 import { Empty, Typography } from 'antd';
-import type { ConversationSummary } from '../../../app/project/project.types';
-import { KNOWJECT_BRAND } from '../../../styles/brand';
+import type { ConversationSummary } from '@app/project/project.types';
+import { KNOWJECT_BRAND } from '@styles/brand';
 
 interface ProjectConversationListProps {
   conversations: ConversationSummary[];

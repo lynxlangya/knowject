@@ -1,4 +1,5 @@
 import type { CreateProjectInput, ProjectSummary } from './project.types';
+import { orderProjectsForDisplay } from './project.helpers';
 
 const PROJECTS_STORAGE_KEY = 'knowject_projects';
 
@@ -79,25 +80,27 @@ const normalizeProject = (value: unknown): ProjectSummary | null => {
 export const loadProjects = (): ProjectSummary[] => {
   const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
   if (!raw) {
-    return DEFAULT_PROJECTS;
+    return orderProjectsForDisplay(DEFAULT_PROJECTS);
   }
 
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) {
-      return DEFAULT_PROJECTS;
+      return orderProjectsForDisplay(DEFAULT_PROJECTS);
     }
 
     const normalized = parsed.map(normalizeProject).filter(Boolean) as ProjectSummary[];
-    return normalized.length > 0 ? normalized : DEFAULT_PROJECTS;
+    return normalized.length > 0
+      ? orderProjectsForDisplay(normalized)
+      : orderProjectsForDisplay(DEFAULT_PROJECTS);
   } catch (error) {
     console.error('解析项目缓存失败，已回退默认项目', error);
-    return DEFAULT_PROJECTS;
+    return orderProjectsForDisplay(DEFAULT_PROJECTS);
   }
 };
 
 export const saveProjects = (projects: ProjectSummary[]): void => {
-  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(orderProjectsForDisplay(projects)));
 };
 
 export const createProjectSummary = (input: CreateProjectInput): ProjectSummary => {

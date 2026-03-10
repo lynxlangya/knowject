@@ -1,8 +1,11 @@
 import { App, Typography } from 'antd';
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { PATHS } from '../../app/navigation/paths';
-import type { ProjectResourceFocus } from '../../app/project/project.types';
+import {
+  PATHS,
+  buildProjectSectionPath,
+} from '@app/navigation/paths';
+import type { ProjectResourceFocus } from '@app/project/project.types';
 import { ProjectResourceGroup } from './components/ProjectResourceGroup';
 import { useProjectPageContext } from './projectPageContext';
 import { getProjectResourceGroups } from './project.mock';
@@ -13,19 +16,31 @@ const GLOBAL_PATH_BY_FOCUS: Record<ProjectResourceFocus, string> = {
   agents: PATHS.agents,
 };
 
+const RESOURCE_FOCUS_KEYS = ['knowledge', 'skills', 'agents'] as const;
+
+const isProjectResourceFocus = (value: string | null): value is ProjectResourceFocus => {
+  return RESOURCE_FOCUS_KEYS.includes(value as ProjectResourceFocus);
+};
+
 export const ProjectResourcesPage = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { activeProject, stats } = useProjectPageContext();
+  const { activeProject } = useProjectPageContext();
   const groups = getProjectResourceGroups(activeProject);
-  const focus = searchParams.get('focus') as ProjectResourceFocus | null;
+  const rawFocus = searchParams.get('focus');
+  const focus = isProjectResourceFocus(rawFocus) ? rawFocus : null;
   const knowledgeRef = useRef<HTMLDivElement>(null);
   const skillsRef = useRef<HTMLDivElement>(null);
   const agentsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!focus) {
+      if (rawFocus) {
+        navigate(buildProjectSectionPath(activeProject.id, 'resources'), {
+          replace: true,
+        });
+      }
       return;
     }
 
@@ -36,22 +51,38 @@ export const ProjectResourcesPage = () => {
       behavior: 'smooth',
       block: 'start',
     });
-  }, [agentsRef, focus, knowledgeRef, skillsRef]);
+
+    navigate(buildProjectSectionPath(activeProject.id, 'resources'), {
+      replace: true,
+    });
+  }, [activeProject.id, agentsRef, focus, knowledgeRef, navigate, rawFocus, skillsRef]);
+
+  const resourceCountByGroup = groups.reduce<Record<ProjectResourceFocus, number>>(
+    (result, group) => {
+      result[group.key] = group.items.length;
+      return result;
+    },
+    {
+      knowledge: 0,
+      skills: 0,
+      agents: 0,
+    },
+  );
 
   const summaryItems = [
     {
       label: '知识库',
-      value: `${stats.knowledgeCount} 个`,
+      value: `${resourceCountByGroup.knowledge} 个`,
       hint: '当前项目已接入的知识上下文',
     },
     {
       label: '技能',
-      value: `${stats.skillCount} 个`,
+      value: `${resourceCountByGroup.skills} 个`,
       hint: '当前项目可直接复用的工作流能力',
     },
     {
       label: '智能体',
-      value: `${stats.agentCount} 个`,
+      value: `${resourceCountByGroup.agents} 个`,
       hint: '当前项目已绑定的协作智能体',
     },
     {

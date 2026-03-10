@@ -1,23 +1,19 @@
 import {
   getCatalogMembers,
   getGlobalAssetById,
-} from '../../app/project/project.catalog';
+} from '@app/project/project.catalog';
 import type {
   ChatMessage,
   ConversationSummary,
   MemberProfile,
   ProjectMember,
-  ProjectOverviewStats,
   ProjectResourceFocus,
   ProjectResourceGroup,
   ProjectResourceItem,
   ProjectSummary,
-} from '../../app/project/project.types';
-
-export interface ProjectWorkspaceMeta {
-  iconUrl: string;
-  summary: string;
-}
+  ProjectWorkspaceMeta,
+  ProjectWorkspaceSnapshot,
+} from '@app/project/project.types';
 
 const DEFAULT_MEMBERS = getCatalogMembers().slice(0, 3);
 
@@ -123,18 +119,17 @@ const PROJECT_MEMBER_SNAPSHOTS_BY_PROJECT: Record<string, Record<string, Project
   },
 };
 
-const PROJECT_META_BY_ID: Record<string, ProjectWorkspaceMeta> = {
+const DEFAULT_PROJECT_SUMMARY = '聚焦当前项目的知识沉淀、协作过程和 AI 能力接入。';
+
+const PROJECT_META_BY_ID: Record<string, Pick<ProjectWorkspaceMeta, 'iconUrl'>> = {
   'project-mobile-rebuild': {
     iconUrl: '/icon-128.png',
-    summary: '聚焦移动端应用重构、体验统一与技术债梳理。',
   },
   'project-api-v2': {
     iconUrl: '/icon-128.png',
-    summary: '推进 API V2 迁移切流、鉴权一致性和接口治理。',
   },
   'project-marketing-site': {
     iconUrl: '/icon-128.png',
-    summary: '围绕品牌表达、转化路径和内容资产进行协作。',
   },
 };
 
@@ -393,13 +388,13 @@ const mapProjectResources = (
     }));
 };
 
-export const getProjectMeta = (projectId: string): ProjectWorkspaceMeta => {
-  return (
-    PROJECT_META_BY_ID[projectId] ?? {
-      iconUrl: '/icon-128.png',
-      summary: '聚焦当前项目的知识沉淀、协作过程和 AI 能力接入。',
-    }
-  );
+const getProjectMeta = (
+  project: Pick<ProjectSummary, 'id' | 'description'>,
+): ProjectWorkspaceMeta => {
+  return {
+    iconUrl: PROJECT_META_BY_ID[project.id]?.iconUrl ?? '/icon-128.png',
+    summary: project.description.trim() || DEFAULT_PROJECT_SUMMARY,
+  };
 };
 
 export const getProjectMembers = (
@@ -427,18 +422,25 @@ export const getProjectResourceGroups = (
   }));
 };
 
-export const getProjectOverviewStats = (
-  project: Pick<ProjectSummary, 'id' | 'knowledgeBaseIds' | 'skillIds' | 'agentIds' | 'memberIds'>,
-): ProjectOverviewStats => {
+export const getProjectWorkspaceSnapshot = (
+  project: Pick<
+    ProjectSummary,
+    'id' | 'description' | 'knowledgeBaseIds' | 'skillIds' | 'agentIds' | 'memberIds'
+  >,
+): ProjectWorkspaceSnapshot => {
   const members = getProjectMembers(project);
   const conversations = getConversationsByProject(project.id);
 
   return {
-    activeMembers: members.filter((member) => member.isActive).length,
-    conversationCount: conversations.length,
-    knowledgeCount: project.knowledgeBaseIds.length,
-    agentCount: project.agentIds.length,
-    skillCount: project.skillIds.length,
+    members,
+    meta: getProjectMeta(project),
+    stats: {
+      activeMembers: members.filter((member) => member.isActive).length,
+      conversationCount: conversations.length,
+      knowledgeCount: project.knowledgeBaseIds.length,
+      agentCount: project.agentIds.length,
+      skillCount: project.skillIds.length,
+    },
   };
 };
 

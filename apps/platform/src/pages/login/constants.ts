@@ -1,8 +1,12 @@
 export interface LoginFormValues {
+  name?: string;
   username: string;
   password: string;
+  confirmPassword?: string;
   remember?: boolean;
 }
+
+export type AuthMode = 'login' | 'register';
 
 export interface FlowPoint {
   x: number;

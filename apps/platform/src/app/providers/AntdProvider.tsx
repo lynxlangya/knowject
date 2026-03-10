@@ -1,6 +1,6 @@
 import { App, ConfigProvider } from 'antd';
 import type { ReactNode } from 'react';
-import { themeConfig } from '@/styles/antd-theme';
+import { themeConfig } from '@styles/antd-theme';
 
 interface AntdProviderProps {
   children: ReactNode;

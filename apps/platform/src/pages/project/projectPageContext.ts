@@ -1,16 +1,11 @@
 import { useOutletContext } from 'react-router-dom';
 import type {
-  ProjectMember,
-  ProjectOverviewStats,
   ProjectSummary,
-} from '../../app/project/project.types';
-import type { ProjectWorkspaceMeta } from './project.mock';
+  ProjectWorkspaceSnapshot,
+} from '@app/project/project.types';
 
-export interface ProjectPageContextValue {
+export interface ProjectPageContextValue extends ProjectWorkspaceSnapshot {
   activeProject: ProjectSummary;
-  members: ProjectMember[];
-  meta: ProjectWorkspaceMeta;
-  stats: ProjectOverviewStats;
 }
 
 export const useProjectPageContext = (): ProjectPageContextValue => {

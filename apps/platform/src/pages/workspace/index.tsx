@@ -5,7 +5,7 @@ import {
   queryMemory,
   type MemoryItem,
   type MemoryOverviewResponse,
-} from '../../api/memory';
+} from '@api/memory';
 
 export const WorkspacePage = () => {
   const { message } = App.useApp();

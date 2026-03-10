@@ -1,11 +1,10 @@
 import { Layout } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { clearToken } from '../auth/token';
-import { clearAuthUser } from '../auth/user';
-import { getMenuSelectedKey } from '../navigation/menu';
-import { PATHS } from '../navigation/paths';
-import { ProjectProvider } from '../project/ProjectContext';
-import { KNOWJECT_BRAND } from '../../styles/brand';
+import { clearAuthSession } from '@app/auth/user';
+import { getMenuSelectedKey } from '@app/navigation/menu';
+import { PATHS } from '@app/navigation/paths';
+import { ProjectProvider } from '@app/project/ProjectContext';
+import { KNOWJECT_BRAND } from '@styles/brand';
 import { AppSider } from './components/AppSider';
 
 const { Content } = Layout;
@@ -15,8 +14,7 @@ export const AuthedLayout = () => {
   const location = useLocation();
 
   const handleLogout = () => {
-    clearToken();
-    clearAuthUser();
+    clearAuthSession();
     navigate(PATHS.login, { replace: true });
   };
 

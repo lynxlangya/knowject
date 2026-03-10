@@ -1,26 +1,55 @@
 import { Navigate, type RouteObject } from 'react-router-dom';
-import { RequireAuth } from '../guards/RequireAuth';
-import { AuthedLayout } from '../layouts/AuthedLayout';
+import { RequireAuth } from '@app/guards/RequireAuth';
+import { AuthedLayout } from '@app/layouts/AuthedLayout';
 import { PATHS, ROUTE_PATTERNS } from './paths';
-import { LoginPage } from '../../pages/login/LoginPage';
-import { HomePage } from '../../pages/home/HomePage';
-import { ProjectLayout } from '../../pages/project/ProjectLayout';
-import { ProjectOverviewPage } from '../../pages/project/ProjectOverviewPage';
-import { ProjectChatPage } from '../../pages/project/ProjectChatPage';
-import { ProjectResourcesPage } from '../../pages/project/ProjectResourcesPage';
-import { ProjectMembersPage } from '../../pages/project/ProjectMembersPage';
-import { KnowledgePage } from '../../pages/knowledge/KnowledgePage';
-import { SkillsPage } from '../../pages/skills/SkillsPage';
-import { AgentsPage } from '../../pages/agents/AgentsPage';
-import { MembersPage } from '../../pages/members/MembersPage';
-import { AnalyticsPage } from '../../pages/analytics/AnalyticsPage';
-import { SettingsPage } from '../../pages/settings/SettingsPage';
-import { NotFoundPage } from '../../pages/notfound/NotFoundPage';
+import { LoginPage } from '@pages/login/LoginPage';
+import { HomePage } from '@pages/home/HomePage';
+import { ProjectLayout } from '@pages/project/ProjectLayout';
+import { ProjectOverviewPage } from '@pages/project/ProjectOverviewPage';
+import { ProjectChatPage } from '@pages/project/ProjectChatPage';
+import { ProjectResourcesPage } from '@pages/project/ProjectResourcesPage';
+import { ProjectMembersPage } from '@pages/project/ProjectMembersPage';
+import { KnowledgePage } from '@pages/knowledge/KnowledgePage';
+import { SkillsPage } from '@pages/skills/SkillsPage';
+import { AgentsPage } from '@pages/agents/AgentsPage';
+import { MembersPage } from '@pages/members/MembersPage';
+import { AnalyticsPage } from '@pages/analytics/AnalyticsPage';
+import { SettingsPage } from '@pages/settings/SettingsPage';
+import { NotFoundPage } from '@pages/notfound/NotFoundPage';
 import {
-  LegacyProjectAssetRedirect,
-  LegacyProjectRedirect,
-  ProjectRootRedirect,
+  ProjectResourceRedirect,
+  ProjectSectionRedirect,
 } from './routeRedirects';
+
+const legacyProjectResourceRoutes: RouteObject[] = [
+  {
+    path: ROUTE_PATTERNS.projectKnowledgeLegacy,
+    element: <ProjectResourceRedirect focus="knowledge" />,
+  },
+  {
+    path: ROUTE_PATTERNS.projectSkillsLegacy,
+    element: <ProjectResourceRedirect focus="skills" />,
+  },
+  {
+    path: ROUTE_PATTERNS.projectAgentsLegacy,
+    element: <ProjectResourceRedirect focus="agents" />,
+  },
+];
+
+const legacyHomeProjectRoutes: RouteObject[] = [
+  {
+    path: ROUTE_PATTERNS.legacyHomeProject,
+    element: <ProjectSectionRedirect section="overview" />,
+  },
+  {
+    path: ROUTE_PATTERNS.legacyHomeProjectChat,
+    element: <ProjectSectionRedirect section="chat" />,
+  },
+  {
+    path: ROUTE_PATTERNS.legacyHomeProjectChatDetail,
+    element: <ProjectSectionRedirect section="chat" />,
+  },
+];
 
 export const routes: RouteObject[] = [
   {
@@ -49,7 +78,7 @@ export const routes: RouteObject[] = [
         children: [
           {
             index: true,
-            element: <ProjectRootRedirect />,
+            element: <ProjectSectionRedirect section="overview" />,
           },
           {
             path: 'overview',
@@ -73,30 +102,8 @@ export const routes: RouteObject[] = [
           },
         ],
       },
-      {
-        path: ROUTE_PATTERNS.projectKnowledgeLegacy,
-        element: <LegacyProjectAssetRedirect focus="knowledge" />,
-      },
-      {
-        path: ROUTE_PATTERNS.projectAgentsLegacy,
-        element: <LegacyProjectAssetRedirect focus="agents" />,
-      },
-      {
-        path: ROUTE_PATTERNS.projectSkillsLegacy,
-        element: <LegacyProjectAssetRedirect focus="skills" />,
-      },
-      {
-        path: ROUTE_PATTERNS.legacyHomeProject,
-        element: <LegacyProjectRedirect section="overview" />,
-      },
-      {
-        path: ROUTE_PATTERNS.legacyHomeProjectChat,
-        element: <LegacyProjectRedirect section="chat" />,
-      },
-      {
-        path: ROUTE_PATTERNS.legacyHomeProjectChatDetail,
-        element: <LegacyProjectRedirect section="chat" />,
-      },
+      ...legacyProjectResourceRoutes,
+      ...legacyHomeProjectRoutes,
       {
         path: PATHS.knowledge,
         element: <KnowledgePage />,

@@ -4,8 +4,8 @@ import type {
   ProjectMember,
   ProjectMemberRole,
   ProjectMemberStatus,
-} from '../../app/project/project.types';
-import { KNOWJECT_BRAND } from '../../styles/brand';
+} from '@app/project/project.types';
+import { KNOWJECT_BRAND } from '@styles/brand';
 import { useProjectPageContext } from './projectPageContext';
 
 const ROLE_LABELS: Record<ProjectMemberRole, string> = {

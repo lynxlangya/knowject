@@ -1,31 +1,55 @@
-import cors from 'cors';
-import express from 'express';
-import { authRouter } from './routes/auth.js';
-import { healthRouter } from './routes/health.js';
-import { memoryRouter } from './routes/memory.js';
+import { createServer } from 'node:http';
+import { createApp } from './app/create-app.js';
+import { getEnv } from './config/env.js';
+import { MongoDatabaseManager } from './db/mongo.js';
 
-const app = express();
-const port = Number(process.env.PORT ?? 3001);
+const bootstrap = async (): Promise<void> => {
+  const env = getEnv();
+  const mongo = new MongoDatabaseManager(env);
 
-app.use(cors());
-app.use(express.json());
+  try {
+    await mongo.connect();
+    console.log(`[bootstrap] MongoDB connected at ${env.mongo.host}/${env.mongo.dbName}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.warn(`[bootstrap] MongoDB unavailable at startup: ${message}`);
+  }
 
-app.use('/api/health', healthRouter);
-app.use('/api/auth', authRouter);
-app.use('/api/memory', memoryRouter);
+  const app = createApp({ env, mongo });
+  const server = createServer(app);
 
-app.get('/', (_req, res) => {
-  res.json({
-    name: 'knowject-api',
-    status: 'running',
-    docs: ['/api/health', '/api/auth/login', '/api/memory/overview', '/api/memory/query'],
+  const shutdown = async (signal: string): Promise<void> => {
+    console.log(`[shutdown] received ${signal}, closing server`);
+
+    server.close(async (serverError) => {
+      if (serverError) {
+        console.error('[shutdown] failed to close HTTP server', serverError);
+      }
+
+      try {
+        await mongo.close();
+      } catch (mongoError) {
+        console.error('[shutdown] failed to close MongoDB client', mongoError);
+      } finally {
+        process.exit(serverError ? 1 : 0);
+      }
+    });
+  };
+
+  process.once('SIGINT', () => {
+    void shutdown('SIGINT');
   });
-});
 
-app.use((_req, res) => {
-  res.status(404).json({ message: 'not found' });
-});
+  process.once('SIGTERM', () => {
+    void shutdown('SIGTERM');
+  });
 
-app.listen(port, () => {
-  console.log(`knowject api running on http://localhost:${port}`);
+  server.listen(env.port, () => {
+    console.log(`${env.appName} running on http://localhost:${env.port}`);
+  });
+};
+
+bootstrap().catch((error) => {
+  console.error('[bootstrap] failed to start knowject api', error);
+  process.exit(1);
 });

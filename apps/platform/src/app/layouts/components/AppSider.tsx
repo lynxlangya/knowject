@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -24,19 +24,23 @@ import {
 } from 'antd';
 import type { MenuProps } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { KNOWJECT_BRAND } from '../../../styles/brand';
-import { getMenuPath, menuItems } from '../../navigation/menu';
-import { buildProjectOverviewPath, PATHS } from '../../navigation/paths';
-import { getAuthUser } from '../../auth/user';
+import { KNOWJECT_BRAND } from '@styles/brand';
+import { getMenuPath, menuItems } from '@app/navigation/menu';
+import {
+  PATHS,
+  buildProjectOverviewPath,
+  getProjectIdFromPathname,
+} from '@app/navigation/paths';
+import { getAuthUser } from '@app/auth/user';
 import {
   GLOBAL_AGENT_OPTIONS,
   GLOBAL_KNOWLEDGE_OPTIONS,
   GLOBAL_MEMBER_OPTIONS,
   GLOBAL_SKILL_OPTIONS,
-} from '../../project/project.catalog';
-import type { ProjectSummary } from '../../project/project.types';
-import { useProjectContext } from '../../project/useProjectContext';
-import { SIDER_WIDTH } from '../layout.constants';
+} from '@app/project/project.catalog';
+import type { ProjectSummary } from '@app/project/project.types';
+import { useProjectContext } from '@app/project/useProjectContext';
+import { SIDER_WIDTH } from '@app/layouts/layout.constants';
 
 const { Sider } = Layout;
 
@@ -45,17 +49,6 @@ export interface AppSiderProps {
   onNavigate: (path: string) => void;
   onLogout: () => void;
 }
-
-const getActiveProjectIdFromPath = (pathname: string): string | null => {
-  const match = pathname.match(/^\/project\/([^/]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
-};
-
-const getOrderedProjects = (projects: ProjectSummary[]): ProjectSummary[] => {
-  const pinnedProjects = projects.filter((project) => project.isPinned);
-  const regularProjects = projects.filter((project) => !project.isPinned);
-  return [...pinnedProjects, ...regularProjects];
-};
 
 interface ProjectFormValues {
   name: string;
@@ -85,26 +78,11 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [actionMenuOpenProjectId, setActionMenuOpenProjectId] = useState<string | null>(null);
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
-
-  const activeProjectId = useMemo(() => {
-    return getActiveProjectIdFromPath(location.pathname);
-  }, [location.pathname]);
-
-  const authUser = useMemo(() => {
-    return getAuthUser();
-  }, []);
-
-  const orderedProjects = useMemo(() => {
-    return getOrderedProjects(projects);
-  }, [projects]);
-
-  const editingProject = useMemo(() => {
-    if (!editingProjectId) {
-      return null;
-    }
-
-    return projects.find((project) => project.id === editingProjectId) ?? null;
-  }, [editingProjectId, projects]);
+  const activeProjectId = getProjectIdFromPathname(location.pathname);
+  const authUser = getAuthUser();
+  const editingProject = editingProjectId
+    ? projects.find((project) => project.id === editingProjectId) ?? null
+    : null;
 
   const isEditing = editingProject !== null;
   const accountPrimary = authUser?.username || authUser?.name || 'current@knowject.ai';
@@ -220,7 +198,7 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
   const handleDeleteProject = (project: ProjectSummary) => {
     setActionMenuOpenProjectId(null);
 
-    const remainingProjects = orderedProjects.filter((item) => item.id !== project.id);
+    const remainingProjects = projects.filter((item) => item.id !== project.id);
 
     modal.confirm({
       title: '删除项目',
@@ -432,13 +410,13 @@ export const AppSider = ({ selectedKey, onNavigate, onLogout }: AppSiderProps) =
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
-            {orderedProjects.length === 0 ? (
+            {projects.length === 0 ? (
               <Typography.Text className="px-2 text-xs text-slate-500">
                 暂无项目，可先添加一个。
               </Typography.Text>
             ) : (
               <div className="space-y-1.5">
-                {orderedProjects.map((project) => {
+                {projects.map((project) => {
                   const active = project.id === activeProjectId;
                   const actionMenuOpen = actionMenuOpenProjectId === project.id;
 

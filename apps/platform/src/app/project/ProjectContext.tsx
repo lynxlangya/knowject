@@ -4,6 +4,10 @@ import {
   loadProjects,
   saveProjects,
 } from './project.storage';
+import {
+  normalizeProjectDescription,
+  orderProjectsForDisplay,
+} from './project.helpers';
 import type {
   AddProjectResult,
   CreateProjectInput,
@@ -20,14 +24,6 @@ export interface ProjectProviderProps {
   children: React.ReactNode;
 }
 
-const getPinnedProjects = (projects: ProjectSummary[]): ProjectSummary[] =>
-  projects.filter((project) => project.isPinned);
-
-const getUnpinnedProjects = (projects: ProjectSummary[]): ProjectSummary[] =>
-  projects.filter((project) => !project.isPinned);
-
-const normalizeProjectDescription = (value: string): string => value.trim();
-
 export const ProjectProvider = ({ children }: ProjectProviderProps) => {
   const [projects, setProjects] = useState<ProjectSummary[]>(loadProjects);
   const projectsRef = useRef(projects);
@@ -37,9 +33,10 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
   }, [projects]);
 
   const commitProjects = useCallback((nextProjects: ProjectSummary[]) => {
-    projectsRef.current = nextProjects;
-    saveProjects(nextProjects);
-    setProjects(() => nextProjects);
+    const orderedProjects = orderProjectsForDisplay(nextProjects);
+    projectsRef.current = orderedProjects;
+    saveProjects(orderedProjects);
+    setProjects(() => orderedProjects);
   }, []);
 
   const addProject = useCallback(
@@ -63,7 +60,9 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
         description: nextDescription,
         name: nextName,
       });
-      const nextProjects = [...getPinnedProjects(currentProjects), nextProject, ...getUnpinnedProjects(currentProjects)];
+      const pinnedProjects = currentProjects.filter((project) => project.isPinned);
+      const regularProjects = currentProjects.filter((project) => !project.isPinned);
+      const nextProjects = [...pinnedProjects, nextProject, ...regularProjects];
       commitProjects(nextProjects);
       return 'added';
     },
@@ -125,10 +124,12 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
 
       const remainingProjects = currentProjects.filter((project) => project.id !== projectId);
       if (targetProject.isPinned) {
+        const pinnedProjects = remainingProjects.filter((project) => project.isPinned);
+        const regularProjects = remainingProjects.filter((project) => !project.isPinned);
         const nextProjects = [
-          ...getPinnedProjects(remainingProjects),
+          ...pinnedProjects,
           { ...targetProject, isPinned: false },
-          ...getUnpinnedProjects(remainingProjects),
+          ...regularProjects,
         ];
         commitProjects(nextProjects);
         return 'unpinned';

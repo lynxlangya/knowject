@@ -4,7 +4,7 @@ import {
   buildProjectChatPath,
   buildProjectMembersPath,
   buildProjectResourcesPath,
-} from '../../app/navigation/paths';
+} from '@app/navigation/paths';
 import { useProjectPageContext } from './projectPageContext';
 import {
   getRecentProjectConversations,

@@ -1,10 +1,15 @@
 import { App, Form, Layout } from 'antd';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, type LoginRequest } from '../../api/auth';
-import { setToken } from '../../app/auth/token';
-import { setAuthUser } from '../../app/auth/user';
-import { PATHS } from '../../app/navigation/paths';
+import { isApiError } from '@knowject/request';
+import {
+  login,
+  register,
+  type LoginRequest,
+  type RegisterRequest,
+} from '@api/auth';
+import { setAuthSession } from '@app/auth/user';
+import { PATHS } from '@app/navigation/paths';
 import { LoginFlowBackground } from './components/LoginFlowBackground';
 import { LoginFormPanel } from './components/LoginFormPanel';
 import { LoginHeroPanel } from './components/LoginHeroPanel';
@@ -12,6 +17,7 @@ import {
   getRememberedUsername,
   LOGIN_PAGE_BACKGROUND,
   persistRememberedUsername,
+  type AuthMode,
   type LoginFormValues,
 } from './constants';
 
@@ -22,35 +28,65 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<AuthMode>('login');
 
-  useEffect(() => {
+  const resetForm = useCallback(() => {
     const rememberedUsername = getRememberedUsername();
+    form.resetFields();
     form.setFieldsValue({
+      name: '',
       username: rememberedUsername,
       password: '',
+      confirmPassword: '',
       remember: true,
     });
   }, [form]);
+
+  useEffect(() => {
+    resetForm();
+  }, [mode, resetForm]);
+
+  const handleModeChange = (nextMode: AuthMode) => {
+    setMode(nextMode);
+  };
 
   const handleSubmit = async (values: LoginFormValues) => {
     setLoading(true);
 
     try {
-      const payload: LoginRequest = {
-        username: values.username.trim(),
-        password: values.password,
-      };
+      const username = values.username.trim();
 
-      const result = await login(payload);
-      persistRememberedUsername(payload.username, values.remember);
+      const result =
+        mode === 'register'
+          ? await register({
+              username,
+              password: values.password,
+              name: values.name?.trim() ?? '',
+            } satisfies RegisterRequest)
+          : await login({
+              username,
+              password: values.password,
+            } satisfies LoginRequest);
 
-      setToken(result.token);
-      setAuthUser(result.user);
-      message.success(`欢迎回来，${result.user.name}`);
+      persistRememberedUsername(username, values.remember);
+
+      setAuthSession({
+        token: result.token,
+        user: result.user,
+      });
+      message.success(
+        mode === 'register' ? `欢迎加入，${result.user.name}` : `欢迎回来，${result.user.name}`
+      );
       navigate(PATHS.home, { replace: true });
     } catch (error) {
       console.error(error);
-      message.error('登录失败，请检查用户名和密码');
+      message.error(
+        isApiError(error)
+          ? error.message
+          : mode === 'register'
+            ? '注册失败，请稍后重试'
+            : '登录失败，请检查用户名和密码'
+      );
     } finally {
       setLoading(false);
     }
@@ -81,7 +117,9 @@ export const LoginPage = () => {
           <LoginHeroPanel />
           <LoginFormPanel
             form={form}
+            mode={mode}
             loading={loading}
+            onModeChange={handleModeChange}
             onSubmit={handleSubmit}
             onForgotPassword={handleForgotPassword}
           />

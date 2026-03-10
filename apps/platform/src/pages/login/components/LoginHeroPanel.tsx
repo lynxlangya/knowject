@@ -1,6 +1,6 @@
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { Typography } from 'antd';
-import { LOGIN_FEATURE_ITEMS } from '../constants';
+import { LOGIN_FEATURE_ITEMS } from '@pages/login/constants';
 
 export const LoginHeroPanel = () => {
   return (

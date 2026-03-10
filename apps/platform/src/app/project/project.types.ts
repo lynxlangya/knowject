@@ -90,6 +90,17 @@ export interface ProjectOverviewStats {
   skillCount: number;
 }
 
+export interface ProjectWorkspaceMeta {
+  iconUrl: string;
+  summary: string;
+}
+
+export interface ProjectWorkspaceSnapshot {
+  members: ProjectMember[];
+  meta: ProjectWorkspaceMeta;
+  stats: ProjectOverviewStats;
+}
+
 export interface CreateProjectInput {
   name: string;
   description: string;
