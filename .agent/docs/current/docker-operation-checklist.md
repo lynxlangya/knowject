@@ -41,12 +41,12 @@ pnpm dev:up
 说明：
 
 - `pnpm dev:up` 会先确保 `mongo + chroma` 在 Docker 中可用，再启动宿主机前后端
-- `pnpm dev:init` / `pnpm dev:up` 会自动把宿主机 `.env.local` 中的 `MONGODB_URI_FILE`、`JWT_SECRET_FILE` 和 `CHROMA_URL` 同步到当前 Docker 本地依赖，避免 `.env.local` 中的直写密码过期
+- `pnpm dev:init` / `pnpm dev:up` 会先确保 `docker/secrets/` 与 `.env.docker.local` 已就绪，再把宿主机 `.env.local` 回写为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE` 和当前 `CHROMA_URL`，避免 Docker 本地依赖轮换后宿主机 API 继续使用旧直写值
 - 若你只想单独管理依赖，可使用下一小节的 `dev:deps:*` 命令
 
 此时常用访问入口：
 
-- 以下地址默认假定 `.env.docker.local` 使用模板端口；如果你改过 `WEB_PORT` / `API_PUBLISHED_PORT` / `MONGO_PUBLISHED_PORT` / `CHROMA_PUBLISHED_PORT`，请把下面命令和地址替换成实际值。
+- 以下地址默认假定 `.env.docker.local` 使用模板端口与默认 `CHROMA_HEARTBEAT_PATH`；如果你改过 `WEB_PORT` / `API_PUBLISHED_PORT` / `MONGO_PUBLISHED_PORT` / `CHROMA_PUBLISHED_PORT` / `CHROMA_HEARTBEAT_PATH`，请把下面命令和地址替换成实际值。
 - 前端：`http://127.0.0.1:5173`
 - 后端：`http://127.0.0.1:3001`
 - MongoDB：`127.0.0.1:27017`
@@ -77,6 +77,7 @@ pnpm docker:local:up
 
 访问入口：
 
+- 以下入口默认假定 `.env.docker.local` 仍使用模板端口与默认 `CHROMA_HEARTBEAT_PATH`。
 - 前端：`http://127.0.0.1:8080`
 - API：`http://127.0.0.1:3001/api/health`
 - MongoDB：`127.0.0.1:27017`
@@ -148,12 +149,14 @@ pnpm dev:deps:down
 完整 Docker 直连：
 
 ```bash
+# 若改过 `API_PUBLISHED_PORT`，请替换端口
 curl http://127.0.0.1:3001/api/health
 ```
 
 通过前端反向代理：
 
 ```bash
+# 若改过 `WEB_PORT`，请替换端口
 curl http://127.0.0.1:8080/api/health
 ```
 
@@ -266,7 +269,7 @@ docker exec -it knowject-local-platform-1 sh
 
 ### 7.1 基础入口
 
-- 心跳：`http://127.0.0.1:8000/api/v2/heartbeat`
+- 心跳：`http://127.0.0.1:8000/api/v2/heartbeat`（若改过 `CHROMA_PUBLISHED_PORT` 或 `CHROMA_HEARTBEAT_PATH`，请按实际值访问）
 - Swagger UI：`http://127.0.0.1:8000/docs/`
 - OpenAPI：`http://127.0.0.1:8000/openapi.json`
 

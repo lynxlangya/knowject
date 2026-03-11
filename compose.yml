@@ -52,7 +52,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3001/api/health').then((response) => { process.exit(response.ok ? 0 : 1); }).catch(() => process.exit(1));",
+          "fetch('http://127.0.0.1:3001/api/health').then(async (response) => { if (!response.ok) { process.exit(1); } const payload = await response.json().catch(() => null); process.exit(payload?.status === 'ok' ? 0 : 1); }).catch(() => process.exit(1));",
         ]
       interval: 30s
       timeout: 5s
@@ -107,7 +107,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "timeout 5 bash -lc 'exec 3<>/dev/tcp/127.0.0.1/8000 && printf \"GET /api/v2/heartbeat HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q \"200 OK\"'",
+          "timeout 5 bash -lc 'exec 3<>/dev/tcp/127.0.0.1/8000 && printf \"GET ${CHROMA_HEARTBEAT_PATH:-/api/v2/heartbeat} HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q \"200 OK\"'",
         ]
       interval: 15s
       timeout: 5s

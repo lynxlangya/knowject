@@ -269,6 +269,7 @@ scripts/
 
 - `.agent/docs/README.md`：文档索引、分类导航与维护边界。
 - `.agent/docs/current/docker-usage.md`：Docker 当前拓扑、安全策略与部署边界。
+- `.agent/docs/handoff/chatgpt-project-brief.md`：给 ChatGPT / 外部大模型的最小项目说明。
 - `.agent/docs/contracts/chroma-decision.md`：Chroma 的角色定位、collection 命名与检索层边界说明。
 - `.agent/docs/handoff/handoff-guide.md`：新协作者快速建立当前事实的入口。
 - `.agent/docs/handoff/handoff-prompt.md`：把当前上下文继续交给下一位协作者的模板。

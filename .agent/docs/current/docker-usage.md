@@ -23,7 +23,7 @@
   - `pnpm dev:up`：宿主机前后端开发
   - `pnpm dev:deps:*`：仅管理 Docker 依赖 `mongo + chroma`
   - `pnpm docker:local:up`：完整 Docker 联调 / 验收
-- 其中 `pnpm dev:init` / `pnpm dev:up` 会自动同步宿主机 `.env.local` 对 MongoDB / JWT 的关键文件引用，避免 Docker secrets 轮换后宿主机 API 仍使用旧密码。
+- 其中 `pnpm dev:init` / `pnpm dev:up` 会先确保 `docker/secrets/` 与 `.env.docker.local` 已就绪，再把宿主机 `.env.local` 回写为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE` 与当前 `CHROMA_URL`，避免 Docker secrets 轮换后宿主机 API 仍使用旧直写值。
 - 当前 Docker 固定镜像版本：
   - MongoDB：`mongo:8.2.5`
   - Chroma：`chromadb/chroma:1.5.5`
@@ -70,10 +70,12 @@
 ### 3.2 API 支持 `*_FILE`
 
 - `apps/api/src/config/env.ts` 现在支持 `<NAME>_FILE` 方式读取环境变量。
+- 运行时按 `.env` → `.env.local` 顺序加载，允许高优先级来源用 `NAME` 或 `NAME_FILE` 覆盖低优先级同族键。
 - 这意味着 Docker secrets 可直接用于：
   - `JWT_SECRET_FILE`
   - `MONGODB_URI_FILE`
   - 以及其他字符串型环境变量
+- 同一份 env 文件不应同时出现 `NAME` 和 `NAME_FILE`；若最终生效环境仍同时出现两者，服务会直接报错。
 
 ### 3.3 MongoDB 凭据隔离
 
@@ -100,6 +102,7 @@
 补充说明：
 
 - Chroma 当前的“已交付”只指容器编排、持久化卷和 API 健康探测，不等于正式 knowledge module 已经实现。
+- 完整 Docker 编排里，`api` 容器健康检查要求 `/api/health` 返回 JSON `status: ok`；当数据库或 Chroma 退化为 `degraded` 时，容器仍会被视为不健康。
 - 为了稳定部署，Mongo 与 Chroma 当前都使用精确 patch tag，而不是浮动 minor tag。
 
 ## 5. 当前关键文件

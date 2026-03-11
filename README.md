@@ -66,6 +66,7 @@ scripts/      常用命令包装脚本
 - `apps/api` 当前已具备项目正式写模型、CRUD 和成员管理接口；`memory` 接口主要用于演示查询流程。
 - 后端环境变量模板位于仓库根 `/.env.example`，认证与环境实施合同位于 `.agent/docs/contracts/auth-contract.md`。
 - Docker 环境模板位于仓库根 `/.env.docker.local.example` 与 `/.env.docker.production.example`，部署命令与 secrets 约定位于 `docker/README.md`。
+- 运行时按 `.env` → `.env.local` 顺序加载环境；高优先级文件可用 `NAME` 或 `NAME_FILE` 覆盖低优先级同族键，但同一份 env 文件里不要同时定义两者。
 
 ## 文档入口
 
@@ -80,6 +81,7 @@ scripts/      常用命令包装脚本
 - [认证与环境契约](./.agent/docs/contracts/auth-contract.md)
 - [Chroma 决策说明书](./.agent/docs/contracts/chroma-decision.md)
 - [快速接手指南](./.agent/docs/handoff/handoff-guide.md)
+- [ChatGPT 项目说明](./.agent/docs/handoff/chatgpt-project-brief.md)
 - [交接 Prompt 模板](./.agent/docs/handoff/handoff-prompt.md)
 - [前端说明](./apps/platform/README.md)
 - [API 说明](./apps/api/README.md)
@@ -131,7 +133,7 @@ pnpm knowject:help
 
 - 前端：`http://localhost:5173`
 - 后端：`http://localhost:3001`
-- Docker 本地：`http://localhost:8080`、`http://localhost:3001/api/health`、`127.0.0.1:27017`、`http://127.0.0.1:8000/api/v2/heartbeat`
+- Docker 本地：`http://localhost:8080`、`http://localhost:3001/api/health`、`127.0.0.1:27017`、`http://127.0.0.1:8000/api/v2/heartbeat`（端口可通过 `.env.docker.local` 覆盖，Chroma 心跳路径可通过 `CHROMA_HEARTBEAT_PATH` 覆盖）
 - `compose.local.yml` 会额外挂载本地专用 `publish` 网络，确保 `api / mongo / chroma` 的宿主机端口真正发布；生产编排不使用该网络。
 
 ## Docker 部署
@@ -163,7 +165,7 @@ pnpm dev:up
 
 说明：
 
-- `pnpm dev:init` / `pnpm dev:up` 会把宿主机 `.env.local` 中的 MongoDB / JWT 关键配置同步到 `docker/secrets` 对应文件引用，避免本地密码和 Docker 依赖漂移。
+- `pnpm dev:init` / `pnpm dev:up` 会确保 `docker/secrets/` 与 `.env.docker.local` 已就绪，并把宿主机 `.env.local` 回写为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE` 与当前 `CHROMA_URL`，避免 Docker 本地依赖轮换后宿主机 API 继续持有旧直写值。
 
 只管理 Docker 依赖：
 

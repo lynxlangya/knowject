@@ -18,7 +18,8 @@
 3. 涉及基础框架阶段范围与完成记录时读 `.agent/docs/plans/tasks-foundation-framework.md`
 4. 涉及登录、JWT、环境变量时读 `.agent/docs/contracts/auth-contract.md`
 5. 只有需要理解目标态时，再读 `.agent/docs/roadmap/target-architecture.md`
-6. 最后核对以下源码入口：
+6. 如果是要给 ChatGPT / 外部模型快速补上下文，可先喂 `.agent/docs/handoff/chatgpt-project-brief.md`
+7. 最后核对以下源码入口：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/navigation/routeRedirects.tsx`
    - `apps/platform/src/app/layouts/components/AppSider.tsx`

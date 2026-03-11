@@ -73,6 +73,7 @@
 
 - 环境变量模板位于仓库根 [`.env.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.example)。
 - 本地真实值应放在仓库根 `.env.local`。
+- 运行时按 `.env` → `.env.local` 顺序加载；`.env.local` 可覆盖低优先级同族键，但同一份 env 文件不要同时定义 `NAME` 和 `NAME_FILE`。
 - Docker 本地 / 线上模板分别位于 [`.env.docker.local.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.docker.local.example) 与 [`.env.docker.production.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.docker.production.example)。
 - 最小必需变量：
   - `PORT`
@@ -90,6 +91,7 @@
   - `API_ERROR_EXPOSE_DETAILS`
   - `API_ERROR_INCLUDE_STACK`
 - 所有字符串型变量都支持 `<NAME>_FILE` 形式，适用于 Docker secrets。
+- 若最终生效环境里同时出现 `NAME` 和 `NAME_FILE`，服务会直接启动失败；推荐只保留高优先级来源中的一个。
 - 容器化部署里，API 容器内部监听端口固定为 `3001`；宿主机发布端口由 `compose.local.yml` 中的 `API_PUBLISHED_PORT` 控制。
 - 可选 Chroma 变量：
   - `CHROMA_URL`

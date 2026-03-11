@@ -25,6 +25,7 @@
     tasks-global-assets-foundation.md
   handoff/
     handoff-guide.md
+    chatgpt-project-brief.md
     handoff-prompt.md
   inputs/
     知项Knowject-项目认知总结-v2.md
@@ -48,7 +49,8 @@
 8. 涉及 Docker、MongoDB 本地联调方式或部署现状时，再读 `.agent/docs/current/docker-usage.md`
 9. 需要直接执行本地登录、后端调用、Navicat 连接、Chroma 查看或开发 / 验收模式切换时，再读 `.agent/docs/current/docker-operation-checklist.md`
 10. 需要直接执行容器启动、TLS 入口或私有化部署命令时，再读 `docker/README.md`
-11. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
+11. 需要给 ChatGPT / 外部大模型快速建立当前上下文时，先读 `.agent/docs/handoff/chatgpt-project-brief.md`
+12. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
 
 ### 理解产品现状与目标
 
@@ -66,7 +68,7 @@
 | 实施契约 | `.agent/docs/contracts` | `auth-contract.md`、`chroma-decision.md`                                                              | MongoDB、JWT、密码哈希、注册登录、Chroma 角色边界与检索约束怎么定 |
 | 路线蓝图 | `.agent/docs/roadmap`   | `target-architecture.md`、`gap-analysis.md`                                                           | 产品最终想做成什么、现在差多少、先补什么                          |
 | 阶段计划 | `.agent/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md` | 当前阶段具体怎么拆、顺序如何、DoD 怎么定                          |
-| 接手交接 | `.agent/docs/handoff`   | `handoff-guide.md`、`handoff-prompt.md`                                                               | 新协作者如何快速建立事实并继续推进                                |
+| 接手交接 | `.agent/docs/handoff`   | `handoff-guide.md`、`chatgpt-project-brief.md`、`handoff-prompt.md`                                  | 新协作者、ChatGPT 或外部模型如何快速建立事实并继续推进            |
 | 输入材料 | `.agent/docs/inputs`    | `知项Knowject-项目认知总结-v2.md`                                                                     | 认知总结原文是什么，哪些内容需要吸收为正式文档                    |
 | 设计资料 | `.agent/docs/design`    | 品牌与视觉资料                                                                                        | 品牌表达、图标、字标、视觉方向是什么                              |
 | 模板     | `.agent/docs/templates` | `PLANS.md`                                                                                            | 复杂任务、迁移和高风险变更该如何写执行计划                        |
@@ -110,6 +112,9 @@
 - 更新 `.agent/docs/handoff/handoff-guide.md`
   - 当前最重要的接手路径、阅读顺序、继续开发建议发生变化。
   - 有新的业务事实容易被误读，需要显式提醒接手者。
+- 更新 `.agent/docs/handoff/chatgpt-project-brief.md`
+  - 需要给 ChatGPT / 外部大模型提供新的项目快照时。
+  - 当前事实、模块边界、运行方式或“哪些仍是 Mock”发生明显变化时。
 - 更新 `.agent/docs/handoff/handoff-prompt.md`
   - 接手 Prompt 中引用的关键文档、源码入口或输出格式发生变化。
   - 交接方式需要从“阅读事实”调整为“执行某一类任务”。
@@ -123,6 +128,7 @@
 - 关于“当前是什么”的判断，以 `.agent/docs/current/architecture.md` 和源码为准。
 - 关于“Docker 现在怎么用、哪些还没交付”的判断，以 `.agent/docs/current/docker-usage.md` 为准。
 - 关于“怎么最快接手当前工作”的判断，以 `.agent/docs/handoff/handoff-guide.md` 为准。
+- 关于“给 ChatGPT / 外部大模型最小必要上下文”的判断，以 `.agent/docs/handoff/chatgpt-project-brief.md` 为准。
 - 关于“未来要做什么”的判断，以 `.agent/docs/roadmap/target-architecture.md` 为准。
 - 关于“为什么现在不这么写、下一步先做什么”的判断，以 `.agent/docs/roadmap/gap-analysis.md` 为准。
 - 关于“如何把上下文交给下一位协作者”的判断，以 `.agent/docs/handoff/handoff-prompt.md` 为准。

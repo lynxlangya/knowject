@@ -1,0 +1,141 @@
+# Knowject 项目说明（给 ChatGPT / 外部大模型）
+
+> 目的：用最小必要上下文，让 ChatGPT 在不了解仓库历史的前提下，也能快速判断“现在已经做到了什么、还没做到什么、改动时应该注意什么”。  
+> 若本文件与源码或 `.agent/docs/current/architecture.md` 冲突，以源码和 `architecture.md` 为准。
+
+## 1. 项目是什么
+
+- `知项 · Knowject` 是一个围绕“项目知识真正为团队所用”的协作产品。
+- 当前仓库是 monorepo，核心由两部分组成：
+  - `apps/platform`：React + Vite + Ant Design 前端
+  - `apps/api`：Express + TypeScript 后端
+- 当前阶段不是纯 Demo，也不是完整 AI 产品；更准确地说，是“前后端基础框架已接通，局部业务仍依赖 Mock”。
+
+## 2. 当前已经落地的事实
+
+- 登录页 `/login` 已接通正式注册 / 登录接口：
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+- 后端已落地：
+  - MongoDB 连接与健康诊断
+  - `argon2id` 密码哈希
+  - JWT 鉴权
+  - 全局成员概览 `GET /api/members`
+  - 项目最小 CRUD `GET/POST/PATCH/DELETE /api/projects`
+  - 项目成员管理 `/api/projects/:projectId/members*`
+  - 用户搜索 `GET /api/auth/users`
+  - `memory/overview` 与 `memory/query` 演示接口
+- 前端项目列表、项目基础信息、成员 roster 与全局成员页已经切到正式后端接口。
+
+## 3. 当前信息架构
+
+- 登录后默认落点：`/home`
+- 主导航固定为：
+  - `/home`
+  - `/knowledge`
+  - `/skills`
+  - `/agents`
+  - `/members`
+  - `/analytics`
+  - `/settings`
+- 项目 canonical 路由固定为：
+  - `/project/:projectId/overview`
+  - `/project/:projectId/chat`
+  - `/project/:projectId/chat/:chatId`
+  - `/project/:projectId/resources`
+  - `/project/:projectId/members`
+- 以下路径只是兼容入口，不应继续当成主设计扩展：
+  - `/workspace`
+  - `/home/project/*`
+  - `/project/:projectId/knowledge|skills|agents`
+
+## 4. 当前数据来源与状态分层
+
+- 正式后端主链路：
+  - 登录 / 注册
+  - 项目主数据
+  - 项目成员关系
+  - 全局成员概览
+- 仍主要依赖前端本地 / Mock：
+  - 项目概览页内容
+  - 对话列表与消息演示数据
+  - 项目资源消费态展示
+  - 全局资产治理页中的真实写操作
+- 当前关键本地状态：
+  - `knowject_token`：登录 token
+  - `knowject_project_pins`：项目置顶偏好
+  - `knowject_project_resource_bindings`：项目资源绑定
+  - `knowject_projects`：历史本地 Mock 项目缓存，仅用于一次性迁移
+
+## 5. Docker 与运行方式
+
+- 推荐日常开发流：
+  - 宿主机运行前端和后端
+  - Docker 只托管 `mongo + chroma`
+  - 常用命令：`pnpm dev:init`、`pnpm dev:up`
+- 完整 Docker 联调 / 验收：
+  - `pnpm docker:local:init`
+  - `pnpm docker:local:up`
+- 线上 Compose 基线：
+  - `compose.yml`
+  - `compose.production.yml`
+  - `caddy` 负责 HTTPS 入口
+- 当前 MongoDB 是正式主数据库；Chroma 只进入了基础设施与健康诊断层，还没有形成正式知识检索闭环。
+
+## 6. 环境与配置要点
+
+- API 运行时按 `.env` → `.env.local` 顺序加载环境变量。
+- 所有字符串型变量支持 `<NAME>_FILE`，适合 Docker secrets。
+- 同一份 env 文件里不要同时定义 `NAME` 和 `NAME_FILE`。
+- 本地 Docker 可改的是宿主机发布端口：
+  - `WEB_PORT`
+  - `API_PUBLISHED_PORT`
+  - `MONGO_PUBLISHED_PORT`
+  - `CHROMA_PUBLISHED_PORT`
+- API 容器内部监听端口固定为 `3001`。
+- Chroma 心跳路径默认为 `/api/v2/heartbeat`，可通过 `CHROMA_HEARTBEAT_PATH` 覆盖。
+
+## 7. 当前明确还没落地的能力
+
+- 正式的 Knowledge / Skill / Agent 创建、绑定、执行闭环
+- 基于 Chroma 的正式向量写入、重建、检索服务链路
+- 对话正式数据源、流式消息链路、来源引用渲染
+- 项目资源绑定的完整后端持久化
+- refresh token、组织级 RBAC、邀请链接、密码找回
+
+## 8. 给 ChatGPT 的工作约束
+
+- 不要把 `.agent/docs/roadmap/target-architecture.md` 当成当前已实现事实。
+- 不要把项目概览 / 对话 / 资源页误判为已经完全切到后端。
+- 改动以下内容时，必须同步文档：
+  - 路由 / 重定向 / 页面命名
+  - localStorage 键
+  - 环境变量 / secrets / Docker 拓扑
+  - API 边界 / 鉴权约定
+- 优先做最小可行改动，不要为了“未来扩展”平白引入新抽象。
+
+## 9. 推荐最小阅读顺序
+
+1. `.agent/docs/current/architecture.md`
+2. `.agent/docs/contracts/auth-contract.md`
+3. `.agent/docs/current/docker-usage.md`
+4. `.agent/docs/current/docker-operation-checklist.md`
+5. `README.md`
+
+## 10. 关键源码入口
+
+- `apps/platform/src/app/navigation/routes.tsx`
+- `apps/platform/src/app/layouts/components/AppSider.tsx`
+- `apps/platform/src/app/project/ProjectContext.tsx`
+- `apps/platform/src/app/project/project.storage.ts`
+- `apps/platform/src/pages/project/project.mock.ts`
+- `apps/api/src/app/create-app.ts`
+- `apps/api/src/config/env.ts`
+- `apps/api/src/modules/auth/*`
+- `apps/api/src/modules/projects/*`
+- `apps/api/src/modules/memberships/*`
+- `apps/api/src/routes/health.ts`
+
+## 11. 一句话总结
+
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据和成员链路；当前最大的断层仍是项目资源绑定、对话数据与 AI 正式检索链路。

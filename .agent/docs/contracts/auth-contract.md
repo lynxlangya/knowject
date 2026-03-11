@@ -40,7 +40,8 @@
 - 仓库只提交 [/.env.example](/Users/langya/Documents/CodeHub/ai/knowject/.env.example)
 - 本地真实值放 `.env.local`
 - `.env.local`、部署 secrets、数据库密码和 JWT secret 不进入 git
-- 所有字符串型环境变量都支持 `<NAME>_FILE` 形式，供 Docker secrets 与容器部署使用；若 `NAME` 和 `NAME_FILE` 同时出现，服务会直接报错
+- 运行时按 `.env` → `.env.local` 顺序加载；高优先级来源可用 `NAME` 或 `NAME_FILE` 覆盖低优先级同族键
+- 所有字符串型环境变量都支持 `<NAME>_FILE` 形式，供 Docker secrets 与容器部署使用；同一份 env 文件中禁止同时定义 `NAME` 和 `NAME_FILE`，若最终生效环境仍同时出现两者，服务会直接报错
 
 变量清单：
 

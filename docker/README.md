@@ -45,6 +45,7 @@ docker/
 - `compose.production.yml`：线上 HTTPS 入口
 - `.env.docker.local.example` / `.env.docker.production.example`：固定镜像 tag 与环境模板
 - 本地可改的是宿主机发布端口（如 `WEB_PORT`、`API_PUBLISHED_PORT`），API 容器内部监听端口固定为 `3001`
+- Chroma 心跳路径默认是 `/api/v2/heartbeat`，如需改动请同步修改 `CHROMA_HEARTBEAT_PATH`，脚本与容器健康检查会共享该值
 
 ## 2. 安全约定
 
@@ -89,6 +90,7 @@ pnpm docker:local:up
 - 默认 MongoDB：`127.0.0.1:27017`
 - 默认 Chroma：`http://127.0.0.1:8000/api/v2/heartbeat`
 - 如果在 `.env.docker.local` 中改了 `WEB_PORT` / `API_PUBLISHED_PORT` / `MONGO_PUBLISHED_PORT` / `CHROMA_PUBLISHED_PORT`，请按实际端口访问
+- `api` 容器健康检查会读取 `/api/health` 的 JSON `status`；只有返回 `ok` 才视为健康，`degraded` 会继续被标记为不健康
 
 ### 3.4 常用本地命令
 
