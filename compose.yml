@@ -1,0 +1,141 @@
+services:
+  platform:
+    build:
+      context: .
+      dockerfile: docker/platform/Dockerfile
+    image: ${KNOWJECT_PLATFORM_IMAGE:-knowject/platform:local}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - edge
+      - app
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    image: ${KNOWJECT_API_IMAGE:-knowject/api:local}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      APP_NAME: ${APP_NAME:-knowject-api}
+      PORT: "3001"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      MONGO_HOST: mongo
+      MONGO_PORT: "27017"
+      MONGO_APP_DATABASE: ${MONGO_APP_DATABASE:-knowject}
+      MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE:-knowject}
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:-knowject_app}
+      MONGO_APP_PASSWORD_FILE: /run/secrets/mongo_app_password
+      MONGODB_DB_NAME: ${MONGODB_DB_NAME:-knowject}
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+      JWT_ISSUER: ${JWT_ISSUER:-knowject-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-knowject-platform}
+      ARGON2_MEMORY_COST: ${ARGON2_MEMORY_COST:-65536}
+      ARGON2_TIME_COST: ${ARGON2_TIME_COST:-3}
+      ARGON2_PARALLELISM: ${ARGON2_PARALLELISM:-1}
+      API_ERROR_EXPOSE_DETAILS: ${API_ERROR_EXPOSE_DETAILS:-false}
+      API_ERROR_INCLUDE_STACK: ${API_ERROR_INCLUDE_STACK:-false}
+      CHROMA_URL: ${CHROMA_URL:-http://chroma:8000}
+      CHROMA_HEARTBEAT_PATH: ${CHROMA_HEARTBEAT_PATH:-/api/v2/heartbeat}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/health').then((response) => { process.exit(response.ok ? 0 : 1); }).catch(() => process.exit(1));",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    networks:
+      - app
+      - data
+    restart: unless-stopped
+    secrets:
+      - jwt_secret
+      - mongo_app_password
+
+  mongo:
+    image: mongo:${MONGO_IMAGE_TAG:-8.2.5}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-knowject_root}
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongo_root_password
+      MONGO_INITDB_DATABASE: ${MONGO_APP_DATABASE:-knowject}
+      MONGO_APP_DATABASE: ${MONGO_APP_DATABASE:-knowject}
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:-knowject_app}
+      MONGO_APP_PASSWORD_FILE: /run/secrets/mongo_app_password
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --host 127.0.0.1 --authenticationDatabase admin -u \"$MONGO_INITDB_ROOT_USERNAME\" -p \"$(cat /run/secrets/mongo_root_password)\" --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1 >/dev/null",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 10
+    networks:
+      - data
+    restart: unless-stopped
+    secrets:
+      - mongo_root_password
+      - mongo_app_password
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/mongo/init/01-create-app-user.sh:/docker-entrypoint-initdb.d/01-create-app-user.sh:ro
+
+  chroma:
+    image: chromadb/chroma:${CHROMA_IMAGE_TAG:-1.5.5}
+    command: ["run", "--host", "0.0.0.0", "--port", "8000", "--path", "/chroma/chroma"]
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /chroma/chroma
+      ALLOW_RESET: ${CHROMA_ALLOW_RESET:-FALSE}
+      ANONYMIZED_TELEMETRY: ${CHROMA_ANONYMIZED_TELEMETRY:-FALSE}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "timeout 5 bash -lc 'exec 3<>/dev/tcp/127.0.0.1/8000 && printf \"GET /api/v2/heartbeat HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q \"200 OK\"'",
+        ]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 10
+    networks:
+      - data
+    restart: unless-stopped
+    volumes:
+      - chroma_data:/chroma/chroma
+
+networks:
+  edge: {}
+  app:
+    internal: true
+  data:
+    internal: true
+
+volumes:
+  mongo_data:
+  chroma_data:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  jwt_secret:
+    file: ./docker/secrets/jwt_secret.txt
+  mongo_root_password:
+    file: ./docker/secrets/mongo_root_password.txt
+  mongo_app_password:
+    file: ./docker/secrets/mongo_app_password.txt

@@ -25,6 +25,7 @@ export const ProjectHeader = ({
   const activeMembers = members.filter((member) => member.isActive);
   const visibleMembers = activeMembers.slice(0, 5);
   const hiddenMemberCount = Math.max(activeMembers.length - visibleMembers.length, 0);
+  const statLabelClassName = 'text-[12px] font-semibold leading-none text-slate-600';
   const statItems = [
     { label: '知识库', value: stats.knowledgeCount },
     { label: '技能', value: stats.skillCount },
@@ -58,7 +59,7 @@ export const ProjectHeader = ({
 
         <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-[312px] lg:shrink-0">
           <div className="rounded-[14px] border border-white/80 bg-white/78 px-3.5 py-2.5 shadow-[0_8px_18px_rgba(148,163,184,0.08)] backdrop-blur sm:col-span-2">
-            <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            <Typography.Text className={statLabelClassName}>
               活跃成员
             </Typography.Text>
             <div className="mt-1.5 flex items-center">
@@ -93,7 +94,7 @@ export const ProjectHeader = ({
               key={item.label}
               className="flex h-10 items-center justify-between rounded-[12px] border border-white/80 bg-white/70 px-3 py-1.5 shadow-[0_6px_14px_rgba(148,163,184,0.06)] backdrop-blur"
             >
-              <span className="text-[12px] font-semibold leading-none text-slate-600">
+              <span className={statLabelClassName}>
                 {item.label}
               </span>
               <span className="text-[20px] font-semibold leading-none text-slate-800">

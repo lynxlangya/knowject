@@ -6,7 +6,7 @@
 - 本文件仅定义 Knowject 项目的覆盖规则与项目上下文补充。
 - 全局规则与本文件不冲突时，按全局规则执行。
 
-## 1. 当前项目架构（2026-03-10）
+## 1. 当前项目架构（2026-03-11）
 
 ```text
 apps/
@@ -15,6 +15,12 @@ apps/
 packages/
   request/   请求库（@knowject/request）
   ui/        UI 组件库（@knowject/ui）
+docker/
+  api/       API 容器构建与启动脚本
+  platform/  前端容器构建与 Nginx 入口
+  mongo/     MongoDB 初始化脚本
+  caddy/     线上 HTTPS 入口
+scripts/     常用命令统一入口
 .agent/
   docs/
     current/        当前事实与架构文档
@@ -33,6 +39,8 @@ packages/
 - `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`memory` 六组接口；其中项目列表、项目基础信息、成员 roster 与全局成员概览已经接入正式后端主链路。
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
+- `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、镜像构建、Mongo 初始化与 HTTPS 入口。
+- `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
 - `.agent/docs`：项目文档统一根目录；`.agent/docs/current/architecture.md` 是项目结构与路由事实的主文档。
 
 ## 3. 当前产品信息架构（2026-03-10）
@@ -74,6 +82,8 @@ packages/
 - 涉及以下变化时，必须同步检查并更新文档：
   - 路由、重定向、页面命名变化：同步 `README.md`、`.agent/docs/current/architecture.md`、相关子模块 README。
   - Mock 数据源、示例路径、存储键变化：同步 `.agent/docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
+  - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`.agent/docs/current/docker-usage.md`、`.agent/docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
+  - 仓库级命令包装或脚本入口变化：同步 `README.md`、`docker/README.md`、`.agent/docs/current/architecture.md`、必要时同步本文件。
   - 模块边界、目录结构、协作规则变化：同步本文件与 `.agent/docs/current/architecture.md`。
 
 ## 6. 页面与组件分层约定

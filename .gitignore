@@ -11,6 +11,9 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+.env.docker.local
+.env.docker.production
+docker/secrets/
 
 # Testing
 coverage

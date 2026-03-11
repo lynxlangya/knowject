@@ -1,6 +1,6 @@
 # 基础框架认证与环境契约
 
-状态：基础框架阶段已完成（截至 2026-03-10，`BF-03` ~ `BF-10` 已按本文件及相关文档落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责解释 auth 与环境约定。
+状态：基础框架阶段已完成（截至 2026-03-11，`BF-03` ~ `BF-10` 已按本文件及相关文档落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责解释 auth 与环境约定。
 
 ## 1. 目标
 
@@ -40,6 +40,7 @@
 - 仓库只提交 [/.env.example](/Users/langya/Documents/CodeHub/ai/knowject/.env.example)
 - 本地真实值放 `.env.local`
 - `.env.local`、部署 secrets、数据库密码和 JWT secret 不进入 git
+- 所有字符串型环境变量都支持 `<NAME>_FILE` 形式，供 Docker secrets 与容器部署使用；若 `NAME` 和 `NAME_FILE` 同时出现，服务会直接报错
 
 变量清单：
 
@@ -66,11 +67,19 @@
 
 - `JWT_SECRET` 必须通过随机生成获得，例如：`openssl rand -base64 48`
 - `MONGODB_URI` 只能使用应用用户，不允许 API 直接使用 root 凭据
+- 容器化部署中推荐使用 `JWT_SECRET_FILE` 与 `MONGODB_URI_FILE`，或用应用账号 + secrets 文件在启动脚本里组装 `MONGODB_URI`
 - `CORS_ORIGIN` 在本地开发固定指向当前前端 dev server；部署时按环境显式注入
 - `API_ERROR_INCLUDE_STACK` 只影响服务端错误日志，不进入客户端错误响应
 - `API_ERROR_INCLUDE_STACK` 在所有环境默认关闭
 - 生产环境中的认证与鉴权请求必须通过 HTTPS 发送；服务端会拒绝不安全传输的 `/api/auth/*` 与 `/api/memory/*` 请求
 - `/api/auth/*` 与 `/api/memory/*` 响应必须带 `Cache-Control: no-store`
+
+可选扩展变量：
+
+| 变量                    | 必填 | 示例 / 默认值       | 说明                                    |
+| ----------------------- | ---- | ------------------- | --------------------------------------- |
+| `CHROMA_URL`            | 否   | `http://chroma:8000` | Chroma 服务地址；当前主要用于健康诊断   |
+| `CHROMA_HEARTBEAT_PATH` | 否   | `/api/v2/heartbeat` | Chroma 心跳路径，默认用于容器化部署诊断 |
 
 ## 4. JWT 契约
 

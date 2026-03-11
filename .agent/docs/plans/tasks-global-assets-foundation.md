@@ -32,6 +32,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 
 ### 规划参考文件
 
+- `.agent/docs/contracts/chroma-decision.md`
 - `.agent/docs/roadmap/gap-analysis.md`
 - `.agent/docs/roadmap/target-architecture.md`
 - `.agent/docs/plans/tasks-foundation-framework.md`
@@ -106,6 +107,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - `.agent/docs/README.md`
   - `.agent/docs/current/architecture.md`
   - `.agent/docs/contracts/auth-contract.md`（如环境变量或运行契约发生变化）
+  - `.agent/docs/contracts/chroma-decision.md`（如 Chroma 角色、collection、metadata 或检索边界发生变化）
   - `.agent/docs/roadmap/gap-analysis.md`
   - `apps/api/README.md`
   - `apps/platform/README.md`
@@ -166,6 +168,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 - 原因：
   - Chroma 只是向量存储，不解决 embedding 生成本身。
   - 若 provider、SDK 和环境变量未先锁定，Week 3-4 的“向量化 / 可写可查”会停留在口号层。
+- 具体角色边界、collection 命名、metadata 设计原则与检索 service 分层，以 `.agent/docs/contracts/chroma-decision.md` 为准。
 
 ## 计划接口与数据边界
 

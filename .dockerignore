@@ -1,0 +1,16 @@
+.git
+.DS_Store
+.turbo
+coverage
+dist
+build
+node_modules
+**/node_modules
+.env
+.env.local
+.env.docker.local
+.env.docker.production
+docker/secrets
+log
+resume
+

@@ -1,12 +1,12 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-10，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。
+截至 2026-03-11，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。
 
 ## 当前接口
 
 - `GET /api/health`
-  - 返回应用状态、数据库状态和最小诊断信息。
+  - 返回应用状态、数据库状态与可选的 Chroma 心跳诊断信息。
 - `POST /api/auth/register`
   - 接收 `username`、`password`、`name`。
   - 注册成功后直接返回 JWT 与基础用户信息。
@@ -63,12 +63,17 @@
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD；`memberships` 已落地最小成员管理闭环。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD 和成员管理接口，但资产、资源与对话等正式后端接口仍未落地。
-- 当前最小本地服务拓扑为 `api + mongodb`；`docker-compose` 仅处于文档规划阶段。
+- 当前宿主机开发最小服务拓扑为 `api + mongodb`。
+- 仓库已交付 Docker Compose 基线，可在容器内运行 `api + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
+- Docker 公共基线中的 `app / data` 网络默认保持 `internal`；本地若要从宿主机直接访问 API，则通过 `compose.local.yml` 额外挂载 `publish` 网络完成端口发布。
+- Docker 当前使用方式与部署边界见 [`.agent/docs/current/docker-usage.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/current/docker-usage.md)。
+- Docker 操作手册见 [`docker/README.md`](/Users/langya/Documents/CodeHub/ai/knowject/docker/README.md)。
 
 ## 当前环境约定
 
 - 环境变量模板位于仓库根 [`.env.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.example)。
 - 本地真实值应放在仓库根 `.env.local`。
+- Docker 本地 / 线上模板分别位于 [`.env.docker.local.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.docker.local.example) 与 [`.env.docker.production.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.docker.production.example)。
 - 最小必需变量：
   - `PORT`
   - `APP_NAME`
@@ -84,6 +89,11 @@
   - `ARGON2_PARALLELISM`
   - `API_ERROR_EXPOSE_DETAILS`
   - `API_ERROR_INCLUDE_STACK`
+- 所有字符串型变量都支持 `<NAME>_FILE` 形式，适用于 Docker secrets。
+- 容器化部署里，API 容器内部监听端口固定为 `3001`；宿主机发布端口由 `compose.local.yml` 中的 `API_PUBLISHED_PORT` 控制。
+- 可选 Chroma 变量：
+  - `CHROMA_URL`
+  - `CHROMA_HEARTBEAT_PATH`
 - 认证和环境的详细实施合同见 [.agent/docs/contracts/auth-contract.md](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/auth-contract.md)。
 
 ## 关键文件
@@ -91,6 +101,7 @@
 - `src/server.ts`：启动入口、MongoDB 预连接与优雅关闭。
 - `src/app/create-app.ts`：统一路由挂载、中间件组装。
 - `src/config/env.ts`：环境变量加载与校验。
+- `src/lib/chroma-health.ts`：Chroma 心跳诊断。
 - `src/db/mongo.ts`：MongoDB 连接管理与健康快照。
 - `src/modules/auth/*`：用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
 - `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。

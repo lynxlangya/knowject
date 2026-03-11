@@ -479,9 +479,66 @@ export const AppSider = ({
                 </button>
               </div>
             ) : projects.length === 0 ? (
-              <Typography.Text className="px-2 text-xs text-slate-500">
-                暂无正式项目，可先创建一个。
-              </Typography.Text>
+              <div
+                className="relative overflow-hidden rounded-[22px] border px-4 py-4"
+                style={{
+                  borderColor: "rgba(191,219,254,0.9)",
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(239,246,255,0.92) 100%)",
+                  boxShadow:
+                    "0 16px 30px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.72)",
+                }}
+              >
+                <div className="pointer-events-none absolute top-0 right-0 h-20 w-20 translate-x-5 -translate-y-5 rounded-full bg-sky-200/45 blur-2xl" />
+
+                <div className="relative flex flex-col gap-3.5">
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border text-[18px] text-sky-600"
+                      style={{
+                        borderColor: "rgba(255,255,255,0.78)",
+                        background: "rgba(255,255,255,0.78)",
+                        boxShadow: "0 10px 24px rgba(59,130,246,0.12)",
+                      }}
+                    >
+                      <InboxOutlined />
+                    </div>
+
+                    <div className="min-w-0">
+                      <Typography.Text className="block text-[14px] font-semibold text-slate-900">
+                        从第一个正式项目开始
+                      </Typography.Text>
+                      <Typography.Text className="mt-1 block text-[12px] leading-5 text-slate-500">
+                        创建项目后，概览、资源、成员与对话会在这里自然聚合，侧栏也会开始变得充实。
+                      </Typography.Text>
+                    </div>
+                  </div>
+
+                  <div
+                    className="flex items-center justify-between gap-3 rounded-[18px] border px-3 py-3"
+                    style={{
+                      borderColor: "rgba(255,255,255,0.78)",
+                      background: "rgba(255,255,255,0.68)",
+                    }}
+                  >
+                    <Typography.Text className="text-[11px] leading-5 text-slate-500">
+                      先建项目，再逐步绑定知识库、技能和智能体。
+                    </Typography.Text>
+                    <button
+                      type="button"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-[12px] px-3 py-2 text-[12px] font-medium text-white transition-all duration-200 hover:-translate-y-px hover:shadow-[0_10px_20px_rgba(37,99,235,0.22)]"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
+                      }}
+                      onClick={handleOpenProjectModal}
+                    >
+                      <PlusOutlined />
+                      <span>新建项目</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="space-y-1.5">
                 {error ? (

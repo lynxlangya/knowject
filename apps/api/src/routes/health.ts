@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { AppEnv } from '@config/env.js';
 import type { MongoDatabaseManager } from '@db/mongo.js';
 import { asyncHandler } from '@lib/async-handler.js';
+import { getChromaHealthSnapshot } from '@lib/chroma-health.js';
 
 interface CreateHealthRouterOptions {
   env: AppEnv;
@@ -15,7 +16,9 @@ export const createHealthRouter = ({ env, mongo }: CreateHealthRouterOptions): R
     '/',
     asyncHandler(async (_req, res) => {
       const database = await mongo.getHealthSnapshot();
-      const status = database.status === 'up' ? 'ok' : 'degraded';
+      const vectorStore = await getChromaHealthSnapshot(env);
+      const status =
+        database.status === 'up' && vectorStore.status !== 'down' ? 'ok' : 'degraded';
 
       res.json({
         status,
@@ -28,6 +31,7 @@ export const createHealthRouter = ({ env, mongo }: CreateHealthRouterOptions): R
             status: 'up',
           },
           database,
+          vectorStore,
         },
       });
     }),

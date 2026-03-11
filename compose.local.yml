@@ -1,0 +1,29 @@
+services:
+  platform:
+    ports:
+      - "${WEB_BIND_HOST:-127.0.0.1}:${WEB_PORT:-8080}:80"
+
+  api:
+    networks:
+      - app
+      - data
+      - publish
+    ports:
+      - "${API_BIND_HOST:-127.0.0.1}:${API_PUBLISHED_PORT:-3001}:3001"
+
+  mongo:
+    networks:
+      - data
+      - publish
+    ports:
+      - "${MONGO_BIND_HOST:-127.0.0.1}:${MONGO_PUBLISHED_PORT:-27017}:27017"
+
+  chroma:
+    networks:
+      - data
+      - publish
+    ports:
+      - "${CHROMA_BIND_HOST:-127.0.0.1}:${CHROMA_PUBLISHED_PORT:-8000}:8000"
+
+networks:
+  publish: {}

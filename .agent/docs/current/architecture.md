@@ -1,13 +1,13 @@
-# Knowject 架构事实（2026-03-10）
+# Knowject 架构事实（2026-03-11）
 
 本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `.agent/docs/roadmap/target-architecture.md` 与 `.agent/docs/roadmap/gap-analysis.md`。
-截至 2026-03-10，`.agent/docs/plans/tasks-foundation-framework.md` 中定义的基础框架阶段（`BF-01` ~ `BF-10`）已经完成。
+截至 2026-03-11，`.agent/docs/plans/tasks-foundation-framework.md` 中定义的基础框架阶段（`BF-01` ~ `BF-10`）已经完成。
 
 ## 1. 文档角色
 
 - 权威级别：当前实现事实源。
 - 适用范围：仓库结构、当前路由、当前数据来源、当前 API 边界、当前限制。
-- 不包含内容：Chroma、SSE、docker-compose、真实 RAG、Skill 执行引擎等未落地能力。
+- 不包含内容：真实 RAG、SSE、Skill 执行引擎等完整 AI 业务能力。
 
 ## 2. 当前基线
 
@@ -19,7 +19,16 @@
   - `packages/ui`：通用 UI 组件，当前已包含 `SearchPanel` 及其 helper 分层。
 - 当前产品主线：登录后产品壳、项目态页面、全局资产管理页、基础框架 API 基线。
 - 当前项目态主数据流：项目列表、项目基础信息与成员 roster 来自后端 `/api/projects*`；概览 / 对话 / 资源仍部分依赖前端 Mock 与本地绑定数据。
-- 当前最小本地开发拓扑：`platform + api + mongodb`；可运行的 `docker-compose` 编排文件仍未交付。
+- 当前最小宿主机开发拓扑：`platform + api + mongodb`。
+- 当前容器化部署拓扑：
+  - 本地：`platform + api + mongodb + chroma`
+  - 线上：`caddy + platform + api + mongodb + chroma`
+- 当前已经交付 `compose.yml`、`compose.local.yml`、`compose.production.yml` 作为 Docker Compose 基线。
+- Docker 网络边界当前采用：公共基线里的 `app / data` 为 `internal`，`compose.local.yml` 额外挂载本地专用 `publish` 网络给 `api / mongo / chroma`，用于宿主机端口发布；生产编排不复用该网络。
+- `.env.docker.local` 当前允许覆盖宿主机发布端口：`WEB_PORT`、`API_PUBLISHED_PORT`、`MONGO_PUBLISHED_PORT`、`CHROMA_PUBLISHED_PORT`；其中 API 容器内部监听端口固定为 `3001`。
+- 当前固定镜像版本：
+  - MongoDB：`mongo:8.2.5`
+  - Chroma：`chromadb/chroma:1.5.5`
 - 当前运行要求：仓库要求 Node.js >= 22、pnpm 10；若本机版本过低，`pnpm check-types` 会先被环境阻塞。
 
 ## 3. 目录结构
@@ -41,6 +50,14 @@ apps/
 packages/
   request/          Axios 请求能力封装
   ui/               通用 UI 组件
+docker/
+  api/              API 镜像构建与启动脚本
+  platform/         前端镜像构建与 Nginx 反向代理配置
+  mongo/init/       MongoDB 初始化脚本
+  caddy/            线上 HTTPS 入口配置
+  scripts/          本地 secrets 生成脚本
+scripts/
+  knowject.sh       常用命令统一入口
 .agent/
   docs/
     current/architecture.md      当前事实源
@@ -143,7 +160,8 @@ packages/
 
 - `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
-- `GET /api/health` 会联动返回数据库状态，因此服务可在数据库不可达时以 `degraded` 状态启动并提供诊断。
+- `GET /api/health` 会联动返回数据库状态与可选的 Chroma 心跳状态，因此服务可在依赖不可达时以 `degraded` 状态启动并提供诊断。
+- 根 `scripts/knowject.sh` 已收口三类常用命令包装：`dev:*`（宿主机开发 + Docker 依赖）、`host:*`（兼容宿主机命令）和 `docker:*`（本地 / 线上部署与验收）。
 
 ### 5.4 项目状态与 Mock 资产
 
@@ -199,7 +217,7 @@ packages/
 
 ### 6.2 当前接口职责
 
-- `health`：返回应用状态、数据库状态和最小诊断信息。
+- `health`：返回应用状态、数据库状态、可选的向量存储状态和最小诊断信息。
 - `auth/register`：创建用户、写入 `passwordHash`、签发 JWT 并返回登录态。
 - `auth/login`：校验用户名与密码，签发 JWT 并返回登录态。
 - `auth/users`：按用户名 / 姓名模糊搜索已有注册用户，供项目成员添加下拉候选使用。
@@ -239,20 +257,22 @@ packages/
 
 以下能力在认知总结或目标蓝图中出现过，但当前仓库未落地，不应视为现状：
 
-- Chroma 或其他向量检索基础设施。
+- 基于 Chroma 的正式向量写入、检索与知识服务业务链路。
 - SSE 流式对话链路与来源引用渲染。
 - RBAC、成员邀请权限流、refresh token。
 - 文档上传、Git 仓库接入、Figma 接入、代码解析与向量化。
 - 真实的 Knowledge / Skill / Agent 创建、绑定、执行与调度能力。
 - 项目私有知识库持久化、全局资产复用的正式后端流程。
-- 可运行的 `docker-compose` 私有化部署编排文件（当前只有最小服务拓扑规划，不是已交付能力）。
 - Zustand、React Query 等额外状态管理层。
 
 ## 9. 相关文档
 
 - `.agent/docs/README.md`：文档索引、分类导航与维护边界。
+- `.agent/docs/current/docker-usage.md`：Docker 当前拓扑、安全策略与部署边界。
+- `.agent/docs/contracts/chroma-decision.md`：Chroma 的角色定位、collection 命名与检索层边界说明。
 - `.agent/docs/handoff/handoff-guide.md`：新协作者快速建立当前事实的入口。
 - `.agent/docs/handoff/handoff-prompt.md`：把当前上下文继续交给下一位协作者的模板。
 - `.agent/docs/roadmap/target-architecture.md`：目标蓝图与阶段能力。
 - `.agent/docs/roadmap/gap-analysis.md`：现状与目标差距、风险和建议优先级。
 - `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`：目标蓝图输入材料，不是当前事实源。
+- `../../../docker/README.md`：Docker 本地 / 线上操作手册。

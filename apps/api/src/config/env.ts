@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -18,6 +18,11 @@ export interface AppEnv {
     dbName: string;
     host: string;
   };
+  chroma: {
+    url: string | null;
+    host: string | null;
+    heartbeatPath: string;
+  };
   jwt: {
     secret: string;
     expiresIn: string;
@@ -36,6 +41,7 @@ export interface AppEnv {
 }
 
 let cachedEnv: AppEnv | null = null;
+const ENV_FILE_SUFFIX = '_FILE';
 
 const currentFilePath = fileURLToPath(import.meta.url);
 const packageRoot = resolve(dirname(currentFilePath), '../..');
@@ -60,18 +66,89 @@ const findWorkspaceRoot = (startDir: string): string => {
 
 const workspaceRoot = findWorkspaceRoot(packageRoot);
 
-const loadEnvironmentFiles = (): void => {
-  const candidates = [join(workspaceRoot, '.env.local'), join(workspaceRoot, '.env')];
+const getSiblingEnvName = (name: string): string => {
+  if (name.endsWith(ENV_FILE_SUFFIX)) {
+    return name.slice(0, -ENV_FILE_SUFFIX.length);
+  }
 
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      dotenv.config({ path: candidate });
+  return `${name}${ENV_FILE_SUFFIX}`;
+};
+
+const validateParsedEnvironment = (
+  filePath: string,
+  parsedEnvironment: Record<string, string>,
+): void => {
+  for (const name of Object.keys(parsedEnvironment)) {
+    const siblingName = getSiblingEnvName(name);
+
+    if (siblingName && siblingName in parsedEnvironment) {
+      throw new Error(
+        `Environment file ${filePath} cannot define both ${name} and ${siblingName}`,
+      );
     }
   }
 };
 
+const loadEnvironmentFiles = (): void => {
+  const candidates = [join(workspaceRoot, '.env'), join(workspaceRoot, '.env.local')];
+  const baseEnvKeys = new Set(Object.keys(process.env));
+
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) {
+      continue;
+    }
+
+    const parsedEnvironment = dotenv.parse(readFileSync(candidate));
+
+    validateParsedEnvironment(candidate, parsedEnvironment);
+
+    for (const [name, value] of Object.entries(parsedEnvironment)) {
+      if (baseEnvKeys.has(name)) {
+        continue;
+      }
+
+      const siblingName = getSiblingEnvName(name);
+
+      if (siblingName && !baseEnvKeys.has(siblingName)) {
+        delete process.env[siblingName];
+      }
+
+      process.env[name] = value;
+    }
+  }
+};
+
+const readConfiguredString = (name: string): string | null => {
+  const directValue = process.env[name]?.trim();
+  const filePath = process.env[`${name}_FILE`]?.trim();
+
+  if (directValue && filePath) {
+    throw new Error(`Environment variables ${name} and ${name}_FILE cannot be set together`);
+  }
+
+  if (directValue) {
+    return directValue;
+  }
+
+  if (!filePath) {
+    return null;
+  }
+
+  const fileValue = readFileSync(filePath, 'utf8').trim();
+
+  if (!fileValue) {
+    throw new Error(`Environment variable ${name}_FILE points to an empty file`);
+  }
+
+  return fileValue;
+};
+
+const readOptionalString = (name: string): string | null => {
+  return readConfiguredString(name);
+};
+
 const readRequiredString = (name: string): string => {
-  const value = process.env[name]?.trim();
+  const value = readConfiguredString(name);
 
   if (!value) {
     throw new Error(`Missing required environment variable: ${name}`);
@@ -115,9 +192,9 @@ const readNodeEnvironment = (): NodeEnvironment => {
   throw new Error('Environment variable NODE_ENV must be development, test, or production');
 };
 
-const parseMongoHost = (uri: string): string => {
+const parseServiceHost = (url: string): string => {
   try {
-    return new URL(uri).host || 'unknown';
+    return new URL(url).host || 'unknown';
   } catch {
     return 'unknown';
   }
@@ -131,6 +208,7 @@ export const getEnv = (): AppEnv => {
   loadEnvironmentFiles();
 
   const mongoUri = readRequiredString('MONGODB_URI');
+  const chromaUrl = readOptionalString('CHROMA_URL');
 
   cachedEnv = {
     workspaceRoot,
@@ -143,7 +221,12 @@ export const getEnv = (): AppEnv => {
     mongo: {
       uri: mongoUri,
       dbName: readRequiredString('MONGODB_DB_NAME'),
-      host: parseMongoHost(mongoUri),
+      host: parseServiceHost(mongoUri),
+    },
+    chroma: {
+      url: chromaUrl,
+      host: chromaUrl ? parseServiceHost(chromaUrl) : null,
+      heartbeatPath: readOptionalString('CHROMA_HEARTBEAT_PATH') ?? '/api/v2/heartbeat',
     },
     jwt: {
       secret: readRequiredString('JWT_SECRET'),
