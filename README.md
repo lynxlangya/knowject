@@ -10,12 +10,12 @@ The repository is currently in an active foundation stage: the product shell, au
 
 ## Current Status
 
-- `apps/platform` already provides the authenticated shell, project routes, member management UI, and global asset management shells.
+- `apps/platform` already provides the authenticated shell, project routes, member management UI, and the first formal global knowledge management UI.
 - `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, knowledge metadata CRUD/upload/search endpoints, scaffolded `skills / agents`, and demo `memory` endpoints.
 - Project lists, project basics, member rosters, and the global members overview already use `/api/projects*` and `/api/members`.
 - Project overview, chat, and resources still partially depend on local mock data and local bindings.
-- Global `knowledge`, `skills`, and `agents` pages currently act as management shells; create/import flows are still placeholders.
-- `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, and `POST /api/knowledge/search` are now available on the backend; `/knowledge` frontend is still a shell and has not been wired yet.
+- `/knowledge` is now wired to the formal backend knowledge APIs for list/create/update/delete/upload/status display, while `skills` and `agents` still remain shell pages.
+- `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, and `POST /api/knowledge/search` are available end-to-end for the current GA-07 knowledge flow.
 - Docker Compose baselines are available for both local and production-style environments with `platform + api + indexer-py + mongodb + chroma`.
 - MongoDB is the current primary datastore. Chroma now backs the GA-06 global document index layer for `global_docs`, while `global_code` is reserved as an empty namespace only.
 - `apps/indexer-py` now provides the Python indexing service used for `md / txt` parsing, cleaning, chunking, OpenAI-compatible embedding generation, and Chroma upsert/delete orchestration.

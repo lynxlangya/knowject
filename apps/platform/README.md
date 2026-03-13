@@ -20,7 +20,7 @@
 - 登录后主布局为“左侧全局侧栏 + 右侧内容区”。
 - 左侧侧栏负责品牌区、全局导航、“我的项目”列表、项目创建 / 编辑 / 置顶 / 删除与退出登录。
 - 项目态四个一级页固定为：`概览`、`对话`、`资源`、`成员`。
-- 全局 `知识库 / 技能 / 智能体` 页面负责资产治理壳层；项目内 `资源` 页只展示项目已接入的资产。
+- 全局 `知识库 / 技能 / 智能体` 页面负责资产治理；其中 `/knowledge` 已切到正式后端接口，`/skills` 与 `/agents` 仍保留壳层。
 - 项目 `成员` 页当前支持按用户名 / 姓名模糊搜索已有用户，并通过多选下拉框批量加入项目。
 - 全局 `成员` 页当前聚合“当前账号可见项目”中的成员基础信息、参与项目、协作快照与权限摘要。
 
@@ -29,7 +29,8 @@
 - `src/app/project/project.storage.ts`：`knowject_project_pins`、`knowject_project_resource_bindings` 的本地持久化，以及旧 `knowject_projects` 的一次性迁移读取。
 - `src/app/project/project.catalog.ts`：全局资产与成员 Mock 源。
 - `src/pages/project/project.mock.ts`：项目概览、对话、资源、成员演示数据。
-- `src/api`：登录、项目、成员与记忆查询接口封装；项目列表、项目基础信息、全局成员概览与成员 roster 已接入真实后端。
+- `src/api`：登录、项目、成员、知识库与记忆查询接口封装；项目列表、项目基础信息、全局成员概览、成员 roster 与全局知识库已接入真实后端。
+- `/knowledge` 主要消费 `GET /api/knowledge`、`GET /api/knowledge/:knowledgeId`、`POST /api/knowledge`、`PATCH /api/knowledge/:knowledgeId`、`DELETE /api/knowledge/:knowledgeId` 与 `POST /api/knowledge/:knowledgeId/documents`。
 - `/members` 主要消费 `GET /api/members`；`/project/:projectId/members` 主要消费 `GET /api/auth/users` 与 `/api/projects/:projectId/members*`。
 
 ## 核心目录

@@ -111,7 +111,7 @@ scripts/
 
 - `/login`：登录页。
 - `/home`：登录后默认首页，当前承载空态引导。
-- `/knowledge`：全局知识库管理页壳层。
+- `/knowledge`：全局知识库正式管理页，已接入知识库 CRUD、文档上传与状态展示。
 - `/skills`：全局技能管理页壳层。
 - `/agents`：全局智能体管理页壳层。
 - `/members`：全局成员协作总览页，聚合当前账号可见项目中的成员信息。
@@ -192,11 +192,12 @@ scripts/
 
 ### 5.5 全局资产与项目资源分层
 
-- 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理壳层。
+- 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理入口；其中 `/knowledge` 已切正式接口，`/skills` 与 `/agents` 仍保留壳层。
 - 项目 `资源` 页当前只展示“该项目已绑定的资产”。
 - 项目资源的实际来源仍是“前端本地资源绑定中记录的全局资产 ID”映射而来。
 - 兼容跳转会临时落到 `/project/:projectId/resources?focus=*`；页面完成滚动定位后会回写 canonical URL `/project/:projectId/resources`。
-- `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 中的“新建资产 / 引入到项目”仍为占位交互，只提示后续接入，不产生真实状态变更。
+- `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx` 已接正式后端知识库接口，支持知识库 CRUD、文档上传、状态展示和上传后的最小轮询。
+- `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 当前仍只服务 `skills / agents` 两类壳层页面，其中“新建资产 / 引入到项目”仍为占位交互，不产生真实状态变更。
 - 当前不存在项目私有知识库的真实持久化或索引流程；“项目资源分层”目前是信息架构和前端数据组织上的分层。
 
 ### 5.6 成员数据分层
@@ -264,7 +265,7 @@ scripts/
 ## 7. 模块职责
 
 - `apps/platform`
-  - 登录页、产品壳、路由、项目态页面、全局资产页壳层。
+  - 登录页、产品壳、路由、项目态页面，以及已正式接线的 `/knowledge` 页面和仍处于壳层阶段的 `skills / agents` 页面。
 - `apps/api`
   - 本地联调与基础框架接口，当前已承担项目列表、项目基础信息与成员 roster 的正式主数据源。
   - 已具备 `config / db / middleware / modules` 基础骨架。
