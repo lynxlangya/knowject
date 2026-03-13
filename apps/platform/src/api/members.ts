@@ -1,3 +1,7 @@
+import {
+  unwrapApiData,
+  type ApiEnvelope,
+} from '@knowject/request';
 import { client } from './client';
 import type { ProjectRole } from './projects';
 
@@ -28,6 +32,6 @@ export interface MembersOverviewResponse {
 }
 
 export const getMembersOverview = async (): Promise<MembersOverviewResponse> => {
-  const response = await client.get<MembersOverviewResponse>('/members');
-  return response.data;
+  const response = await client.get<ApiEnvelope<MembersOverviewResponse>>('/members');
+  return unwrapApiData(response.data);
 };

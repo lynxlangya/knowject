@@ -6,6 +6,7 @@ import { createErrorHandler } from '@middleware/error-handler.js';
 import { notFoundHandler } from '@middleware/not-found.js';
 import { requestContextMiddleware } from '@middleware/request-context.js';
 import { createSensitiveRouteTransportGuard } from '@middleware/secure-transport.js';
+import { sendSuccess } from '@lib/api-response.js';
 import { createAgentsRepository } from '@modules/agents/agents.repository.js';
 import { createAgentsRouter } from '@modules/agents/agents.router.js';
 import { createAgentsService } from '@modules/agents/agents.service.js';
@@ -92,7 +93,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   app.use('/api/memory', sensitiveRouteTransportGuard, createMemoryRouter(requireAuth));
 
   app.get('/', (_req, res) => {
-    res.json({
+    sendSuccess(res, {
       name: env.appName,
       status: 'running',
       environment: env.nodeEnv,

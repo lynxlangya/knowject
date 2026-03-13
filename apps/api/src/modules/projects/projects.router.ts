@@ -1,6 +1,7 @@
 import { Router, type Request } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
 import type { RequestHandler } from 'express';
+import { sendCreated, sendSuccess } from '@lib/api-response.js';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 import type { ProjectsService } from './projects.service.js';
 import type { CreateProjectInput, UpdateProjectInput } from './projects.types.js';
@@ -34,7 +35,7 @@ export const createProjectsRouter = (
         actor: getRequiredAuthUser(req),
       });
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 
@@ -48,7 +49,7 @@ export const createProjectsRouter = (
         req.body as CreateProjectInput,
       );
 
-      res.status(201).json({
+      sendCreated(res, {
         project,
       });
     }),
@@ -65,7 +66,7 @@ export const createProjectsRouter = (
         req.body as UpdateProjectInput,
       );
 
-      res.json({
+      sendSuccess(res, {
         project,
       });
     }),
@@ -81,7 +82,7 @@ export const createProjectsRouter = (
         getRequiredProjectId(req),
       );
 
-      res.status(204).send();
+      sendSuccess(res, null);
     }),
   );
 

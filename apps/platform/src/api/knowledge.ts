@@ -1,3 +1,7 @@
+import {
+  unwrapApiData,
+  type ApiEnvelope,
+} from '@knowject/request';
 import { client } from './client';
 
 export type KnowledgeSourceType = 'global_docs' | 'global_code';
@@ -83,45 +87,48 @@ export interface UpdateKnowledgeRequest {
 }
 
 export const listKnowledge = async (): Promise<KnowledgeListResponse> => {
-  const response = await client.get<KnowledgeListResponse>('/knowledge');
-  return response.data;
+  const response = await client.get<ApiEnvelope<KnowledgeListResponse>>('/knowledge');
+  return unwrapApiData(response.data);
 };
 
 export const getKnowledgeDetail = async (
   knowledgeId: string,
 ): Promise<KnowledgeDetailEnvelope> => {
-  const response = await client.get<KnowledgeDetailEnvelope>(
+  const response = await client.get<ApiEnvelope<KnowledgeDetailEnvelope>>(
     `/knowledge/${encodeURIComponent(knowledgeId)}`,
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };
 
 export const createKnowledge = async (
   payload: CreateKnowledgeRequest,
 ): Promise<KnowledgeMutationResponse> => {
-  const response = await client.post<KnowledgeMutationResponse>(
+  const response = await client.post<ApiEnvelope<KnowledgeMutationResponse>>(
     '/knowledge',
     payload,
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };
 
 export const updateKnowledge = async (
   knowledgeId: string,
   payload: UpdateKnowledgeRequest,
 ): Promise<KnowledgeMutationResponse> => {
-  const response = await client.patch<KnowledgeMutationResponse>(
+  const response = await client.patch<ApiEnvelope<KnowledgeMutationResponse>>(
     `/knowledge/${encodeURIComponent(knowledgeId)}`,
     payload,
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };
 
 export const deleteKnowledge = async (knowledgeId: string): Promise<void> => {
-  await client.delete(`/knowledge/${encodeURIComponent(knowledgeId)}`);
+  const response = await client.delete<ApiEnvelope<null>>(
+    `/knowledge/${encodeURIComponent(knowledgeId)}`,
+  );
+  unwrapApiData(response.data);
 };
 
 export const uploadKnowledgeDocument = async (
@@ -132,7 +139,7 @@ export const uploadKnowledgeDocument = async (
 
   formData.append('file', file);
 
-  const response = await client.post<KnowledgeDocumentUploadResponse>(
+  const response = await client.post<ApiEnvelope<KnowledgeDocumentUploadResponse>>(
     `/knowledge/${encodeURIComponent(knowledgeId)}/documents`,
     formData,
     {
@@ -142,5 +149,5 @@ export const uploadKnowledgeDocument = async (
     },
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };

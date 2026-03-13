@@ -1,5 +1,6 @@
 import { Router, type RequestHandler } from "express";
 import { AppError } from "@lib/app-error.js";
+import { sendSuccess } from "@lib/api-response.js";
 
 interface MemoryQueryBody {
   query?: string;
@@ -74,7 +75,7 @@ export const createMemoryRouter = (requireAuth: RequestHandler): Router => {
   memoryRouter.use(requireAuth);
 
   memoryRouter.get("/overview", (_req, res) => {
-    res.json({
+    sendSuccess(res, {
       projectName: "知项 · Knowject",
       slogan: "让项目知识，真正为团队所用。",
       summary:
@@ -121,7 +122,7 @@ export const createMemoryRouter = (requireAuth: RequestHandler): Router => {
         score: Number((item.score - index * 0.02).toFixed(2)),
       }));
 
-    res.json({
+    sendSuccess(res, {
       query: query.trim(),
       total: results.length,
       items: results,

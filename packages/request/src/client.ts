@@ -9,16 +9,19 @@ import { RequestDeduper } from './dedupe';
 import { ApiError, type HttpClientOptions } from './types';
 
 interface ApiErrorResponseBody {
+  code?: string;
+  message?: string;
+  data?: unknown;
+  meta?: {
+    requestId?: string;
+    timestamp?: string;
+    details?: unknown;
+  };
   error?: {
     message?: string;
     code?: string;
     details?: unknown;
   };
-  meta?: {
-    requestId?: string;
-  };
-  message?: string;
-  code?: string;
   detail?: unknown;
 }
 
@@ -78,12 +81,13 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
       const requestId = response?.data?.meta?.requestId || config?._requestId;
       const status = response?.status || 0;
       const message =
-        response?.data?.error?.message ||
         response?.data?.message ||
+        response?.data?.error?.message ||
         axiosError.message ||
         'Unknown Error';
-      const code = response?.data?.error?.code || response?.data?.code;
+      const code = response?.data?.code || response?.data?.error?.code;
       const detail =
+        response?.data?.meta?.details ??
         response?.data?.error?.details ??
         response?.data?.detail ??
         response?.data;

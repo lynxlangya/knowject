@@ -6,6 +6,19 @@ export interface HttpClientOptions {
   dedupe?: boolean;
 }
 
+export interface ApiMeta {
+  requestId: string;
+  timestamp: string;
+  details?: unknown;
+}
+
+export interface ApiEnvelope<T> {
+  code: string;
+  message: string;
+  data: T;
+  meta: ApiMeta;
+}
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -24,6 +37,10 @@ export class ApiError extends Error {
 
 export const isApiError = (error: unknown): error is ApiError => {
   return error instanceof ApiError;
+};
+
+export const unwrapApiData = <T>(envelope: ApiEnvelope<T>): T => {
+  return envelope.data;
 };
 
 // Extend AxiosRequestConfig to include our custom property

@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import type { RequestHandler } from "express";
 import { asyncHandler } from "@lib/async-handler.js";
+import { sendCreated, sendSuccess } from "@lib/api-response.js";
 import type { AuthenticatedRequestUser } from "@modules/auth/auth.types.js";
 import type { MembershipsService } from "./memberships.service.js";
 import type {
@@ -43,7 +44,7 @@ export const createMembershipsRouter = (
         req.body as AddProjectMemberInput,
       );
 
-      res.status(201).json({
+      sendCreated(res, {
         project,
       });
     }),
@@ -61,7 +62,7 @@ export const createMembershipsRouter = (
         req.body as UpdateProjectMemberInput,
       );
 
-      res.json({
+      sendSuccess(res, {
         project,
       });
     }),
@@ -78,7 +79,7 @@ export const createMembershipsRouter = (
         getRouteParam(req, "userId"),
       );
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 

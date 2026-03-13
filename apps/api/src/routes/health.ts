@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { AppEnv } from '@config/env.js';
 import type { MongoDatabaseManager } from '@db/mongo.js';
 import { asyncHandler } from '@lib/async-handler.js';
+import { sendSuccess } from '@lib/api-response.js';
 import { getChromaHealthSnapshot } from '@lib/chroma-health.js';
 
 interface CreateHealthRouterOptions {
@@ -20,7 +21,7 @@ export const createHealthRouter = ({ env, mongo }: CreateHealthRouterOptions): R
       const status =
         database.status === 'up' && vectorStore.status !== 'down' ? 'ok' : 'degraded';
 
-      res.json({
+      sendSuccess(res, {
         status,
         service: env.appName,
         environment: env.nodeEnv,

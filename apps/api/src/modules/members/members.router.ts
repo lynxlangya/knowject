@@ -1,6 +1,7 @@
 import { Router, type Request } from 'express';
 import type { RequestHandler } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
+import { sendSuccess } from '@lib/api-response.js';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 import type { MembersService } from './members.service.js';
 
@@ -25,7 +26,7 @@ export const createMembersRouter = (
       const actor = getRequiredAuthUser(req);
       const result = await membersService.listVisibleMembers({ actor });
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 

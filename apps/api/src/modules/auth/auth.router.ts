@@ -1,6 +1,7 @@
 import { Router, type Request } from 'express';
 import type { RequestHandler } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
+import { sendCreated, sendSuccess } from '@lib/api-response.js';
 import type { AuthService } from './auth.service.js';
 import type {
   LoginInput,
@@ -28,7 +29,7 @@ export const createAuthRouter = (
     asyncHandler(async (req, res) => {
       const result = await authService.register(req.body as RegisterInput);
 
-      res.json(result);
+      sendCreated(res, result);
     }),
   );
 
@@ -37,7 +38,7 @@ export const createAuthRouter = (
     asyncHandler(async (req, res) => {
       const result = await authService.login(req.body as LoginInput);
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 
@@ -48,7 +49,7 @@ export const createAuthRouter = (
       getRequiredAuthUser(req);
 
       const result = await authService.searchUsers(req.query as SearchUsersInput);
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 

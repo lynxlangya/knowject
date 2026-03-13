@@ -9,10 +9,10 @@
   - 返回应用状态、数据库状态与可选的 Chroma 心跳诊断信息。
 - `POST /api/auth/register`
   - 接收 `username`、`password`、`name`。
-  - 注册成功后直接返回 JWT 与基础用户信息。
+  - 注册成功后以统一响应壳返回 JWT 与基础用户信息。
 - `POST /api/auth/login`
   - 接收 `username` 和 `password`。
-  - 返回 JWT 与基础用户信息。
+  - 以统一响应壳返回 JWT 与基础用户信息。
 - `GET /api/auth/users`
   - 需要 `Authorization: Bearer <token>`。
   - 按 `username / name` 模糊搜索已有注册用户，供项目成员添加下拉候选使用。
@@ -31,6 +31,7 @@
 - `DELETE /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 删除项目。
+  - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
 - `POST /api/projects/:projectId/members`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 按用户名添加已注册用户。
@@ -57,10 +58,11 @@
 - `DELETE /api/knowledge/:knowledgeId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除知识库、对应文档记录、当前知识库的本地原始文件目录，以及 `global_docs / global_code` 中对应的向量记录。
+  - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
 - `POST /api/knowledge/:knowledgeId/documents`
   - 需要 `Authorization: Bearer <token>`。
   - 使用 `multipart/form-data` 上传单个文件，字段名固定为 `file`。
-  - 当前只支持 `md / txt / pdf`，单文件上限为 `50 MB`。
+  - 当前只支持 `md / txt / pdf`，单文件上限为 `10 MB`。
   - 上传成功后会先创建文档记录并返回 `pending`，随后由 Node 在后台切到 `processing` 并触发 Python indexer。
   - `md / txt` 当前会继续推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 先明确回写 `failed` 与 `errorMessage`，不假装支持。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
@@ -85,10 +87,18 @@
   - 需要 `Authorization: Bearer <token>`。
   - 返回基于本地 `DEMO_ITEMS` 的演示检索结果。
 
-错误响应约定：
+统一响应约定：
 
-- 当前 API 已接入统一错误中间件。
-- 失败响应统一为 `error + meta(requestId, timestamp)` 结构。
+- 当前所有 JSON 响应统一为 `code / message / data / meta` 四层结构。
+- 成功响应默认规则：
+  - `HTTP 200` -> `code: SUCCESS`，`message: 请求成功`
+  - `HTTP 201` -> `code: CREATED`，`message: 创建成功`
+- 失败响应统一为：
+  - `data: null`
+  - `code` 继续沿用现有业务错误码，如 `VALIDATION_ERROR`、`NOT_FOUND`、`AUTH_TOKEN_INVALID`
+  - `message` 直接展示错误信息
+- `meta` 当前固定包含 `requestId` 与 `timestamp`；仅在 `API_ERROR_EXPOSE_DETAILS=true` 时才会额外返回 `meta.details`。
+- 前端当前通过 `apps/platform/src/api/*` 在 API 层统一解包 `data`，页面层不直接消费 envelope。
 - `projects`、`memberships` 与 `memory` 路由当前都已切到正式 JWT 鉴权中间件。
 - 生产环境下，`/api/auth/*` 与 `/api/memory/*` 必须通过 HTTPS 访问；不安全传输会被拒绝。
 - `auth` 与 `memory` 响应默认携带 `Cache-Control: no-store`，避免敏感响应被中间层缓存。

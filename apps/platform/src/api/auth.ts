@@ -1,3 +1,7 @@
+import {
+  unwrapApiData,
+  type ApiEnvelope,
+} from '@knowject/request';
 import { publicClient } from './client';
 
 export interface LoginRequest {
@@ -23,11 +27,11 @@ export interface AuthSuccessResponse {
 }
 
 export const register = async (payload: RegisterRequest): Promise<AuthSuccessResponse> => {
-  const response = await publicClient.post<AuthSuccessResponse>('/auth/register', payload);
-  return response.data;
+  const response = await publicClient.post<ApiEnvelope<AuthSuccessResponse>>('/auth/register', payload);
+  return unwrapApiData(response.data);
 };
 
 export const login = async (payload: LoginRequest): Promise<AuthSuccessResponse> => {
-  const response = await publicClient.post<AuthSuccessResponse>('/auth/login', payload);
-  return response.data;
+  const response = await publicClient.post<ApiEnvelope<AuthSuccessResponse>>('/auth/login', payload);
+  return unwrapApiData(response.data);
 };

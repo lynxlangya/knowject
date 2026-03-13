@@ -1,3 +1,7 @@
+import {
+  unwrapApiData,
+  type ApiEnvelope,
+} from '@knowject/request';
 import { client } from './client';
 
 export interface MemoryOverviewResponse {
@@ -33,13 +37,13 @@ export interface MemoryQueryResponse {
 }
 
 export const getMemoryOverview = async (): Promise<MemoryOverviewResponse> => {
-  const response = await client.get<MemoryOverviewResponse>('/memory/overview');
-  return response.data;
+  const response = await client.get<ApiEnvelope<MemoryOverviewResponse>>('/memory/overview');
+  return unwrapApiData(response.data);
 };
 
 export const queryMemory = async (
   payload: MemoryQueryRequest
 ): Promise<MemoryQueryResponse> => {
-  const response = await client.post<MemoryQueryResponse>('/memory/query', payload);
-  return response.data;
+  const response = await client.post<ApiEnvelope<MemoryQueryResponse>>('/memory/query', payload);
+  return unwrapApiData(response.data);
 };

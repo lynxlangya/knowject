@@ -30,6 +30,7 @@
 - `src/app/project/project.catalog.ts`：全局资产与成员 Mock 源。
 - `src/pages/project/project.mock.ts`：项目概览、对话、资源、成员演示数据。
 - `src/api`：登录、项目、成员、知识库与记忆查询接口封装；项目列表、项目基础信息、全局成员概览、成员 roster 与全局知识库已接入真实后端。
+- `src/api/*` 当前统一按 `ApiEnvelope<T>` 调用后端，并在 API 层解包 `data`；页面层继续消费原有业务对象，不直接感知 `code / message / meta`。
 - `/knowledge` 主要消费 `GET /api/knowledge`、`GET /api/knowledge/:knowledgeId`、`POST /api/knowledge`、`PATCH /api/knowledge/:knowledgeId`、`DELETE /api/knowledge/:knowledgeId` 与 `POST /api/knowledge/:knowledgeId/documents`。
 - `/members` 主要消费 `GET /api/members`；`/project/:projectId/members` 主要消费 `GET /api/auth/users` 与 `/api/projects/:projectId/members*`。
 
@@ -40,7 +41,7 @@
 - `src/app/layouts`：登录后布局与侧栏。
 - `src/app/navigation`：路由、路径构建与兼容重定向。
 - `src/app/project`：项目状态、共享类型、Mock 资产目录。
-- `src/api`：前端 API 封装（auth / projects / members / memory），其中成员添加候选复用 `GET /api/auth/users`。
+- `src/api`：前端 API 封装（auth / projects / members / memory / knowledge），其中成员添加候选复用 `GET /api/auth/users`，并统一在此层完成 response envelope 解包。
 - `src/pages`：登录页、主页、项目页、全局资产页。
 
 ## 开发

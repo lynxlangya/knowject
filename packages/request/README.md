@@ -11,7 +11,11 @@ pnpm add @knowject/request --filter platform
 ## 快速使用
 
 ```ts
-import { createHttpClient } from '@knowject/request';
+import {
+  createHttpClient,
+  unwrapApiData,
+  type ApiEnvelope,
+} from '@knowject/request';
 
 export const client = createHttpClient({
   baseURL: '/api',
@@ -22,6 +26,9 @@ export const client = createHttpClient({
     window.location.href = '/login';
   },
 });
+
+const response = await client.get<ApiEnvelope<{ status: string }>>('/health');
+const data = unwrapApiData(response.data);
 ```
 
 ## 错误处理

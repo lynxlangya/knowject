@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from 'express';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import { createErrorEnvelope } from '@lib/api-response.js';
 
 interface JsonParseError extends SyntaxError {
   status?: number;
@@ -59,8 +60,6 @@ export const createErrorHandler = (env: AppEnv): ErrorRequestHandler => {
   return (error, req, res, _next) => {
     void _next;
     const normalizedError = normalizeError(error);
-    const timestamp = new Date().toISOString();
-
     if (normalizedError.statusCode >= 500) {
       if (env.apiErrors.includeStack && normalizedError.stack) {
         console.error(`[${req.requestId}] ${normalizedError.message}\n${normalizedError.stack}`);
@@ -69,16 +68,13 @@ export const createErrorHandler = (env: AppEnv): ErrorRequestHandler => {
       }
     }
 
-    res.status(normalizedError.statusCode).json({
-      error: {
+    res.status(normalizedError.statusCode).json(
+      createErrorEnvelope({
+        request: req,
         code: normalizedError.code,
         message: normalizedError.message,
-        details: env.apiErrors.exposeDetails ? normalizedError.details : null,
-      },
-      meta: {
-        requestId: req.requestId,
-        timestamp,
-      },
-    });
+        details: env.apiErrors.exposeDetails ? normalizedError.details : undefined,
+      }),
+    );
   };
 };

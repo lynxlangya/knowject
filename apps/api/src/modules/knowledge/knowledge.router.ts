@@ -3,6 +3,7 @@ import { Router, type Request, type Response } from 'express';
 import type { RequestHandler } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
 import { AppError } from '@lib/app-error.js';
+import { sendCreated, sendSuccess } from '@lib/api-response.js';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 import {
   KNOWLEDGE_UPLOAD_FIELD_NAME,
@@ -113,7 +114,7 @@ export const createKnowledgeRouter = (
         actor: getRequiredAuthUser(req),
       });
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 
@@ -127,7 +128,7 @@ export const createKnowledgeRouter = (
         req.body as SearchKnowledgeDocumentsInput,
       );
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 
@@ -141,7 +142,7 @@ export const createKnowledgeRouter = (
         getRequiredKnowledgeId(req),
       );
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 
@@ -155,7 +156,7 @@ export const createKnowledgeRouter = (
         req.body as CreateKnowledgeInput,
       );
 
-      res.status(201).json(result);
+      sendCreated(res, result);
     }),
   );
 
@@ -170,7 +171,7 @@ export const createKnowledgeRouter = (
         req.body as UpdateKnowledgeInput,
       );
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 
@@ -184,7 +185,7 @@ export const createKnowledgeRouter = (
         getRequiredKnowledgeId(req),
       );
 
-      res.status(204).send();
+      sendSuccess(res, null);
     }),
   );
 
@@ -200,7 +201,7 @@ export const createKnowledgeRouter = (
         file,
       );
 
-      res.status(201).json(result);
+      sendCreated(res, result);
     }),
   );
 

@@ -1,6 +1,7 @@
 import { Router, type Request } from 'express';
 import type { RequestHandler } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
+import { sendSuccess } from '@lib/api-response.js';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 import type { SkillsService } from './skills.service.js';
 
@@ -27,7 +28,7 @@ export const createSkillsRouter = (
         actor: getRequiredAuthUser(req),
       });
 
-      res.json(result);
+      sendSuccess(res, result);
     }),
   );
 

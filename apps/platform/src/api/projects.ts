@@ -1,3 +1,7 @@
+import {
+  unwrapApiData,
+  type ApiEnvelope,
+} from '@knowject/request';
 import { client } from "./client";
 
 export type ProjectRole = "admin" | "member";
@@ -66,14 +70,14 @@ export interface SearchProjectMemberCandidatesResponse {
 }
 
 export const listProjects = async (): Promise<ProjectsListResponse> => {
-  const response = await client.get<ProjectsListResponse>("/projects");
-  return response.data;
+  const response = await client.get<ApiEnvelope<ProjectsListResponse>>("/projects");
+  return unwrapApiData(response.data);
 };
 
 export const searchProjectMemberCandidates = async (
   query: string,
 ): Promise<SearchProjectMemberCandidatesResponse> => {
-  const response = await client.get<SearchProjectMemberCandidatesResponse>(
+  const response = await client.get<ApiEnvelope<SearchProjectMemberCandidatesResponse>>(
     "/auth/users",
     {
       params: {
@@ -83,45 +87,46 @@ export const searchProjectMemberCandidates = async (
     },
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };
 
 export const createProject = async (
   payload: CreateProjectRequest,
 ): Promise<ProjectMutationResponse> => {
-  const response = await client.post<ProjectMutationResponse>(
+  const response = await client.post<ApiEnvelope<ProjectMutationResponse>>(
     "/projects",
     payload,
   );
-  return response.data;
+  return unwrapApiData(response.data);
 };
 
 export const updateProject = async (
   projectId: string,
   payload: UpdateProjectRequest,
 ): Promise<ProjectMutationResponse> => {
-  const response = await client.patch<ProjectMutationResponse>(
+  const response = await client.patch<ApiEnvelope<ProjectMutationResponse>>(
     `/projects/${encodeURIComponent(projectId)}`,
     payload,
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };
 
 export const deleteProject = async (projectId: string): Promise<void> => {
-  await client.delete(`/projects/${encodeURIComponent(projectId)}`);
+  const response = await client.delete<ApiEnvelope<null>>(`/projects/${encodeURIComponent(projectId)}`);
+  unwrapApiData(response.data);
 };
 
 export const addProjectMember = async (
   projectId: string,
   payload: AddProjectMemberRequest,
 ): Promise<ProjectMutationResponse> => {
-  const response = await client.post<ProjectMutationResponse>(
+  const response = await client.post<ApiEnvelope<ProjectMutationResponse>>(
     `/projects/${encodeURIComponent(projectId)}/members`,
     payload,
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };
 
 export const updateProjectMemberRole = async (
@@ -129,21 +134,21 @@ export const updateProjectMemberRole = async (
   userId: string,
   payload: UpdateProjectMemberRequest,
 ): Promise<ProjectMutationResponse> => {
-  const response = await client.patch<ProjectMutationResponse>(
+  const response = await client.patch<ApiEnvelope<ProjectMutationResponse>>(
     `/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(userId)}`,
     payload,
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };
 
 export const removeProjectMember = async (
   projectId: string,
   userId: string,
 ): Promise<RemoveProjectMemberResponse> => {
-  const response = await client.delete<RemoveProjectMemberResponse>(
+  const response = await client.delete<ApiEnvelope<RemoveProjectMemberResponse>>(
     `/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(userId)}`,
   );
 
-  return response.data;
+  return unwrapApiData(response.data);
 };
