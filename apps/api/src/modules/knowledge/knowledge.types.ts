@@ -137,3 +137,33 @@ export interface KnowledgeDocumentUploadResponse {
   knowledge: KnowledgeSummaryResponse;
   document: KnowledgeDocumentResponse;
 }
+
+export interface KnowledgeIndexerDocumentRequest {
+  knowledgeId: string;
+  documentId: string;
+  sourceType: KnowledgeSourceType;
+  fileName: string;
+  mimeType: string;
+  storagePath: string;
+  documentVersionHash: string;
+}
+
+export interface KnowledgeIndexerSuccessResponse {
+  status: 'completed';
+  knowledgeId: string;
+  documentId: string;
+  chunkCount: number;
+  characterCount: number;
+  parser: string;
+}
+
+export interface KnowledgeIndexerFailureResponse {
+  status: 'failed';
+  knowledgeId: string;
+  documentId: string;
+  errorMessage: string;
+}
+
+export type KnowledgeIndexerResponse =
+  | KnowledgeIndexerSuccessResponse
+  | KnowledgeIndexerFailureResponse;

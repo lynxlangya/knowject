@@ -17,6 +17,8 @@ import type {
   KnowledgeDetailEnvelope,
   KnowledgeDocumentRecord,
   KnowledgeDocumentUploadResponse,
+  KnowledgeIndexerDocumentRequest,
+  KnowledgeIndexerResponse,
   KnowledgeListResponse,
   KnowledgeMutationResponse,
   KnowledgeSourceType,
@@ -225,6 +227,185 @@ const buildStoragePath = (
   );
 };
 
+const buildKnowledgeIndexerUrl = (baseUrl: string): string => {
+  return new URL('/internal/index-documents', baseUrl).toString();
+};
+
+const normalizeIndexerErrorMessage = (
+  error: unknown,
+  fallback = 'Python indexer 处理失败',
+): string => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return fallback;
+};
+
+const callKnowledgeIndexer = async (
+  env: AppEnv,
+  payload: KnowledgeIndexerDocumentRequest,
+): Promise<KnowledgeIndexerResponse> => {
+  const response = await fetch(buildKnowledgeIndexerUrl(env.knowledge.indexerUrl), {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
+  });
+
+  let responseBody: unknown = null;
+
+  try {
+    responseBody = await response.json();
+  } catch {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      typeof responseBody === 'object' &&
+      responseBody &&
+      'errorMessage' in responseBody &&
+      typeof responseBody.errorMessage === 'string'
+        ? responseBody.errorMessage
+        : `Python indexer 请求失败（HTTP ${response.status}）`;
+
+    throw new Error(errorMessage);
+  }
+
+  if (
+    !responseBody ||
+    typeof responseBody !== 'object' ||
+    !('status' in responseBody) ||
+    (responseBody.status !== 'completed' && responseBody.status !== 'failed')
+  ) {
+    throw new Error('Python indexer 返回了无法识别的响应');
+  }
+
+  return responseBody as KnowledgeIndexerResponse;
+};
+
+const persistProcessingFailure = async ({
+  repository,
+  knowledgeId,
+  documentId,
+  errorMessage,
+}: {
+  repository: KnowledgeRepository;
+  knowledgeId: string;
+  documentId: string;
+  errorMessage: string;
+}): Promise<void> => {
+  const failedAt = new Date();
+
+  try {
+    const failedDocument = await repository.updateKnowledgeDocument(
+      documentId,
+      {
+        status: 'failed',
+        chunkCount: 0,
+        errorMessage,
+        processedAt: failedAt,
+        updatedAt: failedAt,
+      },
+      {
+        incrementRetryCount: true,
+      },
+    );
+
+    if (failedDocument) {
+      await repository.syncKnowledgeSummaryFromDocuments(knowledgeId, failedAt);
+    }
+  } catch (persistenceError) {
+    console.error(
+      `[knowledge-indexer] document ${documentId} failure state persistence failed: ${normalizeIndexerErrorMessage(
+        persistenceError,
+        'MongoDB 状态回写失败',
+      )}`,
+    );
+  }
+
+  console.error(`[knowledge-indexer] document ${documentId} processing failed: ${errorMessage}`);
+};
+
+const processUploadedDocument = async ({
+  env,
+  repository,
+  knowledgeId,
+  documentId,
+  storagePath,
+  fileName,
+  mimeType,
+  sourceType,
+  documentVersionHash,
+}: {
+  env: AppEnv;
+  repository: KnowledgeRepository;
+  knowledgeId: string;
+  documentId: string;
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  sourceType: KnowledgeSourceType;
+  documentVersionHash: string;
+}): Promise<void> => {
+  try {
+    const processingAt = new Date();
+    const processingDocument = await repository.updateKnowledgeDocument(documentId, {
+      status: 'processing',
+      errorMessage: null,
+      processedAt: null,
+      updatedAt: processingAt,
+    });
+
+    if (!processingDocument) {
+      return;
+    }
+
+    await repository.syncKnowledgeSummaryFromDocuments(knowledgeId, processingAt);
+
+    const result = await callKnowledgeIndexer(env, {
+      knowledgeId,
+      documentId,
+      sourceType,
+      fileName,
+      mimeType,
+      storagePath,
+      documentVersionHash,
+    });
+
+    if (result.status === 'failed') {
+      throw new Error(result.errorMessage);
+    }
+
+    const completedAt = new Date();
+    const completedDocument = await repository.updateKnowledgeDocument(documentId, {
+      status: 'completed',
+      chunkCount: result.chunkCount,
+      lastIndexedAt: completedAt,
+      errorMessage: null,
+      processedAt: completedAt,
+      updatedAt: completedAt,
+    });
+
+    if (!completedDocument) {
+      return;
+    }
+
+    await repository.syncKnowledgeSummaryFromDocuments(knowledgeId, completedAt);
+  } catch (error) {
+    const errorMessage = normalizeIndexerErrorMessage(error);
+    await persistProcessingFailure({
+      repository,
+      knowledgeId,
+      documentId,
+      errorMessage,
+    });
+  }
+};
+
 export const createKnowledgeService = ({
   env,
   repository,
@@ -382,6 +563,25 @@ export const createKnowledgeService = ({
         }
 
         knowledgeSummaryUpdated = true;
+        setImmediate(() => {
+          void processUploadedDocument({
+            env,
+            repository,
+            knowledgeId,
+            documentId: documentId.toHexString(),
+            storagePath: absoluteStoragePath,
+            fileName: basename(file.originalName),
+            mimeType: file.mimeType,
+            sourceType: knowledge.sourceType,
+            documentVersionHash,
+          }).catch((error) => {
+            console.error(
+              `[knowledge-indexer] detached processing crashed for document ${documentId.toHexString()}: ${normalizeIndexerErrorMessage(
+                error,
+              )}`,
+            );
+          });
+        });
 
         return {
           knowledge: toKnowledgeSummaryResponse(updatedKnowledge),

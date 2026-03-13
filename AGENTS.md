@@ -12,12 +12,13 @@
 apps/
   platform/  前端应用（React + Vite + Ant Design）
   api/       基础框架 API（Express + TypeScript）
-  indexer-py/ Python 索引服务预留目录（当前仅边界说明）
+  indexer-py/ Python 索引服务（当前已提供最小 HTTP 解析 / 分块运行时）
 packages/
   request/   请求库（@knowject/request）
   ui/        UI 组件库（@knowject/ui）
 docker/
   api/       API 容器构建与启动脚本
+  indexer-py/ Python indexer 容器构建入口
   platform/  前端容器构建与 Nginx 入口
   mongo/     MongoDB 初始化脚本
   caddy/     线上 HTTPS 入口
@@ -41,8 +42,8 @@ scripts/     常用命令统一入口
 - `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`memory` 九组接口；其中项目列表、项目基础信息、成员 roster 与全局成员概览已经接入正式后端主链路，`knowledge / skills / agents` 当前仅为 GA-02 最小骨架与鉴权占位响应。
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
-- `apps/indexer-py`：预留 Python 索引处理链路目录；当前只有职责与集成边界说明，不含可运行实现。
-- `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、镜像构建、Mongo 初始化与 HTTPS 入口。
+- `apps/indexer-py`：承载最小 Python 索引处理链路，当前已提供 `md / txt` 解析、清洗、分块与 HTTP 触发入口。
+- `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、`api / indexer-py / platform` 镜像构建、Mongo 初始化与 HTTPS 入口。
 - `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
 - `.agent/docs`：项目文档统一根目录；`.agent/docs/current/architecture.md` 是项目结构与路由事实的主文档。
 - `.agent/gpt`：给 ChatGPT Projects 使用的上传副本目录；内容来自 `.agent/docs` 与项目规则的派生同步，不作为新的事实源。

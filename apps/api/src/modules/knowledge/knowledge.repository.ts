@@ -7,6 +7,7 @@ import {
 import type {
   KnowledgeBaseDocument,
   KnowledgeDocumentRecord,
+  KnowledgeIndexStatus,
 } from './knowledge.types.js';
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
@@ -74,6 +75,18 @@ export class KnowledgeRepository {
         updatedAt: -1,
       })
       .toArray();
+  }
+
+  async findKnowledgeDocumentById(
+    documentId: string,
+  ): Promise<WithId<KnowledgeDocumentRecord> | null> {
+    const objectId = toObjectId(documentId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getKnowledgeDocumentsCollection();
+    return collection.findOne({ _id: objectId });
   }
 
   async createKnowledgeBase(
@@ -148,6 +161,68 @@ export class KnowledgeRepository {
         returnDocument: 'after',
       },
     );
+  }
+
+  async updateKnowledgeDocument(
+    documentId: string,
+    patch: Partial<
+      Pick<
+        KnowledgeDocumentRecord,
+        | 'status'
+        | 'chunkCount'
+        | 'lastIndexedAt'
+        | 'errorMessage'
+        | 'processedAt'
+        | 'updatedAt'
+      >
+    >,
+    options?: {
+      incrementRetryCount?: boolean;
+    },
+  ): Promise<WithId<KnowledgeDocumentRecord> | null> {
+    const objectId = toObjectId(documentId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getKnowledgeDocumentsCollection();
+    return collection.findOneAndUpdate(
+      { _id: objectId },
+      {
+        $set: patch,
+        ...(options?.incrementRetryCount
+          ? {
+              $inc: {
+                retryCount: 1,
+              },
+            }
+          : {}),
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+  }
+
+  async syncKnowledgeSummaryFromDocuments(
+    knowledgeId: string,
+    updatedAt: Date,
+  ): Promise<WithId<KnowledgeBaseDocument> | null> {
+    const knowledge = await this.findKnowledgeById(knowledgeId);
+    if (!knowledge) {
+      return null;
+    }
+
+    const documents = await this.listDocumentsByKnowledgeId(knowledgeId);
+    const chunkCount = documents.reduce((total, document) => total + document.chunkCount, 0);
+    const indexStatus = resolveKnowledgeIndexStatus(documents);
+
+    return this.updateKnowledgeBase(knowledgeId, {
+      indexStatus,
+      documentCount: documents.length,
+      chunkCount,
+      updatedAt,
+    });
   }
 
   async deleteKnowledgeDocumentsByKnowledgeId(knowledgeId: string): Promise<number> {
@@ -261,6 +336,32 @@ export class KnowledgeRepository {
     await this.ensureDocumentIndexesPromise;
   }
 }
+
+const resolveKnowledgeIndexStatus = (
+  documents: WithId<KnowledgeDocumentRecord>[],
+): KnowledgeIndexStatus => {
+  if (documents.length === 0) {
+    return 'idle';
+  }
+
+  if (documents.some((document) => document.status === 'processing')) {
+    return 'processing';
+  }
+
+  if (documents.some((document) => document.status === 'pending')) {
+    return 'pending';
+  }
+
+  if (documents.some((document) => document.status === 'failed')) {
+    return 'failed';
+  }
+
+  if (documents.every((document) => document.status === 'completed')) {
+    return 'completed';
+  }
+
+  return 'idle';
+};
 
 export const createKnowledgeRepository = ({
   mongo,

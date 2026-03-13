@@ -27,6 +27,8 @@ docker/
   api/
     Dockerfile
     start-api.sh
+  indexer-py/
+    Dockerfile
   platform/
     Dockerfile
     nginx.conf
@@ -60,9 +62,10 @@ docker/
 
 说明：
 
-- `pnpm docker:local:up` 会启动完整本地部署拓扑：`platform + api + mongo + chroma`
+- `pnpm docker:local:up` 会启动完整本地部署拓扑：`platform + api + indexer-py + mongo + chroma`
 - 这条命令更适合集成联调、部署验收和对外交付演示
 - 日常本地开发更推荐宿主机运行前后端，只把 `mongo / chroma` 放进 Docker
+- 完整编排会把 API 与 `indexer-py` 绑定到同一个知识存储卷，保证跨容器仍能读取上传文件
 - 推荐日常开发命令：
   - `pnpm dev:init`
   - `pnpm dev:up`
@@ -90,6 +93,7 @@ pnpm docker:local:up
 - 默认 MongoDB：`127.0.0.1:27017`
 - 默认 Chroma：`http://127.0.0.1:8000/api/v2/heartbeat`
 - 如果在 `.env.docker.local` 中改了 `WEB_PORT` / `API_PUBLISHED_PORT` / `MONGO_PUBLISHED_PORT` / `CHROMA_PUBLISHED_PORT`，请按实际端口访问
+- `indexer-py` 默认只暴露在容器内部网络，不直接发布宿主机端口；其健康检查由 compose 内部完成
 - `api` 容器健康检查会读取 `/api/health` 的 JSON `status`；只有返回 `ok` 才视为健康，`degraded` 会继续被标记为不健康
 
 ### 3.4 常用本地命令
@@ -151,7 +155,7 @@ pnpm docker:local:ps
 查看日志：
 
 ```bash
-pnpm docker:local:logs -- platform api mongo chroma
+pnpm docker:local:logs -- platform api indexer-py mongo chroma
 ```
 
 停止并保留数据：
@@ -170,4 +174,5 @@ pnpm docker:local:reset
 
 - 当前业务正式使用的是 MongoDB。
 - Chroma 已进入容器化基线，并被纳入 API 健康诊断，但正式知识检索链路仍未落地。
+- `indexer-py` 当前只负责最小解析 / 分块与状态协作，不负责向量写入与统一检索。
 - 当前更适合把这套 Docker 交付视为“可本地部署 / 可私有化打包的基础设施基线”，而不是完整 AI 能力交付。

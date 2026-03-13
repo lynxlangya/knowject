@@ -1,6 +1,6 @@
 # 全局资产基础开发任务（Week 3-4，规划拆解）
 
-状态：截至 2026-03-13，GA-01、GA-02、GA-03、GA-04 已完成，GA-05 待启动；本文件当前同时承担“Week 3-4 任务清单 + 完成记录”角色。
+状态：截至 2026-03-13，GA-01、GA-02、GA-03、GA-04、GA-05 已完成，GA-06 待启动；本文件当前同时承担“Week 3-4 任务清单 + 完成记录”角色。
 
 本文件用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 中的 `Week 3-4 全局资产基础`，结合当前已完成的基础框架事实，收敛成可执行、可排期、可验收的任务清单。
 
@@ -57,6 +57,11 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 - GA-04 已完成：
   - `knowledge` 模块已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口。
   - 文档上传入口已接入，支持 `md / txt / pdf` 三种格式的最小上传闭环，并把原始文件落到本地存储。
+- GA-05 已完成：
+  - `apps/indexer-py` 已落地最小 Python HTTP 索引服务，支持 `md / txt` 解析、清洗与 `1000 / 200` 分块。
+  - `knowledge` 上传链路已接入 `pending -> processing -> completed|failed` 状态流，业务状态仍由 Node 统一回写 MongoDB。
+  - `pdf` 当前会明确回写 `failed` 与 `errorMessage`，不假装支持。
+  - Docker Compose 基线已补 `indexer-py` 服务与共享知识存储卷，避免容器内上传后找不到原始文件。
 - 全局资产当前仍是前端 Mock：
   - `project.catalog.ts` 提供知识库 / 技能 / 智能体目录。
   - `GlobalAssetManagementPage.tsx` 只有展示与占位按钮，没有真实写路径。
@@ -66,9 +71,9 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 
 ### 当前明确未完成
 
-- 后端已建立 `knowledge / skills / agents` 正式模块骨架；其中 `knowledge` 已具备真实元数据模型、CRUD 和上传入口，但还没有 Python 触发、解析、检索和绑定逻辑。
-- 没有文件上传、文档解析、分块、向量化、索引状态机。
-- `apps/indexer-py` 当前只有目录与边界说明，还没有可运行的 Python indexer / worker / CLI，也没有 Node 到 Python 的正式触发实现。
+- 后端已建立 `knowledge / skills / agents` 正式模块骨架；其中 `knowledge` 已具备真实元数据模型、CRUD、上传入口，以及最小 Python 解析 / 分块 / 状态回写闭环，但还没有 Chroma、统一检索和绑定逻辑。
+- 当前还没有向量化、Chroma 写入、统一知识检索 service、`global_code` 真实导入和前端正式状态视图。
+- `apps/indexer-py` 已具备可运行的最小 Python indexer HTTP 服务，但尚未实现 embedding、Chroma upsert / delete、重建和诊断能力。
 - 没有 Chroma 配置、集合初始化、统一知识检索 service、删除 / 重建 / 重试能力。
 - 没有全局 Skill 注册表、执行契约和内置 Skill 清单。
 - 没有全局 Agent 的正式存储、CRUD、绑定校验与前端表单。
@@ -421,7 +426,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - 前端可以创建知识库并上传至少一种支持格式的文件。
   - 上传后能在列表或详情里看到文档记录和初始状态。
 
-### GA-05 TODO · 落地文档解析、清洗、分块与状态机
+### GA-05 DONE（2026-03-13）· 落地文档解析、清洗、分块与状态机
 
 - 目标：把“上传成功”推进到“可索引”。
 - 输出：
@@ -430,6 +435,12 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - 文本清洗与 chunking 逻辑。
   - `pending -> processing -> completed|failed` 状态流。
 - 依赖：`GA-04`。
+- 已完成记录：
+  - 已在 `apps/indexer-py` 落地 `server.py` 与 `pipeline.py`，提供本地 HTTP 触发入口和 `md / txt` 最小解析能力。
+  - 已按 `1000 字符 / 200 重叠 / 保留段落边界优先` 实现文本清洗与 chunking。
+  - 已让 `POST /api/knowledge/:knowledgeId/documents` 返回初始 `pending`，再由 Node 后台推进到 `processing` 并调用 Python indexer。
+  - 已由 Node 统一回写 `completed / failed`、`chunkCount`、`processedAt`、`lastIndexedAt`、`errorMessage` 与知识库聚合 `indexStatus`。
+  - 已明确 `pdf` 当前不进入稳定支持范围，而是回写 `failed` 和可诊断错误信息。
 - 建议子任务：
   - 先保证 `md / txt` 稳定跑通，再补 `pdf`。
   - 分块遵循认知文档给出的 `1000 字符 / 200 重叠 / 保留段落边界`。

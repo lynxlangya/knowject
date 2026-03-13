@@ -8,6 +8,7 @@
 - 当前 `pnpm docker:local:up` **会同时启动**：
   - `platform`
   - `api`
+  - `indexer-py`
   - `mongo`
   - `chroma`
 - 推荐把这套完整 Docker 环境主要用于：
@@ -72,6 +73,7 @@ pnpm docker:local:up
 
 - `platform`
 - `api`
+- `indexer-py`
 - `mongo`
 - `chroma`
 
@@ -208,6 +210,7 @@ pnpm docker:local:health
 
 ```bash
 pnpm docker:local:logs -- api
+pnpm docker:local:logs -- indexer-py
 pnpm docker:local:logs -- mongo
 pnpm docker:local:logs -- chroma
 pnpm docker:local:logs -- platform

@@ -25,6 +25,8 @@ export interface AppEnv {
   };
   knowledge: {
     storageRoot: string;
+    indexerUrl: string;
+    indexerRequestTimeoutMs: number;
   };
   jwt: {
     secret: string;
@@ -171,6 +173,22 @@ const readPositiveInteger = (name: string): number => {
   return parsed;
 };
 
+const readOptionalPositiveInteger = (name: string, fallback: number): number => {
+  const raw = readOptionalString(name);
+
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`Environment variable ${name} must be a positive integer`);
+  }
+
+  return parsed;
+};
+
 const readBoolean = (name: string): boolean => {
   const raw = readRequiredString(name).toLowerCase();
 
@@ -235,6 +253,12 @@ export const getEnv = (): AppEnv => {
       storageRoot:
         readOptionalString('KNOWLEDGE_STORAGE_ROOT') ??
         join(workspaceRoot, '.knowject-storage', 'knowledge'),
+      indexerUrl:
+        readOptionalString('KNOWLEDGE_INDEXER_URL') ?? 'http://127.0.0.1:8001',
+      indexerRequestTimeoutMs: readOptionalPositiveInteger(
+        'KNOWLEDGE_INDEXER_TIMEOUT_MS',
+        15000,
+      ),
     },
     jwt: {
       secret: readRequiredString('JWT_SECRET'),

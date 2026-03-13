@@ -22,6 +22,8 @@ services:
         condition: service_healthy
       chroma:
         condition: service_healthy
+      indexer-py:
+        condition: service_healthy
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       APP_NAME: ${APP_NAME:-knowject-api}
@@ -46,6 +48,9 @@ services:
       API_ERROR_INCLUDE_STACK: ${API_ERROR_INCLUDE_STACK:-false}
       CHROMA_URL: ${CHROMA_URL:-http://chroma:8000}
       CHROMA_HEARTBEAT_PATH: ${CHROMA_HEARTBEAT_PATH:-/api/v2/heartbeat}
+      KNOWLEDGE_STORAGE_ROOT: ${KNOWLEDGE_STORAGE_ROOT:-/var/lib/knowject/knowledge}
+      KNOWLEDGE_INDEXER_URL: ${KNOWLEDGE_INDEXER_URL:-http://indexer-py:8001}
+      KNOWLEDGE_INDEXER_TIMEOUT_MS: ${KNOWLEDGE_INDEXER_TIMEOUT_MS:-15000}
     healthcheck:
       test:
         [
@@ -65,6 +70,34 @@ services:
     secrets:
       - jwt_secret
       - mongo_app_password
+    volumes:
+      - knowledge_storage:/var/lib/knowject/knowledge
+
+  indexer-py:
+    build:
+      context: .
+      dockerfile: docker/indexer-py/Dockerfile
+    image: ${KNOWJECT_INDEXER_IMAGE:-knowject/indexer-py:local}
+    environment:
+      KNOWLEDGE_INDEXER_HOST: 0.0.0.0
+      KNOWLEDGE_INDEXER_PORT: ${KNOWLEDGE_INDEXER_PORT:-8001}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8001/health').status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - app
+    restart: unless-stopped
+    volumes:
+      - knowledge_storage:/var/lib/knowject/knowledge
 
   mongo:
     image: mongo:${MONGO_IMAGE_TAG:-8.2.5}
@@ -129,6 +162,7 @@ networks:
 volumes:
   mongo_data:
   chroma_data:
+  knowledge_storage:
   caddy_data:
   caddy_config:
 

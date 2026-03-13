@@ -16,9 +16,9 @@ The repository is currently in an active foundation stage: the product shell, au
 - Project overview, chat, and resources still partially depend on local mock data and local bindings.
 - Global `knowledge`, `skills`, and `agents` pages currently act as management shells; create/import flows are still placeholders.
 - `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, and `POST /api/knowledge/:knowledgeId/documents` are now available on the backend; `/knowledge` frontend is still a shell and has not been wired yet.
-- Docker Compose baselines are available for both local and production-style environments with `platform + api + mongodb + chroma`.
+- Docker Compose baselines are available for both local and production-style environments with `platform + api + indexer-py + mongodb + chroma`.
 - MongoDB is the current primary datastore. Chroma is integrated only for infrastructure and health diagnostics, not yet for a full retrieval pipeline.
-- `apps/indexer-py` is reserved as the future Python indexer boundary, but currently only contains implementation notes.
+- `apps/indexer-py` now provides the minimal Python indexing service used by GA-05 for `md / txt` parsing, cleaning, chunking, and document status handoff; Chroma writes are still pending.
 
 ## Repository Layout
 
@@ -26,7 +26,7 @@ The repository is currently in an active foundation stage: the product shell, au
 apps/
   platform/   React + Vite + Ant Design frontend
   api/        Express + TypeScript API
-  indexer-py/ Reserved Python indexer boundary (placeholder only)
+  indexer-py/ Minimal Python indexing service for document preprocessing
 packages/
   request/    Shared HTTP client package (@knowject/request)
   ui/         Shared UI package (@knowject/ui)
@@ -76,6 +76,7 @@ scripts/      Reusable command entrypoints
 ```bash
 cp .env.example .env.local
 pnpm install
+python3 apps/indexer-py/server.py
 pnpm dev
 ```
 
@@ -91,6 +92,7 @@ pnpm dev:up
 ```bash
 pnpm dev:web
 pnpm dev:api
+python3 apps/indexer-py/server.py
 pnpm check-types
 pnpm build
 pnpm host:up
