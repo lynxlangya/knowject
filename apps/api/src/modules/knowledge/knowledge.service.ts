@@ -1,4 +1,5 @@
 import type { KnowledgeRepository } from './knowledge.repository.js';
+import { toKnowledgeSummaryResponse } from './knowledge.shared.js';
 import type { KnowledgeCommandContext, KnowledgeListResponse } from './knowledge.types.js';
 
 export interface KnowledgeService {
@@ -12,23 +13,13 @@ export const createKnowledgeService = ({
 }): KnowledgeService => {
   return {
     // Keep future metadata, upload, index trigger, and search orchestration behind the service.
-    listKnowledge: async ({ actor }) => {
+    listKnowledge: async (_context) => {
+      await repository.ensureMetadataModel();
+      const items = await repository.listKnowledgeBases();
+
       return {
-        total: 0,
-        items: [],
-        meta: {
-          module: 'knowledge',
-          stage: 'GA-02',
-          placeholder: true,
-          actorId: actor.id,
-          nextTask: 'GA-03',
-          boundaries: {
-            businessRuntime: 'node-express',
-            primaryDataStore: repository.getPrimaryDataStore(),
-            indexRuntime: 'python-http',
-            indexStore: 'chroma',
-          },
-        },
+        total: items.length,
+        items: items.map(toKnowledgeSummaryResponse),
       };
     },
   };

@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，但当前仅返回鉴权占位响应，尚未接正式模型。
+截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，其中 `knowledge` 已完成 Mongo 元数据模型与正式列表 response shape，`skills / agents` 仍停留在鉴权占位响应阶段。
 
 ## 当前接口
 
@@ -43,7 +43,8 @@
   - 若移除的是当前登录用户本人，响应会返回 `project: null` 与 `removedCurrentUser: true`，前端据此退出当前项目上下文。
 - `GET /api/knowledge`
   - 需要 `Authorization: Bearer <token>`。
-  - 返回 GA-02 阶段的知识库模块占位响应，当前 `items` 为空数组。
+  - 返回知识库列表的正式 summary shape：`id / name / description / sourceType / indexStatus / documentCount / chunkCount / maintainerId / createdBy / createdAt / updatedAt`。
+  - 当前若没有数据，返回 `total: 0` 与空数组；首次访问时会确保 `knowledge_bases` 与 `knowledge_documents` 的索引存在。
 - `GET /api/skills`
   - 需要 `Authorization: Bearer <token>`。
   - 返回 GA-02 阶段的 Skill 模块占位响应，当前 `items` 为空数组。
@@ -71,7 +72,8 @@
 - 项目概览、对话与资源等内容目前仍主要由 `apps/platform` 本地 Mock 驱动。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD；`memberships` 已落地最小成员管理闭环。
-- `knowledge / skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入；真实元数据模型、CRUD、上传、检索与绑定逻辑仍未落地。
+- `knowledge` 当前已完成 Mongo 元数据模型、集合索引和列表 response shape，但还没有 CRUD、上传、状态流与统一知识检索 service。
+- `skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD 和成员管理接口，但资产、资源与对话等正式后端接口仍未落地。
 - 当前宿主机开发最小服务拓扑为 `api + mongodb`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
@@ -122,7 +124,7 @@
 - `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。
 - `src/modules/projects/*`：项目模型、MongoDB 仓储、权限校验和 CRUD 接口。
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
-- `src/modules/knowledge/*`：全局知识库模块最小骨架，当前仅提供鉴权占位响应。
+- `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储与列表 response shape。
 - `src/modules/skills/*`：全局 Skill 模块最小骨架，当前仅提供鉴权占位响应。
 - `src/modules/agents/*`：全局 Agent 模块最小骨架，当前仅提供鉴权占位响应。
 - `src/routes/health.ts`：健康检查。
