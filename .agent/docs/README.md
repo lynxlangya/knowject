@@ -65,7 +65,7 @@
 | 分类     | 目录                    | 主要文件                                                                                              | 适合回答的问题                                                    |
 | -------- | ----------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | 当前事实 | `.agent/docs/current`   | `architecture.md`、`docker-usage.md`、`docker-operation-checklist.md`                                | 现在的路由、数据来源、模块边界、API / Docker 边界，以及该怎么操作 |
-| 实施契约 | `.agent/docs/contracts` | `auth-contract.md`、`chroma-decision.md`                                                              | MongoDB、JWT、密码哈希、注册登录、Chroma 角色边界与检索约束怎么定 |
+| 实施契约 | `.agent/docs/contracts` | `auth-contract.md`、`chroma-decision.md`                                                              | MongoDB、JWT、密码哈希、注册登录、Node / Python / Chroma 分层与检索约束怎么定 |
 | 路线蓝图 | `.agent/docs/roadmap`   | `target-architecture.md`、`gap-analysis.md`                                                           | 产品最终想做成什么、现在差多少、先补什么                          |
 | 阶段计划 | `.agent/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md` | 当前阶段具体怎么拆、顺序如何、DoD 怎么定                          |
 | 接手交接 | `.agent/docs/handoff`   | `handoff-guide.md`、`chatgpt-project-brief.md`、`handoff-prompt.md`                                  | 新协作者、ChatGPT 或外部模型如何快速建立事实并继续推进            |
@@ -88,7 +88,7 @@
   - 错误响应格式、状态码语义或安全边界发生变化。
 - 更新 `.agent/docs/contracts/chroma-decision.md`
   - Chroma 的角色定位、MongoDB / Chroma 分工、collection 命名或 metadata 设计原则发生变化。
-  - 检索 service 边界、删除 / 重建 / 去重策略发生变化。
+  - Node / Python 索引分层、检索 service 边界、删除 / 重建 / 去重策略发生变化。
   - Week 3-4 与 Week 5-8 的检索分层边界发生变化。
 - 更新 `.agent/docs/roadmap/target-architecture.md`
   - 产品三层架构定义变化。
@@ -135,7 +135,7 @@
 - 关于“基础框架阶段先拆哪些任务”的判断，以 `.agent/docs/plans/tasks-foundation-framework.md` 为准。
 - 关于“全局资产阶段先拆哪些任务、执行顺序和 DoD 怎么定”的判断，以 `.agent/docs/plans/tasks-global-assets-foundation.md` 为准。
 - 关于“基础框架阶段的环境变量和认证协议具体怎么实现”的判断，以 `.agent/docs/contracts/auth-contract.md` 为准。
-- 关于“Chroma 应该放在哪一层、collection 怎么命名、metadata 与检索 service 如何分层”的判断，以 `.agent/docs/contracts/chroma-decision.md` 为准。
+- 关于“Chroma 应该放在哪一层、Node 与 Python 如何分工、collection 怎么命名、metadata 与检索 service 如何分层”的判断，以 `.agent/docs/contracts/chroma-decision.md` 为准。
 - `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 不直接作为当前事实源引用；引用其中内容时，必须先判断它属于已落地事实、目标态还是待决策。
 
 ## 6. 当前结论

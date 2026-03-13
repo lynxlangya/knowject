@@ -1,4 +1,4 @@
-# Knowject 现状与目标差距分析（2026-03-10）
+# Knowject 现状与目标差距分析（2026-03-13）
 
 本文档用于回答“当前仓库离目标蓝图还有多远、先补哪里最划算”。判断基于三类证据：当前代码设计、现有文档、关键 git 演进记录。
 
@@ -13,6 +13,7 @@
   - `apps/api` 的配置、MongoDB、健康检查基础骨架。
   - 用户注册 / 登录、`argon2id`、JWT 与前端 `/login` 双模式入口。
 - 与目标蓝图之间的最大断层不在 UI，而在正式数据层、RAG / Skill / Agent 核心能力、部署与权限体系。
+- 当前 Chroma 只停留在基础设施与健康诊断层，还没有形成正式知识索引链路；仓库里也还没有 Python indexer 和统一知识检索 service。
 - 因此后续开发不应继续把目标态文案写成现状，而应在“前端壳层补完”和“后端 / AI 主链路启动”之间做阶段取舍。
 
 ## 2. 关键演进脉络
@@ -86,9 +87,10 @@
   - `apps/api` 当前已暴露 health、register、login、projects CRUD、project memberships、memory overview、memory query 12 个接口。
   - 已经建立 `config / db / modules / middleware` 骨架，并接入 MongoDB、用户模型、`argon2id` 与 JWT。
   - 已有正式项目模型、项目内嵌成员结构、最小项目 CRUD 和成员管理接口，但资产与对话正式存储仍未落地。
+  - Chroma 目前只作为 Docker 基础设施与健康诊断目标接入，没有正式知识库索引写入、删除、重建或统一检索服务。
 - 目标状态
   - 需要完整承载用户、项目、成员、对话、知识资产、Skill 配置、Agent 配置的正式后端。
-  - 需要结构化数据存储和向量检索基础设施。
+  - 需要结构化数据存储和向量检索基础设施，并明确“Node 管业务主链路，Python 管索引处理链路”的运行时分层。
 - 证据来源
   - `apps/api/src/server.ts`
   - `apps/api/src/config/env.ts`
@@ -102,13 +104,14 @@
 - 建议优先级
   - P0，与前端状态切换同级。
 - 下一步动作
-  - 项目模型、CRUD 和成员接口已经落地，下一步应直接承接资源绑定、会话与 AI 入口的正式化，不必一次做完所有 AI 能力。
+  - 项目模型、CRUD 和成员接口已经落地；下一步应先补 `apps/api + Python indexer + Chroma` 的最小索引闭环，再逐步承接资源绑定、会话与 AI 入口的正式化。
 
 ### 3.4 AI / RAG / Skill / Agent
 
 - 当前状态
   - 只有 `memory/query` 的演示式关键词匹配。
   - Knowledge / Skill / Agent 还停留在前端目录与概念分层阶段。
+  - 当前只有 Chroma 基础设施与健康诊断，没有正式知识索引链路、没有 Python indexer，也没有统一知识检索 service。
 - 目标状态
   - 文档与代码可索引。
   - 项目对话可检索上下文、调用技能、展示来源和工具过程。
@@ -123,7 +126,7 @@
 - 建议优先级
   - P0，但应拆阶段推进。
 - 下一步动作
-  - 建议按“真实知识索引 -> 最小检索接口 -> 对话链路 -> Skill 执行 -> Agent 编排”顺序推进，而不是一次性并发铺开所有目标态能力。
+  - 建议按“Node API + Python indexer + Chroma 的最小知识索引闭环 -> `global_code` 扩展 -> 项目级知识库与对话链路 -> Skill 执行 -> Agent 编排”顺序推进，而不是一次性并发铺开所有目标态能力。
 
 ### 3.5 部署与运维
 
@@ -170,8 +173,8 @@
 
 1. 稳住当前信息架构，不再做大的页面和路由反复。
 2. 基于已落地的最小正式项目与成员模型，优先替换最关键的前端 Mock 主数据源。
-3. 为 Knowledge / Skill / Agent 建立最小可用的数据结构和配置入口。
-4. 先打通真实检索链路，再接对话，再接 Skill，再接 Agent 编排。
+3. 先补 `apps/api + Python indexer + Chroma` 的最小索引闭环，并把 `search_documents` 的服务边界固定在 Node。
+4. 在 `global_docs` 稳定后，再扩到 `global_code`，随后再接项目级知识库、对话链路、Skill 执行与 Agent 编排。
 5. 在正式后端和 AI 链路初步稳定后，再补私有化部署方案。
 
 ## 5. 当前最值得避免的误区

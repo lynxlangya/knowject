@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-11，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。
+截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。
 
 ## 当前接口
 
@@ -65,6 +65,8 @@
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD 和成员管理接口，但资产、资源与对话等正式后端接口仍未落地。
 - 当前宿主机开发最小服务拓扑为 `api + mongodb`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
+- 当前 Chroma 仍只用于基础设施与健康诊断；仓库里还没有独立 Python indexer，也还没有正式知识索引写入与统一知识检索 service。
+- Week 3-4 的推荐演进路径是：`apps/api` 继续负责业务主链路与对外 API，Python 独立索引运行时负责解析、分块、向量写入、重建与诊断，具体边界以 [`.agent/docs/contracts/chroma-decision.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/chroma-decision.md) 为准。
 - Docker 公共基线中的 `app / data` 网络默认保持 `internal`；本地若要从宿主机直接访问 API，则通过 `compose.local.yml` 额外挂载 `publish` 网络完成端口发布。
 - Docker 当前使用方式与部署边界见 [`.agent/docs/current/docker-usage.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/current/docker-usage.md)。
 - Docker 操作手册见 [`docker/README.md`](/Users/langya/Documents/CodeHub/ai/knowject/docker/README.md)。
@@ -96,6 +98,7 @@
 - 可选 Chroma 变量：
   - `CHROMA_URL`
   - `CHROMA_HEARTBEAT_PATH`
+- 未来全局知识索引闭环会新增 embedding provider、本地文件存储、Node / Python 触发等环境契约；在代码真正落地前，以 [`.agent/docs/contracts/chroma-decision.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/chroma-decision.md) 与 [`.agent/docs/plans/tasks-global-assets-foundation.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/plans/tasks-global-assets-foundation.md) 的分类说明为准，不把它们误写成当前已生效环境变量。
 - 认证和环境的详细实施合同见 [.agent/docs/contracts/auth-contract.md](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/auth-contract.md)。
 
 ## 关键文件
