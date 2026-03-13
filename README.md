@@ -11,14 +11,14 @@ The repository is currently in an active foundation stage: the product shell, au
 ## Current Status
 
 - `apps/platform` already provides the authenticated shell, project routes, member management UI, and global asset management shells.
-- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, knowledge metadata CRUD/upload endpoints, scaffolded `skills / agents`, and demo `memory` endpoints.
+- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, knowledge metadata CRUD/upload/search endpoints, scaffolded `skills / agents`, and demo `memory` endpoints.
 - Project lists, project basics, member rosters, and the global members overview already use `/api/projects*` and `/api/members`.
 - Project overview, chat, and resources still partially depend on local mock data and local bindings.
 - Global `knowledge`, `skills`, and `agents` pages currently act as management shells; create/import flows are still placeholders.
-- `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, and `POST /api/knowledge/:knowledgeId/documents` are now available on the backend; `/knowledge` frontend is still a shell and has not been wired yet.
+- `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, and `POST /api/knowledge/search` are now available on the backend; `/knowledge` frontend is still a shell and has not been wired yet.
 - Docker Compose baselines are available for both local and production-style environments with `platform + api + indexer-py + mongodb + chroma`.
-- MongoDB is the current primary datastore. Chroma is integrated only for infrastructure and health diagnostics, not yet for a full retrieval pipeline.
-- `apps/indexer-py` now provides the minimal Python indexing service used by GA-05 for `md / txt` parsing, cleaning, chunking, and document status handoff; Chroma writes are still pending.
+- MongoDB is the current primary datastore. Chroma now backs the GA-06 global document index layer for `global_docs`, while `global_code` is reserved as an empty namespace only.
+- `apps/indexer-py` now provides the Python indexing service used for `md / txt` parsing, cleaning, chunking, OpenAI-compatible embedding generation, and Chroma upsert/delete orchestration.
 
 ## Repository Layout
 
@@ -26,7 +26,7 @@ The repository is currently in an active foundation stage: the product shell, au
 apps/
   platform/   React + Vite + Ant Design frontend
   api/        Express + TypeScript API
-  indexer-py/ Minimal Python indexing service for document preprocessing
+  indexer-py/ Python indexing service for preprocessing and Chroma write-side
 packages/
   request/    Shared HTTP client package (@knowject/request)
   ui/         Shared UI package (@knowject/ui)
@@ -79,6 +79,8 @@ pnpm install
 python3 apps/indexer-py/server.py
 pnpm dev
 ```
+
+To verify the GA-06 indexing/retrieval path locally, make sure `.env.local` also provides `CHROMA_URL` and OpenAI-compatible embedding settings.
 
 If you want the recommended local workflow with Docker-managed dependencies:
 

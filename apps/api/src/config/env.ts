@@ -22,11 +22,20 @@ export interface AppEnv {
     url: string | null;
     host: string | null;
     heartbeatPath: string;
+    tenant: string;
+    database: string;
+    requestTimeoutMs: number;
   };
   knowledge: {
     storageRoot: string;
     indexerUrl: string;
     indexerRequestTimeoutMs: number;
+  };
+  openai: {
+    apiKey: string | null;
+    baseUrl: string;
+    embeddingModel: string;
+    requestTimeoutMs: number;
   };
   jwt: {
     secret: string;
@@ -248,6 +257,9 @@ export const getEnv = (): AppEnv => {
       url: chromaUrl,
       host: chromaUrl ? parseServiceHost(chromaUrl) : null,
       heartbeatPath: readOptionalString('CHROMA_HEARTBEAT_PATH') ?? '/api/v2/heartbeat',
+      tenant: readOptionalString('CHROMA_TENANT') ?? 'default_tenant',
+      database: readOptionalString('CHROMA_DATABASE') ?? 'default_database',
+      requestTimeoutMs: readOptionalPositiveInteger('CHROMA_TIMEOUT_MS', 15000),
     },
     knowledge: {
       storageRoot:
@@ -259,6 +271,13 @@ export const getEnv = (): AppEnv => {
         'KNOWLEDGE_INDEXER_TIMEOUT_MS',
         15000,
       ),
+    },
+    openai: {
+      apiKey: readOptionalString('OPENAI_API_KEY'),
+      baseUrl: readOptionalString('OPENAI_BASE_URL') ?? 'https://api.openai.com/v1',
+      embeddingModel:
+        readOptionalString('OPENAI_EMBEDDING_MODEL') ?? 'text-embedding-3-small',
+      requestTimeoutMs: readOptionalPositiveInteger('OPENAI_TIMEOUT_MS', 15000),
     },
     jwt: {
       secret: readRequiredString('JWT_SECRET'),

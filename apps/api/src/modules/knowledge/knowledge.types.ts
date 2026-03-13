@@ -155,6 +155,7 @@ export interface KnowledgeIndexerSuccessResponse {
   chunkCount: number;
   characterCount: number;
   parser: string;
+  collectionName: string;
 }
 
 export interface KnowledgeIndexerFailureResponse {
@@ -167,3 +168,28 @@ export interface KnowledgeIndexerFailureResponse {
 export type KnowledgeIndexerResponse =
   | KnowledgeIndexerSuccessResponse
   | KnowledgeIndexerFailureResponse;
+
+export interface SearchKnowledgeDocumentsInput {
+  query?: unknown;
+  knowledgeId?: unknown;
+  sourceType?: unknown;
+  topK?: unknown;
+}
+
+export interface KnowledgeSearchHitResponse {
+  knowledgeId: string;
+  documentId: string;
+  chunkId: string;
+  chunkIndex: number;
+  type: KnowledgeSourceType;
+  source: string;
+  content: string;
+  distance: number | null;
+}
+
+export interface KnowledgeSearchResponse {
+  query: string;
+  sourceType: KnowledgeSourceType;
+  total: number;
+  items: KnowledgeSearchHitResponse[];
+}

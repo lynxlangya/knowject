@@ -1,14 +1,33 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib import error as urllib_error
+from urllib import parse as urllib_parse
+from urllib import request as urllib_request
+
+from runtime_env import read_optional_positive_integer, read_optional_string
 
 
 DEFAULT_CHUNK_SIZE = int(os.getenv("KNOWLEDGE_CHUNK_SIZE", "1000"))
 DEFAULT_CHUNK_OVERLAP = int(os.getenv("KNOWLEDGE_CHUNK_OVERLAP", "200"))
+DEFAULT_OPENAI_BASE_URL = read_optional_string("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+DEFAULT_OPENAI_EMBEDDING_MODEL = (
+    read_optional_string("OPENAI_EMBEDDING_MODEL") or "text-embedding-3-small"
+)
+DEFAULT_OPENAI_TIMEOUT_MS = read_optional_positive_integer("OPENAI_TIMEOUT_MS", 15000)
+DEFAULT_OPENAI_EMBEDDING_BATCH_SIZE = 64
+DEFAULT_CHROMA_TIMEOUT_MS = read_optional_positive_integer("CHROMA_TIMEOUT_MS", 15000)
+DEFAULT_CHROMA_TENANT = read_optional_string("CHROMA_TENANT") or "default_tenant"
+DEFAULT_CHROMA_DATABASE = read_optional_string("CHROMA_DATABASE") or "default_database"
 SUPPORTED_EXTENSIONS = {".md", ".markdown", ".txt"}
+COLLECTION_NAME_BY_SOURCE_TYPE = {
+    "global_docs": "global_docs",
+    "global_code": "global_code",
+}
 
 
 class IndexerError(Exception):
@@ -32,6 +51,16 @@ class ChunkBlock:
     carries_overlap: bool = False
 
 
+@dataclass(frozen=True)
+class ChunkRecord:
+    chunk_id: str
+    text: str
+    metadata: dict[str, Any]
+
+
+_COLLECTION_CACHE: dict[str, dict[str, Any]] = {}
+
+
 def process_document(payload: dict[str, Any]) -> dict[str, Any]:
     request = parse_request(payload)
     text = parse_document_text(request)
@@ -40,22 +69,29 @@ def process_document(payload: dict[str, Any]) -> dict[str, Any]:
     if not cleaned_text.strip():
         raise IndexerError("文档清洗后内容为空，无法分块")
 
-    chunks = build_chunks(
+    chunk_texts = build_chunks(
         cleaned_text,
         chunk_size=DEFAULT_CHUNK_SIZE,
         overlap=DEFAULT_CHUNK_OVERLAP,
     )
 
-    if not chunks:
+    if not chunk_texts:
         raise IndexerError("文档未生成有效分块")
+
+    chunk_records = build_chunk_records(request, chunk_texts)
+    collection = ensure_collection(resolve_collection_name(request.source_type))
+    embeddings = create_embeddings([chunk.text for chunk in chunk_records])
+    delete_document_chunks(collection["id"], request.document_id)
+    upsert_chunk_records(collection["id"], chunk_records, embeddings)
 
     return {
         "status": "completed",
         "knowledgeId": request.knowledge_id,
         "documentId": request.document_id,
-        "chunkCount": len(chunks),
+        "chunkCount": len(chunk_records),
         "characterCount": len(cleaned_text),
         "parser": detect_parser_name(request.file_name),
+        "collectionName": collection["name"],
     }
 
 
@@ -208,6 +244,253 @@ def split_large_block(block: str, chunk_size: int, overlap: int) -> list[ChunkBl
 def join_chunk(prefix: str, blocks: list[str]) -> str:
     parts = [part for part in [prefix.strip(), "\n\n".join(blocks).strip()] if part]
     return "\n\n".join(parts).strip()
+
+
+def build_chunk_records(
+    request: IndexDocumentRequest,
+    chunk_texts: list[str],
+) -> list[ChunkRecord]:
+    collection_name = resolve_collection_name(request.source_type)
+    records: list[ChunkRecord] = []
+
+    for index, chunk_text in enumerate(chunk_texts):
+        chunk_id = f"{request.document_id}:{index}"
+        records.append(
+            ChunkRecord(
+                chunk_id=chunk_id,
+                text=chunk_text,
+                metadata={
+                    "knowledgeId": request.knowledge_id,
+                    "documentId": request.document_id,
+                    "type": request.source_type,
+                    "source": request.file_name,
+                    "chunkIndex": index,
+                    "chunkId": chunk_id,
+                    "documentVersionHash": request.document_version_hash,
+                    "collectionName": collection_name,
+                },
+            )
+        )
+
+    return records
+
+
+def resolve_collection_name(source_type: str) -> str:
+    collection_name = COLLECTION_NAME_BY_SOURCE_TYPE.get(source_type)
+    if not collection_name:
+        raise IndexerError(f"当前暂不支持 {source_type} 索引命名空间")
+    return collection_name
+
+
+def create_embeddings(texts: list[str]) -> list[list[float]]:
+    if not texts:
+        return []
+
+    api_key = read_optional_string("OPENAI_API_KEY")
+    if not api_key:
+        raise IndexerError("OPENAI_API_KEY 未配置，无法生成 embedding")
+
+    embeddings: list[list[float]] = []
+    for batch in iter_embedding_batches(texts, DEFAULT_OPENAI_EMBEDDING_BATCH_SIZE):
+        response = request_json(
+            build_api_url(DEFAULT_OPENAI_BASE_URL, "/embeddings"),
+            method="POST",
+            timeout_ms=DEFAULT_OPENAI_TIMEOUT_MS,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+            },
+            payload={
+                "model": DEFAULT_OPENAI_EMBEDDING_MODEL,
+                "input": batch,
+            },
+            error_prefix="OpenAI embedding 请求失败",
+        )
+        embeddings.extend(parse_embeddings_response(response, expected_count=len(batch)))
+
+    return embeddings
+
+
+def iter_embedding_batches(texts: list[str], batch_size: int) -> list[list[str]]:
+    if batch_size <= 0:
+        raise IndexerError("embedding_batch_size 必须大于 0")
+
+    return [texts[start : start + batch_size] for start in range(0, len(texts), batch_size)]
+
+
+def parse_embeddings_response(response: Any, *, expected_count: int) -> list[list[float]]:
+    data = response.get("data") if isinstance(response, dict) else None
+    if not isinstance(data, list):
+        raise IndexerError("OpenAI embedding 响应缺少 data")
+
+    if len(data) != expected_count:
+        raise IndexerError("OpenAI embedding 响应数量与请求不一致")
+
+    embeddings: list[list[float]] = []
+    for item in data:
+        embedding = item.get("embedding") if isinstance(item, dict) else None
+        if not isinstance(embedding, list):
+            raise IndexerError("OpenAI embedding 响应缺少 embedding")
+        embeddings.append([float(value) for value in embedding])
+
+    return embeddings
+
+
+def ensure_collection(name: str) -> dict[str, Any]:
+    cached = _COLLECTION_CACHE.get(name)
+    if cached:
+        return cached
+
+    collections = request_json(
+        build_chroma_database_url("/collections"),
+        timeout_ms=DEFAULT_CHROMA_TIMEOUT_MS,
+        error_prefix="Chroma collection 列表请求失败",
+    )
+    if isinstance(collections, list):
+        existing = next(
+            (
+                collection
+                for collection in collections
+                if isinstance(collection, dict) and collection.get("name") == name
+            ),
+            None,
+        )
+        if isinstance(existing, dict):
+            _COLLECTION_CACHE[name] = existing
+            return existing
+
+    try:
+        created = request_json(
+            build_chroma_database_url("/collections"),
+            method="POST",
+            timeout_ms=DEFAULT_CHROMA_TIMEOUT_MS,
+            payload={"name": name},
+            error_prefix="Chroma collection 创建失败",
+        )
+        if not isinstance(created, dict) or not isinstance(created.get("id"), str):
+            raise IndexerError("Chroma collection 创建响应不合法")
+
+        _COLLECTION_CACHE[name] = created
+        return created
+    except IndexerError:
+        refreshed = request_json(
+            build_chroma_database_url("/collections"),
+            timeout_ms=DEFAULT_CHROMA_TIMEOUT_MS,
+            error_prefix="Chroma collection 列表请求失败",
+        )
+        if isinstance(refreshed, list):
+            existing = next(
+                (
+                    collection
+                    for collection in refreshed
+                    if isinstance(collection, dict) and collection.get("name") == name
+                ),
+                None,
+            )
+            if isinstance(existing, dict):
+                _COLLECTION_CACHE[name] = existing
+                return existing
+
+        raise
+
+
+def delete_document_chunks(collection_id: str, document_id: str) -> None:
+    request_json(
+        build_chroma_database_url(f"/collections/{collection_id}/delete"),
+        method="POST",
+        timeout_ms=DEFAULT_CHROMA_TIMEOUT_MS,
+        payload={
+            "where": {
+                "documentId": document_id,
+            }
+        },
+        error_prefix="Chroma 文档向量删除失败",
+    )
+
+
+def upsert_chunk_records(
+    collection_id: str,
+    chunks: list[ChunkRecord],
+    embeddings: list[list[float]],
+) -> None:
+    request_json(
+        build_chroma_database_url(f"/collections/{collection_id}/upsert"),
+        method="POST",
+        timeout_ms=DEFAULT_CHROMA_TIMEOUT_MS,
+        payload={
+            "ids": [chunk.chunk_id for chunk in chunks],
+            "documents": [chunk.text for chunk in chunks],
+            "embeddings": embeddings,
+            "metadatas": [chunk.metadata for chunk in chunks],
+        },
+        error_prefix="Chroma 文档向量写入失败",
+    )
+
+
+def build_api_url(base_url: str, path: str) -> str:
+    normalized_base = base_url if base_url.endswith("/") else f"{base_url}/"
+    return urllib_parse.urljoin(normalized_base, path.lstrip("/"))
+
+
+def build_chroma_database_url(path: str) -> str:
+    chroma_url = read_optional_string("CHROMA_URL")
+    if not chroma_url:
+        raise IndexerError("CHROMA_URL 未配置，无法写入向量索引")
+
+    return build_api_url(
+        chroma_url,
+        f"/api/v2/tenants/{DEFAULT_CHROMA_TENANT}/databases/{DEFAULT_CHROMA_DATABASE}{path}",
+    )
+
+
+def request_json(
+    url: str,
+    *,
+    method: str = "GET",
+    timeout_ms: int,
+    payload: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+    error_prefix: str,
+) -> Any:
+    request_headers = {
+        "Accept": "application/json",
+        **(headers or {}),
+    }
+
+    data = None
+    if payload is not None:
+        request_headers["Content-Type"] = "application/json"
+        data = json.dumps(payload).encode("utf-8")
+
+    request = urllib_request.Request(
+        url,
+        data=data,
+        headers=request_headers,
+        method=method,
+    )
+
+    try:
+        with urllib_request.urlopen(request, timeout=timeout_ms / 1000) as response:
+            body = response.read().decode("utf-8")
+            if not body:
+                return None
+            return json.loads(body)
+    except urllib_error.HTTPError as error:
+        body = error.read().decode("utf-8")
+        message = f"{error_prefix}（HTTP {error.code}）"
+
+        if body:
+            try:
+                payload = json.loads(body)
+                if isinstance(payload, dict):
+                    detail = payload.get("errorMessage") or payload.get("message")
+                    if isinstance(detail, str) and detail.strip():
+                        message = f"{message}: {detail.strip()}"
+            except json.JSONDecodeError:
+                message = f"{message}: {body.strip()}"
+
+        raise IndexerError(message) from error
+    except (urllib_error.URLError, TimeoutError) as error:
+        raise IndexerError(f"{error_prefix}: {error}") from error
 
 
 def detect_parser_name(file_name: str) -> str:

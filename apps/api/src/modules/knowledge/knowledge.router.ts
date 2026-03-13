@@ -11,6 +11,7 @@ import {
 import type { KnowledgeService } from './knowledge.service.js';
 import type {
   CreateKnowledgeInput,
+  SearchKnowledgeDocumentsInput,
   UpdateKnowledgeInput,
   UploadedKnowledgeFile,
 } from './knowledge.types.js';
@@ -106,6 +107,20 @@ export const createKnowledgeRouter = (
       const result = await knowledgeService.listKnowledge({
         actor: getRequiredAuthUser(req),
       });
+
+      res.json(result);
+    }),
+  );
+
+  knowledgeRouter.post(
+    '/search',
+    asyncHandler(async (req, res) => {
+      const result = await knowledgeService.searchDocuments(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        req.body as SearchKnowledgeDocumentsInput,
+      );
 
       res.json(result);
     }),

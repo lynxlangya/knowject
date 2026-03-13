@@ -5,6 +5,7 @@ import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
+import type { KnowledgeSearchService } from './knowledge.search.js';
 import {
   SUPPORTED_KNOWLEDGE_UPLOAD_TYPES,
   sanitizeFileName,
@@ -21,12 +22,15 @@ import type {
   KnowledgeIndexerResponse,
   KnowledgeListResponse,
   KnowledgeMutationResponse,
+  KnowledgeSearchResponse,
   KnowledgeSourceType,
+  SearchKnowledgeDocumentsInput,
   UpdateKnowledgeInput,
   UploadedKnowledgeFile,
 } from './knowledge.types.js';
 
 export interface KnowledgeService {
+  initializeSearchInfrastructure(): Promise<void>;
   listKnowledge(context: KnowledgeCommandContext): Promise<KnowledgeListResponse>;
   getKnowledgeDetail(
     context: KnowledgeCommandContext,
@@ -47,6 +51,10 @@ export interface KnowledgeService {
     knowledgeId: string,
     file: UploadedKnowledgeFile,
   ): Promise<KnowledgeDocumentUploadResponse>;
+  searchDocuments(
+    context: KnowledgeCommandContext,
+    input: SearchKnowledgeDocumentsInput,
+  ): Promise<KnowledgeSearchResponse>;
 }
 
 const createValidationError = (
@@ -98,6 +106,23 @@ const createUploadSourceTypeError = (): AppError => {
 const readOptionalStringField = (
   value: unknown,
   field: 'name' | 'description',
+): string | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== 'string') {
+    throw createValidationError(`${field} 必须为字符串`, {
+      [field]: `${field} 必须为字符串`,
+    });
+  }
+
+  return value.trim();
+};
+
+const readOptionalTrimmedString = (
+  value: unknown,
+  field: string,
 ): string | undefined => {
   if (value === undefined) {
     return undefined;
@@ -178,6 +203,47 @@ const validateUpdateKnowledgeInput = (
   return {
     ...(name !== undefined ? { name } : {}),
     ...(description !== undefined ? { description: description ?? '' } : {}),
+  };
+};
+
+const validateSearchDocumentsInput = (
+  input: SearchKnowledgeDocumentsInput,
+): {
+  query: string;
+  knowledgeId?: string;
+  sourceType: KnowledgeSourceType;
+  topK: number;
+} => {
+  const query = typeof input.query === 'string' ? input.query.trim() : '';
+  const knowledgeId = readOptionalTrimmedString(input.knowledgeId, 'knowledgeId');
+  const sourceType = readOptionalSourceType(input.sourceType) ?? 'global_docs';
+  const rawTopK = input.topK;
+
+  if (!query) {
+    throw createValidationError('query 为必填项', {
+      query: 'query 为必填项',
+    });
+  }
+
+  let topK = 5;
+
+  if (typeof rawTopK === 'number' && Number.isFinite(rawTopK)) {
+    topK = Math.trunc(rawTopK);
+  } else if (typeof rawTopK === 'string' && rawTopK.trim()) {
+    topK = Number.parseInt(rawTopK.trim(), 10);
+  }
+
+  if (!Number.isInteger(topK) || topK <= 0 || topK > 10) {
+    throw createValidationError('topK 必须是 1 到 10 之间的整数', {
+      topK: 'topK 必须是 1 到 10 之间的整数',
+    });
+  }
+
+  return {
+    query,
+    knowledgeId: knowledgeId || undefined,
+    sourceType,
+    topK,
   };
 };
 
@@ -333,6 +399,7 @@ const persistProcessingFailure = async ({
 const processUploadedDocument = async ({
   env,
   repository,
+  searchService,
   knowledgeId,
   documentId,
   storagePath,
@@ -343,6 +410,7 @@ const processUploadedDocument = async ({
 }: {
   env: AppEnv;
   repository: KnowledgeRepository;
+  searchService: KnowledgeSearchService;
   knowledgeId: string;
   documentId: string;
   storagePath: string;
@@ -365,6 +433,7 @@ const processUploadedDocument = async ({
     }
 
     await repository.syncKnowledgeSummaryFromDocuments(knowledgeId, processingAt);
+    await searchService.ensureCollections();
 
     const result = await callKnowledgeIndexer(env, {
       knowledgeId,
@@ -409,11 +478,17 @@ const processUploadedDocument = async ({
 export const createKnowledgeService = ({
   env,
   repository,
+  searchService,
 }: {
   env: AppEnv;
   repository: KnowledgeRepository;
+  searchService: KnowledgeSearchService;
 }): KnowledgeService => {
   return {
+    initializeSearchInfrastructure: async () => {
+      await searchService.ensureCollections();
+    },
+
     // Keep future metadata, upload, index trigger, and search orchestration behind the service.
     listKnowledge: async (_context) => {
       await repository.ensureMetadataModel();
@@ -483,6 +558,15 @@ export const createKnowledgeService = ({
 
       if (!knowledge) {
         throw createKnowledgeNotFoundError();
+      }
+
+      try {
+        await searchService.deleteKnowledgeChunks(knowledgeId, knowledge.sourceType);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.warn(
+          `[knowledge-search] failed to cleanup knowledge ${knowledgeId} chunks before delete: ${message}`,
+        );
       }
 
       await repository.deleteKnowledgeDocumentsByKnowledgeId(knowledgeId);
@@ -567,6 +651,7 @@ export const createKnowledgeService = ({
           void processUploadedDocument({
             env,
             repository,
+            searchService,
             knowledgeId,
             documentId: documentId.toHexString(),
             storagePath: absoluteStoragePath,
@@ -598,6 +683,10 @@ export const createKnowledgeService = ({
         });
         throw error;
       }
+    },
+
+    searchDocuments: async (_context, input) => {
+      return searchService.searchDocuments(validateSearchDocumentsInput(input));
     },
   };
 };

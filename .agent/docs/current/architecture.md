@@ -24,7 +24,7 @@
   - 本地：`platform + api + indexer-py + mongodb + chroma`
   - 线上：`caddy + platform + api + indexer-py + mongodb + chroma`
 - 当前已经交付 `compose.yml`、`compose.local.yml`、`compose.production.yml` 作为 Docker Compose 基线。
-- 当前仓库已在 `apps/indexer-py` 落地最小可运行 Python 索引服务，负责 `md / txt` 的解析、清洗与分块；Chroma 写入、重建与统一检索仍未接入。
+- 当前仓库已在 `apps/indexer-py` 落地可运行 Python 索引服务，负责 `md / txt` 的解析、清洗、分块、OpenAI-compatible embedding 与 `global_docs` Chroma 写入；`global_code` 仍只保留命名空间预留。
 - Docker 网络边界当前采用：公共基线里的 `app / data` 为 `internal`，其中 `indexer-py` 仅接入内部 `app` 网络；`compose.local.yml` 额外挂载本地专用 `publish` 网络给 `api / mongo / chroma`，用于宿主机端口发布；生产编排不复用该网络。
 - Docker 基线已把 API 与 `indexer-py` 绑定到共享 `knowledge_storage` 卷，并把容器内知识存储根目录固定为 `/var/lib/knowject/knowledge`。
 - `.env.docker.local` 当前允许覆盖宿主机发布端口：`WEB_PORT`、`API_PUBLISHED_PORT`、`MONGO_PUBLISHED_PORT`、`CHROMA_PUBLISHED_PORT`；其中 API 容器内部监听端口固定为 `3001`。
@@ -170,9 +170,9 @@ scripts/
 
 - `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`；Docker 编排会额外注入 `KNOWLEDGE_STORAGE_ROOT=/var/lib/knowject/knowledge` 与 `KNOWLEDGE_INDEXER_URL=http://indexer-py:8001`。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
-- `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘，以及 Node 后台触发 Python indexer 的最小状态推进闭环。
+- `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘、Node 后台触发 Python indexer、`global_docs` Chroma 写入，以及统一知识检索 service。
 - `GET /api/health` 会联动返回数据库状态与可选的 Chroma 心跳状态，因此服务可在依赖不可达时以 `degraded` 状态启动并提供诊断。
-- 当前 Chroma 只进入了 Docker 基础设施与健康诊断链路，还没有正式文档索引写入或统一知识检索 service；Python indexer 当前只做到解析、清洗、分块与状态回写，不负责 Chroma 写入。
+- 当前 Chroma 已进入正式知识索引链路：`global_docs` 支持 collection 初始化、向量写入、按知识库过滤查询和知识库删除联动清理；`global_code` 当前只有 collection 预留，没有真实数据导入。
 - 根 `scripts/knowject.sh` 已收口三类常用命令包装：`dev:*`（宿主机开发 + Docker 依赖）、`host:*`（兼容宿主机命令）和 `docker:*`（本地 / 线上部署与验收）。
 
 ### 5.4 项目状态与 Mock 资产
@@ -225,6 +225,7 @@ scripts/
 - `PATCH /api/projects/:projectId/members/:userId`
 - `DELETE /api/projects/:projectId/members/:userId`
 - `GET /api/knowledge`
+- `POST /api/knowledge/search`
 - `GET /api/knowledge/:knowledgeId`
 - `POST /api/knowledge`
 - `PATCH /api/knowledge/:knowledgeId`
@@ -244,7 +245,7 @@ scripts/
 - `members`：聚合当前用户可见项目中的成员基础信息、项目参与关系和最小权限摘要。
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
-- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口，以及文档上传入口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`。
+- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。
 - `skills`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接内置 Skill 注册表与只读查询。
 - `agents`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接全局 Agent 配置模型与绑定关系。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
@@ -271,12 +272,12 @@ scripts/
   - `modules/members` 当前已承载全局成员聚合只读接口。
   - `modules/projects` 当前已承载项目模型、MongoDB 仓储、权限校验与 CRUD 接口。
   - `modules/memberships` 当前已承载项目成员增删改接口与最小角色规则。
-  - `modules/knowledge` 已落地 GA-05 元数据模型、集合索引、CRUD、文档上传入口，以及 Node -> Python 的解析 / 分块 / 状态推进闭环；Chroma 与统一知识检索逻辑仍未接入。
+  - `modules/knowledge` 已落地 GA-06 元数据模型、集合索引、CRUD、文档上传入口、Node -> Python 的解析 / 分块 / embedding / Chroma 写入闭环，以及 Node 侧统一知识检索逻辑。
   - `modules/skills`、`modules/agents` 当前仍停留在 GA-02 最小骨架与鉴权占位响应阶段。
-  - 当前尚未落地统一知识检索 service。
+  - 当前统一知识检索 service 已落地在 `knowledge` 模块，供后续 Skill / 对话链路复用。
 - `apps/indexer-py`
-  - 当前已落地最小 Python HTTP 服务与 `md / txt` 解析、清洗、`1000 字符 / 200 重叠` 分块逻辑。
-  - 当前明确不做 OpenAI embedding、Chroma 写入、`global_code` 导入、重建与统一检索。
+  - 当前已落地 Python HTTP 服务、`md / txt` 解析、清洗、`1000 字符 / 200 重叠` 分块、OpenAI-compatible embedding 与 `global_docs` Chroma 写入 / 删除逻辑。
+  - 当前明确不做 `global_code` 真实导入、对外可见重建 / retry API 和统一检索读侧。
 - `packages/request`
   - 请求客户端、错误封装、去重、下载能力。
 - `packages/ui`
@@ -286,12 +287,13 @@ scripts/
 
 以下能力在认知总结或目标蓝图中出现过，但当前仓库未落地，不应视为现状：
 
-- 基于 Chroma 的正式向量写入、检索与知识服务业务链路。
-- Python indexer 的 OpenAI embedding、Chroma 写入、重建与统一知识检索链路；当前只实现了最小可运行 HTTP 服务、`md / txt` 解析 / 分块和 Node 状态回写。
+- 项目私有知识库、`proj_{projectId}_*` collection 真实写入与合并检索。
+- `global_code` 的真实 Git 导入、切分和索引写入。
+- 重建 / retry document / rebuild knowledge 的正式接口与调度链路。
 - SSE 流式对话链路与来源引用渲染。
 - RBAC、成员邀请权限流、refresh token。
 - 文档上传、Git 仓库接入、Figma 接入、代码解析与向量化。
-- Knowledge 的 Chroma 写入与检索流程，以及 Skill / Agent 的创建、绑定、执行与调度能力；当前 Knowledge 已完成后端 CRUD、上传入口和 Python 解析 / 状态推进，Skill / Agent 仍只有 GA-02 骨架接口。
+- Skill / Agent 的创建、绑定、执行与调度能力；当前 Knowledge 已完成后端 CRUD、上传入口、Chroma 写入与统一检索，Skill / Agent 仍只有 GA-02 骨架接口。
 - 项目私有知识库持久化、全局资产复用的正式后端流程。
 - Zustand、React Query 等额外状态管理层。
 

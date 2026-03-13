@@ -1,6 +1,6 @@
 # Knowject 的 Chroma 决策说明书（项目版）
 
-状态：部分实施（截至 2026-03-13，Chroma 已作为 Docker 基础设施与健康诊断目标接入，但正式知识索引链路仍未落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责固定 Knowject 使用 Chroma 的角色定位、阶段边界与推荐实现约束。
+状态：部分实施（截至 2026-03-13，`global_docs` 已打通 Node -> Python -> OpenAI-compatible embedding -> Chroma 写入与 Node 统一检索闭环；`global_code` 仍只做 collection 预留，重建 / retry / 项目级检索仍未落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责固定 Knowject 使用 Chroma 的角色定位、阶段边界与推荐实现约束。
 
 ## 1. 文档目标
 
@@ -24,13 +24,16 @@
 - 当前容器化部署拓扑已包含：`platform + api + mongodb + chroma`。
 - 当前 `apps/api` 已具备正式的 `auth / members / projects / memberships` 基础框架，但 `memory` 仍是演示接口。
 - 当前全局 `知识库 / 技能 / 智能体` 页面仍主要是管理壳层，尚未形成正式资产数据链路。
-- 当前仓库已经接入但仍停留在基础设施层：
+- 当前仓库已经正式接入：
   - Chroma 容器、持久化卷与 API 健康诊断
+  - `apps/indexer-py` Python 索引服务
+  - OpenAI-compatible embedding 配置
+  - 文档上传后的 `global_docs` 真实索引链路
+  - Node 侧统一知识检索 service
 - 当前仓库尚未正式接入：
-  - Python 独立索引服务 / worker / CLI（例如 `apps/indexer-py`）
-  - embedding provider
-  - 文档上传后的真实索引链路
-  - 统一知识检索 service
+  - `global_code` 真实导入链路
+  - 项目私有知识库写入与检索
+  - 文档 / 知识库级重建与 retry API
 - 当前阶段（Week 3-4）的核心任务是“全局资产正式化”，不是一次做完整 AI 对话系统。
 
 ## 3. 核心决策摘要

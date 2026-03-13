@@ -15,6 +15,7 @@ import { createAuthRouter } from '@modules/auth/auth.router.js';
 import { createAuthService } from '@modules/auth/auth.service.js';
 import { createKnowledgeRepository } from '@modules/knowledge/knowledge.repository.js';
 import { createKnowledgeRouter } from '@modules/knowledge/knowledge.router.js';
+import { createKnowledgeSearchService } from '@modules/knowledge/knowledge.search.js';
 import { createKnowledgeService } from '@modules/knowledge/knowledge.service.js';
 import { createMembersRouter } from '@modules/members/members.router.js';
 import { createMembersService } from '@modules/members/members.service.js';
@@ -44,9 +45,11 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
     authRepository,
   });
   const knowledgeRepository = createKnowledgeRepository({ mongo });
+  const knowledgeSearchService = createKnowledgeSearchService({ env });
   const knowledgeService = createKnowledgeService({
     env,
     repository: knowledgeRepository,
+    searchService: knowledgeSearchService,
   });
   const skillsRepository = createSkillsRepository({ mongo });
   const skillsService = createSkillsService({
@@ -101,6 +104,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/projects',
         '/api/projects/:projectId/members',
         '/api/knowledge',
+        '/api/knowledge/search',
         '/api/knowledge/:knowledgeId',
         '/api/knowledge/:knowledgeId/documents',
         '/api/skills',
@@ -113,6 +117,11 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(env));
+
+  void knowledgeService.initializeSearchInfrastructure().catch((error) => {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.warn(`[bootstrap] failed to initialize knowledge search infrastructure: ${message}`);
+  });
 
   return app;
 };
