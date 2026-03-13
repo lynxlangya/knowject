@@ -60,7 +60,7 @@
 - `POST /api/knowledge/:knowledgeId/documents`
   - 需要 `Authorization: Bearer <token>`。
   - 使用 `multipart/form-data` 上传单个文件，字段名固定为 `file`。
-  - 当前只支持 `md / txt / pdf`，文件大小不能超过 `10 MB`。
+  - 当前只支持 `md / txt / pdf`，单文件上限为 `50 MB`。
   - 上传成功后会先创建文档记录并返回 `pending`，随后由 Node 在后台切到 `processing` 并触发 Python indexer。
   - `md / txt` 当前会继续推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 先明确回写 `failed` 与 `errorMessage`，不假装支持。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。

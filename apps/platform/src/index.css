@@ -1,10 +1,6 @@
 @import 'tailwindcss';
 
 @layer base {
-  html {
-    scrollbar-gutter: stable;
-  }
-
   html,
   body,
   #root {

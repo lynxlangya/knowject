@@ -41,6 +41,11 @@ import {
   type KnowledgeSummaryResponse,
   type UpdateKnowledgeRequest,
 } from '@api/knowledge';
+import { KnowledgeSourcePickerModal } from './components/KnowledgeSourcePickerModal';
+import {
+  KnowledgeTextInputModal,
+  type KnowledgeTextInputValues,
+} from './components/KnowledgeTextInputModal';
 
 interface KnowledgeFormValues {
   name: string;
@@ -52,6 +57,8 @@ interface KnowledgeSourceMeta {
   label: string;
   color: string;
 }
+
+type UploadFlowStep = 'picker' | 'text';
 
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   dateStyle: 'medium',
@@ -108,6 +115,11 @@ const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {
   global_code: 'border-violet-200 bg-violet-50 text-violet-700',
 };
 
+const DOCUMENT_UPLOAD_ACCEPT =
+  '.md,.markdown,.txt,.pdf,text/markdown,text/plain,application/pdf';
+const DOCUMENT_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
+const DOCUMENT_UPLOAD_SOFT_WARNING_BYTES = 20 * 1024 * 1024;
+const SUPPORTED_DOCUMENT_EXTENSIONS = ['.md', '.markdown', '.txt', '.pdf'] as const;
 const MAX_POLLING_ATTEMPTS = 20;
 const POLLING_INTERVAL_MS = 1500;
 
@@ -139,6 +151,74 @@ const getKnowledgeInitials = (name: string): string => {
   }
 
   return trimmed[0] ?? '知';
+};
+
+const getFileExtension = (fileName: string): string => {
+  const extensionIndex = fileName.lastIndexOf('.');
+
+  if (extensionIndex < 0) {
+    return '';
+  }
+
+  return fileName.slice(extensionIndex).toLowerCase();
+};
+
+const validateKnowledgeSourceFile = (file: File): string | null => {
+  const extension = getFileExtension(file.name);
+
+  if (!SUPPORTED_DOCUMENT_EXTENSIONS.includes(extension as (typeof SUPPORTED_DOCUMENT_EXTENSIONS)[number])) {
+    return '仅支持 md、markdown、txt、pdf 文件';
+  }
+
+  if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {
+    return '文件大小不能超过 50 MB';
+  }
+
+  return null;
+};
+
+const shouldWarnLargeKnowledgeSourceFile = (file: File): boolean => {
+  return file.size > DOCUMENT_UPLOAD_SOFT_WARNING_BYTES;
+};
+
+const sanitizeTextSourceTitle = (value: string): string => {
+  return value.replace(/[\\/:*?"<>|]+/g, '-').trim();
+};
+
+const buildFallbackTextSourceFileName = (): string => {
+  const now = new Date();
+  const parts = [
+    now.getFullYear(),
+    `${now.getMonth() + 1}`.padStart(2, '0'),
+    `${now.getDate()}`.padStart(2, '0'),
+    '-',
+    `${now.getHours()}`.padStart(2, '0'),
+    `${now.getMinutes()}`.padStart(2, '0'),
+    `${now.getSeconds()}`.padStart(2, '0'),
+  ];
+
+  return `文本来源-${parts.join('')}.txt`;
+};
+
+const createTextSourceFile = ({
+  title,
+  content,
+}: KnowledgeTextInputValues): File => {
+  const normalizedTitle = sanitizeTextSourceTitle(title?.trim() ?? '').replace(
+    /\.txt$/i,
+    '',
+  );
+  const trimmedContent = content.trim();
+  const fileName = normalizedTitle
+    ? `${normalizedTitle}.txt`
+    : buildFallbackTextSourceFileName();
+  const fileContent = normalizedTitle
+    ? `${normalizedTitle}\n\n${trimmedContent}`
+    : trimmedContent;
+
+  return new File([fileContent], fileName, {
+    type: 'text/plain;charset=utf-8',
+  });
 };
 
 const pickNextActiveKnowledgeId = (
@@ -333,6 +413,7 @@ export const KnowledgeManagementPage = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadFlowStep, setUploadFlowStep] = useState<UploadFlowStep | null>(null);
   const [deletingKnowledgeId, setDeletingKnowledgeId] = useState<string | null>(null);
 
   const stats = buildKnowledgeStats(items);
@@ -537,6 +618,10 @@ export const KnowledgeManagementPage = () => {
     form.resetFields();
   };
 
+  const closeUploadFlow = () => {
+    setUploadFlowStep(null);
+  };
+
   const handleSubmitKnowledge = async (values: KnowledgeFormValues) => {
     setModalSubmitting(true);
 
@@ -612,7 +697,7 @@ export const KnowledgeManagementPage = () => {
     }
   };
 
-  const handleUploadClick = () => {
+  const openUploadFlow = () => {
     if (!activeKnowledge) {
       message.info('请先选择一个知识库');
       return;
@@ -623,15 +708,29 @@ export const KnowledgeManagementPage = () => {
       return;
     }
 
-    fileInputRef.current?.click();
+    setUploadFlowStep('picker');
   };
 
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file || !activeKnowledgeId) {
+  const uploadKnowledgeSource = async (file: File) => {
+    if (!activeKnowledgeId || !activeKnowledge) {
+      message.info('请先选择一个知识库');
       return;
+    }
+
+    if (activeKnowledge.sourceType !== 'global_docs') {
+      message.info('global_code 目前只冻结命名空间，暂不支持真实导入');
+      return;
+    }
+
+    const validationError = validateKnowledgeSourceFile(file);
+
+    if (validationError) {
+      message.error(validationError);
+      return;
+    }
+
+    if (shouldWarnLargeKnowledgeSourceFile(file)) {
+      message.warning('文件超过 20 MB，建议按主题拆分上传，索引更快也更稳');
     }
 
     setUploading(true);
@@ -653,6 +752,48 @@ export const KnowledgeManagementPage = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  const triggerDocumentUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleSelectedFiles = async (files: File[]) => {
+    if (files.length === 0) {
+      return;
+    }
+
+    closeUploadFlow();
+
+    if (files.length > 1) {
+      message.info('当前一次仅支持上传 1 个文件');
+    }
+
+    await uploadKnowledgeSource(files[0]);
+  };
+
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+
+    if (files.length === 0) {
+      return;
+    }
+
+    await handleSelectedFiles(files);
+  };
+
+  const handleOpenTextInput = () => {
+    setUploadFlowStep('text');
+  };
+
+  const handleBackToSourcePicker = () => {
+    setUploadFlowStep('picker');
+  };
+
+  const handleSubmitTextSource = async (values: KnowledgeTextInputValues) => {
+    closeUploadFlow();
+    await uploadKnowledgeSource(createTextSourceFile(values));
   };
 
   if (loading) {
@@ -678,7 +819,7 @@ export const KnowledgeManagementPage = () => {
   }
 
   return (
-    <section className="flex min-h-full flex-col gap-4">
+    <section className="flex min-h-full flex-col gap-4 pr-4 md:pr-5">
       <Card
         className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
         styles={{ body: { padding: '22px 22px 20px' } }}
@@ -869,7 +1010,7 @@ export const KnowledgeManagementPage = () => {
                     icon={<CloudUploadOutlined />}
                     loading={uploading}
                     disabled={activeKnowledge.sourceType !== 'global_docs'}
-                    onClick={handleUploadClick}
+                    onClick={openUploadFlow}
                   >
                     上传文档
                   </Button>
@@ -945,7 +1086,7 @@ export const KnowledgeManagementPage = () => {
                     showIcon
                     title={
                       activeKnowledge.sourceType === 'global_docs'
-                        ? '当前最稳妥上传格式是 md / txt，pdf 仍会走失败态用于验证状态机。'
+                        ? '当前最稳妥上传格式是 md / txt；单文件上限 50 MB，20 MB 以上建议按主题拆分上传；pdf 仍会走失败态用于验证状态机。'
                         : 'global_code 当前只保留集合与契约，不做真实导入、分块或上传入口。'
                     }
                   />
@@ -990,7 +1131,7 @@ export const KnowledgeManagementPage = () => {
                           type="primary"
                           icon={<CloudUploadOutlined />}
                           loading={uploading}
-                          onClick={handleUploadClick}
+                          onClick={openUploadFlow}
                         >
                           上传第一份文档
                         </Button>
@@ -1020,9 +1161,29 @@ export const KnowledgeManagementPage = () => {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".md,.markdown,.txt,.pdf,text/markdown,text/plain,application/pdf"
+        accept={DOCUMENT_UPLOAD_ACCEPT}
         className="hidden"
         onChange={(event) => void handleFileChange(event)}
+      />
+
+      <KnowledgeSourcePickerModal
+        open={uploadFlowStep === 'picker'}
+        onCancel={closeUploadFlow}
+        onUploadClick={triggerDocumentUpload}
+        onTextInputClick={handleOpenTextInput}
+        onDropFiles={(files) => {
+          void handleSelectedFiles(files);
+        }}
+      />
+
+      <KnowledgeTextInputModal
+        open={uploadFlowStep === 'text'}
+        submitting={uploading}
+        onBack={handleBackToSourcePicker}
+        onCancel={closeUploadFlow}
+        onSubmit={(values) => {
+          void handleSubmitTextSource(values);
+        }}
       />
 
       <Modal

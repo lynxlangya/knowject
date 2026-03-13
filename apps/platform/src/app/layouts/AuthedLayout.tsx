@@ -12,6 +12,8 @@ const { Content } = Layout;
 export const AuthedLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const shouldPinContentScrollbar =
+    location.pathname === PATHS.members || location.pathname === PATHS.knowledge;
 
   const handleLogout = () => {
     clearAuthSession();
@@ -35,7 +37,13 @@ export const AuthedLayout = () => {
               'linear-gradient(180deg, rgba(249,251,254,0.98) 0%, rgba(245,247,251,0.98) 56%, rgba(238,243,250,0.9) 100%)',
           }}
         >
-          <Content className="flex-1 overflow-y-auto p-4 md:p-5">
+          <Content
+            className={`flex-1 overflow-y-auto ${
+              shouldPinContentScrollbar
+                ? 'pb-4 pl-4 pr-0 pt-4 md:pb-5 md:pl-5 md:pr-0 md:pt-5'
+                : 'p-4 md:p-5'
+            }`}
+          >
             <Outlet />
           </Content>
         </Layout>

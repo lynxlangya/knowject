@@ -175,7 +175,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
         </div>
       </div>
 
-      <SubtleScrollArea className="min-h-0 flex-1 pr-1">
+      <SubtleScrollArea className="min-h-0 flex-1 -mr-5 pr-5">
         <div className="flex flex-col gap-5">
           <Tabs
             items={[

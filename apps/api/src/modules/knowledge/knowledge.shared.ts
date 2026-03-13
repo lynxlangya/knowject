@@ -11,7 +11,7 @@ import type {
 export const KNOWLEDGE_COLLECTION_NAME = 'knowledge_bases';
 export const KNOWLEDGE_DOCUMENT_COLLECTION_NAME = 'knowledge_documents';
 export const KNOWLEDGE_UPLOAD_FIELD_NAME = 'file';
-export const KNOWLEDGE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+export const KNOWLEDGE_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 
 export const SUPPORTED_KNOWLEDGE_UPLOAD_TYPES = [
   {

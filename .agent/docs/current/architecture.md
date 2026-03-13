@@ -168,7 +168,7 @@ scripts/
 
 ### 5.3 API 环境与数据库基线
 
-- `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`；Docker 编排会额外注入 `KNOWLEDGE_STORAGE_ROOT=/var/lib/knowject/knowledge` 与 `KNOWLEDGE_INDEXER_URL=http://indexer-py:8001`。
+- `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`；Docker 编排会额外注入 `KNOWLEDGE_STORAGE_ROOT=/var/lib/knowject/knowledge` 与 `KNOWLEDGE_INDEXER_URL=http://indexer-py:8001`，知识库上传单文件上限当前固定为 `50 MB`。
 - 宿主机默认开发流已把 `apps/indexer-py` 纳入 workspace `pnpm dev`，因此本地 `platform + api + indexer-py` 会一并启动；若单独跑 `api`，仍需额外启动 Python indexer 才能验证知识上传闭环。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
 - `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘、Node 后台触发 Python indexer、`global_docs` Chroma 写入，以及统一知识检索 service。
@@ -249,7 +249,7 @@ scripts/
 - `members`：聚合当前用户可见项目中的成员基础信息、项目参与关系和最小权限摘要。
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
-- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。
+- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。上传单文件上限默认 `50 MB`，但当前链路仍更适合 `md / txt` 与按主题拆分后的文档。
 - `skills`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接内置 Skill 注册表与只读查询。
 - `agents`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接全局 Agent 配置模型与绑定关系。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。

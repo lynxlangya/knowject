@@ -30,17 +30,21 @@ const getRequiredKnowledgeId = (request: Request): string => {
   return Array.isArray(knowledgeId) ? knowledgeId[0] ?? '' : knowledgeId;
 };
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: KNOWLEDGE_UPLOAD_MAX_BYTES,
-  },
-});
+const formatUploadLimitLabel = (): string => {
+  return `${Math.round(KNOWLEDGE_UPLOAD_MAX_BYTES / 1024 / 1024)} MB`;
+};
 
 const readUploadedFile = async (
   request: Request,
   response: Response,
 ): Promise<UploadedKnowledgeFile> => {
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: KNOWLEDGE_UPLOAD_MAX_BYTES,
+    },
+  });
+
   await new Promise<void>((resolve, reject) => {
     upload.single(KNOWLEDGE_UPLOAD_FIELD_NAME)(request, response, (error) => {
       if (!error) {
@@ -54,7 +58,7 @@ const readUploadedFile = async (
             new AppError({
               statusCode: 400,
               code: 'KNOWLEDGE_UPLOAD_TOO_LARGE',
-              message: '上传文件不能超过 10 MB',
+              message: `上传文件不能超过 ${formatUploadLimitLabel()}`,
             }),
           );
           return;

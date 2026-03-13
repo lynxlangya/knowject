@@ -221,7 +221,7 @@ export const MembersPage = () => {
   }
 
   return (
-    <section ref={sectionRef} className="flex min-h-full flex-col gap-4">
+    <section ref={sectionRef} className="flex min-h-full flex-col gap-4 pr-4 md:pr-5">
       <Card
         className="shrink-0 rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
         styles={{ body: { padding: '22px 22px 20px' } }}
