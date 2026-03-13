@@ -14,6 +14,10 @@ node_modules
 .env.docker.local
 .env.docker.production
 docker/secrets/
+.knowject-storage
+__pycache__/
+*.pyc
+*.pyo
 
 # Testing
 coverage

@@ -12,8 +12,8 @@ export type KnowledgeDocumentStatus =
   | 'processing'
   | 'completed'
   | 'failed';
-export type KnowledgeEmbeddingProvider = 'openai';
-export type KnowledgeEmbeddingModel = 'text-embedding-3-small';
+export type KnowledgeEmbeddingProvider = 'openai' | 'local_dev';
+export type KnowledgeEmbeddingModel = 'text-embedding-3-small' | 'hash-1536-dev';
 
 export interface KnowledgeSummaryResponse {
   id: string;

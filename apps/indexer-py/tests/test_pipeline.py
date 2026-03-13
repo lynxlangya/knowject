@@ -81,6 +81,22 @@ class EmbeddingsTest(unittest.TestCase):
         self.assertEqual([len(batch) for batch in captured_batches], [64, 64, 2])
         self.assertEqual(len(embeddings), len(texts))
 
+    def test_create_embeddings_uses_local_fallback_in_development_without_openai_key(self):
+        with patch.object(
+            pipeline,
+            "read_optional_string",
+            side_effect=lambda name: "development" if name == "NODE_ENV" else None,
+        ):
+            embeddings = pipeline.create_embeddings(["知项 Knowject 项目认知总结"])
+
+        self.assertEqual(len(embeddings), 1)
+        self.assertEqual(len(embeddings[0]), pipeline.DEFAULT_LOCAL_EMBEDDING_DIMENSION)
+        self.assertAlmostEqual(
+            sum(value * value for value in embeddings[0]),
+            1.0,
+            places=6,
+        )
+
 
 class ProcessDocumentTest(unittest.TestCase):
     def test_process_document_checks_collection_before_embedding(self):

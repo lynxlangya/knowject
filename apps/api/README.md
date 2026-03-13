@@ -65,7 +65,8 @@
   - `md / txt` 当前会继续推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 先明确回写 `failed` 与 `errorMessage`，不假装支持。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
   - `md / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings 并写入 Chroma `global_docs` collection。
-  - 完整 Docker 编排会通过内部 `indexer-py` 服务和共享知识存储卷推进这条链路；宿主机开发若要验证上传状态流，需要单独运行 `python3 apps/indexer-py/server.py`。
+  - 完整 Docker 编排会通过内部 `indexer-py` 服务和共享知识存储卷推进这条链路；默认 `pnpm dev` 也会一并启动本地 `indexer-py`，若单独运行 `pnpm --filter api dev`，仍需额外启动 `pnpm --filter indexer-py dev`。
+  - 开发环境下若缺少 `OPENAI_API_KEY`，Node 会把文档记录标记为 `embeddingProvider=local_dev`、`embeddingModel=hash-1536-dev`，Python indexer 会使用 deterministic 本地 embedding 写入 Chroma，保证上传状态流可用；正式检索与生产环境仍应使用真实 OpenAI-compatible embedding 配置。
 - `POST /api/knowledge/search`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `query`、可选 `knowledgeId`、可选 `sourceType`、可选 `topK`。
@@ -101,8 +102,8 @@
 - `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除和统一知识检索 service；但还没有重建 / retry 接口和前端正式接线。
 - `skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD 和成员管理接口，但资产、资源与对话等正式后端接口仍未落地。
-- 当前宿主机开发最小服务拓扑为 `api + mongodb`。
-- 若要在宿主机开发里验证知识上传、Chroma 写入与统一检索，还需要额外运行本地 `indexer-py + chroma`。
+- 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
+- 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
 - 当前 Chroma 已进入正式知识索引链路：`global_docs` 支持写入、按知识库过滤查询和知识库删除联动清理；`global_code` 只完成 collection 初始化与命名空间预留。
 - Week 3-4 的推荐演进路径是：`apps/api` 继续负责业务主链路与对外 API，Python 独立索引运行时负责解析、分块、向量写入、重建与诊断，具体边界以 [`.agent/docs/contracts/chroma-decision.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/chroma-decision.md) 为准。
@@ -180,6 +181,7 @@
 
 ```bash
 pnpm --filter api dev
+pnpm --filter indexer-py dev
 pnpm --filter api check-types
 pnpm --filter api build
 ```

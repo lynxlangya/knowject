@@ -308,18 +308,47 @@ const normalizeIndexerErrorMessage = (
   return fallback;
 };
 
+const resolveEmbeddingMetadata = (
+  env: AppEnv,
+): {
+  embeddingProvider: 'openai' | 'local_dev';
+  embeddingModel: 'text-embedding-3-small' | 'hash-1536-dev';
+} => {
+  if (env.nodeEnv === 'development' && !env.openai.apiKey) {
+    return {
+      embeddingProvider: 'local_dev',
+      embeddingModel: 'hash-1536-dev',
+    };
+  }
+
+  return {
+    embeddingProvider: 'openai',
+    embeddingModel: 'text-embedding-3-small',
+  };
+};
+
 const callKnowledgeIndexer = async (
   env: AppEnv,
   payload: KnowledgeIndexerDocumentRequest,
 ): Promise<KnowledgeIndexerResponse> => {
-  const response = await fetch(buildKnowledgeIndexerUrl(env.knowledge.indexerUrl), {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
-  });
+  const indexerUrl = buildKnowledgeIndexerUrl(env.knowledge.indexerUrl);
+  let response: Response;
+
+  try {
+    response = await fetch(indexerUrl, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown fetch error';
+    throw new Error(
+      `Python indexer 不可达，请确认本地索引服务已启动（${indexerUrl}）。原始错误：${message}`,
+    );
+  }
 
   let responseBody: unknown = null;
 
@@ -594,6 +623,7 @@ export const createKnowledgeService = ({
 
       const documentId = new ObjectId();
       const documentVersionHash = buildDocumentVersionHash(file);
+      const embeddingMetadata = resolveEmbeddingMetadata(env);
       const storagePath = buildStoragePath(
         knowledgeId,
         documentId.toHexString(),
@@ -623,8 +653,8 @@ export const createKnowledgeService = ({
           status: 'pending',
           chunkCount: 0,
           documentVersionHash,
-          embeddingProvider: 'openai',
-          embeddingModel: 'text-embedding-3-small',
+          embeddingProvider: embeddingMetadata.embeddingProvider,
+          embeddingModel: embeddingMetadata.embeddingModel,
           lastIndexedAt: null,
           retryCount: 0,
           errorMessage: null,

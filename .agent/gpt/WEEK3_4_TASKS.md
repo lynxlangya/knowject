@@ -21,10 +21,10 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - `knowledge`
   - `skills`
   - `agents`
-- Python indexer 运行时边界已冻结
-- Node -> Python 触发方式已冻结
-- 状态回写方式已冻结
-- `global_docs` 可写 / 可删 / 可重建
+- Python indexer 运行时边界已冻结并已落地到 `apps/indexer-py`
+- Node -> Python 触发方式已冻结并已走本地 HTTP
+- 状态回写方式已冻结并已由 Node 独占
+- `global_docs` 已支持最小上传 / 状态推进 / Chroma 写入闭环
 - `global_code` 完成集合命名与 metadata 预留
 - UI 能看到知识库文档状态
 - `search_documents` 复用统一知识检索 service
@@ -145,6 +145,12 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 - `/agents` 已支持创建并绑定知识库 / Skill
 - `search_documents` 不直连 Chroma
 - 至少有一条 Node / Python / Chroma 闭环验证记录
+
+### 当前补充事实
+
+- `md / txt` 已具备可验证的上传 / 分块 / Chroma 写入闭环。
+- 开发环境下若缺少 `OPENAI_API_KEY`，允许用 deterministic 本地 embedding 保持上传链路可验证。
+- 中文文件名上传已在 Node 入口做 multipart 乱码纠偏，避免中文名在展示层被污染。
 
 ## 9. 给 ChatGPT 的判断规则
 

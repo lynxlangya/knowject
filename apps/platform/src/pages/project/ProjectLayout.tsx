@@ -22,7 +22,7 @@ export const ProjectLayout = () => {
         <Alert
           type="warning"
           showIcon
-          message="项目路由缺失"
+          title="项目路由缺失"
           description="未识别到 projectId，请返回主页重新选择项目。"
           action={
             <Button size="small" onClick={() => navigate(PATHS.home)}>
@@ -50,7 +50,7 @@ export const ProjectLayout = () => {
         <Alert
           type={error ? 'error' : 'warning'}
           showIcon
-          message={error ? '项目列表加载失败' : '项目不存在或已被删除'}
+          title={error ? '项目列表加载失败' : '项目不存在或已被删除'}
           description={
             error ? '当前无法从后端同步项目列表，请稍后重试。' : '请从左侧“我的项目”重新选择。'
           }

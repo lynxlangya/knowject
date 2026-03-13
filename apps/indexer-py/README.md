@@ -15,6 +15,7 @@
   - 负责文本清洗。
   - 负责按 `1000 字符 / 200 重叠 / 尽量保留段落边界` 进行分块。
   - 负责通过 OpenAI-compatible `/embeddings` 接口生成向量。
+  - 在 `development` 且缺少 `OPENAI_API_KEY` 时，退化为 deterministic 本地 embedding，保证上传 / 索引状态链路可验证。
   - 负责把 `global_docs` chunk upsert 到 Chroma，并在同一 `documentId` 重建前先删除旧向量，避免重复累积。
   - 对 `pdf` 明确返回失败信息，不假装支持。
 - `runtime_env.py`
@@ -50,6 +51,8 @@
 ```bash
 python3 apps/indexer-py/server.py
 ```
+
+在仓库根目录执行 `pnpm dev` 时，workspace 现在也会自动带起 `apps/indexer-py`，适合作为默认宿主机开发流；如果只想单独调试索引服务，可以继续直接运行上面的 Python 命令，或使用 `pnpm --filter indexer-py dev`。
 
 Docker Compose 完整编排下会自动构建并启动 `indexer-py` 服务，不需要额外手动起进程；该服务默认只暴露在容器内部网络，通过共享知识存储卷读取上传文件。
 

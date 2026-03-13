@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -20,6 +23,7 @@ DEFAULT_OPENAI_EMBEDDING_MODEL = (
 )
 DEFAULT_OPENAI_TIMEOUT_MS = read_optional_positive_integer("OPENAI_TIMEOUT_MS", 15000)
 DEFAULT_OPENAI_EMBEDDING_BATCH_SIZE = 64
+DEFAULT_LOCAL_EMBEDDING_DIMENSION = 1536
 DEFAULT_CHROMA_TIMEOUT_MS = read_optional_positive_integer("CHROMA_TIMEOUT_MS", 15000)
 DEFAULT_CHROMA_TENANT = read_optional_string("CHROMA_TENANT") or "default_tenant"
 DEFAULT_CHROMA_DATABASE = read_optional_string("CHROMA_DATABASE") or "default_database"
@@ -288,6 +292,8 @@ def create_embeddings(texts: list[str]) -> list[list[float]]:
 
     api_key = read_optional_string("OPENAI_API_KEY")
     if not api_key:
+        if (read_optional_string("NODE_ENV") or "development") == "development":
+            return [create_local_development_embedding(text) for text in texts]
         raise IndexerError("OPENAI_API_KEY 未配置，无法生成 embedding")
 
     embeddings: list[list[float]] = []
@@ -308,6 +314,37 @@ def create_embeddings(texts: list[str]) -> list[list[float]]:
         embeddings.extend(parse_embeddings_response(response, expected_count=len(batch)))
 
     return embeddings
+
+
+def create_local_development_embedding(text: str) -> list[float]:
+    normalized = unicodedata.normalize("NFKC", text).casefold()
+    units = [char for char in normalized if not char.isspace()]
+    vector = [0.0] * DEFAULT_LOCAL_EMBEDDING_DIMENSION
+
+    if not units:
+        vector[0] = 1.0
+        return vector
+
+    for size, weight in ((1, 1.0), (2, 1.5), (3, 2.0)):
+        if len(units) < size:
+            continue
+
+        for start in range(0, len(units) - size + 1):
+            feature = "".join(units[start : start + size]).encode("utf-8")
+            digest = hashlib.sha256(feature).digest()
+
+            for projection in range(4):
+                offset = projection * 2
+                index = int.from_bytes(digest[offset : offset + 2], "big") % DEFAULT_LOCAL_EMBEDDING_DIMENSION
+                sign = 1.0 if digest[8 + projection] % 2 == 0 else -1.0
+                vector[index] += weight * sign
+
+    norm = math.sqrt(sum(value * value for value in vector))
+    if norm <= 0:
+        vector[0] = 1.0
+        return vector
+
+    return [value / norm for value in vector]
 
 
 def iter_embedding_batches(texts: list[str], batch_size: int) -> list[list[str]]:

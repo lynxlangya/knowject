@@ -230,7 +230,7 @@ const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
           className="mt-3"
           type="error"
           showIcon
-          message="处理失败"
+          title="处理失败"
           description={document.errorMessage}
         />
       ) : null}
@@ -660,7 +660,7 @@ export const KnowledgeManagementPage = () => {
         </div>
       </Card>
 
-      {error ? <Alert type="error" showIcon message={error} /> : null}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
 
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
         <Card
@@ -691,7 +691,7 @@ export const KnowledgeManagementPage = () => {
               </Button>
             </Empty>
           ) : (
-            <div className="mt-5 space-y-3">
+            <div className="mt-6 flex flex-col gap-4">
               {items.map((knowledge) => {
                 const indexStatusMeta = INDEX_STATUS_META[knowledge.indexStatus];
                 const sourceTypeMeta = SOURCE_TYPE_META[knowledge.sourceType];
@@ -706,17 +706,14 @@ export const KnowledgeManagementPage = () => {
                       pollingAttemptsRef.current[knowledge.id] = 0;
                       setActiveKnowledgeId(knowledge.id);
                     }}
-                    className={`w-full rounded-[20px] border px-4 py-4 text-left transition ${
+                    className={`w-full rounded-[20px] border px-4 py-4 text-left transition-all ${
                       isActive
-                        ? 'border-slate-800 bg-slate-900 text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)]'
-                        : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50'
+                        ? 'border-slate-300 bg-linear-to-br from-slate-100 via-white to-sky-50/85 text-slate-800 shadow-[0_14px_34px_rgba(148,163,184,0.18)]'
+                        : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/80 hover:shadow-[0_10px_26px_rgba(148,163,184,0.12)]'
                     }`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <Typography.Text
-                        strong
-                        className={isActive ? 'text-white!' : 'text-slate-800!'}
-                      >
+                      <Typography.Text strong className="text-slate-800!">
                         {knowledge.name}
                       </Typography.Text>
                       <Tag color={indexStatusMeta.color}>{indexStatusMeta.label}</Tag>
@@ -725,7 +722,7 @@ export const KnowledgeManagementPage = () => {
 
                     <Typography.Paragraph
                       className={`mb-0! mt-3 text-sm! leading-6! ${
-                        isActive ? 'text-slate-200!' : 'text-slate-500!'
+                        isActive ? 'text-slate-600!' : 'text-slate-500!'
                       }`}
                     >
                       {knowledge.description || '当前未填写描述。'}
@@ -733,7 +730,7 @@ export const KnowledgeManagementPage = () => {
 
                     <div
                       className={`mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs ${
-                        isActive ? 'text-slate-300' : 'text-slate-400'
+                        isActive ? 'text-slate-500' : 'text-slate-400'
                       }`}
                     >
                       <span>文档：{knowledge.documentCount}</span>
@@ -762,7 +759,7 @@ export const KnowledgeManagementPage = () => {
             </div>
           ) : detailError ? (
             <div className="space-y-4">
-              <Alert type="error" showIcon message={detailError} />
+              <Alert type="error" showIcon title={detailError} />
               <Button onClick={reloadKnowledgeDetail}>重试加载详情</Button>
             </div>
           ) : activeKnowledge ? (
@@ -884,7 +881,7 @@ export const KnowledgeManagementPage = () => {
               <Alert
                 type={activeKnowledge.sourceType === 'global_docs' ? 'info' : 'warning'}
                 showIcon
-                message={
+                title={
                   activeKnowledge.sourceType === 'global_docs'
                     ? '当前最稳妥上传格式是 md / txt，pdf 仍会走失败态用于验证状态机。'
                     : 'global_code 当前只保留集合与契约，不做真实导入、分块或上传入口。'
@@ -895,7 +892,7 @@ export const KnowledgeManagementPage = () => {
                 <Alert
                   type={pollingStopped ? 'warning' : 'info'}
                   showIcon
-                  message={
+                  title={
                     pollingStopped
                       ? '自动刷新已达到本轮上限，请手动点击“刷新状态”继续观察。'
                       : '检测到待处理文档，页面会做最小轮询以更新索引状态。'

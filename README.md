@@ -76,9 +76,12 @@ scripts/      Reusable command entrypoints
 ```bash
 cp .env.example .env.local
 pnpm install
-python3 apps/indexer-py/server.py
 pnpm dev
 ```
+
+`pnpm dev` now starts `platform + api + indexer-py` together through the workspace, so the default host workflow no longer needs a separate manual indexer process for markdown uploads.
+
+In `development`, if `OPENAI_API_KEY` is missing but `CHROMA_URL` is available, markdown/txt uploads now fall back to deterministic local embeddings so the upload/index status flow can still run end-to-end. Formal retrieval quality and `/api/knowledge/search` still expect real OpenAI-compatible embedding config.
 
 To verify the GA-06 indexing/retrieval path locally, make sure `.env.local` also provides `CHROMA_URL` and OpenAI-compatible embedding settings.
 
@@ -94,7 +97,7 @@ pnpm dev:up
 ```bash
 pnpm dev:web
 pnpm dev:api
-python3 apps/indexer-py/server.py
+pnpm --filter indexer-py dev
 pnpm check-types
 pnpm build
 pnpm host:up

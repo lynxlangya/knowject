@@ -65,6 +65,7 @@ docker/
 - `pnpm docker:local:up` 会启动完整本地部署拓扑：`platform + api + indexer-py + mongo + chroma`
 - 这条命令更适合集成联调、部署验收和对外交付演示
 - 日常本地开发更推荐宿主机运行前后端，只把 `mongo / chroma` 放进 Docker
+- 当前 `pnpm dev` / `pnpm dev:up` 会在宿主机同时启动 `platform + api + indexer-py`，避免知识库上传在默认开发流里因为缺少 Python indexer 而直接失败
 - 完整编排会把 API 与 `indexer-py` 绑定到同一个知识存储卷，保证跨容器仍能读取上传文件
 - 推荐日常开发命令：
   - `pnpm dev:init`

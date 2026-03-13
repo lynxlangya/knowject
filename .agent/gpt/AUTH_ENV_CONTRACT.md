@@ -75,15 +75,22 @@
 - `API_ERROR_EXPOSE_DETAILS`
 - `API_ERROR_INCLUDE_STACK`
 
-## 7. 当前与 Chroma 相关的已生效变量
+## 7. 当前与知识索引相关的已生效变量
 
 - `CHROMA_URL`
 - `CHROMA_HEARTBEAT_PATH`
+- `KNOWLEDGE_INDEXER_URL`
+- `KNOWLEDGE_INDEXER_TIMEOUT_MS`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_EMBEDDING_MODEL`
+- `OPENAI_TIMEOUT_MS`
 
 说明：
 
-- 它们当前主要服务于基础设施健康诊断。
-- 未来知识索引闭环会新增 embedding provider、本地文件存储、Node/Python 触发等契约，但在代码未落地前，不应把那些变量误写成当前已生效事实。
+- `CHROMA_URL` 当前已经不仅用于健康诊断，也用于 `global_docs` 的正式写侧索引与统一检索。
+- `KNOWLEDGE_INDEXER_URL` 默认回落到 `http://127.0.0.1:8001`，本地 `pnpm dev` 会一起带起 `apps/indexer-py`。
+- 在 `development` 环境下，若缺少 `OPENAI_API_KEY`，上传链路会退化到 deterministic 本地 embedding，用于保持文档上传与状态流可验证；正式检索与生产环境仍以真实 OpenAI-compatible embedding 为准。
 
 ## 8. ChatGPT 使用提醒
 

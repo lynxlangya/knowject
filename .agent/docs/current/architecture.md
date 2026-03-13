@@ -169,8 +169,10 @@ scripts/
 ### 5.3 API 环境与数据库基线
 
 - `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`；Docker 编排会额外注入 `KNOWLEDGE_STORAGE_ROOT=/var/lib/knowject/knowledge` 与 `KNOWLEDGE_INDEXER_URL=http://indexer-py:8001`。
+- 宿主机默认开发流已把 `apps/indexer-py` 纳入 workspace `pnpm dev`，因此本地 `platform + api + indexer-py` 会一并启动；若单独跑 `api`，仍需额外启动 Python indexer 才能验证知识上传闭环。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
 - `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘、Node 后台触发 Python indexer、`global_docs` Chroma 写入，以及统一知识检索 service。
+- 开发环境下若缺少 `OPENAI_API_KEY`，知识库上传链路会退化到 deterministic 本地 embedding，并把文档元数据标记为 `local_dev / hash-1536-dev`；生产与正式检索仍以真实 OpenAI-compatible embedding 为基线。
 - `GET /api/health` 会联动返回数据库状态与可选的 Chroma 心跳状态，因此服务可在依赖不可达时以 `degraded` 状态启动并提供诊断。
 - 当前 Chroma 已进入正式知识索引链路：`global_docs` 支持 collection 初始化、向量写入、按知识库过滤查询和知识库删除联动清理；`global_code` 当前只有 collection 预留，没有真实数据导入。
 - 根 `scripts/knowject.sh` 已收口三类常用命令包装：`dev:*`（宿主机开发 + Docker 依赖）、`host:*`（兼容宿主机命令）和 `docker:*`（本地 / 线上部署与验收）。
@@ -197,6 +199,7 @@ scripts/
 - 项目资源的实际来源仍是“前端本地资源绑定中记录的全局资产 ID”映射而来。
 - 兼容跳转会临时落到 `/project/:projectId/resources?focus=*`；页面完成滚动定位后会回写 canonical URL `/project/:projectId/resources`。
 - `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx` 已接正式后端知识库接口，支持知识库 CRUD、文档上传、状态展示和上传后的最小轮询。
+- 知识库上传链路现在会在上传入口对 multipart 文件名做 UTF-8 纠偏，避免中文文件名因浏览器 / multer 参数编码差异出现乱码。
 - `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 当前仍只服务 `skills / agents` 两类壳层页面，其中“新建资产 / 引入到项目”仍为占位交互，不产生真实状态变更。
 - 当前不存在项目私有知识库的真实持久化或索引流程；“项目资源分层”目前是信息架构和前端数据组织上的分层。
 

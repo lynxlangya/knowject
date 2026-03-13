@@ -96,6 +96,11 @@ get_host_api_port() {
   read_env_value_from_file "$HOST_ENV_FILE" "PORT" "$(get_local_api_published_port)"
 }
 
+get_host_indexer_port() {
+  ensure_host_env
+  read_env_value_from_file "$HOST_ENV_FILE" "KNOWLEDGE_INDEXER_PORT" "8001"
+}
+
 upsert_env_key() {
   local file_path="$1"
   local key="$2"
@@ -357,9 +362,13 @@ case "$command_name" in
     ensure_local_dev_prerequisites
     sync_host_env_with_local_docker
     ensure_host_api_port_available
+    host_indexer_port="$(get_host_indexer_port)"
+    if port_is_listening "$host_indexer_port"; then
+      fail "端口 ${host_indexer_port} 已被占用，请先停止占用进程后再执行 pnpm dev:up。"
+    fi
     up_local_dependencies
     host_api_port="$(get_host_api_port)"
-    info "启动宿主机开发服务：前端 http://127.0.0.1:5173 ，后端 http://127.0.0.1:${host_api_port}"
+    info "启动宿主机开发服务：前端 http://127.0.0.1:5173 ，后端 http://127.0.0.1:${host_api_port} ，索引器 http://127.0.0.1:${host_indexer_port}"
     run pnpm dev
     ;;
   dev:deps:up)

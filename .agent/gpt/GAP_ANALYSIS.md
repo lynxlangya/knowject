@@ -8,11 +8,11 @@
 
 - 当前仓库已经完成信息架构、登录、项目主数据和成员主链路的第一轮收口。
 - 当前最大断层不在 UI，而在：
-  - 全局资产正式化
-  - 正式知识索引闭环
+  - `skills / agents` 正式化
+  - 项目级知识与对话主链路
   - 对话与 AI 主链路
-- Chroma 当前只停留在基础设施与健康诊断层。
-- 当前还没有 Python indexer，也没有统一知识检索 service。
+- Chroma 已进入 `global_docs` 正式索引链路，而不只是基础设施层。
+- 当前已经有 Python indexer 与统一知识检索 service，但仍停留在最小闭环阶段。
 
 ## 2. 六个核心 gap
 
@@ -33,8 +33,8 @@
 ### 4. AI / RAG / Skill / Agent
 
 - 当前只有 `memory/query` 演示接口
-- 没有正式知识索引链路
-- 没有正式 Skill / Agent 执行闭环
+- `global_docs` 已有正式知识索引最小闭环
+- 仍没有正式 Skill / Agent 执行闭环
 
 ### 5. 部署与运维
 
@@ -50,7 +50,7 @@
 
 1. 稳住当前信息架构
 2. 基于已落地的项目与成员模型，优先继续替换关键 Mock 主数据源
-3. 先补 `apps/api + Python indexer + Chroma` 的最小索引闭环
+3. 继续稳住 `apps/api + apps/indexer-py + Chroma` 的 `global_docs` 最小索引闭环
 4. 在 `global_docs` 稳定后，再扩到 `global_code`
 5. 再推进项目级知识库、对话链路、Skill 执行与 Agent 编排
 6. 最后补更完整的部署与运维能力
@@ -76,4 +76,4 @@
 
 ## 6. 一句话总结
 
-当前最划算的路径不是继续美化壳层，而是先把全局资产和最小知识索引闭环做成正式主链路。
+当前最划算的路径不是继续美化壳层，而是把已经打通的 `/knowledge` 最小闭环稳住，再推进 `skills / agents` 和项目级知识 / 对话主链路。

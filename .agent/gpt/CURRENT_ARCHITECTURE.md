@@ -17,20 +17,22 @@
 
 ## 2. 当前服务拓扑
 
-### 宿主机最小开发拓扑
+### 宿主机默认开发拓扑
 
-- `platform + api + mongodb`
+- `platform + api + indexer-py`
+- 推荐再配合 Docker 托管 `mongodb + chroma`
 
 ### 容器化部署拓扑
 
-- 本地：`platform + api + mongodb + chroma`
-- 线上：`caddy + platform + api + mongodb + chroma`
+- 本地：`platform + api + indexer-py + mongodb + chroma`
+- 线上：`caddy + platform + api + indexer-py + mongodb + chroma`
 
 ### 当前已知事实
 
-- Chroma 已进入 Docker 基础设施与健康诊断链路。
-- 仓库里还没有独立 Python 索引服务代码。
-- 当前还没有正式文档索引与统一知识检索 service。
+- Chroma 已进入正式知识索引链路，而不只是健康诊断层。
+- 仓库里已经有独立 Python 索引服务代码，目录为 `apps/indexer-py`。
+- `/knowledge` 已接正式后端接口，支持知识库 CRUD、文档上传、状态展示和最小轮询。
+- `global_docs` 已打通最小文档索引闭环；`global_code` 仍只保留命名空间与检索契约。
 
 ## 3. 当前目录结构重点
 
@@ -38,6 +40,9 @@
   - 鉴权、布局、导航、项目上下文、页面
 - `apps/api`
   - app/config/db/modules/routes/middleware/server
+- `apps/indexer-py`
+  - Python HTTP 索引服务
+  - `md / txt` parse / clean / chunk / embedding / Chroma upsert
 - `packages/request`
   - Axios 请求能力封装
 - `packages/ui`
@@ -115,6 +120,13 @@
 - `POST /api/projects/:projectId/members`
 - `PATCH /api/projects/:projectId/members/:userId`
 - `DELETE /api/projects/:projectId/members/:userId`
+- `GET /api/knowledge`
+- `GET /api/knowledge/:knowledgeId`
+- `POST /api/knowledge`
+- `PATCH /api/knowledge/:knowledgeId`
+- `DELETE /api/knowledge/:knowledgeId`
+- `POST /api/knowledge/:knowledgeId/documents`
+- `POST /api/knowledge/search`
 - `GET /api/memory/overview`
 - `POST /api/memory/query`
 
@@ -124,17 +136,16 @@
 - `members`：全局成员概览
 - `projects`：项目 CRUD
 - `memberships`：项目成员增删改
+- `knowledge`：知识库 CRUD、文档上传、状态推进、统一知识检索 service
 - `memory/*`：演示接口，不是正式知识检索服务
 
 ## 7. 当前明确未落地能力
 
-- `knowledge / skills / agents` 正式模块
-- 统一知识检索 service
-- 独立 Python indexer
-- 正式文档上传与索引闭环
+- `skills / agents` 正式模块
 - 基于 Chroma 的正式向量写入 / 检索业务链路
 - SSE 流式对话链路与来源引用
 - 项目私有知识库持久化
+- `global_code` 真实导入与项目级合并检索
 
 ## 8. 当前事实判断规则
 

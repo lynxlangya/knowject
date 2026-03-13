@@ -13,7 +13,8 @@
 - 当前项目阶段不是纯 Demo，也不是完整 AI 产品，而是：
   - 前后端基础框架已接通
   - 项目主数据与成员链路已落地
-  - 全局资产、知识索引、对话正式链路仍在推进
+  - 全局知识库最小正式闭环已落地
+  - Skill / Agent、对话正式链路仍在推进
 
 ## 2. 当前已经落地的事实
 
@@ -32,12 +33,12 @@
   - 项目基础信息
   - 成员 roster
   - 全局成员页
+  - `/knowledge` 知识库管理页
 
 ## 3. 当前仍未落地的事实
 
-- 正式 Knowledge / Skill / Agent 创建、绑定、执行闭环
-- 正式文档上传、索引写入、检索服务闭环
-- 独立 Python indexer
+- `skills / agents` 正式创建、绑定、执行闭环
+- `global_code` 真实导入与项目级合并检索
 - 项目对话正式数据源与 SSE
 - 来源引用渲染
 - 项目资源绑定的正式后端持久化
@@ -94,7 +95,7 @@
 - `apps/api`
   - 继续负责业务主链路。
   - 负责鉴权、权限、知识库 CRUD、文档记录、上传入口、状态查询、统一知识检索 service。
-- `services/indexer-py`（或等价命名）
+- `apps/indexer-py`
   - 负责索引处理链路。
   - 包括 parse / clean / chunk / embed / upsert / delete / rebuild / retry / diagnostics。
 - MongoDB
@@ -120,6 +121,7 @@
 
 - provider：OpenAI
 - model：`text-embedding-3-small`
+- 开发环境缺少 `OPENAI_API_KEY` 时，允许用 deterministic 本地 embedding 保持上传状态流可联调。
 
 ### 4. 文件保留策略
 
@@ -183,4 +185,4 @@
 
 ## 12. 一句话总结
 
-当前 Knowject 最稳定的是信息架构、鉴权、项目主数据和成员链路；当前最大的断层仍是全局资产正式化、知识索引闭环与对话正式链路。
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路和 `/knowledge` 的最小文档索引闭环；当前最大的断层仍是 `skills / agents`、项目级检索与对话正式链路。

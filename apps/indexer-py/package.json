@@ -1,0 +1,9 @@
+{
+  "name": "indexer-py",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "python3 server.py",
+    "start": "python3 server.py"
+  }
+}

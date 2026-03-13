@@ -7,6 +7,7 @@ import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 import {
   KNOWLEDGE_UPLOAD_FIELD_NAME,
   KNOWLEDGE_UPLOAD_MAX_BYTES,
+  normalizeUploadedFileName,
 } from './knowledge.shared.js';
 import type { KnowledgeService } from './knowledge.service.js';
 import type {
@@ -86,7 +87,7 @@ const readUploadedFile = async (
   }
 
   return {
-    originalName: request.file.originalname,
+    originalName: normalizeUploadedFileName(request.file.originalname),
     mimeType: request.file.mimetype,
     size: request.file.size,
     buffer: request.file.buffer,
