@@ -30,6 +30,7 @@ scripts/     常用命令统一入口
     handoff/        接手与交接文档
     inputs/         输入材料与认知原稿
     design/         品牌与视觉设计资料
+  gpt/              ChatGPT Projects 上传副本（派生包，不是事实源）
     templates/      模板与计划骨架
 ```
 
@@ -42,6 +43,7 @@ scripts/     常用命令统一入口
 - `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、镜像构建、Mongo 初始化与 HTTPS 入口。
 - `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
 - `.agent/docs`：项目文档统一根目录；`.agent/docs/current/architecture.md` 是项目结构与路由事实的主文档。
+- `.agent/gpt`：给 ChatGPT Projects 使用的上传副本目录；内容来自 `.agent/docs` 与项目规则的派生同步，不作为新的事实源。
 
 ## 3. 当前产品信息架构（2026-03-10）
 
@@ -99,6 +101,7 @@ scripts/     常用命令统一入口
 
 - `README.md`：面向仓库协作者的总入口，说明当前定位、启动方式、信息架构与文档索引。
 - `.agent/docs/current/architecture.md`：项目结构、路由矩阵、数据来源、兼容策略的事实源。
+- `.agent/gpt/README.md`：ChatGPT Projects 上传包说明与推荐上传顺序。
 - `.agent/docs/design/*`：品牌与视觉设计资料。
 - `apps/platform/README.md`、`apps/api/README.md`：分别说明前端与 API 子系统的当前职责与边界。
 - `.agent/docs/templates/PLANS.md`：复杂功能、迁移或高风险任务的执行计划模板。

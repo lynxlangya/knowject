@@ -71,6 +71,9 @@ scripts/
     roadmap/target-architecture.md  目标蓝图
     roadmap/gap-analysis.md      current vs target 对照
     design/                      品牌与视觉资料
+  gpt/
+    README.md                   ChatGPT Projects 上传包说明
+    PROJECT_BRIEF.md            ChatGPT Projects 首读摘要
 ```
 
 ## 3.1 当前导入别名约定

@@ -2,6 +2,8 @@
 
 `.agent/docs/` 是 Knowject 当前唯一的项目文档根目录，用于统一收敛“事实、规划、交接、契约、设计、输入材料与模板”。
 
+补充说明：`.agent/gpt/` 是面向 ChatGPT Projects 的上传副本目录，属于派生包，不替代 `.agent/docs/` 的主文档职责。
+
 本次收敛的目标不是单纯挪文件，而是把文档入口、分类和维护边界一起稳定下来，避免后续继续出现“知道有文档，但不知道该去哪里找”的问题。
 
 ## 1. 分类结构
@@ -50,7 +52,8 @@
 9. 需要直接执行本地登录、后端调用、Navicat 连接、Chroma 查看或开发 / 验收模式切换时，再读 `.agent/docs/current/docker-operation-checklist.md`
 10. 需要直接执行容器启动、TLS 入口或私有化部署命令时，再读 `docker/README.md`
 11. 需要给 ChatGPT / 外部大模型快速建立当前上下文时，先读 `.agent/docs/handoff/chatgpt-project-brief.md`
-12. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
+12. 如果需要一组可直接上传到 ChatGPT Projects 的副本文件，读 `.agent/gpt/README.md`
+13. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
 
 ### 理解产品现状与目标
 
