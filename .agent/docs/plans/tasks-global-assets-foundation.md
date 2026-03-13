@@ -1,6 +1,6 @@
 # 全局资产基础开发任务（Week 3-4，规划拆解）
 
-状态：截至 2026-03-13，待启动；本轮文档已冻结“Node/Express 负责业务主链路，Python 负责索引处理链路”的推荐分层，但当前仓库尚未进入对应代码实现。
+状态：截至 2026-03-13，GA-01、GA-02 已完成，GA-03 待启动；本文件当前同时承担“Week 3-4 任务清单 + 完成记录”角色。
 
 本文件用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 中的 `Week 3-4 全局资产基础`，结合当前已完成的基础框架事实，收敛成可执行、可排期、可验收的任务清单。
 
@@ -46,6 +46,11 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - `/knowledge`
   - `/skills`
   - `/agents`
+- GA-01 已完成：
+  - Week 3-4 范围、里程碑、实现边界和 Node / Python / MongoDB / Chroma 分层契约已冻结到正式文档。
+- GA-02 已完成：
+  - `apps/api` 已建立 `knowledge / skills / agents` 三组最小模块骨架，并挂载 `/api/knowledge`、`/api/skills`、`/api/agents` 鉴权占位接口。
+  - Python 索引运行时目录已冻结为 `apps/indexer-py`，当前已落地职责与集成边界说明。
 - 全局资产当前仍是前端 Mock：
   - `project.catalog.ts` 提供知识库 / 技能 / 智能体目录。
   - `GlobalAssetManagementPage.tsx` 只有展示与占位按钮，没有真实写路径。
@@ -55,9 +60,9 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 
 ### 当前明确未完成
 
-- 后端没有正式的 `knowledge / skills / agents` 模块。
+- 后端已建立 `knowledge / skills / agents` 正式模块骨架，但还没有真实元数据模型、CRUD 和绑定逻辑。
 - 没有文件上传、文档解析、分块、向量化、索引状态机。
-- 没有 Python 独立 indexer / worker / CLI，也没有 Node 到 Python 的正式触发契约。
+- `apps/indexer-py` 当前只有目录与边界说明，还没有可运行的 Python indexer / worker / CLI，也没有 Node 到 Python 的正式触发实现。
 - 没有 Chroma 配置、集合初始化、统一知识检索 service、删除 / 重建 / 重试能力。
 - 没有全局 Skill 注册表、执行契约和内置 Skill 清单。
 - 没有全局 Agent 的正式存储、CRUD、绑定校验与前端表单。
@@ -81,7 +86,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - `skills`
   - `agents`
 - 冻结独立 Python 索引运行时边界：
-  - 推荐目录名 `services/indexer-py` 或等价命名
+  - 推荐目录名 `apps/indexer-py`
   - Node 触发方式固定为本地 HTTP 服务
   - 状态回写方式固定为 Node 独占写入
 - 环境变量与运行时配置能够支撑：
@@ -213,7 +218,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - 统一知识检索 service。
   - 触发 Python indexer。
   - 接收 / 同步索引结果状态。
-- `services/indexer-py`（或等价命名）
+- `apps/indexer-py`
   - Python 独立索引服务 / worker / CLI。
   - 负责 parse / clean / chunk / embed / upsert / delete / rebuild / retry / diagnostics。
 - MongoDB
@@ -271,7 +276,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 - `apps/api/src/modules/skills/*`
 - `apps/api/src/modules/agents/*`
 - `apps/api/src/lib/chroma/*` 或 `apps/api/src/integrations/chroma/*`
-- `services/indexer-py/*`（推荐）
+- `apps/indexer-py/*`（推荐）
 - `apps/platform/src/api/knowledge.ts`
 - `apps/platform/src/api/skills.ts`
 - `apps/platform/src/api/agents.ts`
@@ -311,7 +316,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 
 ## 任务拆解
 
-### GA-01 TODO · 冻结 Week 3-4 范围与契约
+### GA-01 DONE（2026-03-13）· 冻结 Week 3-4 范围与契约
 
 - 目标：把阶段边界、数据模型最小字段和完成标准先锁住，避免实现过程中持续改口。
 - 输出：
@@ -322,6 +327,10 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - Node / Python / Chroma / MongoDB 的职责边界说明。
   - 已冻结的 5 个实施决策落盘。
 - 依赖：无。
+- 已完成记录：
+  - 已冻结 Week 3-4 只推进里程碑 1 的任务顺序：`GA-02 -> GA-03 -> GA-04 -> GA-05 -> GA-06 -> GA-07`。
+  - 已冻结 Node 管业务、Python 管索引、MongoDB 管主数据、Chroma 管索引层的职责边界。
+  - 已冻结 Node 调 Python 本地 HTTP、Node 独占业务状态回写、OpenAI + `text-embedding-3-small`、`global_docs / global_code` 集合边界等关键实施决策。
 - 子任务：
   - 明确本阶段只做“全局资产正式化”，不把项目层和对话层提前卷入。
   - 冻结 3 个内置 Skill 名称与职责边界。
@@ -332,7 +341,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - 所有人对“这两周做什么 / 不做什么”没有二义性。
   - 后续任务都能引用本文件，不再以认知文档原文直接作为实施说明。
 
-### GA-02 TODO · 建立后端全局资产模块骨架
+### GA-02 DONE（2026-03-13）· 建立后端全局资产模块骨架
 
 - 目标：让 `apps/api` 从当前的 `auth / projects / members`，扩展到能承载资产正式开发的模块结构。
 - 输出：
@@ -341,12 +350,17 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - 统一错误语义和鉴权接入。
   - Python indexer 目录 / 服务边界与集成边界说明。
 - 依赖：`GA-01`。
+- 已完成记录：
+  - 已在 `apps/api` 新增 `knowledge / skills / agents` 三组 `router / service / repository / types` 最小骨架。
+  - 已在 `create-app.ts` 挂载 `/api/knowledge`、`/api/skills`、`/api/agents`，并统一复用现有 `requireAuth`。
+  - 已新增 `apps/indexer-py/README.md`，固定 Python 索引运行时目录与 Node / Python 集成边界说明。
+  - 已通过最小验证，确认三组模块接口可被应用挂载且 `knowledge` 占位接口可走现有鉴权链路访问。
 - 建议子任务：
   - 参考 `projects` 模块模式建立三组模块目录。
   - 在 `create-app.ts` 挂载 `/api/knowledge`、`/api/skills`、`/api/agents`。
   - 统一使用现有 `requireAuth`，不另起新的鉴权机制。
   - 为后续文件上传、统一知识检索 service 与 Python indexer 触发预留 service 层扩展点。
-  - 确定 `services/indexer-py`（或等价目录）的职责说明、触发接口与回写契约，不要求此任务一次写完全部能力。
+  - 确定 `apps/indexer-py` 的职责说明、触发接口与回写契约，不要求此任务一次写完全部能力。
 - 验收：
   - 3 组路由都能以最小占位响应工作。
   - 模块目录不把知识库、Skill、Agent 逻辑混写到 `memory` 路由里。

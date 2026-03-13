@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。
+截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，但当前仅返回鉴权占位响应，尚未接正式模型。
 
 ## 当前接口
 
@@ -41,6 +41,15 @@
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 移除成员，并保证项目至少保留一位 `admin`。
   - 若移除的是当前登录用户本人，响应会返回 `project: null` 与 `removedCurrentUser: true`，前端据此退出当前项目上下文。
+- `GET /api/knowledge`
+  - 需要 `Authorization: Bearer <token>`。
+  - 返回 GA-02 阶段的知识库模块占位响应，当前 `items` 为空数组。
+- `GET /api/skills`
+  - 需要 `Authorization: Bearer <token>`。
+  - 返回 GA-02 阶段的 Skill 模块占位响应，当前 `items` 为空数组。
+- `GET /api/agents`
+  - 需要 `Authorization: Bearer <token>`。
+  - 返回 GA-02 阶段的 Agent 模块占位响应，当前 `items` 为空数组。
 - `GET /api/memory/overview`
   - 需要 `Authorization: Bearer <token>`。
   - 返回项目简介与统计信息。
@@ -62,10 +71,11 @@
 - 项目概览、对话与资源等内容目前仍主要由 `apps/platform` 本地 Mock 驱动。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD；`memberships` 已落地最小成员管理闭环。
+- `knowledge / skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入；真实元数据模型、CRUD、上传、检索与绑定逻辑仍未落地。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD 和成员管理接口，但资产、资源与对话等正式后端接口仍未落地。
 - 当前宿主机开发最小服务拓扑为 `api + mongodb`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
-- 当前 Chroma 仍只用于基础设施与健康诊断；仓库里还没有独立 Python indexer，也还没有正式知识索引写入与统一知识检索 service。
+- 当前 Chroma 仍只用于基础设施与健康诊断；仓库已预留 `apps/indexer-py/README.md` 作为 Python indexer 边界占位，但还没有可运行的独立 Python indexer，也还没有正式知识索引写入与统一知识检索 service。
 - Week 3-4 的推荐演进路径是：`apps/api` 继续负责业务主链路与对外 API，Python 独立索引运行时负责解析、分块、向量写入、重建与诊断，具体边界以 [`.agent/docs/contracts/chroma-decision.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/chroma-decision.md) 为准。
 - Docker 公共基线中的 `app / data` 网络默认保持 `internal`；本地若要从宿主机直接访问 API，则通过 `compose.local.yml` 额外挂载 `publish` 网络完成端口发布。
 - Docker 当前使用方式与部署边界见 [`.agent/docs/current/docker-usage.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/current/docker-usage.md)。
@@ -112,9 +122,13 @@
 - `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。
 - `src/modules/projects/*`：项目模型、MongoDB 仓储、权限校验和 CRUD 接口。
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
+- `src/modules/knowledge/*`：全局知识库模块最小骨架，当前仅提供鉴权占位响应。
+- `src/modules/skills/*`：全局 Skill 模块最小骨架，当前仅提供鉴权占位响应。
+- `src/modules/agents/*`：全局 Agent 模块最小骨架，当前仅提供鉴权占位响应。
 - `src/routes/health.ts`：健康检查。
 - `src/routes/memory.ts`：记忆概览与检索演示接口，当前已复用 JWT 中间件。
 - `src/middleware/*`：请求上下文、404、统一错误处理。
+- `../indexer-py/README.md`：Python 索引服务目录边界与 Node / Python 集成约束说明。
 
 ## 开发
 

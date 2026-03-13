@@ -27,7 +27,7 @@
 - 当前仓库已经接入但仍停留在基础设施层：
   - Chroma 容器、持久化卷与 API 健康诊断
 - 当前仓库尚未正式接入：
-  - Python 独立索引服务 / worker / CLI（例如 `services/indexer-py`）
+  - Python 独立索引服务 / worker / CLI（例如 `apps/indexer-py`）
   - embedding provider
   - 文档上传后的真实索引链路
   - 统一知识检索 service
@@ -93,7 +93,7 @@
 | 层 / 运行时 | 推荐职责 | 本阶段边界 |
 | ----------- | -------- | ---------- |
 | `apps/api` | 对外正式 API、鉴权、权限、知识库 CRUD、文档记录、上传入口、状态查询、统一知识检索 service、触发索引任务、同步索引结果状态 | 保持业务主链路，不承接复杂解析 / 分块 / 重建细节 |
-| `services/indexer-py`（或等价命名） | Python 独立索引服务 / worker / CLI；负责 parse / clean / chunk / embed / upsert / delete / rebuild / retry / diagnostics | 本阶段推荐落为最小独立运行时，不要求一上来做分布式队列 |
+| `apps/indexer-py`（推荐） | Python 独立索引服务 / worker / CLI；负责 parse / clean / chunk / embed / upsert / delete / rebuild / retry / diagnostics | 本阶段推荐落为最小独立运行时，不要求一上来做分布式队列 |
 | MongoDB | 知识库元数据、文档记录、索引状态、失败原因、绑定关系、权限与其他业务主数据 | 主数据源，不存向量 |
 | Chroma | chunk embeddings 与检索 metadata | 衍生索引层，可重建，不承担业务主库职责 |
 

@@ -24,7 +24,7 @@
   - 本地：`platform + api + mongodb + chroma`
   - 线上：`caddy + platform + api + mongodb + chroma`
 - 当前已经交付 `compose.yml`、`compose.local.yml`、`compose.production.yml` 作为 Docker Compose 基线。
-- 当前仓库目录中还没有独立 Python 索引服务 / worker / CLI（例如 `services/indexer-py`）代码。
+- 当前仓库已新增 `apps/indexer-py/README.md` 作为 Python 索引运行时边界占位，但还没有可运行的独立 Python 索引服务 / worker / CLI 代码。
 - Docker 网络边界当前采用：公共基线里的 `app / data` 为 `internal`，`compose.local.yml` 额外挂载本地专用 `publish` 网络给 `api / mongo / chroma`，用于宿主机端口发布；生产编排不复用该网络。
 - `.env.docker.local` 当前允许覆盖宿主机发布端口：`WEB_PORT`、`API_PUBLISHED_PORT`、`MONGO_PUBLISHED_PORT`、`CHROMA_PUBLISHED_PORT`；其中 API 容器内部监听端口固定为 `3001`。
 - 当前固定镜像版本：
@@ -44,10 +44,12 @@ apps/
     src/app/        Express 应用组装
     src/config/     环境变量加载与校验
     src/db/         MongoDB 连接与健康快照
-    src/modules/    auth / members / projects / memberships 模块边界
+    src/modules/    auth / members / projects / memberships / knowledge / skills / agents 模块边界
     src/routes/     health / memory 当前接口
     src/middleware/ 请求上下文、404、统一错误处理
     src/server.ts   启动入口
+  indexer-py/
+    README.md       Python 索引运行时预留目录（当前仅边界说明）
 packages/
   request/          Axios 请求能力封装
   ui/               通用 UI 组件
@@ -217,6 +219,9 @@ scripts/
 - `POST /api/projects/:projectId/members`
 - `PATCH /api/projects/:projectId/members/:userId`
 - `DELETE /api/projects/:projectId/members/:userId`
+- `GET /api/knowledge`
+- `GET /api/skills`
+- `GET /api/agents`
 - `GET /api/memory/overview`
 - `POST /api/memory/query`
 
@@ -229,12 +234,15 @@ scripts/
 - `members`：聚合当前用户可见项目中的成员基础信息、项目参与关系和最小权限摘要。
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
+- `knowledge`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接知识库元数据、上传入口、索引状态和统一知识检索 service。
+- `skills`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接内置 Skill 注册表与只读查询。
+- `agents`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接全局 Agent 配置模型与绑定关系。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
 - `memory/query`：基于本地 `DEMO_ITEMS` 做简单关键词匹配，返回演示检索结果。
 
 ### 6.3 当前鉴权约定
 
-- `auth/users`、`projects`、`memberships` 与 `memory` 路由要求 `Authorization: Bearer <token>`。
+- `auth/users`、`projects`、`memberships`、`knowledge`、`skills`、`agents` 与 `memory` 路由要求 `Authorization: Bearer <token>`。
 - 服务端当前通过 JWT 中间件校验 `iss / aud / exp / sub / username`。
 - 当前 API 已接入统一错误处理中间件，失败响应包含 `error` 与 `meta.requestId`。
 - 当前已具备正式用户体系、`argon2id` 密码哈希、JWT、最小项目权限模型和成员管理接口。
@@ -253,7 +261,11 @@ scripts/
   - `modules/members` 当前已承载全局成员聚合只读接口。
   - `modules/projects` 当前已承载项目模型、MongoDB 仓储、权限校验与 CRUD 接口。
   - `modules/memberships` 当前已承载项目成员增删改接口与最小角色规则。
-  - 当前尚未落地 `knowledge / skills / agents` 正式模块，也尚未落地统一知识检索 service。
+  - `modules/knowledge`、`modules/skills`、`modules/agents` 已落地 GA-02 最小骨架，当前只提供鉴权占位响应，尚未接正式模型、上传、检索与绑定逻辑。
+  - 当前尚未落地统一知识检索 service。
+- `apps/indexer-py`
+  - 当前仅落地目录与边界说明。
+  - 真实 Python 解析、分块、向量化、重建与诊断能力仍未实现。
 - `packages/request`
   - 请求客户端、错误封装、去重、下载能力。
 - `packages/ui`
@@ -264,11 +276,11 @@ scripts/
 以下能力在认知总结或目标蓝图中出现过，但当前仓库未落地，不应视为现状：
 
 - 基于 Chroma 的正式向量写入、检索与知识服务业务链路。
-- 独立 Python 索引服务 / worker / CLI 及其与 Node API 的触发、回写和诊断链路。
+- 独立 Python 索引服务 / worker / CLI 的可运行实现，以及它与 Node API 的真实触发、回写和诊断链路。
 - SSE 流式对话链路与来源引用渲染。
 - RBAC、成员邀请权限流、refresh token。
 - 文档上传、Git 仓库接入、Figma 接入、代码解析与向量化。
-- 真实的 Knowledge / Skill / Agent 创建、绑定、执行与调度能力。
+- 真实的 Knowledge / Skill / Agent 创建、绑定、执行与调度能力；当前只有 GA-02 骨架接口。
 - 项目私有知识库持久化、全局资产复用的正式后端流程。
 - Zustand、React Query 等额外状态管理层。
 

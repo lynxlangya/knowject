@@ -6,12 +6,13 @@
 - 本文件仅定义 Knowject 项目的覆盖规则与项目上下文补充。
 - 全局规则与本文件不冲突时，按全局规则执行。
 
-## 1. 当前项目架构（2026-03-11）
+## 1. 当前项目架构（2026-03-13）
 
 ```text
 apps/
   platform/  前端应用（React + Vite + Ant Design）
   api/       基础框架 API（Express + TypeScript）
+  indexer-py/ Python 索引服务预留目录（当前仅边界说明）
 packages/
   request/   请求库（@knowject/request）
   ui/        UI 组件库（@knowject/ui）
@@ -37,9 +38,10 @@ scripts/     常用命令统一入口
 ## 2. 模块职责边界
 
 - `apps/platform`：承载登录后产品壳、路由、鉴权状态、项目态页面与全局资产管理页；当前主要由本地 Mock 数据和 `localStorage` 驱动。
-- `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`memory` 六组接口；其中项目列表、项目基础信息、成员 roster 与全局成员概览已经接入正式后端主链路。
+- `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`memory` 九组接口；其中项目列表、项目基础信息、成员 roster 与全局成员概览已经接入正式后端主链路，`knowledge / skills / agents` 当前仅为 GA-02 最小骨架与鉴权占位响应。
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
+- `apps/indexer-py`：预留 Python 索引处理链路目录；当前只有职责与集成边界说明，不含可运行实现。
 - `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、镜像构建、Mongo 初始化与 HTTPS 入口。
 - `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
 - `.agent/docs`：项目文档统一根目录；`.agent/docs/current/architecture.md` 是项目结构与路由事实的主文档。

@@ -6,10 +6,16 @@ import { createErrorHandler } from '@middleware/error-handler.js';
 import { notFoundHandler } from '@middleware/not-found.js';
 import { requestContextMiddleware } from '@middleware/request-context.js';
 import { createSensitiveRouteTransportGuard } from '@middleware/secure-transport.js';
+import { createAgentsRepository } from '@modules/agents/agents.repository.js';
+import { createAgentsRouter } from '@modules/agents/agents.router.js';
+import { createAgentsService } from '@modules/agents/agents.service.js';
 import { createRequireAuth } from '@modules/auth/auth.middleware.js';
 import { createAuthRepository } from '@modules/auth/auth.repository.js';
 import { createAuthRouter } from '@modules/auth/auth.router.js';
 import { createAuthService } from '@modules/auth/auth.service.js';
+import { createKnowledgeRepository } from '@modules/knowledge/knowledge.repository.js';
+import { createKnowledgeRouter } from '@modules/knowledge/knowledge.router.js';
+import { createKnowledgeService } from '@modules/knowledge/knowledge.service.js';
 import { createMembersRouter } from '@modules/members/members.router.js';
 import { createMembersService } from '@modules/members/members.service.js';
 import { createMembershipsRouter } from '@modules/memberships/memberships.router.js';
@@ -17,6 +23,9 @@ import { createMembershipsService } from '@modules/memberships/memberships.servi
 import { createProjectsRepository } from '@modules/projects/projects.repository.js';
 import { createProjectsRouter } from '@modules/projects/projects.router.js';
 import { createProjectsService } from '@modules/projects/projects.service.js';
+import { createSkillsRepository } from '@modules/skills/skills.repository.js';
+import { createSkillsRouter } from '@modules/skills/skills.router.js';
+import { createSkillsService } from '@modules/skills/skills.service.js';
 import { createHealthRouter } from '@routes/health.js';
 import { createMemoryRouter } from '@routes/memory.js';
 
@@ -33,6 +42,18 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   const projectsService = createProjectsService({
     repository: projectsRepository,
     authRepository,
+  });
+  const knowledgeRepository = createKnowledgeRepository({ mongo });
+  const knowledgeService = createKnowledgeService({
+    repository: knowledgeRepository,
+  });
+  const skillsRepository = createSkillsRepository({ mongo });
+  const skillsService = createSkillsService({
+    repository: skillsRepository,
+  });
+  const agentsRepository = createAgentsRepository({ mongo });
+  const agentsService = createAgentsService({
+    repository: agentsRepository,
   });
   const membershipsService = createMembershipsService({
     projectsRepository,
@@ -60,6 +81,9 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   app.use('/api/members', createMembersRouter(membersService, requireAuth));
   app.use('/api/projects', createProjectsRouter(projectsService, requireAuth));
   app.use('/api/projects', createMembershipsRouter(membershipsService, requireAuth));
+  app.use('/api/knowledge', createKnowledgeRouter(knowledgeService, requireAuth));
+  app.use('/api/skills', createSkillsRouter(skillsService, requireAuth));
+  app.use('/api/agents', createAgentsRouter(agentsService, requireAuth));
   app.use('/api/memory', sensitiveRouteTransportGuard, createMemoryRouter(requireAuth));
 
   app.get('/', (_req, res) => {
@@ -75,6 +99,9 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/members',
         '/api/projects',
         '/api/projects/:projectId/members',
+        '/api/knowledge',
+        '/api/skills',
+        '/api/agents',
         '/api/memory/overview',
         '/api/memory/query',
       ],

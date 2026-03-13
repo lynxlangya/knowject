@@ -11,12 +11,14 @@ The repository is currently in an active foundation stage: the product shell, au
 ## Current Status
 
 - `apps/platform` already provides the authenticated shell, project routes, member management UI, and global asset management shells.
-- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, and demo `memory` endpoints.
+- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, scaffolded `knowledge / skills / agents`, and demo `memory` endpoints.
 - Project lists, project basics, member rosters, and the global members overview already use `/api/projects*` and `/api/members`.
 - Project overview, chat, and resources still partially depend on local mock data and local bindings.
 - Global `knowledge`, `skills`, and `agents` pages currently act as management shells; create/import flows are still placeholders.
+- `GET /api/knowledge`, `GET /api/skills`, and `GET /api/agents` are now auth-protected scaffold endpoints that return empty placeholder payloads for the next GA steps.
 - Docker Compose baselines are available for both local and production-style environments with `platform + api + mongodb + chroma`.
 - MongoDB is the current primary datastore. Chroma is integrated only for infrastructure and health diagnostics, not yet for a full retrieval pipeline.
+- `apps/indexer-py` is reserved as the future Python indexer boundary, but currently only contains implementation notes.
 
 ## Repository Layout
 
@@ -24,6 +26,7 @@ The repository is currently in an active foundation stage: the product shell, au
 apps/
   platform/   React + Vite + Ant Design frontend
   api/        Express + TypeScript API
+  indexer-py/ Reserved Python indexer boundary (placeholder only)
 packages/
   request/    Shared HTTP client package (@knowject/request)
   ui/         Shared UI package (@knowject/ui)
