@@ -1,4 +1,5 @@
 import type { WithId } from 'mongodb';
+import type { AuthUserProfile } from '@modules/auth/auth.types.js';
 import type {
   KnowledgeBaseDocument,
   KnowledgeDocumentRecord,
@@ -164,8 +165,11 @@ export const sanitizeFileName = (fileName: string): string => {
   return sanitized || 'document';
 };
 
+type KnowledgeActorProfileMap = Map<string, AuthUserProfile>;
+
 export const toKnowledgeSummaryResponse = (
   knowledge: WithId<KnowledgeBaseDocument>,
+  actorProfileMap: KnowledgeActorProfileMap = new Map(),
 ): KnowledgeSummaryResponse => {
   return {
     id: knowledge._id.toHexString(),
@@ -176,7 +180,9 @@ export const toKnowledgeSummaryResponse = (
     documentCount: knowledge.documentCount,
     chunkCount: knowledge.chunkCount,
     maintainerId: knowledge.maintainerId,
+    maintainerName: actorProfileMap.get(knowledge.maintainerId)?.name ?? null,
     createdBy: knowledge.createdBy,
+    createdByName: actorProfileMap.get(knowledge.createdBy)?.name ?? null,
     createdAt: knowledge.createdAt.toISOString(),
     updatedAt: knowledge.updatedAt.toISOString(),
   };

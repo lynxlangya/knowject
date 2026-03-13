@@ -3,7 +3,9 @@ import { access, mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
+import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
 import { createKnowledgeService } from './knowledge.service.js';
@@ -60,6 +62,68 @@ const createTestEnv = (storageRoot: string): AppEnv => {
   };
 };
 
+test('listKnowledge hydrates maintainer and creator names', async () => {
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439011'),
+    name: '知识库 A',
+    description: '用于验证展示名称',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 2,
+    chunkCount: 18,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-13T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-13T00:00:00.000Z'),
+  };
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    listKnowledgeBases: async () => [knowledge],
+  } as unknown as KnowledgeRepository;
+
+  const searchService = {
+    ensureCollections: async () => undefined,
+    searchDocuments: async () => ({
+      query: '',
+      sourceType: 'global_docs',
+      total: 0,
+      items: [],
+    }),
+    deleteKnowledgeChunks: async () => undefined,
+    deleteDocumentChunks: async () => undefined,
+  } as KnowledgeSearchService;
+
+  const authRepository = {
+    findProfilesByIds: async (userIds: string[]) =>
+      userIds.map((userId) => ({
+        id: userId,
+        username: userId === knowledge.maintainerId ? 'maintainer' : 'creator',
+        name: userId === knowledge.maintainerId ? '维护人名称' : '创建人名称',
+      })),
+  } as unknown as AuthRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-knowledge-service'),
+    repository,
+    searchService,
+    authRepository,
+  });
+
+  const response = await service.listKnowledge({
+    actor: {
+      id: '507f1f77bcf86cd799439099',
+      username: 'langya',
+    },
+  });
+
+  assert.equal(response.items.length, 1);
+  assert.equal(response.items[0]?.maintainerName, '维护人名称');
+  assert.equal(response.items[0]?.createdByName, '创建人名称');
+});
+
 test('deleteKnowledge continues when Chroma cleanup fails', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-service-'));
   const knowledgeId = '507f1f77bcf86cd799439011';
@@ -110,10 +174,15 @@ test('deleteKnowledge continues when Chroma cleanup fails', async () => {
     deleteDocumentChunks: async () => undefined,
   } as KnowledgeSearchService;
 
+  const authRepository = {
+    findProfilesByIds: async () => [],
+  } as unknown as AuthRepository;
+
   const service = createKnowledgeService({
     env: createTestEnv(storageRoot),
     repository,
     searchService,
+    authRepository,
   });
 
   await assert.doesNotReject(() =>

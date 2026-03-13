@@ -93,7 +93,9 @@ export interface KnowledgeSummaryResponse {
   documentCount: number;
   chunkCount: number;
   maintainerId: string;
+  maintainerName: string | null;
   createdBy: string;
+  createdByName: string | null;
   createdAt: string;
   updatedAt: string;
 }

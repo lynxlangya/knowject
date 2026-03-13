@@ -10,6 +10,7 @@ import { isApiError } from '@knowject/request';
 import {
   Alert,
   App,
+  Avatar,
   Button,
   Card,
   Empty,
@@ -47,9 +48,19 @@ interface KnowledgeFormValues {
   sourceType: KnowledgeSourceType;
 }
 
+interface KnowledgeSourceMeta {
+  label: string;
+  color: string;
+}
+
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   dateStyle: 'medium',
   timeStyle: 'short',
+});
+
+const compactDateFormatter = new Intl.DateTimeFormat('zh-CN', {
+  month: 'numeric',
+  day: 'numeric',
 });
 
 const INDEX_STATUS_META: Record<
@@ -63,6 +74,14 @@ const INDEX_STATUS_META: Record<
   failed: { label: '失败', color: 'error' },
 };
 
+const KNOWLEDGE_INDEX_STATUS_CLASS: Record<KnowledgeIndexStatus, string> = {
+  idle: 'border-slate-200 bg-slate-100 text-slate-600',
+  pending: 'border-amber-200 bg-amber-50 text-amber-700',
+  processing: 'border-sky-200 bg-sky-50 text-sky-700',
+  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  failed: 'border-rose-200 bg-rose-50 text-rose-700',
+};
+
 const DOCUMENT_STATUS_META: Record<
   KnowledgeDocumentStatus,
   { label: string; color: string }
@@ -73,20 +92,20 @@ const DOCUMENT_STATUS_META: Record<
   failed: { label: '失败', color: 'error' },
 };
 
-const SOURCE_TYPE_META: Record<
-  KnowledgeSourceType,
-  { label: string; color: string; description: string }
-> = {
+const SOURCE_TYPE_META: Record<KnowledgeSourceType, KnowledgeSourceMeta> = {
   global_docs: {
     label: '全局文档',
     color: 'blue',
-    description: '面向可上传文档的正式知识库类型，当前支持最小上传与索引闭环。',
   },
   global_code: {
     label: '全局代码',
     color: 'purple',
-    description: '当前只冻结命名空间与检索契约，真实代码导入仍延后到后续阶段。',
   },
+};
+
+const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {
+  global_docs: 'border-slate-200 bg-white text-slate-500',
+  global_code: 'border-violet-200 bg-violet-50 text-violet-700',
 };
 
 const MAX_POLLING_ATTEMPTS = 20;
@@ -98,6 +117,28 @@ const formatDateTime = (value: string | null | undefined): string => {
   }
 
   return dateTimeFormatter.format(new Date(value));
+};
+
+const formatCompactDate = (value: string | null | undefined): string => {
+  if (!value) {
+    return '未记录';
+  }
+
+  return compactDateFormatter.format(new Date(value));
+};
+
+const getKnowledgeInitials = (name: string): string => {
+  const trimmed = name.trim();
+
+  if (!trimmed) {
+    return '知';
+  }
+
+  if (/^[a-z0-9]/i.test(trimmed)) {
+    return trimmed.slice(0, 2).toUpperCase();
+  }
+
+  return trimmed[0] ?? '知';
 };
 
 const pickNextActiveKnowledgeId = (
@@ -179,8 +220,53 @@ const buildKnowledgeStats = (items: KnowledgeSummaryResponse[]) => {
   ];
 };
 
+const buildKnowledgeDetailOverviewStats = (knowledge: KnowledgeDetailResponse) => {
+  return [
+    {
+      label: '文档数量',
+      value: `${knowledge.documentCount}`,
+      emphasis: 'number' as const,
+    },
+    {
+      label: '分块数量',
+      value: `${knowledge.chunkCount}`,
+      emphasis: 'number' as const,
+    },
+    {
+      label: '最近更新',
+      value: formatDateTime(knowledge.updatedAt),
+      emphasis: 'time' as const,
+    },
+  ];
+};
+
+const buildKnowledgeDetailMeta = (
+  knowledge: KnowledgeDetailResponse,
+) => {
+  const items = [
+    {
+      label: '维护人',
+      value: knowledge.maintainerName ?? knowledge.maintainerId,
+    },
+    {
+      label: '创建时间',
+      value: formatDateTime(knowledge.createdAt),
+    },
+  ];
+
+  if (knowledge.createdBy !== knowledge.maintainerId) {
+    items.splice(1, 0, {
+      label: '创建人',
+      value: knowledge.createdByName ?? knowledge.createdBy,
+    });
+  }
+
+  return items;
+};
+
 const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
   const statusMeta = DOCUMENT_STATUS_META[document.status];
+  const indexedAt = document.lastIndexedAt ?? document.processedAt;
 
   return (
     <article
@@ -195,21 +281,15 @@ const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
         <Tag>{document.mimeType}</Tag>
       </div>
 
-      <div className="mt-3 grid gap-3 text-xs text-slate-500 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-3 grid gap-3 text-xs text-slate-500 sm:grid-cols-3">
         <div>
           <div className="text-slate-400">上传时间</div>
           <div className="mt-1 text-slate-600">{formatDateTime(document.uploadedAt)}</div>
         </div>
         <div>
-          <div className="text-slate-400">处理完成</div>
+          <div className="text-slate-400">索引完成</div>
           <div className="mt-1 text-slate-600">
-            {formatDateTime(document.processedAt)}
-          </div>
-        </div>
-        <div>
-          <div className="text-slate-400">最近索引</div>
-          <div className="mt-1 text-slate-600">
-            {formatDateTime(document.lastIndexedAt)}
+            {formatDateTime(indexedAt)}
           </div>
         </div>
         <div>
@@ -218,16 +298,9 @@ const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-        <span>上传人：{document.uploadedBy}</span>
-        <span>Embedding：{document.embeddingProvider}</span>
-        <span>模型：{document.embeddingModel}</span>
-        <span>重试次数：{document.retryCount}</span>
-      </div>
-
       {document.errorMessage ? (
         <Alert
-          className="mt-3"
+          className="mt-4"
           type="error"
           showIcon
           title="处理失败"
@@ -268,6 +341,12 @@ export const KnowledgeManagementPage = () => {
   const activeSourceMeta = activeKnowledge
     ? SOURCE_TYPE_META[activeKnowledge.sourceType]
     : null;
+  const activeOverviewStats = activeKnowledge
+    ? buildKnowledgeDetailOverviewStats(activeKnowledge)
+    : [];
+  const activeMetaItems = activeKnowledge
+    ? buildKnowledgeDetailMeta(activeKnowledge)
+    : [];
   const shouldPoll = hasProcessingDocuments(activeKnowledge);
   const pollingAttempts = activeKnowledgeId
     ? pollingAttemptsRef.current[activeKnowledgeId] ?? 0
@@ -668,14 +747,9 @@ export const KnowledgeManagementPage = () => {
           styles={{ body: { padding: '20px' } }}
         >
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <Typography.Title level={5} className="mb-0! text-slate-800!">
-                知识库列表
-              </Typography.Title>
-              <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
-                只让 `/knowledge` 切正式接口，`skills / agents` 保持现有壳层，避免这轮范围漂移。
-              </Typography.Paragraph>
-            </div>
+            <Typography.Title level={5} className="mb-0! text-slate-800!">
+              知识库列表
+            </Typography.Title>
             <Typography.Text className="text-xs text-slate-400">
               共 {items.length} 个
             </Typography.Text>
@@ -691,11 +765,14 @@ export const KnowledgeManagementPage = () => {
               </Button>
             </Empty>
           ) : (
-            <div className="mt-6 flex flex-col gap-4">
+            <div className="mt-5 flex flex-col gap-2">
               {items.map((knowledge) => {
                 const indexStatusMeta = INDEX_STATUS_META[knowledge.indexStatus];
                 const sourceTypeMeta = SOURCE_TYPE_META[knowledge.sourceType];
                 const isActive = knowledge.id === activeKnowledgeId;
+                const compactMeta = `${knowledge.documentCount} 份文档 · ${formatCompactDate(
+                  knowledge.updatedAt,
+                )} 更新`;
 
                 return (
                   <button
@@ -706,36 +783,41 @@ export const KnowledgeManagementPage = () => {
                       pollingAttemptsRef.current[knowledge.id] = 0;
                       setActiveKnowledgeId(knowledge.id);
                     }}
-                    className={`w-full rounded-[20px] border px-4 py-4 text-left transition-all ${
+                    className={`w-full rounded-[16px] border px-3 py-2.5 text-left transition ${
                       isActive
-                        ? 'border-slate-300 bg-linear-to-br from-slate-100 via-white to-sky-50/85 text-slate-800 shadow-[0_14px_34px_rgba(148,163,184,0.18)]'
-                        : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/80 hover:shadow-[0_10px_26px_rgba(148,163,184,0.12)]'
+                        ? 'border-emerald-200 bg-emerald-50/70 shadow-[0_12px_30px_rgba(20,184,166,0.08)]'
+                        : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white'
                     }`}
                   >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Typography.Text strong className="text-slate-800!">
-                        {knowledge.name}
-                      </Typography.Text>
-                      <Tag color={indexStatusMeta.color}>{indexStatusMeta.label}</Tag>
-                      <Tag color={sourceTypeMeta.color}>{sourceTypeMeta.label}</Tag>
-                    </div>
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        size={36}
+                        className="shrink-0 bg-slate-200 text-slate-600"
+                      >
+                        {getKnowledgeInitials(knowledge.name)}
+                      </Avatar>
 
-                    <Typography.Paragraph
-                      className={`mb-0! mt-3 text-sm! leading-6! ${
-                        isActive ? 'text-slate-600!' : 'text-slate-500!'
-                      }`}
-                    >
-                      {knowledge.description || '当前未填写描述。'}
-                    </Typography.Paragraph>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Typography.Text className="truncate text-[13px] font-semibold text-slate-800!">
+                            {knowledge.name}
+                          </Typography.Text>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${KNOWLEDGE_SOURCE_CLASS[knowledge.sourceType]}`}
+                          >
+                            {sourceTypeMeta.label}
+                          </span>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${KNOWLEDGE_INDEX_STATUS_CLASS[knowledge.indexStatus]}`}
+                          >
+                            {indexStatusMeta.label}
+                          </span>
+                        </div>
 
-                    <div
-                      className={`mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs ${
-                        isActive ? 'text-slate-500' : 'text-slate-400'
-                      }`}
-                    >
-                      <span>文档：{knowledge.documentCount}</span>
-                      <span>分块：{knowledge.chunkCount}</span>
-                      <span>最近更新：{formatDateTime(knowledge.updatedAt)}</span>
+                        <Typography.Text className="mt-1 block truncate text-[11px] text-slate-500">
+                          {compactMeta}
+                        </Typography.Text>
+                      </div>
                     </div>
                   </button>
                 );
@@ -816,128 +898,110 @@ export const KnowledgeManagementPage = () => {
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-4">
-                  <Typography.Text className="text-xs uppercase tracking-[0.14em] text-slate-400">
-                    文档数量
-                  </Typography.Text>
-                  <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
-                    {activeKnowledge.documentCount}
-                  </Typography.Title>
-                </div>
-                <div className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-4">
-                  <Typography.Text className="text-xs uppercase tracking-[0.14em] text-slate-400">
-                    分块数量
-                  </Typography.Text>
-                  <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
-                    {activeKnowledge.chunkCount}
-                  </Typography.Title>
-                </div>
-                <div className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-4">
-                  <Typography.Text className="text-xs uppercase tracking-[0.14em] text-slate-400">
-                    最近更新
-                  </Typography.Text>
-                  <Typography.Title level={5} className="mb-0! mt-2 text-slate-800!">
-                    {formatDateTime(activeKnowledge.updatedAt)}
-                  </Typography.Title>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-[18px] border border-slate-200 px-4 py-4">
-                  <Typography.Text className="text-xs text-slate-400">
-                    维护人
-                  </Typography.Text>
-                  <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-700!">
-                    {activeKnowledge.maintainerId}
-                  </Typography.Paragraph>
-                </div>
-                <div className="rounded-[18px] border border-slate-200 px-4 py-4">
-                  <Typography.Text className="text-xs text-slate-400">
-                    创建人
-                  </Typography.Text>
-                  <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-700!">
-                    {activeKnowledge.createdBy}
-                  </Typography.Paragraph>
-                </div>
-                <div className="rounded-[18px] border border-slate-200 px-4 py-4">
-                  <Typography.Text className="text-xs text-slate-400">
-                    创建时间
-                  </Typography.Text>
-                  <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-700!">
-                    {formatDateTime(activeKnowledge.createdAt)}
-                  </Typography.Paragraph>
-                </div>
-                <div className="rounded-[18px] border border-slate-200 px-4 py-4">
-                  <Typography.Text className="text-xs text-slate-400">
-                    类型说明
-                  </Typography.Text>
-                  <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-700!">
-                    {activeSourceMeta?.description ?? '未记录'}
-                  </Typography.Paragraph>
-                </div>
-              </div>
-
-              <Alert
-                type={activeKnowledge.sourceType === 'global_docs' ? 'info' : 'warning'}
-                showIcon
-                title={
-                  activeKnowledge.sourceType === 'global_docs'
-                    ? '当前最稳妥上传格式是 md / txt，pdf 仍会走失败态用于验证状态机。'
-                    : 'global_code 当前只保留集合与契约，不做真实导入、分块或上传入口。'
-                }
-              />
-
-              {shouldPoll ? (
-                <Alert
-                  type={pollingStopped ? 'warning' : 'info'}
-                  showIcon
-                  title={
-                    pollingStopped
-                      ? '自动刷新已达到本轮上限，请手动点击“刷新状态”继续观察。'
-                      : '检测到待处理文档，页面会做最小轮询以更新索引状态。'
-                  }
-                />
-              ) : null}
-
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <FileTextOutlined className="text-slate-400" />
-                    <Typography.Title level={5} className="mb-0! text-slate-800!">
-                      文档列表
-                    </Typography.Title>
-                  </div>
-                  <Typography.Text className="text-xs text-slate-400">
-                    共 {activeKnowledge.documents.length} 份
-                  </Typography.Text>
-                </div>
-
-                {activeKnowledge.documents.length === 0 ? (
-                  <Empty
-                    className="my-12"
-                    description={
-                      activeKnowledge.sourceType === 'global_docs'
-                        ? '当前知识库还没有文档，上传一份 md 或 txt 开始索引。'
-                        : 'global_code 当前还没有真实代码导入入口。'
-                    }
-                  >
-                    {activeKnowledge.sourceType === 'global_docs' ? (
-                      <Button
-                        type="primary"
-                        icon={<CloudUploadOutlined />}
-                        loading={uploading}
-                        onClick={handleUploadClick}
+              <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                <div className="grid gap-px bg-slate-200 md:grid-cols-3">
+                  {activeOverviewStats.map((item) => (
+                    <div
+                      key={item.label}
+                      className="bg-slate-50/75 px-4 py-4"
+                    >
+                      <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                        {item.label}
+                      </Typography.Text>
+                      <Typography.Text
+                        className={`mt-3 block text-slate-800 ${
+                          item.emphasis === 'number'
+                            ? 'text-[30px] font-semibold leading-none tracking-tight'
+                            : 'text-lg font-semibold leading-7'
+                        }`}
                       >
-                        上传第一份文档
-                      </Button>
-                    ) : null}
-                  </Empty>
-                ) : (
-                  <div className="mt-4 space-y-3">
-                    {activeKnowledge.documents.map(renderDocumentCard)}
+                        {item.value}
+                      </Typography.Text>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-slate-200 bg-white/90 px-4 py-3.5">
+                  {activeMetaItems.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-baseline gap-2"
+                    >
+                      <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">
+                        {item.label}
+                      </Typography.Text>
+                      <Typography.Text className="text-sm font-medium text-slate-700!">
+                        {item.value}
+                      </Typography.Text>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-4">
+                  <Alert
+                    type={activeKnowledge.sourceType === 'global_docs' ? 'info' : 'warning'}
+                    showIcon
+                    title={
+                      activeKnowledge.sourceType === 'global_docs'
+                        ? '当前最稳妥上传格式是 md / txt，pdf 仍会走失败态用于验证状态机。'
+                        : 'global_code 当前只保留集合与契约，不做真实导入、分块或上传入口。'
+                    }
+                  />
+
+                  {shouldPoll ? (
+                    <Alert
+                      type={pollingStopped ? 'warning' : 'info'}
+                      showIcon
+                      title={
+                        pollingStopped
+                          ? '自动刷新已达到本轮上限，请手动点击“刷新状态”继续观察。'
+                          : '检测到待处理文档，页面会做最小轮询以更新索引状态。'
+                      }
+                    />
+                  ) : null}
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <FileTextOutlined className="text-slate-400" />
+                      <Typography.Title level={5} className="mb-0! text-slate-800!">
+                        文档列表
+                      </Typography.Title>
+                    </div>
+                    <Typography.Text className="text-xs text-slate-400">
+                      共 {activeKnowledge.documents.length} 份
+                    </Typography.Text>
                   </div>
-                )}
+
+                  {activeKnowledge.documents.length === 0 ? (
+                    <Empty
+                      className="my-12"
+                      description={
+                        activeKnowledge.sourceType === 'global_docs'
+                          ? '当前知识库还没有文档，上传一份 md 或 txt 开始索引。'
+                          : 'global_code 当前还没有真实代码导入入口。'
+                      }
+                    >
+                      {activeKnowledge.sourceType === 'global_docs' ? (
+                        <Button
+                          type="primary"
+                          icon={<CloudUploadOutlined />}
+                          loading={uploading}
+                          onClick={handleUploadClick}
+                        >
+                          上传第一份文档
+                        </Button>
+                      ) : null}
+                    </Empty>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {activeKnowledge.documents.map(renderDocumentCard)}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ) : (

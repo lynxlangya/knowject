@@ -4,6 +4,8 @@ import { basename, extname, join } from 'node:path';
 import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import type { AuthRepository } from '@modules/auth/auth.repository.js';
+import type { AuthUserProfile } from '@modules/auth/auth.types.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
 import {
@@ -15,6 +17,7 @@ import {
 import type {
   CreateKnowledgeInput,
   KnowledgeCommandContext,
+  KnowledgeBaseDocument,
   KnowledgeDetailEnvelope,
   KnowledgeDocumentRecord,
   KnowledgeDocumentUploadResponse,
@@ -56,6 +59,8 @@ export interface KnowledgeService {
     input: SearchKnowledgeDocumentsInput,
   ): Promise<KnowledgeSearchResponse>;
 }
+
+type KnowledgeActorProfileMap = Map<string, AuthUserProfile>;
 
 const createValidationError = (
   message: string,
@@ -327,6 +332,20 @@ const resolveEmbeddingMetadata = (
   };
 };
 
+const buildKnowledgeActorProfileMap = async (
+  authRepository: AuthRepository,
+  knowledgeItems: Array<Pick<KnowledgeBaseDocument, 'maintainerId' | 'createdBy'>>,
+): Promise<KnowledgeActorProfileMap> => {
+  const userIds = Array.from(
+    new Set(
+      knowledgeItems.flatMap((knowledge) => [knowledge.maintainerId, knowledge.createdBy]),
+    ),
+  );
+  const profiles = await authRepository.findProfilesByIds(userIds);
+
+  return new Map(profiles.map((profile) => [profile.id, profile] as const));
+};
+
 const callKnowledgeIndexer = async (
   env: AppEnv,
   payload: KnowledgeIndexerDocumentRequest,
@@ -508,10 +527,12 @@ export const createKnowledgeService = ({
   env,
   repository,
   searchService,
+  authRepository,
 }: {
   env: AppEnv;
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
+  authRepository: AuthRepository;
 }): KnowledgeService => {
   return {
     initializeSearchInfrastructure: async () => {
@@ -522,10 +543,11 @@ export const createKnowledgeService = ({
     listKnowledge: async (_context) => {
       await repository.ensureMetadataModel();
       const items = await repository.listKnowledgeBases();
+      const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, items);
 
       return {
         total: items.length,
-        items: items.map(toKnowledgeSummaryResponse),
+        items: items.map((knowledge) => toKnowledgeSummaryResponse(knowledge, actorProfileMap)),
       };
     },
 
@@ -538,10 +560,11 @@ export const createKnowledgeService = ({
       }
 
       const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
+      const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [knowledge]);
 
       return {
         knowledge: {
-          ...toKnowledgeSummaryResponse(knowledge),
+          ...toKnowledgeSummaryResponse(knowledge, actorProfileMap),
           documents: documents.map(toKnowledgeDocumentResponse),
         },
       };
@@ -552,9 +575,10 @@ export const createKnowledgeService = ({
       const knowledge = await repository.createKnowledgeBase(
         validateCreateKnowledgeInput(input, actor.id),
       );
+      const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [knowledge]);
 
       return {
-        knowledge: toKnowledgeSummaryResponse(knowledge),
+        knowledge: toKnowledgeSummaryResponse(knowledge, actorProfileMap),
       };
     },
 
@@ -576,8 +600,10 @@ export const createKnowledgeService = ({
         throw createKnowledgeNotFoundError();
       }
 
+      const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [updatedKnowledge]);
+
       return {
-        knowledge: toKnowledgeSummaryResponse(updatedKnowledge),
+        knowledge: toKnowledgeSummaryResponse(updatedKnowledge, actorProfileMap),
       };
     },
 
@@ -676,6 +702,8 @@ export const createKnowledgeService = ({
           throw createKnowledgeNotFoundError();
         }
 
+        const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [updatedKnowledge]);
+
         knowledgeSummaryUpdated = true;
         setImmediate(() => {
           void processUploadedDocument({
@@ -699,7 +727,7 @@ export const createKnowledgeService = ({
         });
 
         return {
-          knowledge: toKnowledgeSummaryResponse(updatedKnowledge),
+          knowledge: toKnowledgeSummaryResponse(updatedKnowledge, actorProfileMap),
           document: toKnowledgeDocumentResponse(document),
         };
       } catch (error) {
