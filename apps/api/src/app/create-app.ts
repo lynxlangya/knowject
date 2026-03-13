@@ -45,6 +45,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   });
   const knowledgeRepository = createKnowledgeRepository({ mongo });
   const knowledgeService = createKnowledgeService({
+    env,
     repository: knowledgeRepository,
   });
   const skillsRepository = createSkillsRepository({ mongo });
@@ -100,6 +101,8 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/projects',
         '/api/projects/:projectId/members',
         '/api/knowledge',
+        '/api/knowledge/:knowledgeId',
+        '/api/knowledge/:knowledgeId/documents',
         '/api/skills',
         '/api/agents',
         '/api/memory/overview',

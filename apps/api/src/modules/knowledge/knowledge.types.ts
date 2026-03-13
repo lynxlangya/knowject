@@ -31,6 +31,24 @@ export interface KnowledgeCommandContext {
   actor: AuthenticatedRequestUser;
 }
 
+export interface CreateKnowledgeInput {
+  name?: unknown;
+  description?: unknown;
+  sourceType?: unknown;
+}
+
+export interface UpdateKnowledgeInput {
+  name?: unknown;
+  description?: unknown;
+}
+
+export interface UploadedKnowledgeFile {
+  originalName: string;
+  mimeType: string;
+  size: number;
+  buffer: Buffer;
+}
+
 export interface KnowledgeBaseDocument {
   _id?: ObjectId;
   name: string;
@@ -105,4 +123,17 @@ export interface KnowledgeDetailResponse extends KnowledgeSummaryResponse {
 export interface KnowledgeListResponse {
   total: number;
   items: KnowledgeSummaryResponse[];
+}
+
+export interface KnowledgeMutationResponse {
+  knowledge: KnowledgeSummaryResponse;
+}
+
+export interface KnowledgeDetailEnvelope {
+  knowledge: KnowledgeDetailResponse;
+}
+
+export interface KnowledgeDocumentUploadResponse {
+  knowledge: KnowledgeSummaryResponse;
+  document: KnowledgeDocumentResponse;
 }

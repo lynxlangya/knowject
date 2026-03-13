@@ -23,6 +23,9 @@ export interface AppEnv {
     host: string | null;
     heartbeatPath: string;
   };
+  knowledge: {
+    storageRoot: string;
+  };
   jwt: {
     secret: string;
     expiresIn: string;
@@ -227,6 +230,11 @@ export const getEnv = (): AppEnv => {
       url: chromaUrl,
       host: chromaUrl ? parseServiceHost(chromaUrl) : null,
       heartbeatPath: readOptionalString('CHROMA_HEARTBEAT_PATH') ?? '/api/v2/heartbeat',
+    },
+    knowledge: {
+      storageRoot:
+        readOptionalString('KNOWLEDGE_STORAGE_ROOT') ??
+        join(workspaceRoot, '.knowject-storage', 'knowledge'),
     },
     jwt: {
       secret: readRequiredString('JWT_SECRET'),

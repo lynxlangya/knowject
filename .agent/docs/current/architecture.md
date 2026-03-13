@@ -166,7 +166,7 @@ scripts/
 
 - `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
-- `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并在读取知识库列表时确保索引存在；当前仍未接入创建、上传与状态流写路径。
+- `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入与原始文件本地落盘；当前仍未接入 Python 触发、状态推进与统一知识检索 service。
 - `GET /api/health` 会联动返回数据库状态与可选的 Chroma 心跳状态，因此服务可在依赖不可达时以 `degraded` 状态启动并提供诊断。
 - 当前 Chroma 只进入了 Docker 基础设施与健康诊断链路，还没有正式文档索引、统一知识检索 service 或 Python indexer 触发链路。
 - 根 `scripts/knowject.sh` 已收口三类常用命令包装：`dev:*`（宿主机开发 + Docker 依赖）、`host:*`（兼容宿主机命令）和 `docker:*`（本地 / 线上部署与验收）。
@@ -221,6 +221,11 @@ scripts/
 - `PATCH /api/projects/:projectId/members/:userId`
 - `DELETE /api/projects/:projectId/members/:userId`
 - `GET /api/knowledge`
+- `GET /api/knowledge/:knowledgeId`
+- `POST /api/knowledge`
+- `PATCH /api/knowledge/:knowledgeId`
+- `DELETE /api/knowledge/:knowledgeId`
+- `POST /api/knowledge/:knowledgeId/documents`
 - `GET /api/skills`
 - `GET /api/agents`
 - `GET /api/memory/overview`
@@ -235,7 +240,7 @@ scripts/
 - `members`：聚合当前用户可见项目中的成员基础信息、项目参与关系和最小权限摘要。
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
-- `knowledge`：当前已提供正式的知识库列表 response shape，并在后端冻结知识库 / 文档元数据模型与索引；后续承接 CRUD、上传入口、索引状态流和统一知识检索 service。
+- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口，以及文档上传入口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件；当前仍未触发 Python indexer。
 - `skills`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接内置 Skill 注册表与只读查询。
 - `agents`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接全局 Agent 配置模型与绑定关系。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
@@ -262,7 +267,7 @@ scripts/
   - `modules/members` 当前已承载全局成员聚合只读接口。
   - `modules/projects` 当前已承载项目模型、MongoDB 仓储、权限校验与 CRUD 接口。
   - `modules/memberships` 当前已承载项目成员增删改接口与最小角色规则。
-  - `modules/knowledge` 已落地 GA-03 元数据模型、集合索引和正式列表 response shape，但尚未接 CRUD、上传、检索与状态推进逻辑。
+  - `modules/knowledge` 已落地 GA-04 元数据模型、集合索引、CRUD 与文档上传入口，但尚未接 Python 解析、状态推进、Chroma 与统一知识检索逻辑。
   - `modules/skills`、`modules/agents` 当前仍停留在 GA-02 最小骨架与鉴权占位响应阶段。
   - 当前尚未落地统一知识检索 service。
 - `apps/indexer-py`
@@ -282,7 +287,7 @@ scripts/
 - SSE 流式对话链路与来源引用渲染。
 - RBAC、成员邀请权限流、refresh token。
 - 文档上传、Git 仓库接入、Figma 接入、代码解析与向量化。
-- 真实的 Knowledge CRUD / 上传 / 绑定流程，以及 Skill / Agent 的创建、绑定、执行与调度能力；当前 Knowledge 只完成元数据模型与列表 shape，Skill / Agent 仍只有 GA-02 骨架接口。
+- Knowledge 的 Python 触发、解析、分块、Chroma 写入与检索流程，以及 Skill / Agent 的创建、绑定、执行与调度能力；当前 Knowledge 已完成后端 CRUD 与上传入口，Skill / Agent 仍只有 GA-02 骨架接口。
 - 项目私有知识库持久化、全局资产复用的正式后端流程。
 - Zustand、React Query 等额外状态管理层。
 

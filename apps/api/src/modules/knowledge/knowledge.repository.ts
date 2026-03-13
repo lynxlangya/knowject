@@ -76,6 +76,108 @@ export class KnowledgeRepository {
       .toArray();
   }
 
+  async createKnowledgeBase(
+    document: Omit<KnowledgeBaseDocument, '_id'>,
+  ): Promise<WithId<KnowledgeBaseDocument>> {
+    const collection = await this.getKnowledgeCollection();
+    const result = await collection.insertOne(document);
+
+    return {
+      ...document,
+      _id: result.insertedId,
+    };
+  }
+
+  async updateKnowledgeBase(
+    knowledgeId: string,
+    patch: Partial<
+      Pick<
+        KnowledgeBaseDocument,
+        'name' | 'description' | 'indexStatus' | 'documentCount' | 'chunkCount' | 'updatedAt'
+      >
+    >,
+  ): Promise<WithId<KnowledgeBaseDocument> | null> {
+    const objectId = toObjectId(knowledgeId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getKnowledgeCollection();
+    return collection.findOneAndUpdate(
+      { _id: objectId },
+      {
+        $set: patch,
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+  }
+
+  async createKnowledgeDocument(
+    document: KnowledgeDocumentRecord & { _id: NonNullable<KnowledgeDocumentRecord['_id']> },
+  ): Promise<WithId<KnowledgeDocumentRecord>> {
+    const collection = await this.getKnowledgeDocumentsCollection();
+    await collection.insertOne(document);
+
+    return document;
+  }
+
+  async updateKnowledgeSummaryAfterDocumentUpload(
+    knowledgeId: string,
+    updatedAt: Date,
+  ): Promise<WithId<KnowledgeBaseDocument> | null> {
+    const objectId = toObjectId(knowledgeId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getKnowledgeCollection();
+    return collection.findOneAndUpdate(
+      { _id: objectId },
+      {
+        $inc: {
+          documentCount: 1,
+        },
+        $set: {
+          indexStatus: 'pending',
+          updatedAt,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+  }
+
+  async deleteKnowledgeDocumentsByKnowledgeId(knowledgeId: string): Promise<number> {
+    const collection = await this.getKnowledgeDocumentsCollection();
+    const result = await collection.deleteMany({ knowledgeId });
+    return result.deletedCount;
+  }
+
+  async deleteKnowledgeDocumentById(documentId: string): Promise<boolean> {
+    const objectId = toObjectId(documentId);
+    if (!objectId) {
+      return false;
+    }
+
+    const collection = await this.getKnowledgeDocumentsCollection();
+    const result = await collection.deleteOne({ _id: objectId });
+    return result.deletedCount === 1;
+  }
+
+  async deleteKnowledgeBase(knowledgeId: string): Promise<boolean> {
+    const objectId = toObjectId(knowledgeId);
+    if (!objectId) {
+      return false;
+    }
+
+    const collection = await this.getKnowledgeCollection();
+    const result = await collection.deleteOne({ _id: objectId });
+    return result.deletedCount === 1;
+  }
+
   private async getKnowledgeCollection(): Promise<Collection<KnowledgeBaseDocument>> {
     await this.mongo.connect();
     const collection = this.mongo

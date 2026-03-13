@@ -1,6 +1,6 @@
 # 全局资产基础开发任务（Week 3-4，规划拆解）
 
-状态：截至 2026-03-13，GA-01、GA-02、GA-03 已完成，GA-04 待启动；本文件当前同时承担“Week 3-4 任务清单 + 完成记录”角色。
+状态：截至 2026-03-13，GA-01、GA-02、GA-03、GA-04 已完成，GA-05 待启动；本文件当前同时承担“Week 3-4 任务清单 + 完成记录”角色。
 
 本文件用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 中的 `Week 3-4 全局资产基础`，结合当前已完成的基础框架事实，收敛成可执行、可排期、可验收的任务清单。
 
@@ -54,6 +54,9 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 - GA-03 已完成：
   - `knowledge` 模块已落地 `knowledge_bases` 与 `knowledge_documents` 元数据模型、状态枚举与 Mongo 索引策略。
   - `GET /api/knowledge` 已切到正式列表 response shape，不再返回 GA-02 阶段的占位 meta。
+- GA-04 已完成：
+  - `knowledge` 模块已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口。
+  - 文档上传入口已接入，支持 `md / txt / pdf` 三种格式的最小上传闭环，并把原始文件落到本地存储。
 - 全局资产当前仍是前端 Mock：
   - `project.catalog.ts` 提供知识库 / 技能 / 智能体目录。
   - `GlobalAssetManagementPage.tsx` 只有展示与占位按钮，没有真实写路径。
@@ -63,7 +66,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 
 ### 当前明确未完成
 
-- 后端已建立 `knowledge / skills / agents` 正式模块骨架；其中 `knowledge` 已具备真实元数据模型，但还没有 CRUD、上传和绑定逻辑。
+- 后端已建立 `knowledge / skills / agents` 正式模块骨架；其中 `knowledge` 已具备真实元数据模型、CRUD 和上传入口，但还没有 Python 触发、解析、检索和绑定逻辑。
 - 没有文件上传、文档解析、分块、向量化、索引状态机。
 - `apps/indexer-py` 当前只有目录与边界说明，还没有可运行的 Python indexer / worker / CLI，也没有 Node 到 Python 的正式触发实现。
 - 没有 Chroma 配置、集合初始化、统一知识检索 service、删除 / 重建 / 重试能力。
@@ -394,7 +397,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - 知识库与文档记录字段能支撑上传、状态展示、重试、重建和后续项目绑定。
   - 不把 Chroma 里的向量数据误存进 Mongo 元数据表。
 
-### GA-04 TODO · 打通知识库 CRUD 与文档上传入口
+### GA-04 DONE（2026-03-13）· 打通知识库 CRUD 与文档上传入口
 
 - 目标：让 `/knowledge` 真正从“展示目录”变成“可操作资产页”。
 - 输出：
@@ -402,6 +405,11 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - 文档上传接口。
   - 上传大小、格式、错误返回约束。
 - 依赖：`GA-03`。
+- 已完成记录：
+  - 已落地 `GET /api/knowledge/:knowledgeId`、`POST /api/knowledge`、`PATCH /api/knowledge/:knowledgeId`、`DELETE /api/knowledge/:knowledgeId`、`POST /api/knowledge/:knowledgeId/documents`。
+  - 上传阶段已由 Node 创建文档记录，初始化 `pending` 状态，并按 `knowledgeId/documentId/documentVersionHash/` 组织原始文件存储。
+  - 当前上传入口只支持 `md / txt / pdf`，并通过 `10 MB` 限制、空文件校验和格式校验给出明确错误。
+  - 当前上传成功后只完成主数据写入与文件落盘，不触发 Python indexer；这部分继续留给 `GA-05`。
 - 建议子任务：
   - 先完成知识库 CRUD，再接上传，避免把文件入口和实体创建耦在一起。
   - 上传阶段由 Node 立即创建文档记录，状态初始化为 `pending`。

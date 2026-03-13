@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，其中 `knowledge` 已完成 Mongo 元数据模型与正式列表 response shape，`skills / agents` 仍停留在鉴权占位响应阶段。
+截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD 与文档上传入口，`skills / agents` 仍停留在鉴权占位响应阶段。
 
 ## 当前接口
 
@@ -45,6 +45,23 @@
   - 需要 `Authorization: Bearer <token>`。
   - 返回知识库列表的正式 summary shape：`id / name / description / sourceType / indexStatus / documentCount / chunkCount / maintainerId / createdBy / createdAt / updatedAt`。
   - 当前若没有数据，返回 `total: 0` 与空数组；首次访问时会确保 `knowledge_bases` 与 `knowledge_documents` 的索引存在。
+- `GET /api/knowledge/:knowledgeId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 返回知识库详情以及当前知识库下的文档记录列表。
+- `POST /api/knowledge`
+  - 需要 `Authorization: Bearer <token>`。
+  - 接收 `name`、`description`、可选 `sourceType`，创建知识库；`sourceType` 默认是 `global_docs`。
+- `PATCH /api/knowledge/:knowledgeId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 更新知识库的 `name` 与 `description`。
+- `DELETE /api/knowledge/:knowledgeId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 删除知识库、对应文档记录，以及当前知识库的本地原始文件目录。
+- `POST /api/knowledge/:knowledgeId/documents`
+  - 需要 `Authorization: Bearer <token>`。
+  - 使用 `multipart/form-data` 上传单个文件，字段名固定为 `file`。
+  - 当前只支持 `md / txt / pdf`，文件大小不能超过 `10 MB`。
+  - 上传成功后会创建文档记录、初始化 `pending` 状态，并把原始文件落到本地存储。
 - `GET /api/skills`
   - 需要 `Authorization: Bearer <token>`。
   - 返回 GA-02 阶段的 Skill 模块占位响应，当前 `items` 为空数组。
@@ -72,7 +89,7 @@
 - 项目概览、对话与资源等内容目前仍主要由 `apps/platform` 本地 Mock 驱动。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD；`memberships` 已落地最小成员管理闭环。
-- `knowledge` 当前已完成 Mongo 元数据模型、集合索引和列表 response shape，但还没有 CRUD、上传、状态流与统一知识检索 service。
+- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD 和文档上传入口，但还没有 Python 触发、状态流推进、Chroma 与统一知识检索 service。
 - `skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD 和成员管理接口，但资产、资源与对话等正式后端接口仍未落地。
 - 当前宿主机开发最小服务拓扑为 `api + mongodb`。
@@ -124,7 +141,7 @@
 - `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。
 - `src/modules/projects/*`：项目模型、MongoDB 仓储、权限校验和 CRUD 接口。
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
-- `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储与列表 response shape。
+- `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储、CRUD、详情接口与文档上传入口。
 - `src/modules/skills/*`：全局 Skill 模块最小骨架，当前仅提供鉴权占位响应。
 - `src/modules/agents/*`：全局 Agent 模块最小骨架，当前仅提供鉴权占位响应。
 - `src/routes/health.ts`：健康检查。
