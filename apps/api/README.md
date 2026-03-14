@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除 / 统一检索闭环，`skills / agents` 仍停留在鉴权占位响应阶段。
+截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除 / 统一检索闭环，`skills / agents` 仍停留在鉴权占位响应阶段。
 
 ## 当前接口
 
@@ -24,10 +24,17 @@
   - 只返回当前用户参与的项目。
 - `POST /api/projects`
   - 需要 `Authorization: Bearer <token>`。
-  - 接收 `name`、`description`，创建者自动成为项目 `admin`。
+  - 接收 `name`、`description`、可选 `knowledgeBaseIds / agentIds / skillIds`，创建者自动成为项目 `admin`。
+  - 创建时会为项目补一条默认对话，供项目对话读链路返回最小可用上下文。
+- `GET /api/projects/:projectId/conversations`
+  - 需要 `Authorization: Bearer <token>`。
+  - 返回当前项目可见的对话列表摘要：`id / projectId / title / updatedAt / preview`。
+- `GET /api/projects/:projectId/conversations/:conversationId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 返回当前项目单条对话详情与消息列表；当前仅提供只读能力，不支持消息写入。
 - `PATCH /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
-  - 只允许项目级 `admin` 更新项目基础信息。
+  - 只允许项目级 `admin` 更新项目基础信息与 `knowledgeBaseIds / agentIds / skillIds` 资源绑定字段。
 - `DELETE /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 删除项目。
@@ -62,7 +69,7 @@
 - `POST /api/knowledge/:knowledgeId/documents`
   - 需要 `Authorization: Bearer <token>`。
   - 使用 `multipart/form-data` 上传单个文件，字段名固定为 `file`。
-  - 当前只支持 `md / txt / pdf`，单文件上限为 `10 MB`。
+  - 当前只支持 `md / txt / pdf`，单文件上限为 `50 MB`。
   - 上传成功后会先创建文档记录并返回 `pending`，随后由 Node 在后台切到 `processing` 并触发 Python indexer。
   - `md / txt` 当前会继续推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 先明确回写 `failed` 与 `errorMessage`，不假装支持。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
@@ -105,13 +112,13 @@
 
 ## 当前边界
 
-- 这是本地联调与基础框架接口；项目列表、项目基础信息、成员 roster 与全局成员概览已由它提供正式数据源。
-- 项目概览、对话与资源等内容目前仍主要由 `apps/platform` 本地 Mock 驱动。
+- 这是本地联调与基础框架接口；项目列表、项目基础信息、项目资源绑定、项目对话读链路、成员 roster 与全局成员概览已由它提供正式数据源。
+- 项目概览中的补充展示文案、成员协作快照，以及 `skills / agents` 资源目录 fallback 仍主要由 `apps/platform` 本地 Mock 驱动。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
-- `projects` 已落地最小项目模型与 CRUD；`memberships` 已落地最小成员管理闭环。
-- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除和统一知识检索 service；但还没有重建 / retry 接口和前端正式接线。
+- `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
+- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除和统一知识检索 service；前端 `/knowledge` 已正式接线，但还没有重建 / retry 接口。
 - `skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入。
-- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD 和成员管理接口，但资产、资源与对话等正式后端接口仍未落地。
+- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路和成员管理接口；仍未落地的是项目对话消息写入、`skills / agents` 正式主数据，以及更深的项目级检索 / 编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
@@ -173,7 +180,7 @@
 - `src/db/mongo.ts`：MongoDB 连接管理与健康快照。
 - `src/modules/auth/*`：用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
 - `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。
-- `src/modules/projects/*`：项目模型、MongoDB 仓储、权限校验和 CRUD 接口。
+- `src/modules/projects/*`：项目模型、MongoDB 仓储、资源绑定字段、只读项目对话接口、权限校验和 CRUD 接口。
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
 - `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储、CRUD、详情接口、文档上传入口、后台状态推进、Chroma 统一检索 service 与 Python indexer 触发。
 - `src/modules/knowledge/knowledge.search.ts`：Chroma collection 初始化、统一知识检索 service，以及知识库删除时的向量清理。
@@ -192,6 +199,7 @@
 ```bash
 pnpm --filter api dev
 pnpm --filter indexer-py dev
+pnpm --filter api test
 pnpm --filter api check-types
 pnpm --filter api build
 ```

@@ -1,3 +1,4 @@
+import type { KnowledgeSummaryResponse } from '@api/knowledge';
 import {
   getCatalogMembers,
   getGlobalAssetById,
@@ -274,6 +275,11 @@ const RESOURCE_GROUP_COPY: Record<
   },
 };
 
+const compactDateFormatter = new Intl.DateTimeFormat('zh-CN', {
+  month: 'numeric',
+  day: 'numeric',
+});
+
 const buildFallbackConversations = (projectId: string): ConversationSummary[] => {
   return [
     {
@@ -369,7 +375,55 @@ const getResourceIdsByFocus = (
 const mapProjectResources = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
   focus: ProjectResourceFocus,
+  knowledgeCatalog: KnowledgeSummaryResponse[] = [],
 ): ProjectResourceItem[] => {
+  if (focus === 'knowledge') {
+    const knowledgeById = new Map(
+      knowledgeCatalog.map((knowledge) => [knowledge.id, knowledge] as const),
+    );
+
+    return getResourceIdsByFocus(project, focus)
+      .map((resourceId) => {
+        const knowledge = knowledgeById.get(resourceId);
+
+        if (knowledge) {
+          return {
+            id: knowledge.id,
+            type: 'knowledge' as const,
+            name: knowledge.name,
+            description: knowledge.description,
+            updatedAt: compactDateFormatter.format(new Date(knowledge.updatedAt)),
+            owner:
+              knowledge.maintainerName ??
+              knowledge.createdByName ??
+              '未指定',
+            usageCount: 0,
+            source: 'global' as const,
+          };
+        }
+
+        const legacyKnowledge = getGlobalAssetById('knowledge', resourceId);
+        if (legacyKnowledge) {
+          return {
+            ...legacyKnowledge,
+            source: 'global' as const,
+          };
+        }
+
+        return {
+          id: resourceId,
+          type: 'knowledge' as const,
+          name: `知识库 ${resourceId}`,
+          description: '该知识库已绑定到当前项目，但本地尚未拿到完整元数据。',
+          updatedAt: '未记录',
+          owner: '未指定',
+          usageCount: 0,
+          source: 'global' as const,
+        };
+      })
+      .filter(Boolean);
+  }
+
   return getResourceIdsByFocus(project, focus)
     .map((resourceId) => getGlobalAssetById(focus, resourceId))
     .filter((resource): resource is ProjectResourceItem | Exclude<typeof resource, null> => resource !== null)
@@ -404,12 +458,13 @@ export const getMessagesByConversation = (conversationId: string): ChatMessage[]
 
 export const getProjectResourceGroups = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
+  knowledgeCatalog: KnowledgeSummaryResponse[] = [],
 ): ProjectResourceGroup[] => {
   return (['knowledge', 'skills', 'agents'] as const).map((focus) => ({
     key: focus,
     title: RESOURCE_GROUP_COPY[focus].title,
     description: RESOURCE_GROUP_COPY[focus].description,
-    items: mapProjectResources(project, focus),
+    items: mapProjectResources(project, focus, knowledgeCatalog),
   }));
 };
 
@@ -418,16 +473,16 @@ export const getProjectWorkspaceSnapshot = (
     ProjectSummary,
     'id' | 'description' | 'knowledgeBaseIds' | 'skillIds' | 'agentIds' | 'members'
   >,
+  conversationCount: number,
 ): ProjectWorkspaceSnapshot => {
   const members = getProjectMembers(project);
-  const conversations = getConversationsByProject(project.id);
 
   return {
     members,
     meta: getProjectMeta(project),
     stats: {
       activeMembers: members.filter((member) => member.isActive).length,
-      conversationCount: conversations.length,
+      conversationCount,
       knowledgeCount: project.knowledgeBaseIds.length,
       agentCount: project.agentIds.length,
       skillCount: project.skillIds.length,
@@ -444,9 +499,10 @@ export const getRecentProjectConversations = (
 
 export const getRecentProjectResources = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
+  knowledgeCatalog: KnowledgeSummaryResponse[] = [],
   limit = 4,
 ): ProjectResourceItem[] => {
-  return getProjectResourceGroups(project)
+  return getProjectResourceGroups(project, knowledgeCatalog)
     .flatMap((group) => group.items)
     .slice(0, limit);
 };

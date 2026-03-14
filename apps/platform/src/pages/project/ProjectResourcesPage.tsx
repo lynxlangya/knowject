@@ -1,4 +1,4 @@
-import { App, Typography } from 'antd';
+import { Alert, App, Typography } from 'antd';
 import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -26,8 +26,12 @@ export const ProjectResourcesPage = () => {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { activeProject } = useProjectPageContext();
-  const groups = getProjectResourceGroups(activeProject);
+  const {
+    activeProject,
+    knowledgeCatalog,
+    knowledgeCatalogError,
+  } = useProjectPageContext();
+  const groups = getProjectResourceGroups(activeProject, knowledgeCatalog);
   const rawFocus = searchParams.get('focus');
   const focus = isProjectResourceFocus(rawFocus) ? rawFocus : null;
   const knowledgeRef = useRef<HTMLDivElement>(null);
@@ -130,6 +134,15 @@ export const ProjectResourcesPage = () => {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4">
+        {knowledgeCatalogError ? (
+          <Alert
+            type="warning"
+            showIcon
+            message="知识库元数据加载失败"
+            description={knowledgeCatalogError}
+          />
+        ) : null}
+
         {groups.map((group) => (
           <div
             key={group.key}

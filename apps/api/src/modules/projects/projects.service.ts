@@ -4,13 +4,21 @@ import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import { ProjectsRepository } from './projects.repository.js';
 import {
   buildProjectMemberProfileMap,
+  createDefaultProjectConversation,
+  createProjectConversationNotFoundError,
   createProjectNotFoundError,
+  getProjectConversation,
   requireAdminProject,
+  requireVisibleProject,
+  toProjectConversationDetailResponse,
+  toProjectConversationSummaryResponse,
   toProjectResponse,
 } from './projects.shared.js';
 import type {
   CreateProjectInput,
   ProjectCommandContext,
+  ProjectConversationDetailEnvelope,
+  ProjectConversationListResponse,
   ProjectDocument,
   ProjectMemberDocument,
   ProjectResponse,
@@ -20,6 +28,15 @@ import type {
 
 export interface ProjectsService {
   listProjects(context: ProjectCommandContext): Promise<ProjectsListResponse>;
+  listProjectConversations(
+    context: ProjectCommandContext,
+    projectId: string,
+  ): Promise<ProjectConversationListResponse>;
+  getProjectConversationDetail(
+    context: ProjectCommandContext,
+    projectId: string,
+    conversationId: string,
+  ): Promise<ProjectConversationDetailEnvelope>;
   createProject(
     context: ProjectCommandContext,
     input: CreateProjectInput,
@@ -63,11 +80,46 @@ const readOptionalStringField = (
   return value.trim();
 };
 
+const readOptionalStringArrayField = (
+  value: unknown,
+  field: 'knowledgeBaseIds' | 'agentIds' | 'skillIds',
+): string[] | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw createValidationError(`${field} 必须为字符串数组`, {
+      [field]: `${field} 必须为字符串数组`,
+    });
+  }
+
+  const normalizedValues = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (normalizedValues.length !== value.length) {
+    throw createValidationError(`${field} 必须为字符串数组`, {
+      [field]: `${field} 必须为字符串数组`,
+    });
+  }
+
+  return Array.from(new Set(normalizedValues));
+};
+
 const validateCreateProjectInput = (
   input: CreateProjectInput,
-): Pick<ProjectDocument, 'name' | 'description'> => {
+): Pick<
+  ProjectDocument,
+  'name' | 'description' | 'knowledgeBaseIds' | 'agentIds' | 'skillIds'
+> => {
   const name = readOptionalStringField(input.name, 'name');
   const description = readOptionalStringField(input.description, 'description');
+  const knowledgeBaseIds =
+    readOptionalStringArrayField(input.knowledgeBaseIds, 'knowledgeBaseIds') ?? [];
+  const agentIds = readOptionalStringArrayField(input.agentIds, 'agentIds') ?? [];
+  const skillIds = readOptionalStringArrayField(input.skillIds, 'skillIds') ?? [];
 
   if (!name) {
     throw createValidationError('请输入项目名称', {
@@ -78,19 +130,42 @@ const validateCreateProjectInput = (
   return {
     name,
     description: description ?? '',
+    knowledgeBaseIds,
+    agentIds,
+    skillIds,
   };
 };
 
 const validateUpdateProjectInput = (
   input: UpdateProjectInput,
-): Partial<Pick<ProjectDocument, 'name' | 'description'>> => {
+): Partial<
+  Pick<
+    ProjectDocument,
+    'name' | 'description' | 'knowledgeBaseIds' | 'agentIds' | 'skillIds'
+  >
+> => {
   const name = readOptionalStringField(input.name, 'name');
   const description = readOptionalStringField(input.description, 'description');
+  const knowledgeBaseIds = readOptionalStringArrayField(
+    input.knowledgeBaseIds,
+    'knowledgeBaseIds',
+  );
+  const agentIds = readOptionalStringArrayField(input.agentIds, 'agentIds');
+  const skillIds = readOptionalStringArrayField(input.skillIds, 'skillIds');
 
-  if (name === undefined && description === undefined) {
+  if (
+    name === undefined &&
+    description === undefined &&
+    knowledgeBaseIds === undefined &&
+    agentIds === undefined &&
+    skillIds === undefined
+  ) {
     throw createValidationError('至少需要提供一个可更新字段', {
       name: '至少需要提供 name 或 description',
       description: '至少需要提供 name 或 description',
+      knowledgeBaseIds: '至少需要提供一个可更新字段',
+      agentIds: '至少需要提供一个可更新字段',
+      skillIds: '至少需要提供一个可更新字段',
     });
   }
 
@@ -103,6 +178,9 @@ const validateUpdateProjectInput = (
   return {
     ...(name !== undefined ? { name } : {}),
     ...(description !== undefined ? { description } : {}),
+    ...(knowledgeBaseIds !== undefined ? { knowledgeBaseIds } : {}),
+    ...(agentIds !== undefined ? { agentIds } : {}),
+    ...(skillIds !== undefined ? { skillIds } : {}),
   };
 };
 
@@ -120,11 +198,22 @@ const buildInitialMembers = (actorId: string): ProjectMemberDocument[] => {
 
 const applyProjectPatch = (
   project: WithId<ProjectDocument>,
-  patch: Partial<Pick<ProjectDocument, 'name' | 'description'>>,
-): Pick<ProjectDocument, 'name' | 'description' | 'updatedAt'> => {
+  patch: Partial<
+    Pick<
+      ProjectDocument,
+      'name' | 'description' | 'knowledgeBaseIds' | 'agentIds' | 'skillIds'
+    >
+  >,
+): Pick<
+  ProjectDocument,
+  'name' | 'description' | 'knowledgeBaseIds' | 'agentIds' | 'skillIds' | 'updatedAt'
+> => {
   return {
     name: patch.name ?? project.name,
     description: patch.description ?? project.description,
+    knowledgeBaseIds: patch.knowledgeBaseIds ?? project.knowledgeBaseIds ?? [],
+    agentIds: patch.agentIds ?? project.agentIds ?? [],
+    skillIds: patch.skillIds ?? project.skillIds ?? [],
     updatedAt: new Date(),
   };
 };
@@ -147,14 +236,56 @@ export const createProjectsService = ({
       };
     },
 
+    listProjectConversations: async ({ actor }, projectId) => {
+      const project = await requireVisibleProject(repository, projectId, actor);
+      const conversations = project.conversations?.length
+        ? [...project.conversations].sort(
+            (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
+          )
+        : [createDefaultProjectConversation(project)];
+
+      return {
+        total: conversations.length,
+        items: conversations.map((conversation) =>
+          toProjectConversationSummaryResponse(project._id.toHexString(), conversation),
+        ),
+      };
+    },
+
+    getProjectConversationDetail: async ({ actor }, projectId, conversationId) => {
+      const project = await requireVisibleProject(repository, projectId, actor);
+      const conversation = getProjectConversation(project, conversationId);
+
+      if (!conversation) {
+        throw createProjectConversationNotFoundError();
+      }
+
+      return {
+        conversation: toProjectConversationDetailResponse(
+          project._id.toHexString(),
+          conversation,
+        ),
+      };
+    },
+
     createProject: async ({ actor }, input) => {
-      const { name, description } = validateCreateProjectInput(input);
+      const {
+        name,
+        description,
+        knowledgeBaseIds,
+        agentIds,
+        skillIds,
+      } = validateCreateProjectInput(input);
       const now = new Date();
       const project = await repository.createProject({
         name,
         description,
         ownerId: actor.id,
         members: buildInitialMembers(actor.id),
+        knowledgeBaseIds,
+        agentIds,
+        skillIds,
+        conversations: [createDefaultProjectConversation({ name })],
         createdAt: now,
         updatedAt: now,
       });

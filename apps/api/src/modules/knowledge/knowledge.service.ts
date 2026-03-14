@@ -540,7 +540,8 @@ export const createKnowledgeService = ({
     },
 
     // Keep future metadata, upload, index trigger, and search orchestration behind the service.
-    listKnowledge: async (_context) => {
+    listKnowledge: async (context) => {
+      void context;
       await repository.ensureMetadataModel();
       const items = await repository.listKnowledgeBases();
       const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, items);
@@ -551,7 +552,8 @@ export const createKnowledgeService = ({
       };
     },
 
-    getKnowledgeDetail: async (_context, knowledgeId) => {
+    getKnowledgeDetail: async (context, knowledgeId) => {
+      void context;
       await repository.ensureMetadataModel();
       const knowledge = await repository.findKnowledgeById(knowledgeId);
 
@@ -582,7 +584,8 @@ export const createKnowledgeService = ({
       };
     },
 
-    updateKnowledge: async (_context, knowledgeId, input) => {
+    updateKnowledge: async (context, knowledgeId, input) => {
+      void context;
       await repository.ensureMetadataModel();
       const currentKnowledge = await repository.findKnowledgeById(knowledgeId);
 
@@ -607,7 +610,8 @@ export const createKnowledgeService = ({
       };
     },
 
-    deleteKnowledge: async (_context, knowledgeId) => {
+    deleteKnowledge: async (context, knowledgeId) => {
+      void context;
       await repository.ensureMetadataModel();
       const knowledge = await repository.findKnowledgeById(knowledgeId);
 
@@ -743,7 +747,8 @@ export const createKnowledgeService = ({
       }
     },
 
-    searchDocuments: async (_context, input) => {
+    searchDocuments: async (context, input) => {
+      void context;
       return searchService.searchDocuments(validateSearchDocumentsInput(input));
     },
   };

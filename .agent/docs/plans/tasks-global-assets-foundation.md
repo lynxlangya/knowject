@@ -73,8 +73,12 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - `/knowledge` 已切正式接口并补状态视图。
   - `project.catalog.ts` 仍提供 `skills / agents` 目录与项目资源映射所需的过渡数据。
   - `GlobalAssetManagementPage.tsx` 当前仍服务 `skills / agents`，保留占位按钮，不产生真实写路径。
-- 项目资源绑定当前仍是前端本地状态：
-  - `knowject_project_resource_bindings`
+- 项目资源绑定已正式写回后端项目模型：
+  - `projects` 集合当前已持久化 `knowledgeBaseIds / agentIds / skillIds`
+  - `knowject_project_resource_bindings` 已退为历史本地数据迁移缓存
+- 项目对话读链路已接入正式项目接口：
+  - `GET /api/projects/:projectId/conversations`
+  - `GET /api/projects/:projectId/conversations/:conversationId`
 - `memory` 路由当前只是“项目记忆查询演示接口”，不能直接当正式知识检索服务。
 
 ### 当前明确未完成
@@ -89,11 +93,11 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 
 - 登录页、JWT、项目 CRUD、项目成员管理。
 - `/knowledge`、`/skills`、`/agents` 的页面路由壳层。
-- 项目私有知识库、项目资源正式绑定、项目对话列表、SSE、来源引用、完整 Agent 调度。
+- 项目私有知识库、项目对话消息写入、SSE、来源引用、完整 Agent 调度。
 
 ### 当前需要显式处理的边界
 
-- `ProjectSummary` 仍是“后端正式项目基础信息 + 前端本地 pin / 资源绑定”的消费模型；Week 3-4 不要为了全局资产而提前回写项目正式模型。
+- `ProjectSummary` 现已是“后端正式项目基础信息 + 后端资源绑定 + 前端本地 pin”的消费模型；后续不应再把资源绑定重新拆回前端本地状态。
 - 全局资产页已经有壳层，因此本阶段应优先“接正式数据”，不要再重做一套页面结构。
 - 认知文档里提到 `global_docs / global_code`；但真实 Git 仓库接入和代码切分属于 Week 5-6，本阶段只应完成 `global_code` 的集合预留与契约，不应把代码接入强行塞进 Week 3-4。
 
@@ -420,7 +424,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 - 已完成记录：
   - 已落地 `GET /api/knowledge/:knowledgeId`、`POST /api/knowledge`、`PATCH /api/knowledge/:knowledgeId`、`DELETE /api/knowledge/:knowledgeId`、`POST /api/knowledge/:knowledgeId/documents`。
   - 上传阶段已由 Node 创建文档记录，初始化 `pending` 状态，并按 `knowledgeId/documentId/documentVersionHash/` 组织原始文件存储。
-  - 当前上传入口只支持 `md / txt / pdf`，并通过 `10 MB` 限制、空文件校验和格式校验给出明确错误。
+  - 当前上传入口只支持 `md / txt / pdf`，并通过 `50 MB` 限制、空文件校验和格式校验给出明确错误。
   - 当前上传成功后只完成主数据写入与文件落盘，不触发 Python indexer；这部分继续留给 `GA-05`。
 - 建议子任务：
   - 先完成知识库 CRUD，再接上传，避免把文件入口和实体创建耦在一起。

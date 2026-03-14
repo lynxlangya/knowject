@@ -1,4 +1,4 @@
-import { Button, Card, Empty, Typography } from 'antd';
+import { Alert, Button, Card, Empty, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   buildProjectChatPath,
@@ -6,20 +6,40 @@ import {
   buildProjectResourcesPath,
 } from '@app/navigation/paths';
 import { useProjectPageContext } from './projectPageContext';
-import {
-  getRecentProjectConversations,
-  getRecentProjectResources,
-} from './project.mock';
+import { getRecentProjectResources } from './project.mock';
+
+const formatConversationUpdatedAt = (value: string): string => {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+};
 
 export const ProjectOverviewPage = () => {
   const navigate = useNavigate();
-  const { activeProject } = useProjectPageContext();
-  const recentConversations = getRecentProjectConversations(activeProject.id);
-  const recentResources = getRecentProjectResources(activeProject);
+  const {
+    activeProject,
+    conversations,
+    conversationsError,
+    knowledgeCatalog,
+  } = useProjectPageContext();
+  const recentConversations = conversations.slice(0, 3);
+  const recentResources = getRecentProjectResources(activeProject, knowledgeCatalog);
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex flex-col gap-3">
+        {conversationsError ? (
+          <Alert
+            type="warning"
+            showIcon
+            message="项目上下文加载部分失败"
+            description={conversationsError}
+          />
+        ) : null}
+
         <Card
           className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
           styles={{ body: { padding: '20px 20px 18px' } }}
@@ -50,7 +70,7 @@ export const ProjectOverviewPage = () => {
                       {conversation.title}
                     </Typography.Text>
                     <Typography.Text className="text-xs text-slate-400">
-                      {conversation.updatedAt}
+                      {formatConversationUpdatedAt(conversation.updatedAt)}
                     </Typography.Text>
                   </div>
                   <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-600!">

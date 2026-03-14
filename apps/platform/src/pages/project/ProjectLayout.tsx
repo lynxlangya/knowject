@@ -1,5 +1,12 @@
+import { isApiError } from '@knowject/request';
+import { useEffect, useState } from 'react';
 import { Alert, Button, Skeleton } from 'antd';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
+import {
+  listProjectConversations,
+  type ProjectConversationSummaryResponse,
+} from '@api/projects';
 import {
   PATHS,
   buildProjectSectionPath,
@@ -10,11 +17,85 @@ import { ProjectHeader } from './components/ProjectHeader';
 import { ProjectSectionNav } from './components/ProjectSectionNav';
 import { getProjectWorkspaceSnapshot } from './project.mock';
 
+const getLoadErrorMessage = (error: unknown, fallback: string): string => {
+  return isApiError(error) ? error.message : fallback;
+};
+
 export const ProjectLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId } = useParams<{ projectId?: string }>();
   const { getProjectById, loading, error, refreshProjects } = useProjectContext();
+  const [conversations, setConversations] = useState<
+    ProjectConversationSummaryResponse[]
+  >([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [conversationsError, setConversationsError] = useState<string | null>(null);
+  const [knowledgeCatalog, setKnowledgeCatalog] = useState<
+    KnowledgeSummaryResponse[]
+  >([]);
+  const [knowledgeCatalogLoading, setKnowledgeCatalogLoading] = useState(false);
+  const [knowledgeCatalogError, setKnowledgeCatalogError] = useState<string | null>(null);
+  const activeProject = projectId ? getProjectById(projectId) : null;
+
+  useEffect(() => {
+    if (!activeProject) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadProjectPageData = async () => {
+      setConversationsLoading(true);
+      setKnowledgeCatalogLoading(true);
+
+      const [conversationsResult, knowledgeResult] = await Promise.allSettled([
+        listProjectConversations(activeProject.id),
+        listKnowledge(),
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (conversationsResult.status === 'fulfilled') {
+        setConversations(conversationsResult.value.items);
+        setConversationsError(null);
+      } else {
+        console.error('加载项目对话失败', conversationsResult.reason);
+        setConversations([]);
+        setConversationsError(
+          getLoadErrorMessage(
+            conversationsResult.reason,
+            '加载项目对话失败，请稍后重试。',
+          ),
+        );
+      }
+
+      if (knowledgeResult.status === 'fulfilled') {
+        setKnowledgeCatalog(knowledgeResult.value.items);
+        setKnowledgeCatalogError(null);
+      } else {
+        console.error('加载知识库目录失败', knowledgeResult.reason);
+        setKnowledgeCatalog([]);
+        setKnowledgeCatalogError(
+          getLoadErrorMessage(
+            knowledgeResult.reason,
+            '加载知识库元数据失败，请稍后重试。',
+          ),
+        );
+      }
+
+      setConversationsLoading(false);
+      setKnowledgeCatalogLoading(false);
+    };
+
+    void loadProjectPageData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeProject]);
 
   if (!projectId) {
     return (
@@ -33,8 +114,6 @@ export const ProjectLayout = () => {
       </section>
     );
   }
-
-  const activeProject = getProjectById(projectId);
 
   if (loading && !activeProject) {
     return (
@@ -72,7 +151,10 @@ export const ProjectLayout = () => {
 
   const activeSection = getProjectSectionFromPathname(location.pathname);
   const isOverviewSection = activeSection === 'overview';
-  const workspaceSnapshot = getProjectWorkspaceSnapshot(activeProject);
+  const workspaceSnapshot = getProjectWorkspaceSnapshot(
+    activeProject,
+    conversations.length,
+  );
 
   return (
     <section className="flex h-full min-h-0 flex-col">
@@ -97,6 +179,12 @@ export const ProjectLayout = () => {
           context={{
             activeProject,
             ...workspaceSnapshot,
+            conversations,
+            conversationsLoading,
+            conversationsError,
+            knowledgeCatalog,
+            knowledgeCatalogLoading,
+            knowledgeCatalogError,
           }}
         />
       </div>

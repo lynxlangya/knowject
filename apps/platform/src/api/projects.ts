@@ -20,9 +20,44 @@ export interface ProjectResponse {
   description: string;
   ownerId: string;
   members: ProjectMemberResponse[];
+  knowledgeBaseIds: string[];
+  agentIds: string[];
+  skillIds: string[];
   createdAt: string;
   updatedAt: string;
   currentUserRole: ProjectRole;
+}
+
+export interface ProjectConversationSummaryResponse {
+  id: string;
+  projectId: string;
+  title: string;
+  updatedAt: string;
+  preview: string;
+}
+
+export interface ProjectConversationListResponse {
+  total: number;
+  items: ProjectConversationSummaryResponse[];
+}
+
+export type ProjectConversationMessageRole = "user" | "assistant";
+
+export interface ProjectConversationMessageResponse {
+  id: string;
+  conversationId: string;
+  role: ProjectConversationMessageRole;
+  content: string;
+  createdAt: string;
+}
+
+export interface ProjectConversationDetailResponse
+  extends ProjectConversationSummaryResponse {
+  messages: ProjectConversationMessageResponse[];
+}
+
+export interface ProjectConversationDetailEnvelope {
+  conversation: ProjectConversationDetailResponse;
 }
 
 export interface ProjectsListResponse {
@@ -38,11 +73,17 @@ export interface AddProjectMemberRequest {
 export interface CreateProjectRequest {
   name: string;
   description?: string;
+  knowledgeBaseIds?: string[];
+  agentIds?: string[];
+  skillIds?: string[];
 }
 
 export interface UpdateProjectRequest {
   name?: string;
   description?: string;
+  knowledgeBaseIds?: string[];
+  agentIds?: string[];
+  skillIds?: string[];
 }
 
 export interface UpdateProjectMemberRequest {
@@ -97,6 +138,29 @@ export const createProject = async (
     "/projects",
     payload,
   );
+  return unwrapApiData(response.data);
+};
+
+export const listProjectConversations = async (
+  projectId: string,
+): Promise<ProjectConversationListResponse> => {
+  const response = await client.get<ApiEnvelope<ProjectConversationListResponse>>(
+    `/projects/${encodeURIComponent(projectId)}/conversations`,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const getProjectConversationDetail = async (
+  projectId: string,
+  conversationId: string,
+): Promise<ProjectConversationDetailEnvelope> => {
+  const response = await client.get<ApiEnvelope<ProjectConversationDetailEnvelope>>(
+    `/projects/${encodeURIComponent(projectId)}/conversations/${encodeURIComponent(
+      conversationId,
+    )}`,
+  );
+
   return unwrapApiData(response.data);
 };
 

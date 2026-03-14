@@ -54,7 +54,17 @@ export class ProjectsRepository {
 
   async updateProject(
     projectId: string,
-    input: Pick<ProjectDocument, 'name' | 'description' | 'updatedAt'>,
+    input: Partial<
+      Pick<
+        ProjectDocument,
+        | 'name'
+        | 'description'
+        | 'knowledgeBaseIds'
+        | 'agentIds'
+        | 'skillIds'
+        | 'updatedAt'
+      >
+    >,
   ): Promise<WithId<ProjectDocument> | null> {
     const objectId = toObjectId(projectId);
     if (!objectId) {
@@ -65,11 +75,7 @@ export class ProjectsRepository {
     const result = await collection.findOneAndUpdate(
       { _id: objectId },
       {
-        $set: {
-          name: input.name,
-          description: input.description,
-          updatedAt: input.updatedAt,
-        },
+        $set: input,
       },
       {
         returnDocument: 'after',

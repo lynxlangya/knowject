@@ -58,8 +58,32 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined;
+          }
+
+          if (
+            id.includes('/antd/') ||
+            id.includes('/@ant-design/') ||
+            id.includes('/rc-')
+          ) {
+            return 'vendor-antd';
+          }
+
+          if (id.includes('/react-router') || id.includes('/@remix-run/')) {
+            return 'vendor-router';
+          }
+
+          if (
+            id.includes('/react/') ||
+            id.includes('/react-dom/') ||
+            id.includes('/scheduler/')
+          ) {
+            return 'vendor-react';
+          }
+
+          return undefined;
         },
         assetFileNames: 'assets/[name]-[hash][extname]',
         chunkFileNames: 'assets/[name]-[hash].js',

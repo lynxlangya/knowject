@@ -1,6 +1,6 @@
 # Knowject Frontend (`apps/platform`)
 
-前端采用 React + Vite + Ant Design，当前职责是提供登录后产品壳、项目态页面与全局资产管理页；截至 2026-03-10，基础框架阶段已完成认证接入、项目主数据接入、项目成员 roster 管理与全局成员协作总览接入。
+前端采用 React + Vite + Ant Design，当前职责是提供登录后产品壳、项目态页面与全局资产管理页；截至 2026-03-13，基础框架阶段已完成认证接入、项目主数据接入、项目成员 roster 管理、项目资源绑定正式写回、项目对话读链路接入与全局成员协作总览接入。
 
 ## 当前路由
 
@@ -26,12 +26,14 @@
 
 ## 数据来源
 
-- `src/app/project/project.storage.ts`：`knowject_project_pins`、`knowject_project_resource_bindings` 的本地持久化，以及旧 `knowject_projects` 的一次性迁移读取。
-- `src/app/project/project.catalog.ts`：全局资产与成员 Mock 源。
-- `src/pages/project/project.mock.ts`：项目概览、对话、资源、成员演示数据。
-- `src/api`：登录、项目、成员、知识库与记忆查询接口封装；项目列表、项目基础信息、全局成员概览、成员 roster 与全局知识库已接入真实后端。
+- `src/app/project/project.storage.ts`：`knowject_project_pins` 的本地持久化，以及旧 `knowject_project_resource_bindings`、`knowject_projects` 的一次性迁移读取与清理。
+- `src/app/project/project.catalog.ts`：全局 `skills / agents` 目录 fallback 与成员基础档案 Mock 源。
+- `src/pages/project/project.mock.ts`：项目概览补充文案、成员协作快照，以及 `skills / agents` 资源分组的展示 fallback；不再是项目对话或资源绑定的权威数据源。
+- `src/api`：登录、项目、项目对话、成员、知识库与记忆查询接口封装；项目列表、项目基础信息、项目资源绑定、项目对话读链路、全局成员概览、成员 roster 与全局知识库已接入真实后端。
 - `src/api/*` 当前统一按 `ApiEnvelope<T>` 调用后端，并在 API 层解包 `data`；页面层继续消费原有业务对象，不直接感知 `code / message / meta`。
 - `/knowledge` 主要消费 `GET /api/knowledge`、`GET /api/knowledge/:knowledgeId`、`POST /api/knowledge`、`PATCH /api/knowledge/:knowledgeId`、`DELETE /api/knowledge/:knowledgeId` 与 `POST /api/knowledge/:knowledgeId/documents`。
+- `/project/:projectId/chat` 主要消费 `GET /api/projects/:projectId/conversations` 与 `GET /api/projects/:projectId/conversations/:conversationId`；当前输入框仍保持禁用，等待正式消息写路径。
+- `/project/:projectId/resources` 主要消费后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`；其中知识库元数据优先来自 `/api/knowledge`，`skills / agents` 仍用本地目录 fallback。
 - `/members` 主要消费 `GET /api/members`；`/project/:projectId/members` 主要消费 `GET /api/auth/users` 与 `/api/projects/:projectId/members*`。
 
 ## 核心目录

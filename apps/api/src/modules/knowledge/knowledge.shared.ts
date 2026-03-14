@@ -156,8 +156,16 @@ export const normalizeUploadedFileName = (fileName: string): string => {
 
 export const sanitizeFileName = (fileName: string): string => {
   const normalized = normalizeUploadedFileName(fileName);
-  const sanitized = normalized
-    .replace(/[\u0000-\u001F\u007F<>:"/\\|?*]+/g, '_')
+  const sanitized = Array.from(normalized, (char) => {
+    const codePoint = char.codePointAt(0) ?? 0;
+
+    if (codePoint <= 0x1f || codePoint === 0x7f) {
+      return '_';
+    }
+
+    return /[<>:"/\\|?*]/u.test(char) ? '_' : char;
+  })
+    .join('')
     .replace(/\s+/g, '_')
     .replace(/^\.+/g, '')
     .replace(/[. ]+$/g, '');

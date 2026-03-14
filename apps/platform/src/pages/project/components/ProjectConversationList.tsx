@@ -8,6 +8,15 @@ interface ProjectConversationListProps {
   onSelect: (conversationId: string) => void;
 }
 
+const formatConversationUpdatedAt = (value: string): string => {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+};
+
 export const ProjectConversationList = ({
   conversations,
   activeConversationId,
@@ -44,7 +53,7 @@ export const ProjectConversationList = ({
                   {conversation.title}
                 </Typography.Text>
                 <Typography.Text className="shrink-0 text-xs text-slate-400">
-                  {conversation.updatedAt}
+                  {formatConversationUpdatedAt(conversation.updatedAt)}
                 </Typography.Text>
               </div>
               <Typography.Text className="block text-sm text-slate-600">

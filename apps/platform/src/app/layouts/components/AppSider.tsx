@@ -26,6 +26,7 @@ import {
 } from "antd";
 import type { MenuProps } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
+import { listKnowledge } from "@api/knowledge";
 import { KNOWJECT_BRAND } from "@styles/brand";
 import { getMenuPath, menuItems } from "@app/navigation/menu";
 import {
@@ -88,6 +89,10 @@ export const AppSider = ({
   } = useProjectContext();
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectSubmitting, setProjectSubmitting] = useState(false);
+  const [knowledgeOptionsLoading, setKnowledgeOptionsLoading] = useState(false);
+  const [knowledgeOptions, setKnowledgeOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [actionMenuOpenProjectId, setActionMenuOpenProjectId] = useState<
     string | null
@@ -95,6 +100,7 @@ export const AppSider = ({
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const activeProjectId = getProjectIdFromPathname(location.pathname);
   const authUser = getAuthUser();
+  const selectedKnowledgeIds = Form.useWatch("knowledgeBaseIds", form) ?? [];
   const editingProject = editingProjectId
     ? (projects.find((project) => project.id === editingProjectId) ?? null)
     : null;
@@ -123,6 +129,74 @@ export const AppSider = ({
 
     form.resetFields();
   }, [editingProject, form, projectModalOpen]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadKnowledgeOptions = async () => {
+      setKnowledgeOptionsLoading(true);
+
+      try {
+        const result = await listKnowledge();
+        if (!isMounted) {
+          return;
+        }
+
+        setKnowledgeOptions(
+          result.items.map((item) => ({
+            value: item.id,
+            label: item.name,
+          })),
+        );
+      } catch (loadError) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error(loadError);
+        setKnowledgeOptions([]);
+      } finally {
+        if (isMounted) {
+          setKnowledgeOptionsLoading(false);
+        }
+      }
+    };
+
+    void loadKnowledgeOptions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const resolvedKnowledgeOptions = (() => {
+    const optionMap = new Map(
+      knowledgeOptions.map((option) => [option.value, option] as const),
+    );
+
+    selectedKnowledgeIds.forEach((knowledgeId) => {
+      if (optionMap.has(knowledgeId)) {
+        return;
+      }
+
+      const matchedProject = projects.find((project) =>
+        project.knowledgeBaseIds.includes(knowledgeId),
+      );
+      const fallbackLabel =
+        GLOBAL_KNOWLEDGE_OPTIONS.find((option) => option.value === knowledgeId)
+          ?.label ??
+        (matchedProject?.knowledgeBaseIds.includes(knowledgeId)
+          ? knowledgeId
+          : knowledgeId);
+
+      optionMap.set(knowledgeId, {
+        value: knowledgeId,
+        label: fallbackLabel,
+      });
+    });
+
+    return Array.from(optionMap.values());
+  })();
 
   const handleOpenProject = (projectId: string) => {
     navigate(buildProjectOverviewPath(projectId));
@@ -719,7 +793,11 @@ export const AppSider = ({
               mode="multiple"
               allowClear
               placeholder="可选"
-              options={GLOBAL_KNOWLEDGE_OPTIONS}
+              loading={knowledgeOptionsLoading}
+              options={resolvedKnowledgeOptions}
+              notFoundContent={
+                knowledgeOptionsLoading ? "加载中..." : "暂无可选知识库"
+              }
             />
           </Form.Item>
 

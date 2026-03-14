@@ -12,9 +12,9 @@
   - 前端本地 Mock 的组织边界。
   - `apps/api` 的配置、MongoDB、健康检查基础骨架。
   - 用户注册 / 登录、`argon2id`、JWT 与前端 `/login` 双模式入口。
-- 与目标蓝图之间的最大断层不在 UI，而在正式数据层、RAG / Skill / Agent 核心能力、部署与权限体系。
-- 当前 Chroma 只停留在基础设施与健康诊断层，还没有形成正式知识索引链路；仓库里也还没有 Python indexer 和统一知识检索 service。
-- 因此后续开发不应继续把目标态文案写成现状，而应在“前端壳层补完”和“后端 / AI 主链路启动”之间做阶段取舍。
+- 与目标蓝图之间的最大断层不在 UI，而在项目级正式数据层、Skill / Agent 核心能力、检索链路深化和部署可运维性。
+- 当前 RAG 基线已不再停留在概念层：`/knowledge`、Node -> Python indexer、`global_docs` Chroma 写入，以及 `POST /api/knowledge/search` 已形成最小正式闭环。
+- 因此后续开发不应继续把“最小知识链路未落地”当作主要阻塞，而应把重点转到项目对话消息写链路、`skills / agents` 主数据、剩余展示 Mock 收口，以及重建 / 重试和观测能力。
 
 ## 2. 关键演进脉络
 
@@ -62,9 +62,9 @@
 ### 3.2 前端状态模型
 
 - 当前状态
-  - 项目列表、项目基础信息与成员 roster 已切到后端接口。
-  - 资产绑定、对话与协作演示数据仍主要依赖前端本地状态和 Mock。
-  - 前端已经形成“全局目录 + 项目绑定 + 项目协作快照”的数据组织雏形。
+  - 项目列表、项目基础信息、成员 roster、项目资源绑定，以及项目对话列表 / 详情已切到后端接口。
+  - 剩余仍依赖前端本地状态和 Mock 的，主要是项目概览补充文案、成员协作快照，以及 `skills / agents` 目录 fallback。
+  - 前端已经形成“正式项目模型 + 全局目录 fallback + 项目协作快照”的数据组织雏形。
 - 目标状态
   - 项目、资产、成员、对话应来自正式后端与持久化存储。
   - 前端只保留必要的本地 UI 状态，不再承担业务主数据源职责。
@@ -75,19 +75,19 @@
   - `apps/platform/src/pages/project/project.mock.ts`
   - `dd59806`
 - 风险
-  - 如果在剩余的资源绑定、对话和协作快照 Mock 体系上继续堆功能，后续迁到正式后端的成本会迅速升高。
+  - 如果在剩余的协作快照、概览补充层和 `skills / agents` fallback 上继续堆功能，后续迁到正式后端的成本会迅速升高。
 - 建议优先级
   - P0，最值得尽早切换。
 - 下一步动作
-  - 基于已完成的项目主数据切换，优先补资源绑定真实写路径，再逐步替换会话列表、消息链路等剩余前端入口数据源。
+  - 基于已完成的项目主数据、资源绑定和对话读链路，优先补消息写路径，再逐步替换协作快照与 `skills / agents` fallback 等剩余前端入口数据源。
 
 ### 3.3 后端与数据层
 
 - 当前状态
-  - `apps/api` 当前已暴露 health、register、login、projects CRUD、project memberships、memory overview、memory query 12 个接口。
-  - 已经建立 `config / db / modules / middleware` 骨架，并接入 MongoDB、用户模型、`argon2id` 与 JWT。
-  - 已有正式项目模型、项目内嵌成员结构、最小项目 CRUD 和成员管理接口，但资产与对话正式存储仍未落地。
-  - Chroma 目前只作为 Docker 基础设施与健康诊断目标接入，没有正式知识库索引写入、删除、重建或统一检索服务。
+  - `apps/api` 当前已暴露 `health / auth / members / projects / memberships / knowledge / skills / agents / memory` 九组接口。
+  - 已经建立 `config / db / modules / middleware` 骨架，并接入 MongoDB、用户模型、`argon2id`、JWT 与统一响应 envelope。
+  - 已有正式项目模型、项目内嵌成员结构、最小项目 CRUD、项目资源绑定字段、项目对话只读接口和成员管理接口；`knowledge` 也已完成 Mongo 元数据、上传、Node -> Python 索引、`global_docs` Chroma 写入 / 删除和统一检索。
+  - 当前真正未落地的仍是项目对话消息写入 / 正式存储、`skills / agents` 主数据，以及知识链路的重建 / 重试 / 诊断完善。
 - 目标状态
   - 需要完整承载用户、项目、成员、对话、知识资产、Skill 配置、Agent 配置的正式后端。
   - 需要结构化数据存储和向量检索基础设施，并明确“Node 管业务主链路，Python 管索引处理链路”的运行时分层。
@@ -100,18 +100,18 @@
   - `.agent/docs/roadmap/target-architecture.md`
   - `36835ed`
 - 风险
-  - 如果后端继续扩项目与 AI 能力，而前端仍长期保留资源绑定与对话的本地假数据层，仓库会停留在“主链路已接通、剩余入口继续割裂”的中间态。
+  - 如果后端继续扩项目与 AI 能力，而前端仍长期保留协作快照、概览补充层与 `skills / agents` fallback，仓库会停留在“主链路已收口、补充层仍割裂”的中间态。
 - 建议优先级
   - P0，与前端状态切换同级。
 - 下一步动作
-  - 项目模型、CRUD 和成员接口已经落地；下一步应先补 `apps/api + Python indexer + Chroma` 的最小索引闭环，再逐步承接资源绑定、会话与 AI 入口的正式化。
+  - 项目模型、资源绑定、会话读链路、成员接口和全局知识索引闭环已经落地；下一步应优先补会话 / 消息主数据、`skills / agents` 正式模型，以及 `retry / rebuild / diagnostics` 这些索引运维缺口。
 
 ### 3.4 AI / RAG / Skill / Agent
 
 - 当前状态
-  - 只有 `memory/query` 的演示式关键词匹配。
-  - Knowledge / Skill / Agent 还停留在前端目录与概念分层阶段。
-  - 当前只有 Chroma 基础设施与健康诊断，没有正式知识索引链路、没有 Python indexer，也没有统一知识检索 service。
+  - `memory/query` 仍是演示式关键词匹配。
+  - `knowledge` 已进入正式基线，具备知识库 CRUD、文档上传、Python indexer、`global_docs` Chroma 写入与统一检索；`skills / agents` 仍停留在鉴权骨架和页面壳层阶段。
+  - 当前已经有最小统一知识检索 service，但它主要服务全局文档知识库；项目对话虽然已有正式只读接口，但还没有接入真实消息写入、检索上下文和 Agent 编排主链路。
 - 目标状态
   - 文档与代码可索引。
   - 项目对话可检索上下文、调用技能、展示来源和工具过程。
@@ -122,18 +122,18 @@
   - `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`
   - `3d9101b`
 - 风险
-  - 如果直接从当前演示接口跳到完整 Agent 编排，跨度过大，容易在检索质量、工具边界和接口设计上一次性失控。
+  - 如果在 `global_docs` 还没补齐重建 / 重试 / 诊断和项目级消费入口时，直接跳到完整 Agent 编排，容易在检索质量、工具边界和接口设计上一次性失控。
 - 建议优先级
   - P0，但应拆阶段推进。
 - 下一步动作
-  - 建议按“Node API + Python indexer + Chroma 的最小知识索引闭环 -> `global_code` 扩展 -> 项目级知识库与对话链路 -> Skill 执行 -> Agent 编排”顺序推进，而不是一次性并发铺开所有目标态能力。
+  - 建议按“补齐 `global_docs` 的 retry / rebuild / diagnostics -> 让项目对话与资源消费复用统一检索 service -> 补 `skills / agents` 正式主数据与绑定关系 -> 再推进 Agent 编排”顺序推进，而不是一次性并发铺开所有目标态能力。
 
 ### 3.5 部署与运维
 
 - 当前状态
-  - 当前仓库可本地 `pnpm dev`、`pnpm check-types`、`pnpm build`。
-  - 根目录已经有 `/.env.example`，API 侧已形成最小环境变量治理和本地 MongoDB 运行契约。
-  - 没有正式的私有化部署编排、运行监控与回滚策略。
+  - 当前仓库可本地 `pnpm dev`、`pnpm test`、`pnpm check-types`、`pnpm build`，API 包级测试和 Python unittest 也已可独立执行。
+  - 根目录已经有 `/.env.example`，并交付 `compose.yml / compose.local.yml / compose.production.yml`、`scripts/knowject.sh`、`indexer-py + mongodb + chroma` 的本地 / 线上风格编排基线。
+  - 当前仍缺少的是更细的运行监控、统一 smoke / CI 校验与回滚策略，而不是 Docker 基线本身。
 - 目标状态
   - 具备可复现的本地 / 服务器部署方案，支持数据库、向量库和后端服务联动。
 - 证据来源
@@ -142,11 +142,11 @@
   - `turbo.json`
   - `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`
 - 风险
-  - 如果后续引入数据库和检索基础设施，但没有统一部署与环境治理，开发和演示环境会迅速分叉。
+  - 如果后续继续扩项目资源、对话和 Agent 能力，但验证入口、运行观测和回滚策略没有同步补齐，开发环境和演示环境仍会迅速分叉。
 - 建议优先级
-  - P2，在正式后端和 AI 能力启动后立刻跟进。
+  - P2，在项目级正式链路继续扩展前尽快补齐。
 - 下一步动作
-  - 在后端领域模型和基础设施方向稳定后，再补最小部署方案；当前不建议为了“先有部署”而空做 docker-compose。
+  - 在继续扩项目资源、对话与 Agent 能力前，先补统一 smoke 校验、测试入口收口、健康诊断和回滚说明，避免“功能前进了，运维基线没跟上”。
 
 ### 3.6 文档治理
 
@@ -172,10 +172,10 @@
 ## 4. 推荐开发顺序
 
 1. 稳住当前信息架构，不再做大的页面和路由反复。
-2. 基于已落地的最小正式项目与成员模型，优先替换最关键的前端 Mock 主数据源。
-3. 先补 `apps/api + Python indexer + Chroma` 的最小索引闭环，并把 `search_documents` 的服务边界固定在 Node。
-4. 在 `global_docs` 稳定后，再扩到 `global_code`，随后再接项目级知识库、对话链路、Skill 执行与 Agent 编排。
-5. 在正式后端和 AI 链路初步稳定后，再补私有化部署方案。
+2. 基于已落地的最小正式项目、资源绑定与会话读链路，优先继续收口最关键的前端 Mock 入口。
+3. 优先补项目对话消息写路径，以及 `skills / agents` 正式主数据与目录切换。
+4. 在 `global_docs` 已落地的基础上，补齐 `retry / rebuild / diagnostics`，再推进 `global_code`、项目级知识消费、Skill 执行与 Agent 编排。
+5. 在项目级正式链路继续扩展前，补 smoke、观测和回滚说明，避免部署与验证能力滞后。
 
 ## 5. 当前最值得避免的误区
 

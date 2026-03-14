@@ -475,13 +475,11 @@ export const KnowledgeManagementPage = () => {
             : '加载知识库列表失败，请稍后重试',
         );
       } finally {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          setLoading(false);
+          setRefreshing(false);
+          isFirstLoadRef.current = false;
         }
-
-        setLoading(false);
-        setRefreshing(false);
-        isFirstLoadRef.current = false;
       }
     };
 
@@ -526,11 +524,9 @@ export const KnowledgeManagementPage = () => {
             : '加载知识库详情失败，请稍后重试',
         );
       } finally {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          setDetailLoading(false);
         }
-
-        setDetailLoading(false);
       }
     };
 

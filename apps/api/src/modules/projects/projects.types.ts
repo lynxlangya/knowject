@@ -2,11 +2,33 @@ import type { ObjectId } from 'mongodb';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 
 export type ProjectRole = 'admin' | 'member';
+export type ProjectConversationMessageRole = 'user' | 'assistant';
+
+export interface ProjectResourceBindingDocument {
+  knowledgeBaseIds: string[];
+  agentIds: string[];
+  skillIds: string[];
+}
 
 export interface ProjectMemberDocument {
   userId: string;
   role: ProjectRole;
   joinedAt: Date;
+}
+
+export interface ProjectConversationMessageDocument {
+  id: string;
+  role: ProjectConversationMessageRole;
+  content: string;
+  createdAt: Date;
+}
+
+export interface ProjectConversationDocument {
+  id: string;
+  title: string;
+  messages: ProjectConversationMessageDocument[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ProjectDocument {
@@ -15,6 +37,10 @@ export interface ProjectDocument {
   description: string;
   ownerId: string;
   members: ProjectMemberDocument[];
+  knowledgeBaseIds: string[];
+  agentIds: string[];
+  skillIds: string[];
+  conversations: ProjectConversationDocument[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,11 +48,17 @@ export interface ProjectDocument {
 export interface CreateProjectInput {
   name?: unknown;
   description?: unknown;
+  knowledgeBaseIds?: unknown;
+  agentIds?: unknown;
+  skillIds?: unknown;
 }
 
 export interface UpdateProjectInput {
   name?: unknown;
   description?: unknown;
+  knowledgeBaseIds?: unknown;
+  agentIds?: unknown;
+  skillIds?: unknown;
 }
 
 export interface ProjectMemberResponse {
@@ -43,6 +75,9 @@ export interface ProjectResponse {
   description: string;
   ownerId: string;
   members: ProjectMemberResponse[];
+  knowledgeBaseIds: string[];
+  agentIds: string[];
+  skillIds: string[];
   createdAt: string;
   updatedAt: string;
   currentUserRole: ProjectRole;
@@ -51,6 +86,36 @@ export interface ProjectResponse {
 export interface ProjectsListResponse {
   total: number;
   items: ProjectResponse[];
+}
+
+export interface ProjectConversationSummaryResponse {
+  id: string;
+  projectId: string;
+  title: string;
+  updatedAt: string;
+  preview: string;
+}
+
+export interface ProjectConversationListResponse {
+  total: number;
+  items: ProjectConversationSummaryResponse[];
+}
+
+export interface ProjectConversationMessageResponse {
+  id: string;
+  conversationId: string;
+  role: ProjectConversationMessageRole;
+  content: string;
+  createdAt: string;
+}
+
+export interface ProjectConversationDetailResponse
+  extends ProjectConversationSummaryResponse {
+  messages: ProjectConversationMessageResponse[];
+}
+
+export interface ProjectConversationDetailEnvelope {
+  conversation: ProjectConversationDetailResponse;
 }
 
 export interface ProjectCommandContext {

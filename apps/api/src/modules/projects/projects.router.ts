@@ -55,6 +55,36 @@ export const createProjectsRouter = (
     }),
   );
 
+  projectsRouter.get(
+    '/:projectId/conversations',
+    asyncHandler(async (req, res) => {
+      const result = await projectsService.listProjectConversations(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredProjectId(req),
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  projectsRouter.get(
+    '/:projectId/conversations/:conversationId',
+    asyncHandler(async (req, res) => {
+      const conversationId = req.params.conversationId;
+      const result = await projectsService.getProjectConversationDetail(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredProjectId(req),
+        Array.isArray(conversationId) ? conversationId[0] ?? '' : conversationId ?? '',
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
   projectsRouter.patch(
     '/:projectId',
     asyncHandler(async (req, res) => {
