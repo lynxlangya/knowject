@@ -45,7 +45,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "test": "pnpm test:api && pnpm test:indexer",
     "test:api": "pnpm --filter api test",
-    "test:indexer": "python3 apps/indexer-py/tests/test_pipeline.py",
+    "test:indexer": "pnpm --filter indexer-py test",
     "check-types": "turbo run check-types",
     "typecheck": "turbo run check-types"
   },

@@ -6,6 +6,9 @@ dist
 build
 node_modules
 **/node_modules
+**/.venv
+**/.pytest_cache
+**/__pycache__
 .env
 .env.local
 .env.docker.local
@@ -13,4 +16,3 @@ node_modules
 docker/secrets
 log
 resume
-

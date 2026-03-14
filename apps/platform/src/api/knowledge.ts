@@ -151,3 +151,25 @@ export const uploadKnowledgeDocument = async (
 
   return unwrapApiData(response.data);
 };
+
+export const retryKnowledgeDocument = async (
+  knowledgeId: string,
+  documentId: string,
+): Promise<void> => {
+  const response = await client.post<ApiEnvelope<null>>(
+    `/knowledge/${encodeURIComponent(knowledgeId)}/documents/${encodeURIComponent(documentId)}/retry`,
+  );
+
+  unwrapApiData(response.data);
+};
+
+export const deleteKnowledgeDocument = async (
+  knowledgeId: string,
+  documentId: string,
+): Promise<void> => {
+  const response = await client.delete<ApiEnvelope<null>>(
+    `/knowledge/${encodeURIComponent(knowledgeId)}/documents/${encodeURIComponent(documentId)}`,
+  );
+
+  unwrapApiData(response.data);
+};

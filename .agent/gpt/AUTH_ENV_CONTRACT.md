@@ -1,6 +1,6 @@
 # Knowject 认证与环境契约（ChatGPT Projects 上传版）
 
-状态：2026-03-13  
+状态：2026-03-14
 来源：基于 `.agent/docs/contracts/auth-contract.md` 精简同步。  
 定位：用于回答登录、JWT、环境变量与安全边界。
 

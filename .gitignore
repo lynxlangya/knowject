@@ -18,6 +18,8 @@ docker/secrets/
 __pycache__/
 *.pyc
 *.pyo
+.venv/
+.pytest_cache/
 
 # Testing
 coverage

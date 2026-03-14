@@ -1,6 +1,6 @@
 # 基础框架认证与环境契约
 
-状态：基础框架阶段已完成（截至 2026-03-11，`BF-03` ~ `BF-10` 已按本文件及相关文档落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责解释 auth 与环境约定。
+状态：基础框架阶段已完成（截至 2026-03-14，`BF-03` ~ `BF-10` 已按本文件及相关文档落地，当前知识索引相关环境契约也已纳入本文补充）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责解释 auth 与环境约定。
 
 ## 1. 目标
 
@@ -25,7 +25,8 @@
 
 ## 2. 本地运行拓扑
 
-- 基础框架阶段的最小本地拓扑固定为：`api + mongodb`
+- 基础框架阶段的最小认证联调拓扑固定为：`api + mongodb`
+- 当前宿主机默认开发拓扑已扩展为：`platform + api + indexer-py`，依赖服务通常由 Docker 提供 `mongodb + chroma`
 - MongoDB 用途：唯一正式结构化存储
 - API 连接 MongoDB 时必须使用应用用户，不使用 root 用户
 - 推荐本地数据库命名：
@@ -79,8 +80,14 @@
 
 | 变量                    | 必填 | 示例 / 默认值       | 说明                                    |
 | ----------------------- | ---- | ------------------- | --------------------------------------- |
-| `CHROMA_URL`            | 否   | `http://chroma:8000` | Chroma 服务地址；当前主要用于健康诊断   |
+| `CHROMA_URL`            | 否   | `http://chroma:8000` | Chroma 服务地址；当前既用于健康诊断，也用于 `global_docs` 的正式写侧索引与统一检索 |
 | `CHROMA_HEARTBEAT_PATH` | 否   | `/api/v2/heartbeat` | Chroma 心跳路径，默认用于容器化部署诊断 |
+| `KNOWLEDGE_INDEXER_URL` | 否   | `http://127.0.0.1:8001` | Python indexer 服务地址；本地默认回落到宿主机 FastAPI 控制面 |
+| `KNOWLEDGE_INDEXER_TIMEOUT_MS` | 否   | `15000` | Node 调 Python indexer 的请求超时 |
+| `OPENAI_API_KEY`        | 否   | `sk-***`            | embedding provider 凭证；生产环境与正式检索建议必须配置 |
+| `OPENAI_BASE_URL`       | 否   | `https://api.openai.com/v1` | OpenAI-compatible embedding 服务地址 |
+| `OPENAI_EMBEDDING_MODEL` | 否  | `text-embedding-3-small` | 当前 embedding 模型基线 |
+| `OPENAI_TIMEOUT_MS`     | 否   | `15000`             | embedding 请求超时 |
 
 ## 4. JWT 契约
 

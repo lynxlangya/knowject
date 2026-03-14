@@ -1,6 +1,6 @@
 # Docker 操作清单
 
-状态：截至 2026-03-11，本清单用于指导 Knowject 当前仓库的本地登录、后端调用、Docker 操作、MongoDB 查看与 Chroma 查看；当前事实仍以源码、`compose.yml` 和相关 README 为准。
+状态：截至 2026-03-14，本清单用于指导 Knowject 当前仓库的本地登录、后端调用、Docker 操作、MongoDB 查看与 Chroma 查看；当前事实仍以源码、`compose.yml` 和相关 README 为准。
 
 ## 1. 一句话结论
 
@@ -41,8 +41,9 @@ pnpm dev:up
 
 说明：
 
-- `pnpm dev:up` 会先确保 `mongo + chroma` 在 Docker 中可用，再启动宿主机前后端
+- `pnpm dev:up` 会先确保 `mongo + chroma` 在 Docker 中可用，再启动宿主机 `platform + api + indexer-py`
 - `pnpm dev:init` / `pnpm dev:up` 会先确保 `docker/secrets/` 与 `.env.docker.local` 已就绪，再把宿主机 `.env.local` 回写为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE` 和当前 `CHROMA_URL`，避免 Docker 本地依赖轮换后宿主机 API 继续使用旧直写值
+- 若走宿主机开发流，请先安装 `uv`；`apps/indexer-py` 当前通过 `uv run` 启动 FastAPI 控制面
 - 若你只想单独管理依赖，可使用下一小节的 `dev:deps:*` 命令
 
 此时常用访问入口：
@@ -50,6 +51,7 @@ pnpm dev:up
 - 以下地址默认假定 `.env.docker.local` 使用模板端口与默认 `CHROMA_HEARTBEAT_PATH`；如果你改过 `WEB_PORT` / `API_PUBLISHED_PORT` / `MONGO_PUBLISHED_PORT` / `CHROMA_PUBLISHED_PORT` / `CHROMA_HEARTBEAT_PATH`，请把下面命令和地址替换成实际值。
 - 前端：`http://127.0.0.1:5173`
 - 后端：`http://127.0.0.1:3001`
+- Python indexer：`http://127.0.0.1:8001/health`
 - MongoDB：`127.0.0.1:27017`
 - Chroma：`http://127.0.0.1:8000`
 
@@ -192,6 +194,20 @@ curl http://127.0.0.1:3001/api/projects \
   -H 'Authorization: Bearer <你的JWT>'
 ```
 
+### 4.5 检查 Python indexer 控制面
+
+宿主机默认开发流下可直接访问：
+
+```bash
+curl http://127.0.0.1:8001/health
+```
+
+补充说明：
+
+- 当前 Python indexer 已切到 FastAPI + `uv`。
+- 当前内部写侧入口固定为 `POST /internal/v1/index/documents`，由 Node 在上传链路中触发。
+- `/docs`、`/redoc`、`/openapi.json` 在宿主机开发流下可直接通过 `127.0.0.1:8001` 访问；完整 Docker 编排默认不把该端口发布到宿主机。
+
 ## 5. Docker 常用操作清单
 
 ### 5.1 查看状态
@@ -261,11 +277,15 @@ docker exec -it knowject-local-platform-1 sh
 
 - `users`
 - `projects`
+- `knowledge_bases`
+- `knowledge_documents`
 
 说明：
 
 - `users`：注册用户后会出现数据
 - `projects`：创建项目后会出现数据
+- `knowledge_bases`：创建知识库后会出现数据
+- `knowledge_documents`：上传知识文档后会出现数据
 - 当前成员关系放在 `projects.members` 中，不是单独的 `memberships` 集合
 
 ## 7. Chroma 查看清单
@@ -287,8 +307,9 @@ curl http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_datab
 ### 7.3 当前阶段怎么看结果
 
 - 当前 Chroma 已经进入容器基线，并纳入 API 健康检查。
-- 当前仓库还没有正式的向量写入 / 检索业务闭环。
-- 因此 `collections` 当前大概率为空数组 `[]`，这是符合现阶段事实的。
+- 当前 `global_docs` 已进入正式最小写侧 / 检索闭环；`global_code` 仍只保留命名空间预留。
+- 在服务启动并完成集合初始化后，`collections` 通常至少会出现 `global_docs`、`global_code` 两个 collection。
+- 如果还没有上传过任何文档，`global_docs` 可能只有空集合；上传 `md / txt` 后应能看到实际向量数据。
 
 ## 8. 本地开发建议
 

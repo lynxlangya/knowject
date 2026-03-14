@@ -1,6 +1,6 @@
 # Knowject 索引分层决策（ChatGPT Projects 上传版）
 
-状态：2026-03-13  
+状态：2026-03-14
 来源：基于 `.agent/docs/contracts/chroma-decision.md` 精简同步。  
 定位：这是当前最重要的新决策文档副本，用于解释为什么采用“Node 管业务，Python 管索引”，以及当前已经落地到什么程度。
 
@@ -9,7 +9,7 @@
 - Chroma 在 Knowject 中只承担知识索引层 / 检索层职责。
 - MongoDB 继续承担业务主数据层职责。
 - `apps/api` 继续承担业务主链路。
-- `apps/indexer-py` 已经作为 Python 独立 indexer 落地，并负责索引处理链路。
+- `apps/indexer-py` 已经作为 Python 独立 indexer 落地，并已切到 FastAPI + `uv` 内部控制面。
 - Knowject 不是“Node 直接全包 Chroma”。
 - Knowject 也不是“全仓切 Python”。
 
@@ -52,7 +52,10 @@
 
 ### `apps/indexer-py`
 
-- Python 独立索引服务 / worker / CLI
+- Python 独立索引服务 / worker / 控制面
+- 当前内部写侧入口：`POST /internal/v1/index/documents`
+- 当前运维探活入口：`GET /health`
+- 当前内部文档入口：`/docs`、`/redoc`、`/openapi.json`
 - parse
 - clean
 - chunk
@@ -81,6 +84,7 @@
 ### 1. 触发方式
 
 - Node -> Python 固定为本地 HTTP 服务。
+- 当前已冻结为版本化内部写接口 `POST /internal/v1/index/documents`；`GET /health` 保持非版本化。
 - CLI / 子进程只能作为内部过渡细节。
 
 ### 2. 状态回写
@@ -113,7 +117,7 @@
 2. Node 创建 knowledge/document 记录
 3. 状态初始化为 `pending`
 4. Node 落盘原始文件
-5. Node 调 Python 本地 HTTP 服务
+5. Node 调 Python `POST /internal/v1/index/documents`
 6. Python 解析、清洗、分块、embedding、写入 Chroma
 7. Python 把结果交回 Node
 8. Node 回写 `processing / completed / failed`
@@ -167,4 +171,4 @@
 
 - 如果讨论“为什么这里要 Python”，以这份文档为准。
 - 如果讨论“现在仓库里有没有 Python indexer”，答案是：有，路径为 `apps/indexer-py`。
-- 如果讨论“正式链路是否完全生产化”，答案是：`global_docs` 最小闭环已落地，但 production 仍以真实 OpenAI-compatible embedding 为基线。
+- 如果讨论“正式链路是否完全生产化”，答案是：`global_docs` 最小闭环已落地，但 `retry / rebuild / diagnostics` 仍未补齐，production 仍以真实 OpenAI-compatible embedding 为基线。

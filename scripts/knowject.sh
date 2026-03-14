@@ -242,6 +242,8 @@ local_service_running() {
 
 ensure_local_dev_prerequisites() {
   ensure_command pnpm
+  ensure_command python3
+  ensure_command uv
   ensure_host_env
   ensure_local_docker_env
   ensure_local_secrets
@@ -409,12 +411,13 @@ case "$command_name" in
     run pnpm build
     ;;
   host:init)
-    ensure_command pnpm
-    ensure_host_env
+    ensure_local_dev_prerequisites
     run pnpm install
     ;;
   host:up)
     ensure_command pnpm
+    ensure_command python3
+    ensure_command uv
     run pnpm dev
     ;;
   host:web)

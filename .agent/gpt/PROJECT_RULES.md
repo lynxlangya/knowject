@@ -1,6 +1,6 @@
 # Knowject 项目协作规则（ChatGPT Projects 上传版）
 
-状态：2026-03-13  
+状态：2026-03-14
 来源：基于项目 `AGENTS.md` 精简同步。  
 定位：这是给 ChatGPT Projects 用的协作规则副本，不是仓库自动生效规则。
 
@@ -33,13 +33,13 @@
   - 登录后产品壳、路由、项目态页面、全局资产治理壳层。
 - `apps/api`
   - 正式业务主后端。
-  - 当前已落地 auth、members、projects、memberships、memory。
+  - 当前已落地 auth、members、projects、memberships、knowledge、memory。
 - MongoDB
   - 正式业务主数据库。
 - Chroma
-  - 当前只在基础设施与健康诊断层就绪。
+  - 当前已进入 `global_docs` 的正式最小索引 / 检索闭环。
 - Python indexer
-  - 是当前已确认的推荐实现方向，但仓库里还没有落地代码。
+  - 已在 `apps/indexer-py` 落地为 FastAPI + `uv` 内部索引控制面。
 
 ## 5. 当前产品与路由约束
 
@@ -82,6 +82,7 @@
 3. `.agent/docs/plans/*`
 4. `.agent/docs/roadmap/*`
 5. 必要时更新项目 `AGENTS.md`
+6. 若外部模型上传包依赖这些文档，也同步更新 `.agent/gpt/*`
 
 ## 8. 这份上传包的特别说明
 

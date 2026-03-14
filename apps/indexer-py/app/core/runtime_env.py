@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+"""Environment loading helpers shared by the FastAPI indexer runtime."""
+
 import os
 from pathlib import Path
 
 
 ENV_FILE_SUFFIX = "_FILE"
-WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
+WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
 BASE_ENV_KEYS = set(os.environ.keys())
 
 

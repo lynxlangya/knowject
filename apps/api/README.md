@@ -71,11 +71,22 @@
   - 使用 `multipart/form-data` 上传单个文件，字段名固定为 `file`。
   - 当前只支持 `md / txt / pdf`，单文件上限为 `50 MB`。
   - 上传成功后会先创建文档记录并返回 `pending`，随后由 Node 在后台切到 `processing` 并触发 Python indexer。
+  - Node 当前调用 Python FastAPI 内部入口 `POST /internal/v1/index/documents`。
+  - 若开发态 Python indexer 仍停在旧进程，Node 会自动回退兼容 `POST /internal/index-documents`，避免重启顺序造成 `txt/md` 上传直接 404。
   - `md / txt` 当前会继续推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 先明确回写 `failed` 与 `errorMessage`，不假装支持。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
   - `md / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings 并写入 Chroma `global_docs` collection。
   - 完整 Docker 编排会通过内部 `indexer-py` 服务和共享知识存储卷推进这条链路；默认 `pnpm dev` 也会一并启动本地 `indexer-py`，若单独运行 `pnpm --filter api dev`，仍需额外启动 `pnpm --filter indexer-py dev`。
   - 开发环境下若缺少 `OPENAI_API_KEY`，Node 会把文档记录标记为 `embeddingProvider=local_dev`、`embeddingModel=hash-1536-dev`，Python indexer 会使用 deterministic 本地 embedding 写入 Chroma，保证上传状态流可用；正式检索与生产环境仍应使用真实 OpenAI-compatible embedding 配置。
+- `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`
+  - 需要 `Authorization: Bearer <token>`。
+  - 对 `failed / completed` 文档重新入队索引；若文档仍处于 `pending / processing`，返回冲突错误，避免并发重复触发。
+  - 响应返回 `HTTP 200`，`data` 为 `null`；前端应继续通过详情刷新或轮询观察后续状态。
+- `DELETE /api/knowledge/:knowledgeId/documents/:documentId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 删除单个文档记录、本地原始文件目录，并尝试清理对应 Chroma 向量。
+  - 若删除发生在后台索引过程中，服务端会在最终状态回写缺失时继续尝试补做孤儿 chunk 清理，尽量避免留下脏向量。
+  - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
 - `POST /api/knowledge/search`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `query`、可选 `knowledgeId`、可选 `sourceType`、可选 `topK`。
@@ -116,7 +127,7 @@
 - 项目概览中的补充展示文案、成员协作快照，以及 `skills / agents` 资源目录 fallback 仍主要由 `apps/platform` 本地 Mock 驱动。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
-- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除和统一知识检索 service；前端 `/knowledge` 已正式接线，但还没有重建 / retry 接口。
+- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / delete、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除和统一知识检索 service；前端 `/knowledge` 已正式接线。
 - `skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路和成员管理接口；仍未落地的是项目对话消息写入、`skills / agents` 正式主数据，以及更深的项目级检索 / 编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
@@ -189,9 +200,9 @@
 - `src/routes/health.ts`：健康检查。
 - `src/routes/memory.ts`：记忆概览与检索演示接口，当前已复用 JWT 中间件。
 - `src/middleware/*`：请求上下文、404、统一错误处理。
-- `../indexer-py/server.py`：最小 Python HTTP 索引服务入口。
-- `../indexer-py/pipeline.py`：`md / txt` 解析、清洗、`1000 / 200` 分块、OpenAI-compatible embedding 与 Chroma upsert/delete 逻辑。
-- `../indexer-py/runtime_env.py`：Python indexer 对仓库根 `.env / .env.local` 的最小环境加载能力。
+- `../indexer-py/app/main.py`：FastAPI 应用入口、异常处理与路由注册。
+- `../indexer-py/app/domain/indexing/pipeline.py`：`md / txt` 解析、清洗、`1000 / 200` 分块、OpenAI-compatible embedding 与 Chroma upsert/delete 逻辑。
+- `../indexer-py/app/core/runtime_env.py`：Python indexer 对仓库根 `.env / .env.local` 的最小环境加载能力。
 - `../indexer-py/README.md`：Python 索引服务目录边界、运行方式与 Node / Python 集成约束说明。
 
 ## 开发

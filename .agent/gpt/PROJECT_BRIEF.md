@@ -1,15 +1,16 @@
 # Knowject 项目简介（ChatGPT Projects 上传版）
 
-状态：2026-03-13  
+状态：2026-03-14
 来源：基于 `AGENTS.md`、`.agent/docs/current/architecture.md`、`.agent/docs/contracts/chroma-decision.md`、`.agent/docs/plans/tasks-global-assets-foundation.md`、`.agent/docs/roadmap/gap-analysis.md` 汇总。  
 定位：这是给 ChatGPT Projects 建立上下文的首份文档，不是主事实源。
 
 ## 1. 项目是什么
 
 - `知项 · Knowject` 是一个面向开发团队的项目级 AI 知识协作产品。
-- 当前仓库是 monorepo，核心由两部分组成：
+- 当前仓库是 monorepo，核心由三部分组成：
   - `apps/platform`：React + Vite + Ant Design 前端
   - `apps/api`：Express + TypeScript 后端
+  - `apps/indexer-py`：FastAPI + `uv` 的内部 Python 索引控制面
 - 当前项目阶段不是纯 Demo，也不是完整 AI 产品，而是：
   - 前后端基础框架已接通
   - 项目主数据与成员链路已落地
@@ -27,21 +28,30 @@
   - 项目最小 CRUD
   - 项目成员管理
   - 已注册用户搜索
+  - 知识库 CRUD、文档上传、状态推进与统一检索
   - `memory/overview` 与 `memory/query` 演示接口
 - 前端已经切到正式后端的数据包括：
   - 项目列表
   - 项目基础信息
   - 成员 roster
+  - 项目资源绑定
+  - 项目对话列表 / 详情
   - 全局成员页
   - `/knowledge` 知识库管理页
+- Python indexer 已落地：
+  - FastAPI + `uv`
+  - `GET /health`
+  - `POST /internal/v1/index/documents`
+  - 隐藏兼容旧路径 `POST /internal/index-documents`
+  - `/docs`、`/redoc`、`/openapi.json`
 
 ## 3. 当前仍未落地的事实
 
 - `skills / agents` 正式创建、绑定、执行闭环
+- 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建接口仍未落地
 - `global_code` 真实导入与项目级合并检索
-- 项目对话正式数据源与 SSE
+- 项目对话消息写入与 SSE
 - 来源引用渲染
-- 项目资源绑定的正式后端持久化
 
 ## 4. 当前信息架构
 
@@ -73,31 +83,35 @@
 - 项目主数据
 - 项目成员关系
 - 全局成员概览
+- 项目资源绑定
+- 项目对话列表 / 详情读链路
+- 知识库 CRUD、上传、状态推进与统一检索
 
 ### 仍主要依赖前端本地 / Mock
 
 - 项目概览页内容
-- 对话列表与消息演示数据
-- 项目资源消费态展示
-- 全局资产治理页中的真实写操作
+- 对话消息演示数据
+- 项目资源消费态中的 `skills / agents` fallback
+- 全局资产治理页中 `skills / agents` 的真实写操作
 
 ### 当前关键前端本地状态
 
 - `knowject_token`
 - `knowject_auth_user`
 - `knowject_project_pins`
-- `knowject_project_resource_bindings`
+- `knowject_project_resource_bindings`（历史迁移缓存）
 
 ## 6. 新的索引分层决策
 
-这是 2026-03-13 已冻结的推荐实现路径：
+这是当前已冻结并已按最小闭环落地的实现路径：
 
 - `apps/api`
   - 继续负责业务主链路。
   - 负责鉴权、权限、知识库 CRUD、文档记录、上传入口、状态查询、统一知识检索 service。
 - `apps/indexer-py`
   - 负责索引处理链路。
-  - 包括 parse / clean / chunk / embed / upsert / delete / rebuild / retry / diagnostics。
+  - 当前已落地 FastAPI + `uv` 控制面、`GET /health`、`POST /internal/v1/index/documents`，并隐藏兼容旧路径 `POST /internal/index-documents`。
+  - 当前已覆盖 parse / clean / chunk / embed / upsert / delete，并为 rebuild / retry / diagnostics 预留命名空间。
 - MongoDB
   - 负责业务主数据层。
   - 保存知识库元数据、文档记录、索引状态、失败原因、绑定关系。
@@ -110,6 +124,7 @@
 ### 1. Node -> Python 触发方式
 
 - 固定为：Node 调 Python 本地 HTTP 服务。
+- 当前正式内部写侧入口：`POST /internal/v1/index/documents`
 - 若实现初期临时借用 CLI / 子进程，只能作为内部适配细节，不能成为长期业务契约。
 
 ### 2. 业务状态回写归口
@@ -185,4 +200,4 @@
 
 ## 12. 一句话总结
 
-当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路和 `/knowledge` 的最小文档索引闭环；当前最大的断层仍是 `skills / agents`、项目级检索与对话正式链路。
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路和 `/knowledge` 的最小索引闭环；当前最大的断层仍是 `skills / agents`、项目对话消息写侧与索引运维能力。

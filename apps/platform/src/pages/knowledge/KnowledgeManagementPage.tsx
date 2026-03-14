@@ -1,8 +1,11 @@
 import {
   CloudUploadOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
+  EyeOutlined,
   FileTextOutlined,
+  MoreOutlined,
   PlusOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
@@ -13,6 +16,7 @@ import {
   Avatar,
   Button,
   Card,
+  Dropdown,
   Empty,
   Form,
   Input,
@@ -32,6 +36,8 @@ import {
   listKnowledge,
   updateKnowledge,
   uploadKnowledgeDocument,
+  deleteKnowledgeDocument,
+  retryKnowledgeDocument,
   type CreateKnowledgeRequest,
   type KnowledgeDetailResponse,
   type KnowledgeDocumentResponse,
@@ -46,6 +52,7 @@ import {
   KnowledgeTextInputModal,
   type KnowledgeTextInputValues,
 } from './components/KnowledgeTextInputModal';
+import type { MenuProps } from 'antd';
 
 interface KnowledgeFormValues {
   name: string;
@@ -59,7 +66,6 @@ interface KnowledgeSourceMeta {
 }
 
 type UploadFlowStep = 'picker' | 'text';
-
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -246,6 +252,71 @@ const hasProcessingDocuments = (knowledge: KnowledgeDetailResponse | null): bool
   );
 };
 
+const resolveKnowledgeIndexStatus = (
+  documents: Array<Pick<KnowledgeDocumentResponse, 'status'>>,
+): KnowledgeIndexStatus => {
+  if (documents.length === 0) {
+    return 'idle';
+  }
+
+  if (documents.some((document) => document.status === 'processing')) {
+    return 'processing';
+  }
+
+  if (documents.some((document) => document.status === 'pending')) {
+    return 'pending';
+  }
+
+  if (documents.some((document) => document.status === 'failed')) {
+    return 'failed';
+  }
+
+  if (documents.every((document) => document.status === 'completed')) {
+    return 'completed';
+  }
+
+  return 'idle';
+};
+
+const patchDocumentInKnowledgeDetail = (
+  knowledge: KnowledgeDetailResponse,
+  documentId: string,
+  patch: Partial<KnowledgeDocumentResponse>,
+): KnowledgeDetailResponse => {
+  const documents = knowledge.documents.map((document) =>
+    document.id === documentId
+      ? {
+          ...document,
+          ...patch,
+        }
+      : document,
+  );
+
+  return {
+    ...knowledge,
+    documents,
+    indexStatus: resolveKnowledgeIndexStatus(documents),
+    updatedAt: new Date().toISOString(),
+  };
+};
+
+const removeDocumentFromKnowledgeDetail = (
+  knowledge: KnowledgeDetailResponse,
+  documentId: string,
+): KnowledgeDetailResponse => {
+  const targetDocument = knowledge.documents.find((document) => document.id === documentId);
+  const documents = knowledge.documents.filter((document) => document.id !== documentId);
+
+  return {
+    ...knowledge,
+    documents,
+    documentCount: Math.max(knowledge.documentCount - (targetDocument ? 1 : 0), 0),
+    chunkCount: Math.max(knowledge.chunkCount - (targetDocument?.chunkCount ?? 0), 0),
+    indexStatus: resolveKnowledgeIndexStatus(documents),
+    updatedAt: new Date().toISOString(),
+  };
+};
+
 const toKnowledgePayload = (
   values: KnowledgeFormValues,
   mode: 'create' | 'edit',
@@ -344,55 +415,8 @@ const buildKnowledgeDetailMeta = (
   return items;
 };
 
-const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
-  const statusMeta = DOCUMENT_STATUS_META[document.status];
-  const indexedAt = document.lastIndexedAt ?? document.processedAt;
-
-  return (
-    <article
-      key={document.id}
-      className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4"
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <Typography.Text strong className="text-slate-800!">
-          {document.fileName}
-        </Typography.Text>
-        <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
-        <Tag>{document.mimeType}</Tag>
-      </div>
-
-      <div className="mt-3 grid gap-3 text-xs text-slate-500 sm:grid-cols-3">
-        <div>
-          <div className="text-slate-400">上传时间</div>
-          <div className="mt-1 text-slate-600">{formatDateTime(document.uploadedAt)}</div>
-        </div>
-        <div>
-          <div className="text-slate-400">索引完成</div>
-          <div className="mt-1 text-slate-600">
-            {formatDateTime(indexedAt)}
-          </div>
-        </div>
-        <div>
-          <div className="text-slate-400">分块数量</div>
-          <div className="mt-1 text-slate-600">{document.chunkCount}</div>
-        </div>
-      </div>
-
-      {document.errorMessage ? (
-        <Alert
-          className="mt-4"
-          type="error"
-          showIcon
-          title="处理失败"
-          description={document.errorMessage}
-        />
-      ) : null}
-    </article>
-  );
-};
-
 export const KnowledgeManagementPage = () => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm<KnowledgeFormValues>();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isFirstLoadRef = useRef(true);
@@ -415,6 +439,8 @@ export const KnowledgeManagementPage = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadFlowStep, setUploadFlowStep] = useState<UploadFlowStep | null>(null);
   const [deletingKnowledgeId, setDeletingKnowledgeId] = useState<string | null>(null);
+  const [retryingDocumentId, setRetryingDocumentId] = useState<string | null>(null);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
 
   const stats = buildKnowledgeStats(items);
   const activeSummary =
@@ -790,6 +816,320 @@ export const KnowledgeManagementPage = () => {
   const handleSubmitTextSource = async (values: KnowledgeTextInputValues) => {
     closeUploadFlow();
     await uploadKnowledgeSource(createTextSourceFile(values));
+  };
+
+  const patchActiveKnowledgeDocument = (
+    documentId: string,
+    patch: Partial<KnowledgeDocumentResponse>,
+  ) => {
+    setActiveKnowledge((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return patchDocumentInKnowledgeDetail(current, documentId, patch);
+    });
+  };
+
+  const patchKnowledgeSummary = (
+    knowledgeId: string,
+    patch: Partial<KnowledgeSummaryResponse>,
+  ) => {
+    setItems((current) =>
+      current.map((knowledge) =>
+        knowledge.id === knowledgeId
+          ? {
+              ...knowledge,
+              ...patch,
+            }
+          : knowledge,
+      ),
+    );
+  };
+
+  const removeActiveKnowledgeDocument = (documentId: string) => {
+    setActiveKnowledge((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return removeDocumentFromKnowledgeDetail(current, documentId);
+    });
+  };
+
+  const isDocumentBusy = (documentId: string): boolean => {
+    return retryingDocumentId === documentId || deletingDocumentId === documentId;
+  };
+
+  const refreshDocumentStatus = (knowledgeId: string) => {
+    resetPollingAttempts(knowledgeId);
+    reloadKnowledgeList(knowledgeId);
+    reloadKnowledgeDetail();
+  };
+
+  const handleRetryDocument = async (document: KnowledgeDocumentResponse) => {
+    if (!activeKnowledgeId) {
+      message.info('请先选择一个知识库');
+      return;
+    }
+
+    setRetryingDocumentId(document.id);
+
+    try {
+      await retryKnowledgeDocument(activeKnowledgeId, document.id);
+
+      patchActiveKnowledgeDocument(document.id, {
+        status: 'pending',
+        errorMessage: null,
+        processedAt: null,
+        updatedAt: new Date().toISOString(),
+      });
+      patchKnowledgeSummary(activeKnowledgeId, {
+        indexStatus: 'pending',
+        updatedAt: new Date().toISOString(),
+      });
+      resetPollingAttempts(activeKnowledgeId);
+      message.success(
+        document.status === 'completed'
+          ? '文档已进入重新索引队列'
+          : '文档已重新进入索引队列',
+      );
+      refreshDocumentStatus(activeKnowledgeId);
+    } catch (currentError) {
+      console.error(currentError);
+      message.error(
+        isApiError(currentError)
+          ? currentError.message
+          : document.status === 'completed'
+            ? '重新索引失败，请稍后重试'
+            : '重试索引失败，请稍后重试',
+      );
+    } finally {
+      setRetryingDocumentId(null);
+    }
+  };
+
+  const handleDeleteDocument = async (document: KnowledgeDocumentResponse) => {
+    if (!activeKnowledgeId) {
+      message.info('请先选择一个知识库');
+      return;
+    }
+
+    setDeletingDocumentId(document.id);
+
+    try {
+      await deleteKnowledgeDocument(activeKnowledgeId, document.id);
+
+      removeActiveKnowledgeDocument(document.id);
+      patchKnowledgeSummary(activeKnowledgeId, {
+        documentCount: Math.max((activeSummary?.documentCount ?? 1) - 1, 0),
+        chunkCount: Math.max((activeSummary?.chunkCount ?? 0) - document.chunkCount, 0),
+        updatedAt: new Date().toISOString(),
+      });
+      message.success('文档已删除');
+      refreshDocumentStatus(activeKnowledgeId);
+    } catch (currentError) {
+      console.error(currentError);
+      message.error(
+        isApiError(currentError)
+          ? currentError.message
+          : '删除文档失败，请稍后重试',
+      );
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  };
+
+  const confirmDeleteDocument = (document: KnowledgeDocumentResponse) => {
+    modal.confirm({
+      title: '删除文档',
+      content:
+        document.status === 'pending' || document.status === 'processing'
+          ? '会删除文档记录与原始文件；若后台索引任务刚好完成，系统会继续尝试清理对应向量。'
+          : '会删除文档记录、原始文件，并清理对应向量记录。',
+      okText: '删除',
+      cancelText: '取消',
+      okButtonProps: {
+        danger: true,
+      },
+      centered: true,
+      onOk: async () => {
+        await handleDeleteDocument(document);
+      },
+    });
+  };
+
+  const buildDocumentActionMenuItems = (
+    document: KnowledgeDocumentResponse,
+  ): NonNullable<MenuProps['items']> => {
+    const busy = isDocumentBusy(document.id);
+
+    const commonItems: NonNullable<MenuProps['items']> = [
+      {
+        key: 'preview',
+        icon: <EyeOutlined />,
+        label: '预览',
+      },
+      {
+        key: 'download',
+        icon: <DownloadOutlined />,
+        label: '下载',
+      },
+      {
+        type: 'divider',
+      },
+    ];
+
+    if (document.status === 'pending' || document.status === 'processing') {
+      return [
+        ...commonItems,
+        {
+          key: 'refresh',
+          icon: <ReloadOutlined />,
+          label: '刷新状态',
+          disabled: busy,
+        },
+        {
+          type: 'divider',
+        },
+        {
+          key: 'delete',
+          icon: <DeleteOutlined />,
+          label: '删除文档',
+          danger: true,
+          disabled: busy,
+        },
+      ];
+    }
+
+    return [
+      ...commonItems,
+      {
+        key: 'retry',
+        icon: <ReloadOutlined />,
+        label: document.status === 'completed' ? '重新索引' : '重试索引',
+        disabled: busy,
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: '删除文档',
+        danger: true,
+        disabled: busy,
+      },
+    ];
+  };
+
+  const handleDocumentMenuAction = (
+    document: KnowledgeDocumentResponse,
+    key: string,
+  ) => {
+    if (key === 'preview') {
+      message.info(`“${document.fileName}”预览原文即将开放`);
+      return;
+    }
+
+    if (key === 'download') {
+      message.info(`“${document.fileName}”下载原文即将开放`);
+      return;
+    }
+
+    if (key === 'refresh') {
+      refreshDocumentStatus(document.knowledgeId);
+      return;
+    }
+
+    if (key === 'retry') {
+      void handleRetryDocument(document);
+      return;
+    }
+
+    if (key === 'delete') {
+      confirmDeleteDocument(document);
+    }
+  };
+
+  const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
+    const statusMeta = DOCUMENT_STATUS_META[document.status];
+    const indexedAt = document.lastIndexedAt ?? document.processedAt;
+    const busy = isDocumentBusy(document.id);
+
+    return (
+      <article
+        key={document.id}
+        className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Typography.Text strong className="text-slate-800!">
+                {document.fileName}
+              </Typography.Text>
+              <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
+              <Tag>{document.mimeType}</Tag>
+            </div>
+          </div>
+
+          <Dropdown
+            trigger={['click']}
+            placement="bottomRight"
+            menu={{
+              items: buildDocumentActionMenuItems(document),
+              onClick: ({ key }) => handleDocumentMenuAction(document, key),
+            }}
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<MoreOutlined />}
+              loading={busy}
+              aria-label={`更多操作：${document.fileName}`}
+            />
+          </Dropdown>
+        </div>
+
+        <div className="mt-3 grid gap-3 text-xs text-slate-500 sm:grid-cols-3">
+          <div>
+            <div className="text-slate-400">上传时间</div>
+            <div className="mt-1 text-slate-600">{formatDateTime(document.uploadedAt)}</div>
+          </div>
+          <div>
+            <div className="text-slate-400">索引完成</div>
+            <div className="mt-1 text-slate-600">{formatDateTime(indexedAt)}</div>
+          </div>
+          <div>
+            <div className="text-slate-400">分块数量</div>
+            <div className="mt-1 text-slate-600">{document.chunkCount}</div>
+          </div>
+        </div>
+
+        {document.errorMessage ? (
+          <Alert
+            className="mt-4"
+            type="error"
+            showIcon
+            title="处理失败"
+            description={document.errorMessage}
+            action={
+              <Button
+                size="small"
+                type="link"
+                disabled={busy}
+                loading={retryingDocumentId === document.id}
+                onClick={() => {
+                  void handleRetryDocument(document);
+                }}
+              >
+                重试
+              </Button>
+            }
+          />
+        ) : null}
+      </article>
+    );
   };
 
   if (loading) {

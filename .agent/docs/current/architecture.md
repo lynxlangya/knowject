@@ -50,8 +50,8 @@ apps/
     src/middleware/ 请求上下文、404、统一错误处理
     src/server.ts   启动入口
   indexer-py/
-    server.py       Python HTTP 索引入口
-    pipeline.py     文档解析、清洗与分块逻辑
+    app/main.py     FastAPI 索引控制面入口
+    app/domain/indexing/pipeline.py  文档解析、清洗与分块逻辑
     README.md       Python 索引运行时边界与运行说明
 packages/
   request/          Axios 请求能力封装
@@ -172,6 +172,7 @@ scripts/
 - 宿主机默认开发流已把 `apps/indexer-py` 纳入 workspace `pnpm dev`，因此本地 `platform + api + indexer-py` 会一并启动；若单独跑 `api`，仍需额外启动 Python indexer 才能验证知识上传闭环。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
 - `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘、Node 后台触发 Python indexer、`global_docs` Chroma 写入，以及统一知识检索 service。
+- `apps/indexer-py` 当前已切到 FastAPI + uv 基线，主内部写入口固定为 `POST /internal/v1/index/documents`，并开放 `/docs`、`/redoc`、`/openapi.json` 作为内部控制面文档入口；当前仍隐藏兼容旧路径 `POST /internal/index-documents`，用于开发态 / 滚动重启期间的平滑过渡。
 - 开发环境下若缺少 `OPENAI_API_KEY`，知识库上传链路会退化到 deterministic 本地 embedding，并把文档元数据标记为 `local_dev / hash-1536-dev`；生产与正式检索仍以真实 OpenAI-compatible embedding 为基线。
 - `GET /api/health` 会联动返回数据库状态与可选的 Chroma 心跳状态，因此服务可在依赖不可达时以 `degraded` 状态启动并提供诊断。
 - 当前 Chroma 已进入正式知识索引链路：`global_docs` 支持 collection 初始化、向量写入、按知识库过滤查询和知识库删除联动清理；`global_code` 当前只有 collection 预留，没有真实数据导入。
@@ -243,6 +244,8 @@ scripts/
 - `PATCH /api/knowledge/:knowledgeId`
 - `DELETE /api/knowledge/:knowledgeId`
 - `POST /api/knowledge/:knowledgeId/documents`
+- `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`
+- `DELETE /api/knowledge/:knowledgeId/documents/:documentId`
 - `GET /api/skills`
 - `GET /api/agents`
 - `GET /api/memory/overview`
@@ -257,7 +260,7 @@ scripts/
 - `members`：聚合当前用户可见项目中的成员基础信息、项目参与关系和最小权限摘要。
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色、项目资源绑定字段，以及项目对话只读列表 / 详情接口。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
-- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。上传单文件上限默认 `50 MB`，当前稳定链路仍更适合 `md / txt` 与按主题拆分后的文档；`pdf` 会明确回写失败态，不假装支持。
+- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口、单文档 retry / delete，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。上传单文件上限默认 `50 MB`，当前稳定链路仍更适合 `md / txt` 与按主题拆分后的文档；`pdf` 会明确回写失败态，不假装支持。单文档删除会尽量联动清理原始文件与 Chroma chunk；若删除和后台索引并发发生，服务端会在状态回写缺失时补做孤儿 chunk 清理。
 - `skills`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接内置 Skill 注册表与只读查询。
 - `agents`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接全局 Agent 配置模型与绑定关系。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
@@ -288,12 +291,12 @@ scripts/
   - `modules/members` 当前已承载全局成员聚合只读接口。
   - `modules/projects` 当前已承载项目模型、MongoDB 仓储、资源绑定字段、项目对话只读接口、权限校验与 CRUD 接口。
   - `modules/memberships` 当前已承载项目成员增删改接口与最小角色规则。
-  - `modules/knowledge` 已落地 GA-06 元数据模型、集合索引、CRUD、文档上传入口、Node -> Python 的解析 / 分块 / embedding / Chroma 写入闭环，以及 Node 侧统一知识检索逻辑。
+  - `modules/knowledge` 已落地 GA-06 元数据模型、集合索引、CRUD、文档上传入口、单文档 retry / delete、Node -> Python 的解析 / 分块 / embedding / Chroma 写入闭环，以及 Node 侧统一知识检索逻辑。
   - `modules/skills`、`modules/agents` 当前仍停留在 GA-02 最小骨架与鉴权占位响应阶段。
   - 当前统一知识检索 service 已落地在 `knowledge` 模块，供后续 Skill / 对话链路复用。
 - `apps/indexer-py`
-  - 当前已落地 Python HTTP 服务、`md / txt` 解析、清洗、`1000 字符 / 200 重叠` 分块、OpenAI-compatible embedding 与 `global_docs` Chroma 写入 / 删除逻辑。
-  - 当前明确不做 `global_code` 真实导入、对外可见重建 / retry API 和统一检索读侧。
+  - 当前已落地 FastAPI 内部索引控制面、`md / txt` 解析、清洗、`1000 字符 / 200 重叠` 分块、OpenAI-compatible embedding 与 `global_docs` Chroma 写入 / 删除逻辑。
+  - 当前明确不做 `global_code` 真实导入、知识库级 rebuild API 和统一检索读侧。
 - `packages/request`
   - 请求客户端、错误封装、去重、下载能力。
 - `packages/ui`

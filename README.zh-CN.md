@@ -70,6 +70,8 @@ scripts/      统一命令入口
 
 - Node.js >= 22
 - pnpm 10
+- Python 3.12+
+- `uv`（`pnpm dev` / `pnpm test` 会通过 `apps/indexer-py` 使用它）
 
 ### 本地开发
 
@@ -80,6 +82,7 @@ pnpm dev
 ```
 
 `pnpm dev` 现在会通过 workspace 一起启动 `platform + api + indexer-py`，默认宿主机开发流里不再需要手动另开 Python 索引服务。
+如果走宿主机开发流，请先安装 `uv`；现在 `apps/indexer-py` 通过 `uv run` 启动，Docker 开发流则把这层依赖收在容器内。
 
 在 `development` 环境下，如果本地没有配置 `OPENAI_API_KEY`，但已经提供 `CHROMA_URL`，当前 `md / txt` 上传会自动降级到 deterministic 本地 embedding，保证上传与索引状态流先跑通；正式检索质量和 `/api/knowledge/search` 仍建议使用真实 OpenAI-compatible embedding 配置。
 

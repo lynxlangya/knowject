@@ -118,6 +118,9 @@
 - 更新 `.agent/docs/handoff/chatgpt-project-brief.md`
   - 需要给 ChatGPT / 外部大模型提供新的项目快照时。
   - 当前事实、模块边界、运行方式或“哪些仍是 Mock”发生明显变化时。
+- 更新 `.agent/gpt/*`
+  - 当 `.agent/docs/current/*`、`.agent/docs/contracts/*`、`.agent/docs/plans/*` 中被上传包引用的原文发生变化时。
+  - 需要同步更新 `.agent/gpt/README.md` 与受影响的派生副本，避免 ChatGPT Projects 上传包与事实源漂移。
 - 更新 `.agent/docs/handoff/handoff-prompt.md`
   - 接手 Prompt 中引用的关键文档、源码入口或输出格式发生变化。
   - 交接方式需要从“阅读事实”调整为“执行某一类任务”。
@@ -132,6 +135,7 @@
 - 关于“Docker 现在怎么用、哪些还没交付”的判断，以 `.agent/docs/current/docker-usage.md` 为准。
 - 关于“怎么最快接手当前工作”的判断，以 `.agent/docs/handoff/handoff-guide.md` 为准。
 - 关于“给 ChatGPT / 外部大模型最小必要上下文”的判断，以 `.agent/docs/handoff/chatgpt-project-brief.md` 为准。
+- 关于“给 ChatGPT Projects 上传哪组副本、这些副本是否已同步”的判断，以 `.agent/gpt/README.md` 与对应派生文件为准，但若与 `.agent/docs/*` 冲突，始终以后者为准。
 - 关于“未来要做什么”的判断，以 `.agent/docs/roadmap/target-architecture.md` 为准。
 - 关于“为什么现在不这么写、下一步先做什么”的判断，以 `.agent/docs/roadmap/gap-analysis.md` 为准。
 - 关于“如何把上下文交给下一位协作者”的判断，以 `.agent/docs/handoff/handoff-prompt.md` 为准。

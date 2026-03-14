@@ -19,6 +19,8 @@ pnpm install
 pnpm dev
 ```
 
+Host development also requires Python 3.12+ and `uv`, because the `apps/indexer-py` workspace is started and tested through `uv run`.
+
 Recommended local workflow with Docker-managed dependencies:
 
 ```bash

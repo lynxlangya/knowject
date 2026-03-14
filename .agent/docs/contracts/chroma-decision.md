@@ -1,6 +1,6 @@
 # Knowject 的 Chroma 决策说明书（项目版）
 
-状态：部分实施（截至 2026-03-13，`global_docs` 已打通 Node -> Python -> OpenAI-compatible embedding -> Chroma 写入与 Node 统一检索闭环；`global_code` 仍只做 collection 预留，重建 / retry / 项目级检索仍未落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责固定 Knowject 使用 Chroma 的角色定位、阶段边界与推荐实现约束。
+状态：部分实施（截至 2026-03-14，`global_docs` 已打通 Node -> Python FastAPI 控制面 -> OpenAI-compatible embedding -> Chroma 写入与 Node 统一检索闭环；`global_code` 仍只做 collection 预留，重建 / retry / 项目级检索仍未落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责固定 Knowject 使用 Chroma 的角色定位、阶段边界与推荐实现约束。
 
 ## 1. 文档目标
 
@@ -20,16 +20,18 @@
 
 ## 2. 当前事实基线
 
-- 当前仓库的最小宿主机开发拓扑仍是：`platform + api + mongodb`。
-- 当前容器化部署拓扑已包含：`platform + api + mongodb + chroma`。
+- 当前仓库的宿主机默认开发拓扑是：`platform + api + indexer-py`，推荐再配合 Docker 托管 `mongodb + chroma`。
+- 当前容器化部署拓扑已包含：`platform + api + indexer-py + mongodb + chroma`。
 - 当前 `apps/api` 已具备正式的 `auth / members / projects / memberships` 基础框架，但 `memory` 仍是演示接口。
-- 当前全局 `知识库 / 技能 / 智能体` 页面仍主要是管理壳层，尚未形成正式资产数据链路。
+- 当前全局 `知识库` 页面已形成正式最小数据闭环；`技能 / 智能体` 页面仍主要是管理壳层。
 - 当前仓库已经正式接入：
   - Chroma 容器、持久化卷与 API 健康诊断
-  - `apps/indexer-py` Python 索引服务
+  - `apps/indexer-py` FastAPI + `uv` 内部索引控制面
   - OpenAI-compatible embedding 配置
   - 文档上传后的 `global_docs` 真实索引链路
   - Node 侧统一知识检索 service
+  - 非版本化运维探活 `GET /health`
+  - 版本化内部写侧入口 `POST /internal/v1/index/documents`
 - 当前仓库尚未正式接入：
   - `global_code` 真实导入链路
   - 项目私有知识库写入与检索
@@ -40,7 +42,7 @@
 
 - Chroma 在 Knowject 中只承担“知识索引层 / 检索层”职责，不承担主数据库职责。
 - MongoDB 继续作为业务主数据存储；Chroma 只保存 chunk 向量与检索 metadata。
-- `apps/api` 继续承担业务主链路；推荐新增独立 Python 索引服务承担 parse / clean / chunk / embed / upsert / delete / rebuild / retry / diagnostics。
+- `apps/api` 继续承担业务主链路；当前已与独立 Python FastAPI 索引控制面分层协作，由后者承担 parse / clean / chunk / embed / upsert / delete 等写侧索引职责。
 - 自 2026-03-13 起，Week 3-4 的 Node -> Python 触发方式冻结为“Node 调 Python 本地 HTTP 服务”；若实现初期暂时用 CLI，只能作为内部过渡细节，不能暴露为长期业务契约。
 - 自 2026-03-13 起，MongoDB 中的业务状态只允许由 Node/Express 回写；Python 不直接写业务主状态表。
 - 自 2026-03-13 起，Week 3-4 的 embedding 基线冻结为 OpenAI provider + `text-embedding-3-small`。
@@ -91,12 +93,12 @@
 
 ## 6. 推荐运行时分层
 
-下表描述的是推荐实现，不代表当前仓库已经存在这些模块。
+下表描述的是推荐分层；其中 `apps/indexer-py` 的 FastAPI + `uv` 基线已经落地，其余能力仍按阶段渐进补齐。
 
 | 层 / 运行时 | 推荐职责 | 本阶段边界 |
 | ----------- | -------- | ---------- |
 | `apps/api` | 对外正式 API、鉴权、权限、知识库 CRUD、文档记录、上传入口、状态查询、统一知识检索 service、触发索引任务、同步索引结果状态 | 保持业务主链路，不承接复杂解析 / 分块 / 重建细节 |
-| `apps/indexer-py`（推荐） | Python 独立索引服务 / worker / CLI；负责 parse / clean / chunk / embed / upsert / delete / rebuild / retry / diagnostics | 本阶段推荐落为最小独立运行时，不要求一上来做分布式队列 |
+| `apps/indexer-py`（已落地基线） | Python 独立索引控制面 / worker；当前已采用 FastAPI + `uv`，负责 parse / clean / chunk / embed / upsert / delete，并为 rebuild / retry / diagnostics 预留命名空间 | 本阶段已落为最小独立运行时，不要求一上来做分布式队列 |
 | MongoDB | 知识库元数据、文档记录、索引状态、失败原因、绑定关系、权限与其他业务主数据 | 主数据源，不存向量 |
 | Chroma | chunk embeddings 与检索 metadata | 衍生索引层，可重建，不承担业务主库职责 |
 
@@ -105,6 +107,7 @@
 - `apps/api` 可以保留读侧 Chroma 查询适配层，用于 `searchDocuments()` 一类统一检索 service。
 - Python 负责写侧索引链路，不要求 Skill、前端或业务模块直接感知 Chroma 细节。
 - Node 调 Python 的首版契约固定为本地 HTTP；仅当后续吞吐、隔离或部署方式改变时，才允许升级为队列模型。
+- 当前内部写侧入口固定为 `POST /internal/v1/index/documents`；`GET /health` 保持非版本化，供 Docker / Compose 探活使用。
 - MongoDB 中的知识库 / 文档状态迁移、`retryCount`、`lastIndexedAt`、`errorMessage` 等业务字段，统一由 Node 写入。
 - 后续如果实现形式不是独立常驻服务，也至少要保持“Node 管业务、Python 管索引”的职责边界不变。
 

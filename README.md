@@ -17,7 +17,7 @@ The repository is currently in an active foundation stage: the product shell, au
 - Project overview still uses local display supplements for member collaboration snapshots and some fallback copy, while `/project/:projectId/resources` still falls back to local catalog data for `skills / agents`.
 - `/knowledge` is now wired to the formal backend knowledge APIs for list/create/update/delete/upload/status display, while `skills` and `agents` still remain shell pages.
 - `GET /api/projects/:projectId/conversations` and `GET /api/projects/:projectId/conversations/:conversationId` now provide the current project chat read-side; message creation is not implemented yet.
-- `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, and `POST /api/knowledge/search` are available end-to-end for the current GA-07 knowledge flow.
+- `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`, `DELETE /api/knowledge/:knowledgeId/documents/:documentId`, and `POST /api/knowledge/search` are available end-to-end for the current GA-07 knowledge flow.
 - JSON API responses now share the same envelope contract: `code`, `message`, `data`, and `meta`; frontend API wrappers unwrap `data` before UI consumption.
 - Docker Compose baselines are available for both local and production-style environments with `platform + api + indexer-py + mongodb + chroma`.
 - MongoDB is the current primary datastore. Chroma now backs the GA-06 global document index layer for `global_docs`, while `global_code` is reserved as an empty namespace only.
@@ -73,6 +73,8 @@ scripts/      Reusable command entrypoints
 
 - Node.js >= 22
 - pnpm 10
+- Python 3.12+
+- `uv` (used by the `apps/indexer-py` workspace during `pnpm dev` / `pnpm test`)
 
 ### Local development
 
@@ -83,6 +85,7 @@ pnpm dev
 ```
 
 `pnpm dev` now starts `platform + api + indexer-py` together through the workspace, so the default host workflow no longer needs a separate manual indexer process for markdown uploads.
+If you use the host workflow, install `uv` first; `apps/indexer-py` now runs through `uv run`, while Docker-based workflows keep that dependency inside the container.
 
 In `development`, if `OPENAI_API_KEY` is missing but `CHROMA_URL` is available, markdown/txt uploads now fall back to deterministic local embeddings so the upload/index status flow can still run end-to-end. Formal retrieval quality and `/api/knowledge/search` still expect real OpenAI-compatible embedding config.
 

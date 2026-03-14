@@ -1,6 +1,6 @@
 # Docker 使用现状
 
-状态：截至 2026-03-11，仓库已经正式交付可运行的 Docker Compose 基线，覆盖本地部署与线上部署两条路径；当前事实仍以源码和本文件为准。
+状态：截至 2026-03-14，仓库已经正式交付可运行的 Docker Compose 基线，覆盖本地部署与线上部署两条路径；当前事实仍以源码和本文件为准。
 
 ## 1. 一句话结论
 
@@ -46,6 +46,7 @@
   - `chroma`
 - 公共基线里的 `app`、`data` 保持 `internal`；`indexer-py` 只接入内部 `app` 网络；`compose.local.yml` 额外挂载本地专用 `publish` 网络给 `api / mongo / chroma`，确保宿主机端口真正发布，同时不改变生产默认边界。
 - API 与 `indexer-py` 当前通过共享 `knowledge_storage` 命名卷协作，容器内知识存储根目录固定为 `/var/lib/knowject/knowledge`。
+- `indexer-py` 容器当前通过 `uv` 安装运行时依赖，并以 `uv run uvicorn app.main:app` 启动 FastAPI 应用。
 - 本地 override 会把以下端口映射到宿主机：
   - 默认 Web：`127.0.0.1:8080`（可通过 `WEB_PORT` 覆盖）
   - 默认 API：`127.0.0.1:3001`（可通过 `API_PUBLISHED_PORT` 覆盖；容器内部监听固定 `3001`）
@@ -98,7 +99,7 @@
 | ---------- | ---------------------------------- | -------- |
 | `platform` | 提供前端静态资源，并反向代理 `/api` | 已交付   |
 | `api`      | 提供正式 API 基线，连接 MongoDB     | 已交付   |
-| `indexer-py` | 提供内部 Python 文档解析 / 分块 HTTP 服务 | 已交付 |
+| `indexer-py` | 提供内部 Python FastAPI 索引控制面与文档解析 / 分块服务 | 已交付 |
 | `mongodb`  | 正式业务主数据存储                 | 已交付   |
 | `chroma`   | 向量检索基础设施容器与心跳诊断目标 | 已交付   |
 | `caddy`    | 线上 HTTPS 入口与外层反向代理      | 已交付   |
@@ -106,6 +107,7 @@
 补充说明：
 
 - Chroma 当前的“已交付”只指容器编排、持久化卷和 API 健康探测，不等于正式 knowledge module 已经实现。
+- `indexer-py` 的容器健康检查固定使用 `GET /health`，内部控制面文档入口固定开放 `/docs`、`/redoc`、`/openapi.json`。
 - 完整 Docker 编排里，`api` 容器健康检查要求 `/api/health` 返回 JSON `status: ok`；当数据库或 Chroma 退化为 `degraded` 时，容器仍会被视为不健康。
 - 为了稳定部署，Mongo 与 Chroma 当前都使用精确 patch tag，而不是浮动 minor tag。
 

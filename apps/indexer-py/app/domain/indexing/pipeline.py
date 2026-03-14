@@ -12,7 +12,7 @@ from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
-from runtime_env import read_optional_positive_integer, read_optional_string
+from app.core.runtime_env import read_optional_positive_integer, read_optional_string
 
 
 DEFAULT_CHUNK_SIZE = int(os.getenv("KNOWLEDGE_CHUNK_SIZE", "1000"))

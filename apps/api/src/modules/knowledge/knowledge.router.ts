@@ -31,6 +31,11 @@ const getRequiredKnowledgeId = (request: Request): string => {
   return Array.isArray(knowledgeId) ? knowledgeId[0] ?? '' : knowledgeId;
 };
 
+const getRequiredDocumentId = (request: Request): string => {
+  const documentId = request.params.documentId;
+  return Array.isArray(documentId) ? documentId[0] ?? '' : documentId;
+};
+
 const formatUploadLimitLabel = (): string => {
   return `${Math.round(KNOWLEDGE_UPLOAD_MAX_BYTES / 1024 / 1024)} MB`;
 };
@@ -202,6 +207,36 @@ export const createKnowledgeRouter = (
       );
 
       sendCreated(res, result);
+    }),
+  );
+
+  knowledgeRouter.post(
+    '/:knowledgeId/documents/:documentId/retry',
+    asyncHandler(async (req, res) => {
+      await knowledgeService.retryDocument(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredKnowledgeId(req),
+        getRequiredDocumentId(req),
+      );
+
+      sendSuccess(res, null);
+    }),
+  );
+
+  knowledgeRouter.delete(
+    '/:knowledgeId/documents/:documentId',
+    asyncHandler(async (req, res) => {
+      await knowledgeService.deleteDocument(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredKnowledgeId(req),
+        getRequiredDocumentId(req),
+      );
+
+      sendSuccess(res, null);
     }),
   );
 

@@ -19,6 +19,7 @@ pnpm knowject:help
 - MongoDB 容器镜像：`mongo:8.2.5`
 - Chroma 容器镜像：`chromadb/chroma:1.5.5`
 - API 使用的 `mongodb` Node.js Driver：`7.1.0`
+- `indexer-py` 容器运行时：`uv + uvicorn`（FastAPI / ASGI）
 
 ## 1. 文件结构
 
@@ -94,7 +95,8 @@ pnpm docker:local:up
 - 默认 MongoDB：`127.0.0.1:27017`
 - 默认 Chroma：`http://127.0.0.1:8000/api/v2/heartbeat`
 - 如果在 `.env.docker.local` 中改了 `WEB_PORT` / `API_PUBLISHED_PORT` / `MONGO_PUBLISHED_PORT` / `CHROMA_PUBLISHED_PORT`，请按实际端口访问
-- `indexer-py` 默认只暴露在容器内部网络，不直接发布宿主机端口；其健康检查由 compose 内部完成
+- `indexer-py` 默认只暴露在容器内部网络，不直接发布宿主机端口；其健康检查固定走 `GET /health`
+- `indexer-py` 当前内部文档入口为 `/docs`、`/redoc`、`/openapi.json`，默认只作为容器内部控制面文档使用
 - `api` 容器健康检查会读取 `/api/health` 的 JSON `status`；只有返回 `ok` 才视为健康，`degraded` 会继续被标记为不健康
 
 ### 3.4 常用本地命令
@@ -175,5 +177,5 @@ pnpm docker:local:reset
 
 - 当前业务正式使用的是 MongoDB。
 - Chroma 已进入容器化基线，并被纳入 API 健康诊断，但正式知识检索链路仍未落地。
-- `indexer-py` 当前只负责最小解析 / 分块与状态协作，不负责向量写入与统一检索。
+- `indexer-py` 当前提供 FastAPI 内部索引控制面，负责文档解析 / 分块 / embedding / Chroma 写侧，不负责 Mongo 业务状态与统一检索。
 - 当前更适合把这套 Docker 交付视为“可本地部署 / 可私有化打包的基础设施基线”，而不是完整 AI 能力交付。

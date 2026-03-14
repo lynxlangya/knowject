@@ -1,6 +1,6 @@
 # Knowject 当前架构事实（ChatGPT Projects 上传版）
 
-状态：2026-03-13  
+状态：2026-03-14
 来源：基于 `.agent/docs/current/architecture.md` 精简同步。  
 定位：这是当前事实副本，只回答“现在是什么状态”。
 
@@ -31,6 +31,7 @@
 
 - Chroma 已进入正式知识索引链路，而不只是健康诊断层。
 - 仓库里已经有独立 Python 索引服务代码，目录为 `apps/indexer-py`。
+- `apps/indexer-py` 当前已切到 FastAPI + `uv` 基线，主内部写侧入口固定为 `POST /internal/v1/index/documents`，并开放 `/docs`、`/redoc`、`/openapi.json` 作为内部控制面文档入口；当前仍隐藏兼容旧路径 `POST /internal/index-documents`。
 - `/knowledge` 已接正式后端接口，支持知识库 CRUD、文档上传、状态展示和最小轮询。
 - `global_docs` 已打通最小文档索引闭环；`global_code` 仍只保留命名空间与检索契约。
 
@@ -41,7 +42,7 @@
 - `apps/api`
   - app/config/db/modules/routes/middleware/server
 - `apps/indexer-py`
-  - Python HTTP 索引服务
+  - Python FastAPI 内部索引控制面
   - `md / txt` parse / clean / chunk / embedding / Chroma upsert
 - `packages/request`
   - Axios 请求能力封装
@@ -87,14 +88,17 @@
 - 项目列表
 - 项目基础信息
 - 项目成员 roster
+- 项目资源绑定
+- 项目对话列表 / 详情读链路
 - 全局成员概览
+- `/knowledge` 正式后端接口
 
 ### 仍主要依赖前端 Mock / 本地状态
 
 - 项目概览
-- 项目对话
-- 项目资源消费态
-- 全局资产治理页的真实写操作
+- 项目对话消息
+- 项目资源消费态中的 `skills / agents` fallback
+- 全局资产治理页中 `skills / agents` 的真实写操作
 
 ### 当前关键 localStorage
 
@@ -102,7 +106,8 @@
 - `knowject_auth_user`
 - `knowject_remembered_username`
 - `knowject_project_pins`
-- `knowject_project_resource_bindings`
+- `knowject_project_resource_bindings`（历史迁移缓存）
+- `knowject_projects`（历史 Mock 迁移缓存）
 
 ## 6. 当前 API 边界
 
@@ -138,11 +143,12 @@
 - `memberships`：项目成员增删改
 - `knowledge`：知识库 CRUD、文档上传、状态推进、统一知识检索 service
 - `memory/*`：演示接口，不是正式知识检索服务
+- Node 内部当前优先调用 Python `POST /internal/v1/index/documents`，开发态兼容回退旧路径 `POST /internal/index-documents`
 
 ## 7. 当前明确未落地能力
 
 - `skills / agents` 正式模块
-- 基于 Chroma 的正式向量写入 / 检索业务链路
+- 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建仍未落地
 - SSE 流式对话链路与来源引用
 - 项目私有知识库持久化
 - `global_code` 真实导入与项目级合并检索

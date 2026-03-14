@@ -1,4 +1,4 @@
-# Knowject 现状与目标差距分析（2026-03-13）
+# Knowject 现状与目标差距分析（2026-03-14）
 
 本文档用于回答“当前仓库离目标蓝图还有多远、先补哪里最划算”。判断基于三类证据：当前代码设计、现有文档、关键 git 演进记录。
 
@@ -131,7 +131,7 @@
 ### 3.5 部署与运维
 
 - 当前状态
-  - 当前仓库可本地 `pnpm dev`、`pnpm test`、`pnpm check-types`、`pnpm build`，API 包级测试和 Python unittest 也已可独立执行。
+  - 当前仓库可本地 `pnpm dev`、`pnpm test`、`pnpm check-types`、`pnpm build`，API 包级测试与 Python `uv run pytest` 也已可独立执行。
   - 根目录已经有 `/.env.example`，并交付 `compose.yml / compose.local.yml / compose.production.yml`、`scripts/knowject.sh`、`indexer-py + mongodb + chroma` 的本地 / 线上风格编排基线。
   - 当前仍缺少的是更细的运行监控、统一 smoke / CI 校验与回滚策略，而不是 Docker 基线本身。
 - 目标状态

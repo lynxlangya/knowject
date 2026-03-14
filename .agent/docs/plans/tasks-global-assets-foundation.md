@@ -1,6 +1,6 @@
 # 全局资产基础开发任务（Week 3-4，规划拆解）
 
-状态：截至 2026-03-13，GA-01、GA-02、GA-03、GA-04、GA-05、GA-06、GA-07 已完成，GA-08 待启动；本文件当前同时承担“Week 3-4 任务清单 + 完成记录”角色。
+状态：截至 2026-03-14，GA-01、GA-02、GA-03、GA-04、GA-05、GA-06、GA-07 已完成，GA-08 待启动；本文件当前同时承担“Week 3-4 任务清单 + 完成记录”角色。
 
 本文件用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 中的 `Week 3-4 全局资产基础`，结合当前已完成的基础框架事实，收敛成可执行、可排期、可验收的任务清单。
 
@@ -58,7 +58,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - `knowledge` 模块已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口。
   - 文档上传入口已接入，支持 `md / txt / pdf` 三种格式的最小上传闭环，并把原始文件落到本地存储。
 - GA-05 已完成：
-  - `apps/indexer-py` 已落地最小 Python HTTP 索引服务，支持 `md / txt` 解析、清洗与 `1000 / 200` 分块。
+  - `apps/indexer-py` 已落地 FastAPI + `uv` 内部索引控制面，当前固定通过 `POST /internal/v1/index/documents` 触发 `md / txt` 解析、清洗与 `1000 / 200` 分块。
   - `knowledge` 上传链路已接入 `pending -> processing -> completed|failed` 状态流，业务状态仍由 Node 统一回写 MongoDB。
   - `pdf` 当前会明确回写 `failed` 与 `errorMessage`，不假装支持。
   - Docker Compose 基线已补 `indexer-py` 服务与共享知识存储卷，避免容器内上传后找不到原始文件。
@@ -85,7 +85,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 
 - 后端已建立 `knowledge / skills / agents` 正式模块骨架；其中 `knowledge` 已具备真实元数据模型、CRUD、上传入口、`global_docs` Chroma 写入、统一检索与前端正式状态视图。
 - 当前还没有 `global_code` 真实导入、项目私有知识库，以及 Skill / Agent 正式资产能力。
-- `apps/indexer-py` 已具备可运行的 Python indexer HTTP 服务，并已实现 embedding、Chroma upsert / delete；但对外可见的重建 / retry / 诊断接口仍未补齐。
+- `apps/indexer-py` 已具备可运行的 FastAPI 内部索引控制面，并已实现 embedding、Chroma upsert / delete；但对外可见的重建 / retry / diagnostics 接口仍未补齐。
 - 没有全局 Skill 注册表、执行契约和内置 Skill 清单。
 - 没有全局 Agent 的正式存储、CRUD、绑定校验与前端表单。
 
@@ -151,7 +151,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 ## 明确不做
 
 - 项目私有知识库与项目 Git 仓库接入。
-- 项目资源绑定正式写回后端。
+- 项目资源绑定进一步扩展与项目内消费编排增强（基础持久化已完成，不在本阶段作为新增目标）。
 - 对话会话模型、消息存储、SSE 流式输出、来源引用展示。
 - LLM 自主调用 Skill 的编排链路。
 - Skill 的公网引入、复杂自建 Skill、代码执行型 Skill 沙箱。
@@ -447,7 +447,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
   - `pending -> processing -> completed|failed` 状态流。
 - 依赖：`GA-04`。
 - 已完成记录：
-  - 已在 `apps/indexer-py` 落地 `server.py` 与 `pipeline.py`，提供本地 HTTP 触发入口和 `md / txt` 最小解析能力。
+  - 已在 `apps/indexer-py` 落地 FastAPI + `uv` 控制面，当前入口整理为 `app/main.py`、`app/api/routes/*` 与 `app/domain/indexing/pipeline.py`，并固定通过 `POST /internal/v1/index/documents` 提供 `md / txt` 最小解析能力。
   - 已按 `1000 字符 / 200 重叠 / 保留段落边界优先` 实现文本清洗与 chunking。
   - 已让 `POST /api/knowledge/:knowledgeId/documents` 返回初始 `pending`，再由 Node 后台推进到 `processing` 并调用 Python indexer。
   - 已由 Node 统一回写 `completed / failed`、`chunkCount`、`processedAt`、`lastIndexedAt`、`errorMessage` 与知识库聚合 `indexStatus`。
