@@ -26,7 +26,7 @@
   - 项目成员管理 `/api/projects/:projectId/members*`
   - 用户搜索 `GET /api/auth/users`
   - 知识库 CRUD、文档上传、状态推进与统一检索
-  - Skill registry 只读接口与 Agent 正式 CRUD / 绑定
+  - Skill 正式资产 CRUD / 导入 / 草稿发布 / 绑定校验，以及 Agent 正式 CRUD / 绑定
   - `memory/overview` 与 `memory/query` 演示接口
 - Python indexer 已落地：
   - FastAPI + `uv` 基线
@@ -35,7 +35,7 @@
   - 隐藏兼容旧路径 `POST /internal/index-documents`
   - `/docs`、`/redoc`、`/openapi.json`
 - 前端项目列表、项目基础信息、成员 roster、项目资源绑定、项目对话列表 / 详情与全局成员页已经切到正式后端接口。
-- `/knowledge`、`/skills`、`/agents` 已接正式后端接口；其中 `/skills` 为系统内置只读目录，`/agents` 已支持创建、编辑、删除与知识库 / Skill 绑定。
+- `/knowledge`、`/skills`、`/agents` 已接正式后端接口；其中 `/skills` 已支持原生 `SKILL.md` 自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已支持创建、编辑、删除与知识库 / Skill 绑定。
 
 ## 3. 当前信息架构
 
@@ -72,7 +72,7 @@
 - 仍主要依赖前端本地 / Mock：
   - 项目概览页内容
   - 对话消息演示数据
-  - 项目资源消费态中 `skills / agents` 的目录 fallback
+  - 项目资源消费态中 `agents` 的目录 fallback
 - 当前关键本地状态：
   - `knowject_token`：登录 token
   - `knowject_project_pins`：项目置顶偏好
@@ -111,7 +111,7 @@
 
 ## 7. 当前明确还没落地的能力
 
-- Skill / Agent 执行闭环，以及项目资源页 `skills / agents` fallback 收口
+- Skill / Agent 执行闭环，以及项目资源页 `agents` fallback 收口
 - 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建接口仍未落地
 - `global_code` 真实导入与项目级合并检索
 - 对话消息写入、流式消息链路、来源引用渲染
@@ -156,4 +156,4 @@
 
 ## 11. 一句话总结
 
-当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路，以及全局 `/knowledge`、`/skills`、`/agents` 的正式管理页；当前最大的断层仍是项目对话消息写侧、项目资源页 `skills / agents` fallback 与索引运维能力。
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路，以及全局 `/knowledge`、`/skills`、`/agents` 的正式管理页；当前最大的断层仍是项目对话消息写侧、项目资源页 `agents` fallback 与索引运维能力。

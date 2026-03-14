@@ -12,7 +12,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 
 - 全局知识库最小闭环
 - `global_docs` 正式索引闭环
-- 最小 Skill registry
+- Skill registry 与治理基线
 - 最小 Agent 配置模型
 
 ## 2. 当前阶段完成定义（DoD）
@@ -47,7 +47,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 - 来源引用展示
 - Agent runtime
 - LLM 自主调用 Skill 编排
-- Skill 公网引入与复杂自建
+- Skill 回源同步与复杂执行型自建
 
 ## 5. 推荐分层
 
@@ -108,7 +108,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 ### GA-07 ~ GA-11
 
 - 前端 `/knowledge`、`/skills`、`/agents` 接正式接口
-- Skill registry 与 Agent 配置模型落地
+- Skill registry、资产治理与 Agent 配置模型落地
 
 ### GA-12
 
@@ -143,6 +143,7 @@ Week 3-4 不是“把所有 AI 能力一次做完”，而是在已完成的 `au
 - 至少一种文档类型完成完整索引闭环
 - `global_docs` 已实际写入 Chroma
 - `/skills` 已展示 3 个内置 Skill
+- `/skills` 已具备正式 Skill 资产治理交互
 - `/agents` 已支持创建并绑定知识库 / Skill
 - `search_documents` 不直连 Chroma
 - 至少有一条 Node / Python / Chroma 闭环验证记录

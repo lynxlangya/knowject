@@ -1,6 +1,6 @@
 # Knowject Frontend (`apps/platform`)
 
-前端采用 React + Vite + Ant Design，当前职责是提供登录后产品壳、项目态页面与全局资产管理页；截至 2026-03-14，基础框架阶段已完成认证接入、项目主数据接入、项目成员 roster 管理、项目资源绑定正式写回、项目对话读链路接入、全局成员协作总览接入，以及知识库 / 技能 / 智能体正式管理页接线。
+前端采用 React + Vite + Ant Design，当前职责是提供登录后产品壳、项目态页面与全局资产管理页；截至 2026-03-14，基础框架阶段已完成认证接入、项目主数据接入、项目成员 roster 管理、项目资源绑定正式写回、项目对话读链路接入、全局成员协作总览接入，以及知识库 / 技能 / 智能体正式管理页接线，其中 `/skills` 已升级为正式 Skill 资产治理页。
 
 ## 当前路由
 
@@ -32,6 +32,7 @@
 - `src/api`：登录、项目、项目对话、成员、知识库、技能、智能体接口封装，以及统一错误提取 helper；项目列表、项目基础信息、项目资源绑定、项目对话读链路、全局成员概览、成员 roster、全局知识库、全局技能目录与全局智能体管理页已接入真实后端。
 - `src/api/*` 当前统一按 `ApiEnvelope<T>` 调用后端，并在 API 层解包 `data`；页面层继续消费原有业务对象，不直接感知 `code / message / meta`。
 - `/knowledge` 主要消费 `GET /api/knowledge`、`GET /api/knowledge/:knowledgeId`、`POST /api/knowledge`、`PATCH /api/knowledge/:knowledgeId`、`DELETE /api/knowledge/:knowledgeId` 与 `POST /api/knowledge/:knowledgeId/documents`；当前正式上传链路支持 `md / markdown / txt`，界面文案统一推荐 `.md / .txt`。
+- `/skills` 主要消费 `GET /api/skills`、`GET /api/skills/:skillId`、`POST /api/skills`、`POST /api/skills/import`、`PATCH /api/skills/:skillId` 与 `DELETE /api/skills/:skillId`；页面支持原生 `SKILL.md` 自建、GitHub/URL 导入、预览、草稿/发布与删除，系统内置 Skill 保持只读查看。
 - `/project/:projectId/chat` 主要消费 `GET /api/projects/:projectId/conversations` 与 `GET /api/projects/:projectId/conversations/:conversationId`；当前输入框仍保持禁用，等待正式消息写路径。
 - `/project/:projectId/resources` 主要消费后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`；其中知识库与 Skill 元数据优先来自 `/api/knowledge`、`/api/skills`，`agents` 仍用本地目录 fallback，未知资源会展示占位卡片。
 - `/members` 主要消费 `GET /api/members`；`/project/:projectId/members` 主要消费 `GET /api/auth/users` 与 `/api/projects/:projectId/members*`。

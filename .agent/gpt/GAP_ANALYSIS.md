@@ -9,7 +9,7 @@
 - 当前仓库已经完成信息架构、登录、项目主数据和成员主链路的第一轮收口。
 - 当前最大断层不在 UI，而在：
   - 项目对话消息写链路
-  - 项目资源页 `skills / agents` fallback 收口
+  - 项目资源页 `agents` fallback 收口
   - Skill / Agent 运行时与 AI 主链路
 - Chroma 已进入 `global_docs` 正式索引链路，而不只是基础设施层。
 - 当前已经有 Python indexer 与统一知识检索 service，但仍停留在最小闭环阶段。
@@ -23,7 +23,7 @@
 
 ### 2. 前端状态模型
 
-- 项目资源、对话与部分协作信息仍依赖 Mock / 本地状态
+- 项目资源里的 `agents` fallback、对话与部分协作信息仍依赖 Mock / 本地状态
 
 ### 3. 后端与数据层
 
@@ -51,7 +51,7 @@
 1. 稳住当前信息架构
 2. 基于已落地的项目与成员模型，优先继续替换关键 Mock 主数据源
 3. 继续稳住 `apps/api + apps/indexer-py + Chroma` 的 `global_docs` 最小索引闭环
-4. 收口项目资源页 `skills / agents` fallback
+4. 收口项目资源页 `agents` fallback
 5. 在 `global_docs` 稳定后，再扩到 `global_code`、项目级知识库、对话链路、Skill 执行与 Agent 编排
 6. 最后补更完整的部署与运维能力
 
@@ -76,4 +76,4 @@
 
 ## 6. 一句话总结
 
-当前最划算的路径不是继续美化壳层，而是把已经打通的 `/knowledge`、`/skills`、`/agents` 全局资产基线稳住，再推进项目级知识 / 对话主链路与 Skill / Agent runtime。
+当前最划算的路径不是继续美化壳层，而是把已经打通的 `/knowledge`、`/skills`、`/agents` 全局资产基线稳住，再推进项目级知识 / 对话主链路、项目资源页 `agents` 收口与 Skill / Agent runtime。

@@ -271,7 +271,7 @@ scripts/
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色、项目资源绑定字段，以及项目对话只读列表 / 详情接口。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
 - `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口、单文档 retry / delete，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。上传单文件上限默认 `50 MB`，当前支持 `md / markdown / txt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再恢复。Node 统一知识检索 service 当前保留读侧直连 Chroma query 的架构例外；collection init 已下沉到 Python 写侧保证，向量 delete 的正式 Python 内部接口仍待补齐，因此代码里暂保留过渡期直连 delete TODO。单文档删除会尽量联动清理原始文件与 Chroma chunk；若删除和后台索引并发发生，服务端会在状态回写缺失时补做孤儿 chunk 清理。
-- `skills`：当前已提供系统内置 Skill registry、Mongo 元数据仓储、bundle 文件存储、`SKILL.md` 解析、GitHub/URL 导入、列表 / 详情 / 创建 / 编辑 / 删除接口，以及 `draft / published` 生命周期与 bindable 校验；其中 `search_documents` 的 handler 对齐服务端统一知识检索契约，`search_codebase / check_git_log` 当前仍是 contract-only 定义。
+- `skills`：当前已提供系统内置 Skill registry、Mongo 元数据仓储、bundle 文件存储、`SKILL.md` 解析、GitHub/URL 导入、列表 / 详情 / 创建 / 编辑 / 删除接口，以及 `draft / published` 生命周期、引用保护与 bindable 校验；项目与 Agent 当前只允许绑定系统内置或已发布的正式 Skill。其中 `search_documents` 的 handler 对齐服务端统一知识检索契约，`search_codebase / check_git_log` 当前仍是 contract-only 定义。
 - `agents`：当前已提供 Agent 列表 / 详情 / 创建 / 编辑 / 删除接口，后端会校验 `boundKnowledgeIds` 与 `boundSkillIds` 的存在性，并只允许绑定系统内置或已发布的正式 Skill；`model` 当前固定由服务端写入 `server-default`。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
 - `memory/query`：基于本地 `DEMO_ITEMS` 做简单关键词匹配，返回演示检索结果。

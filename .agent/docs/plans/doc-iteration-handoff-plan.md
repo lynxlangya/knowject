@@ -1,5 +1,13 @@
 # 文档迭代与交接执行计划（2026-03-10）
 
+## 2026-03-14 增量同步说明
+
+- 触发提交：`df7c2ea feat(skills): 增加 Skill 资产治理与绑定校验链路`
+- 本次增量范围：
+  - 把 `/skills` 从“系统内置只读目录”的旧表述统一升级为“正式 Skill 资产治理链路”的当前事实。
+  - 同步 README、handoff、roadmap、contracts 与 `.agent/gpt/*` 上传副本里的旧描述。
+  - 保留本文件作为 2026-03-10 首轮文档治理计划记录，但以下涉及 Skill 的事实均以后续源码与最新同步结果为准。
+
 ## 目标
 
 基于当前仓库代码事实和已落地的新业务逻辑，完成一轮文档迭代，明确“现在是什么”“接下来怎么继续”“如何把上下文准确交给下一位 AI 或人类”。
@@ -26,7 +34,7 @@
 - 已确认的路由 / 接口 / 数据来源：
   - canonical 路由：`/home`、`/project/:projectId/*`
   - 兼容路由：`/workspace`、`/home/project/*`、`/project/:projectId/knowledge|skills|agents`
-  - 现有接口：`GET /api/health`、`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/users`、`GET /api/members`、`GET /api/projects`、`POST /api/projects`、`PATCH /api/projects/:projectId`、`DELETE /api/projects/:projectId`、`POST /api/projects/:projectId/members`、`PATCH /api/projects/:projectId/members/:userId`、`DELETE /api/projects/:projectId/members/:userId`、`GET /api/knowledge`、`POST /api/knowledge`、`POST /api/knowledge/search`、`GET /api/skills`、`GET /api/agents`、`POST /api/agents`、`PATCH /api/agents/:agentId`、`DELETE /api/agents/:agentId`、`GET /api/memory/overview`、`POST /api/memory/query`
+  - 现有接口：`GET /api/health`、`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/users`、`GET /api/members`、`GET /api/projects`、`POST /api/projects`、`PATCH /api/projects/:projectId`、`DELETE /api/projects/:projectId`、`POST /api/projects/:projectId/members`、`PATCH /api/projects/:projectId/members/:userId`、`DELETE /api/projects/:projectId/members/:userId`、`GET /api/knowledge`、`POST /api/knowledge`、`POST /api/knowledge/search`、`GET /api/skills`、`GET /api/skills/:skillId`、`POST /api/skills`、`POST /api/skills/import`、`PATCH /api/skills/:skillId`、`DELETE /api/skills/:skillId`、`GET /api/agents`、`GET /api/agents/:agentId`、`POST /api/agents`、`PATCH /api/agents/:agentId`、`DELETE /api/agents/:agentId`、`GET /api/memory/overview`、`POST /api/memory/query`
   - 项目态页面主数据来源：后端 `ProjectContext + /api/projects*`，辅以前端 `project.storage + project.catalog + project.mock`
 - 已知历史兼容或废弃项：
   - `/workspace` 仅作兼容入口，必须重定向到 `/home`
@@ -47,8 +55,8 @@
   - 但对“新接手者如何快速建立事实”和“这一轮新增业务逻辑应该看哪里”仍缺少统一入口。
   - 当前业务事实里有几处容易被误读：
     - 登录页已经是正式 auth 接口接入，不再是纯演示入口。
-    - 项目侧栏创建 / 编辑流程已经把资源绑定字段写回后端项目模型，但项目资源页中的 `skills / agents` 仍保留 fallback。
-    - 全局 `/skills` 为系统内置只读目录，`/agents` 已有正式 CRUD / 绑定写路径；`GlobalAssetManagementPage.tsx` 已退为历史壳层。
+    - 项目侧栏创建 / 编辑流程已经把资源绑定字段写回后端项目模型，但项目资源页中的 `agents` 仍保留 fallback。
+    - 全局 `/skills` 已升级为正式 Skill 资产治理页，支持自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除；`/agents` 已有正式 CRUD / 绑定写路径；`GlobalAssetManagementPage.tsx` 已退为历史壳层。
     - 项目资源页会消费兼容跳转带来的 `focus` 查询参数，但 canonical URL 仍保持无查询串。
 - 代码 / 配置证据：
   - `apps/platform/src/pages/login/LoginPage.tsx`
@@ -71,18 +79,29 @@
 
 - 需要同步的文档：
   - `README.md`
+  - `README.zh-CN.md`
+  - `apps/api/README.md`
+  - `apps/platform/README.md`
   - `.agent/docs/README.md`
   - `.agent/docs/current/architecture.md`
-  - `.agent/docs/plans/doc-iteration-handoff-plan.md`
-  - `.agent/docs/handoff/handoff-guide.md`
-  - `.agent/docs/handoff/handoff-prompt.md`
-- 不需要同步的文档：
+  - `.agent/docs/contracts/chroma-decision.md`
   - `.agent/docs/roadmap/target-architecture.md`
   - `.agent/docs/roadmap/gap-analysis.md`
+  - `.agent/docs/plans/doc-iteration-handoff-plan.md`
+  - `.agent/docs/handoff/handoff-guide.md`
+  - `.agent/docs/handoff/chatgpt-project-brief.md`
+  - `.agent/docs/handoff/handoff-prompt.md`
+  - `.agent/gpt/README.md`
+  - `.agent/gpt/PROJECT_BRIEF.md`
+  - `.agent/gpt/CURRENT_ARCHITECTURE.md`
+  - `.agent/gpt/GAP_ANALYSIS.md`
+  - `.agent/gpt/INDEXING_DECISION.md`
+  - `.agent/gpt/WEEK3_4_TASKS.md`
+- 不需要同步的文档：
   - `.agent/docs/plans/tasks-foundation-framework.md`
   - `.agent/docs/contracts/auth-contract.md`
 - 同步原因：
-  - 本轮没有改变目标架构和阶段规划，只补充当前事实、接手入口和交接模板。
+  - 最新提交已经改变了 Skill 资产治理的当前事实边界，并影响当前事实、接手入口、目标状态注释和上传副本的一致性。
 
 ## 范围
 
@@ -95,8 +114,8 @@
 
 本次不做：
 
-- 不调整产品目标蓝图和阶段路线。
 - 不改动业务代码、路由或接口行为。
+- 不重写历史计划文档的原始意图，只对会误导当前事实判断的段落做增量收口。
 - 不新增额外的需求分析、路线图或架构理想态文档。
 
 ## 执行方案

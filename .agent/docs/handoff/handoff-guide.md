@@ -1,4 +1,4 @@
-# Knowject 快速接手指南（2026-03-13）
+# Knowject 快速接手指南（2026-03-14）
 
 ## 目标
 
@@ -31,11 +31,15 @@
    - `apps/platform/src/pages/project/project.mock.ts`
    - `apps/platform/src/pages/project/ProjectResourcesPage.tsx`
    - `apps/platform/src/pages/project/ProjectMembersPage.tsx`
+   - `apps/platform/src/pages/skills/SkillsManagementPage.tsx`
+   - `apps/platform/src/pages/agents/AgentsManagementPage.tsx`
    - `apps/api/src/app/create-app.ts`
    - `apps/api/src/modules/auth/*`
    - `apps/api/src/modules/members/*`
    - `apps/api/src/modules/projects/*`
    - `apps/api/src/modules/memberships/*`
+   - `apps/api/src/modules/skills/*`
+   - `apps/api/src/modules/agents/*`
    - `apps/api/src/routes/memory.ts`
 
 ## 当前业务逻辑的最小事实包
@@ -81,9 +85,9 @@
   - 项目对话列表 / 详情来自 `/api/projects/:projectId/conversations*`
   - 项目资源绑定来自 `/api/projects`
   - 知识库分组元数据来自 `/api/knowledge`
-- 项目 `资源` 页只消费“当前项目已绑定的全局资产”，不是全局治理入口。
-- `project.mock.ts` 当前主要保留项目概览补充文案、成员协作快照，以及 `skills / agents` 目录 fallback。
-- 全局 `/knowledge`、`/skills`、`/agents` 页面已分别接入正式接口；其中 `/skills` 为系统内置只读目录，`/agents` 已支持创建 / 编辑 / 删除与知识库 / Skill 绑定，项目内引入仍主要通过项目资源绑定与消费态 fallback。
+- 项目 `资源` 页只消费“当前项目已绑定的全局资产”，不是全局治理入口；其中 Skill 元数据优先来自 `/api/skills`。
+- `project.mock.ts` 当前主要保留项目概览补充文案、成员协作快照，以及 `agents` 目录 fallback。
+- 全局 `/knowledge`、`/skills`、`/agents` 页面已分别接入正式接口；其中 `/skills` 已支持原生 `SKILL.md` 自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已支持创建 / 编辑 / 删除与知识库 / Skill 绑定，项目内 `agents` 引入仍主要通过项目资源绑定与消费态 fallback。
 - 成员数据现在分两层：
   - 全局成员基础档案在 `project.catalog.ts`
   - 项目成员协作快照在 `project.mock.ts`
@@ -102,20 +106,20 @@
   - 项目对话只读接口 `GET /api/projects/:projectId/conversations*`
   - 项目成员管理接口 `/api/projects/:projectId/members*`
   - 已注册用户搜索 `GET /api/auth/users`
-  - 全局 Skill registry 只读接口 `GET /api/skills`
+  - 全局 Skill 正式资产接口 `GET /api/skills*`、`POST /api/skills`、`POST /api/skills/import`、`PATCH /api/skills/:skillId`、`DELETE /api/skills/:skillId`
   - 全局 Agent 正式 CRUD 与绑定校验 `/api/agents*`
   - 知识库 CRUD、文档上传、状态推进与统一检索
   - `memory/overview` 与 `memory/query` 演示接口
-- 因此当前项目页内容应写成“项目主数据、资源绑定、对话读链路与成员关系已经切到后端，但消息写入、项目资源页 `skills / agents` fallback 收口，以及 Skill / Agent 运行时仍未完成”；基础框架阶段本身已完成。
+- 因此当前项目页内容应写成“项目主数据、资源绑定、对话读链路与成员关系已经切到后端，但消息写入、项目资源页 `agents` fallback 收口，以及 Skill / Agent 运行时仍未完成”；基础框架阶段本身已完成。
 
 ## 如果你要继续开发，先按这个顺序推进
 
 1. 保持当前 canonical 路由和信息架构稳定，不再做大幅重命名。
 2. 优先补项目对话消息写路径、来源引用与真正的上下文沉淀。
-3. 再推进项目资源页 `skills / agents` fallback 清理，以及后续 Skill runtime / Agent 编排入口。
+3. 再推进项目资源页 `agents` fallback 清理，以及后续 Skill runtime / Agent 编排入口。
 4. 最后逐步替换概览补充文案和成员协作快照这些剩余展示 Mock。
 
-这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“消息写路径、项目资源页 `skills / agents` fallback 收口，以及 AI 主链路仍未形成”。
+这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“消息写路径、项目资源页 `agents` fallback 收口，以及 AI 主链路仍未形成”。
 
 ## 这一轮文档迭代做了什么
 
@@ -124,7 +128,7 @@
   - 项目资源绑定已进入后端项目模型
   - 项目对话读链路已接入正式 `/api/projects/:projectId/conversations*`
   - `resources?focus=*` 的兼容定位逻辑
-  - 全局 `/skills`、`/agents` 正式接线与历史壳层退场现状
+  - 全局 `/skills`、`/agents` 正式接线、Skill 资产治理闭环与历史壳层退场现状
 - README、子系统 README 与 handoff 文档已同步新增 `pnpm test` 入口和项目读链路现状。
 - 新增了三份文档：
   - `.agent/docs/plans/doc-iteration-handoff-plan.md`
@@ -170,4 +174,4 @@ pnpm build
 
 ## 一句话结论
 
-现在最重要的不是“继续美化壳层”，而是让接手者清楚：前端壳层已经稳定，auth、项目 CRUD、项目资源绑定、项目对话读链路与成员接口已落地，剩余主要断层在消息写路径、`skills / agents` 正式数据和 AI 主链路。
+现在最重要的不是“继续美化壳层”，而是让接手者清楚：前端壳层已经稳定，auth、项目 CRUD、项目资源绑定、项目对话读链路、Skill 资产治理与成员接口已落地，剩余主要断层在消息写路径、项目资源页 `agents` fallback 和 AI 主链路。

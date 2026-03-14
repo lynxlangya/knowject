@@ -97,7 +97,7 @@
 
 - 项目概览
 - 项目对话消息
-- 项目资源消费态中的 `skills / agents` fallback
+- 项目资源消费态中的 `agents` fallback
 
 ### 当前关键 localStorage
 
@@ -132,6 +132,11 @@
 - `POST /api/knowledge/:knowledgeId/documents`
 - `POST /api/knowledge/search`
 - `GET /api/skills`
+- `GET /api/skills/:skillId`
+- `POST /api/skills`
+- `POST /api/skills/import`
+- `PATCH /api/skills/:skillId`
+- `DELETE /api/skills/:skillId`
 - `GET /api/agents`
 - `GET /api/agents/:agentId`
 - `POST /api/agents`
@@ -147,12 +152,14 @@
 - `projects`：项目 CRUD
 - `memberships`：项目成员增删改
 - `knowledge`：知识库 CRUD、文档上传、状态推进、统一知识检索 service
+- `skills`：系统内置 + 自建 + GitHub/URL 导入的正式 Skill 资产治理、草稿/发布与绑定校验
+- `agents`：正式 Agent CRUD、知识库 / Skill 绑定校验
 - `memory/*`：演示接口，不是正式知识检索服务
 - Node 内部当前优先调用 Python `POST /internal/v1/index/documents`，开发态兼容回退旧路径 `POST /internal/index-documents`
 
 ## 7. 当前明确未落地能力
 
-- 项目资源页 `skills / agents` fallback 收口，以及 Skill / Agent 运行时
+- 项目资源页 `agents` fallback 收口，以及 Skill / Agent 运行时
 - 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建仍未落地
 - SSE 流式对话链路与来源引用
 - 项目私有知识库持久化

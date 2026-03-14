@@ -34,7 +34,7 @@
   - memberships
   - 错误处理中间件
   - env 管理
-- 知识库 CRUD、文档记录、上传入口、状态查询、统一知识检索 API、Skill / Agent 绑定，仍然更适合留在 Node/Express。
+- 知识库 CRUD、文档记录、上传入口、状态查询、统一知识检索 API，以及 Skill / Agent 正式资产治理与绑定，仍然更适合留在 Node/Express。
 
 ## 4. 推荐运行时分层
 

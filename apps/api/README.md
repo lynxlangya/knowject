@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-14，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入与统一检索闭环；`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
+截至 2026-03-14，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入与统一检索闭环；`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
 
 ## 当前接口
 
@@ -25,6 +25,7 @@
 - `POST /api/projects`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `name`、`description`、可选 `knowledgeBaseIds / agentIds / skillIds`，创建者自动成为项目 `admin`。
+  - 其中 `skillIds` 只允许绑定系统内置或已发布的正式 Skill。
   - 创建时会为项目补一条默认对话，供项目对话读链路返回最小可用上下文。
 - `GET /api/projects/:projectId/conversations`
   - 需要 `Authorization: Bearer <token>`。
@@ -35,6 +36,7 @@
 - `PATCH /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 更新项目基础信息与 `knowledgeBaseIds / agentIds / skillIds` 资源绑定字段。
+  - 若 `skillIds` 中包含草稿或不存在的 Skill，会返回显式绑定校验错误。
 - `DELETE /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 删除项目。
@@ -109,9 +111,11 @@
 - `PATCH /api/skills/:skillId`
   - 需要 `Authorization: Bearer <token>`。
   - 支持更新 `skillMarkdown`、frontmatter 元数据和 `lifecycleStatus`；系统内置 Skill 不可编辑。
+  - 若已发布 Skill 仍被项目或 Agent 引用，则不允许回退到 `draft`。
 - `DELETE /api/skills/:skillId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除非系统内置 Skill，并清理对应 bundle 存储目录。
+  - 若 Skill 仍被项目或 Agent 引用，会直接拒绝删除，避免留下脏绑定。
 - `GET /api/agents`
   - 需要 `Authorization: Bearer <token>`。
   - 返回全局 Agent 正式列表：`id / name / description / systemPrompt / boundSkillIds / boundKnowledgeIds / model / status / createdBy / createdAt / updatedAt`。
@@ -121,10 +125,12 @@
 - `POST /api/agents`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `name`、可选 `description`、`systemPrompt`、可选 `boundSkillIds / boundKnowledgeIds / status`。
+  - `boundSkillIds` 只允许绑定系统内置或已发布的正式 Skill。
   - 当前 `model` 固定由服务端写入 `server-default`，不开放请求侧覆盖。
 - `PATCH /api/agents/:agentId`
   - 需要 `Authorization: Bearer <token>`。
   - 支持更新 `name / description / systemPrompt / boundSkillIds / boundKnowledgeIds / status`。
+  - 更新绑定时同样会校验 Skill 是否存在且可绑定。
 - `DELETE /api/agents/:agentId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
@@ -158,7 +164,7 @@
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
 - `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / delete、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；前端 `/knowledge` 已正式接线。
-- `skills` 当前已完成正式 Skill 资产仓储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、详情读取与绑定校验；`agents` 已完成 Mongo 正式模型、CRUD 和绑定校验。
+- `skills` 当前已完成正式 Skill 资产仓储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、详情读取、引用保护与绑定校验；`agents` 已完成 Mongo 正式模型、CRUD 和绑定校验。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路、知识库正式检索、Skill 资产管理与 Agent CRUD；仍未落地的是项目对话消息写入、项目资源页 `agents` fallback 收口、`global_code` 真实导入、重建 / 诊断接口，以及更深的 Skill / Agent 运行时编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
@@ -229,7 +235,7 @@
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
 - `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储、CRUD、详情接口、文档上传入口、后台状态推进、Chroma 统一检索 service 与 Python indexer 触发。
 - `src/modules/knowledge/knowledge.search.ts`：统一知识检索 service、Python indexer 健康探活，以及当前过渡期的向量删除适配；Node 直连 Chroma 读侧 query 在这里作为架构例外保留。
-- `src/modules/skills/*`：全局 Skill 模块，当前已提供系统内置 Skill registry、Mongo 元数据仓储、bundle 文件存储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布与正式 CRUD 接口；其中 `search_documents` 复用服务端统一知识检索契约。
+- `src/modules/skills/*`：全局 Skill 模块，当前已提供系统内置 Skill registry、Mongo 元数据仓储、bundle 文件存储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、引用保护与正式 CRUD 接口；其中 `search_documents` 复用服务端统一知识检索契约。
 - `src/modules/agents/*`：全局 Agent 模块，当前已提供 Mongo 正式模型、CRUD、引用校验与最小测试。
 - `src/routes/health.ts`：健康检查。
 - `src/routes/memory.ts`：记忆概览与检索演示接口，当前已复用 JWT 中间件。

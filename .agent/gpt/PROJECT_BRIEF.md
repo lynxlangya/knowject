@@ -29,7 +29,7 @@
   - 项目成员管理
   - 已注册用户搜索
   - 知识库 CRUD、文档上传、状态推进与统一检索
-  - Skill registry 只读接口与 Agent 正式 CRUD / 绑定
+  - Skill 正式资产 CRUD / 导入 / 草稿发布 / 绑定校验，以及 Agent 正式 CRUD / 绑定
   - `memory/overview` 与 `memory/query` 演示接口
 - 前端已经切到正式后端的数据包括：
   - 项目列表
@@ -48,7 +48,7 @@
 
 ## 3. 当前仍未落地的事实
 
-- 项目资源页 `skills / agents` fallback 收口，以及 Skill / Agent 执行闭环
+- 项目资源页 `agents` fallback 收口，以及 Skill / Agent 执行闭环
 - 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建接口仍未落地
 - `global_code` 真实导入与项目级合并检索
 - 项目对话消息写入与 SSE
@@ -92,7 +92,7 @@
 
 - 项目概览页内容
 - 对话消息演示数据
-- 项目资源消费态中的 `skills / agents` fallback
+- 项目资源消费态中的 `agents` fallback
 
 ### 当前关键前端本地状态
 
@@ -170,7 +170,7 @@
 
 - 全局资产正式化
 - `global_docs` 最小索引闭环
-- Skill registry 最小闭环
+- Skill registry 与治理最小闭环
 - Agent 配置模型最小闭环
 
 ### 本阶段不做
@@ -184,7 +184,7 @@
 ## 10. 给 ChatGPT 的工作约束
 
 - 不要把目标蓝图当成当前事实。
-- 不要把 `/skills`、`/agents` 误判为已经进入运行时或项目侧消费完全收口；当前正式写链路主要是 Knowledge 上传与 Agent 配置。
+- 不要把 `/skills`、`/agents` 误判为已经进入运行时或项目侧消费完全收口；当前正式写链路已经覆盖 Knowledge 上传、Skill 资产治理与 Agent 配置，但项目资源页 `agents` fallback 与运行时仍未完成。
 - 不要把 Chroma 误判为正式业务主数据库。
 - 不要把“Node/Express 负责业务主链路，Python 负责索引处理链路”写成“全仓切 Python”。
 - 默认中文输出，结论先行，尽量最小改动。
@@ -200,4 +200,4 @@
 
 ## 12. 一句话总结
 
-当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路，以及全局 `/knowledge`、`/skills`、`/agents` 的正式管理页；当前最大的断层仍是项目对话消息写侧、项目资源页 `skills / agents` fallback 与索引运维能力。
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路，以及全局 `/knowledge`、`/skills`、`/agents` 的正式管理页；当前最大的断层仍是项目对话消息写侧、项目资源页 `agents` fallback 与索引运维能力。
