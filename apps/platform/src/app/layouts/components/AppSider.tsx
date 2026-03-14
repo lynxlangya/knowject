@@ -503,7 +503,6 @@ export const AppSider = ({
               "[&_.ant-menu-item]:text-[14px]",
               "[&_.ant-menu-item]:font-medium",
               "[&_.ant-menu-item_.ant-menu-title-content]:tracking-[0.01em]",
-              "[&_.ant-menu-item-selected]:shadow-[0_10px_18px_rgba(27,80,183,0.10)]",
               "[&_.ant-menu-item_.anticon]:text-[15px]",
             ].join(" ")}
           />
@@ -633,7 +632,7 @@ export const AppSider = ({
                         className={[
                           "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 pr-14 text-left text-[13px] transition-all duration-200",
                           active
-                            ? "text-slate-900 shadow-[0_10px_18px_rgba(27,80,183,0.10)]"
+                            ? "text-slate-900"
                             : "text-slate-600 hover:-translate-y-px hover:text-slate-900",
                         ].join(" ")}
                         style={
@@ -661,7 +660,6 @@ export const AppSider = ({
                               ? {
                                   borderColor: KNOWJECT_BRAND.primaryBorder,
                                   backgroundImage: KNOWJECT_BRAND.heroGradient,
-                                  boxShadow: `0 10px 18px ${KNOWJECT_BRAND.primaryGlow}`,
                                 }
                               : undefined
                           }

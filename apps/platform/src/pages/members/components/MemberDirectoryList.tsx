@@ -48,7 +48,7 @@ export const MemberDirectoryList = ({
             onClick={() => onSelect(member.id)}
             className={`w-full rounded-[16px] border px-3 py-2.5 text-left transition ${
               isActive
-                ? 'border-emerald-200 bg-emerald-50/70 shadow-[0_12px_30px_rgba(20,184,166,0.08)]'
+                ? 'border-emerald-200 bg-emerald-50/70'
                 : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white'
             }`}
           >
