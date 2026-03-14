@@ -18,7 +18,7 @@ export const GlobalAssetManagementPage = ({
 
   return (
     <section className="space-y-4">
-      <Card className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!">
+      <Card className="mb-5! rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">

@@ -46,6 +46,7 @@
     "test": "pnpm test:api && pnpm test:indexer",
     "test:api": "pnpm --filter api test",
     "test:indexer": "pnpm --filter indexer-py test",
+    "verify:global-assets-foundation": "pnpm --filter api test && pnpm --filter indexer-py test && pnpm --filter platform check-types",
     "check-types": "turbo run check-types",
     "typecheck": "turbo run check-types"
   },

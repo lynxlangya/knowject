@@ -6,19 +6,20 @@ Make project knowledge truly usable for teams.
 
 Knowject is an AI-assisted project knowledge workspace for development teams. It turns code, documents, design assets, and project context into reusable project memory so that search, collaboration, and decision-making stay grounded in the real repository.
 
-The repository is currently in an active foundation stage: the product shell, authentication flow, project/member data flow, project resource binding persistence, project conversation read-side, and Docker deployment baseline are already implemented, while message write-side, `skills / agents` formalization, and deeper retrieval workflows are still being built out.
+The repository is currently in an active foundation stage: the product shell, authentication flow, project/member data flow, project resource binding persistence, project conversation read-side, global knowledge/skill/agent management flows, and Docker deployment baseline are already implemented, while message write-side, project-side asset consumption cleanup, and deeper retrieval/runtime workflows are still being built out.
 
 ## Current Status
 
-- `apps/platform` already provides the authenticated shell, project routes, member management UI, and the first formal global knowledge management UI.
-- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, knowledge metadata CRUD/upload/search endpoints, scaffolded `skills / agents`, and demo `memory` endpoints.
+- `apps/platform` already provides the authenticated shell, project routes, member management UI, and formal global knowledge/skill/agent management pages.
+- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, knowledge metadata CRUD/upload/search endpoints, the builtin `skills` registry/read APIs, formal `agents` CRUD/binding APIs, and demo `memory` endpoints.
 - Project lists, project basics, member rosters, project resource bindings, project conversation summaries/details, and the global members overview already use `/api/projects*` and `/api/members`.
 - `knowject_project_resource_bindings` now remains only as a one-time migration source for historical local data; runtime resource bindings are persisted on project documents.
 - Project overview still uses local display supplements for member collaboration snapshots and some fallback copy, while `/project/:projectId/resources` still falls back to local catalog data for `skills / agents`.
-- `/knowledge` is now wired to the formal backend knowledge APIs for list/create/update/delete/upload/status display, while `skills` and `agents` still remain shell pages.
+- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; project-side `skills / agents` consumption still uses local fallback catalog data.
 - `GET /api/projects/:projectId/conversations` and `GET /api/projects/:projectId/conversations/:conversationId` now provide the current project chat read-side; message creation is not implemented yet.
 - `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`, `DELETE /api/knowledge/:knowledgeId/documents/:documentId`, and `POST /api/knowledge/search` are available end-to-end for the current GA-07 knowledge flow.
 - JSON API responses now share the same envelope contract: `code`, `message`, `data`, and `meta`; frontend API wrappers unwrap `data` before UI consumption.
+- `pnpm verify:global-assets-foundation` now bundles the Week 3-4 minimum automated validation across API tests, Python indexer tests, and platform type checks.
 - Docker Compose baselines are available for both local and production-style environments with `platform + api + indexer-py + mongodb + chroma`.
 - MongoDB is the current primary datastore. Chroma now backs the GA-06 global document index layer for `global_docs`, while `global_code` is reserved as an empty namespace only.
 - `apps/indexer-py` now provides the Python indexing service used for `md / txt` parsing, cleaning, chunking, OpenAI-compatible embedding generation, and Chroma upsert/delete orchestration.
@@ -105,6 +106,7 @@ pnpm dev:web
 pnpm dev:api
 pnpm --filter indexer-py dev
 pnpm test
+pnpm verify:global-assets-foundation
 pnpm check-types
 pnpm build
 pnpm host:up

@@ -17,7 +17,7 @@
 - 共享包：
   - `packages/request`：Axios 请求封装。
   - `packages/ui`：通用 UI 组件，当前已包含 `SearchPanel` 及其 helper 分层。
-- 当前产品主线：登录后产品壳、项目态页面、全局资产管理页、基础框架 API 基线。
+- 当前产品主线：登录后产品壳、项目态页面、全局资产正式管理页、基础框架 API 基线。
 - 当前项目态主数据流：项目列表、项目基础信息、成员 roster、项目资源绑定与项目对话读链路来自后端 `/api/projects*`；概览补充文案、成员协作快照与 `skills / agents` 目录 fallback 仍依赖前端 Mock。
 - 当前默认宿主机开发拓扑：`platform + api + indexer-py`；依赖服务推荐由 Docker 提供 `mongodb + chroma`。
 - 当前容器化部署拓扑：
@@ -113,8 +113,8 @@ scripts/
 - `/login`：登录页。
 - `/home`：登录后默认首页，当前承载空态引导。
 - `/knowledge`：全局知识库正式管理页，已接入知识库 CRUD、文档上传与状态展示。
-- `/skills`：全局技能管理页壳层。
-- `/agents`：全局智能体管理页壳层。
+- `/skills`：全局技能正式目录页，已接入 `/api/skills` 并展示内置 Skill 元数据。
+- `/agents`：全局智能体正式配置页，已接入 `agents / knowledge / skills` 正式接口。
 - `/members`：全局成员协作总览页，聚合当前账号可见项目中的成员信息。
 - `/analytics`：全局分析页占位。
 - `/settings`：全局设置页占位。
@@ -185,7 +185,7 @@ scripts/
 - `apps/platform/src/app/project/project.storage.ts`
   - 只管理 `knowject_project_pins` 本地偏好。
 - `apps/platform/src/app/project/project.catalog.ts`
-  - 维护全局 `skills / agents` 目录 fallback、成员基础档案等共享 Mock 目录。
+  - 维护项目资源页与成员聚合所需的 `skills / agents` 目录 fallback、成员基础档案等共享 Mock 目录。
 - `apps/platform/src/pages/project/project.mock.ts`
   - 维护项目概览补充文案、成员协作快照，以及项目资源展示 fallback；当 `skills / agents` 绑定了未知 ID 时，会返回占位项而不是静默过滤。
 - `apps/platform/src/app/layouts/components/AppSider.tsx`
@@ -197,15 +197,17 @@ scripts/
 
 ### 5.5 全局资产与项目资源分层
 
-- 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理入口；其中 `/knowledge` 已切正式接口，`/skills` 与 `/agents` 仍保留壳层。
+- 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理入口；其中 `/knowledge`、`/skills` 与 `/agents` 已切正式接口。
 - 项目 `资源` 页当前只展示“该项目已绑定的资产”。
 - 项目资源的实际来源已经切到后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`。
-- 其中知识库分组优先消费 `/api/knowledge` 的正式元数据；`skills / agents` 因正式主数据尚未落地，仍回退到 `project.catalog.ts` 中的共享目录。
+- 其中知识库分组优先消费 `/api/knowledge` 的正式元数据；`/skills` 页面消费 `/api/skills` 的正式目录，`/agents` 页面消费 `/api/agents`、`/api/knowledge` 与 `/api/skills` 的正式数据，项目资源页中的 `skills / agents` 仍回退到 `project.catalog.ts` 中的共享目录。
 - 当项目或成员聚合里出现未知的 `skills / agents` 资源 ID 时，前端当前会渲染“未知资源（{id}）”占位项，而不是静默丢失。
 - 兼容跳转会临时落到 `/project/:projectId/resources?focus=*`；页面完成滚动定位后会回写 canonical URL `/project/:projectId/resources`。
 - `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx` 已接正式后端知识库接口，支持知识库 CRUD、文档上传、状态展示和上传后的最小轮询。
 - 知识库上传链路现在会在上传入口对 multipart 文件名做 UTF-8 纠偏，避免中文文件名因浏览器 / multer 参数编码差异出现乱码。
-- `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 当前仍只服务 `skills / agents` 两类壳层页面，其中“新建资产 / 引入到项目”仍为占位交互，不产生真实状态变更。
+- `apps/platform/src/pages/skills/SkillsManagementPage.tsx` 当前已作为 `/skills` 的正式目录页，展示系统内置 Skill 的类型、状态、handler 与参数契约。
+- `apps/platform/src/pages/agents/AgentsManagementPage.tsx` 当前已作为 `/agents` 的正式配置页，支持创建、编辑、删除，以及知识库 / Skill 绑定表单。
+- `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 当前保留为历史壳层组件，未接入实际路由。
 - 当前不存在项目私有知识库的真实持久化或索引流程；“项目资源分层”目前是信息架构和前端数据组织上的分层。
 
 ### 5.6 成员数据分层
@@ -246,6 +248,10 @@ scripts/
 - `DELETE /api/knowledge/:knowledgeId/documents/:documentId`
 - `GET /api/skills`
 - `GET /api/agents`
+- `GET /api/agents/:agentId`
+- `POST /api/agents`
+- `PATCH /api/agents/:agentId`
+- `DELETE /api/agents/:agentId`
 - `GET /api/memory/overview`
 - `POST /api/memory/query`
 
@@ -259,8 +265,8 @@ scripts/
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色、项目资源绑定字段，以及项目对话只读列表 / 详情接口。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
 - `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口、单文档 retry / delete，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。上传单文件上限默认 `50 MB`，当前支持 `md / markdown / txt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再恢复。Node 统一知识检索 service 当前保留读侧直连 Chroma query 的架构例外；collection init 已下沉到 Python 写侧保证，向量 delete 的正式 Python 内部接口仍待补齐，因此代码里暂保留过渡期直连 delete TODO。单文档删除会尽量联动清理原始文件与 Chroma chunk；若删除和后台索引并发发生，服务端会在状态回写缺失时补做孤儿 chunk 清理。
-- `skills`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接内置 Skill 注册表与只读查询。
-- `agents`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接全局 Agent 配置模型与绑定关系。
+- `skills`：当前已提供 3 个系统内置 Skill 的代码 registry 与只读查询接口，对外暴露 `id / name / description / type / source / handler / parametersSchema / status`；其中 `search_documents` 的 handler 对齐服务端统一知识检索契约，`search_codebase / check_git_log` 当前仍是 contract-only 定义。
+- `agents`：当前已提供 Agent 列表 / 详情 / 创建 / 编辑 / 删除接口，后端会校验 `boundKnowledgeIds` 与 `boundSkillIds` 的存在性；`model` 当前固定由服务端写入 `server-default`。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
 - `memory/query`：基于本地 `DEMO_ITEMS` 做简单关键词匹配，返回演示检索结果。
 
@@ -281,7 +287,7 @@ scripts/
 ## 7. 模块职责
 
 - `apps/platform`
-  - 登录页、产品壳、路由、项目态页面，以及已正式接线的 `/knowledge` 页面和仍处于壳层阶段的 `skills / agents` 页面。
+  - 登录页、产品壳、路由、项目态页面，以及已正式接线的 `/knowledge`、`/skills`、`/agents` 页面。
 - `apps/api`
   - 本地联调与基础框架接口，当前已承担项目列表、项目基础信息与成员 roster 的正式主数据源。
   - 已具备 `config / db / middleware / modules` 基础骨架。
@@ -291,7 +297,7 @@ scripts/
   - `modules/projects` 当前已承载项目模型、MongoDB 仓储、资源绑定字段、项目对话只读接口、权限校验与 CRUD 接口。
   - `modules/memberships` 当前已承载项目成员增删改接口与最小角色规则。
   - `modules/knowledge` 已落地 GA-06 元数据模型、集合索引、CRUD、文档上传入口、单文档 retry / delete、Node -> Python 的解析 / 分块 / embedding / Chroma 写入闭环，以及 Node 侧统一知识检索逻辑。
-  - `modules/skills`、`modules/agents` 当前仍停留在 GA-02 最小骨架与鉴权占位响应阶段。
+  - `modules/skills` 已完成 GA-08 代码 registry 与只读接口；`modules/agents` 已完成 GA-10 Mongo 正式模型、CRUD 与绑定校验。
   - 当前统一知识检索 service 已落地在 `knowledge` 模块，供后续 Skill / 对话链路复用。
 - `apps/indexer-py`
   - 当前已落地 FastAPI 内部索引控制面、`md / txt` 解析、清洗、`1000 字符 / 200 重叠` 分块、OpenAI-compatible embedding 与 `global_docs` Chroma 写入 / 删除逻辑。
@@ -311,8 +317,8 @@ scripts/
 - 项目对话消息写入、SSE 流式输出与来源引用渲染。
 - RBAC、成员邀请权限流、refresh token。
 - Git 仓库接入、Figma 接入、代码解析与向量化。
-- Skill / Agent 的创建、绑定、执行与调度能力；当前 Knowledge 已完成后端 CRUD、上传入口、Chroma 写入与统一检索，Skill / Agent 仍只有 GA-02 骨架接口。
-- 项目私有知识库持久化、`skills / agents` 正式主数据与全局资产治理写路径。
+- Skill / Agent 的执行与调度能力；当前 Knowledge 已完成后端 CRUD、上传入口、Chroma 写入与统一检索，`/skills` 与 `/agents` 也已完成正式管理页与后端 registry / CRUD，但尚未进入项目对话运行时。
+- 项目私有知识库持久化、项目资源页 `skills / agents` 正式消费切换、用户自建 Skill，以及 Agent 项目级覆盖配置。
 - Zustand、React Query 等额外状态管理层。
 
 ## 9. 相关文档

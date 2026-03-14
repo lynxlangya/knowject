@@ -1,4 +1,5 @@
 import type { SkillsRepository } from './skills.repository.js';
+import { listRegisteredSkills } from './skills.registry.js';
 import type { SkillsCommandContext, SkillsListResponse } from './skills.types.js';
 
 export interface SkillsService {
@@ -10,21 +11,25 @@ export const createSkillsService = ({
 }: {
   repository: SkillsRepository;
 }): SkillsService => {
+  void repository;
+
   return {
-    listSkills: async ({ actor }) => {
+    listSkills: async () => {
+      const items = listRegisteredSkills();
+
       return {
-        total: 0,
-        items: [],
+        total: items.length,
+        items,
         meta: {
           module: 'skills',
-          stage: 'GA-02',
-          placeholder: true,
-          actorId: actor.id,
-          nextTask: 'GA-08',
+          stage: 'GA-08',
+          registry: 'code',
+          builtinOnly: true,
           boundaries: {
             businessRuntime: 'node-express',
-            primaryDataStore: repository.getPrimaryDataStore(),
+            registryStore: 'code-registry',
             knowledgeAccess: 'service-layer-only',
+            execution: 'service-linked-or-contract-only',
           },
         },
       };

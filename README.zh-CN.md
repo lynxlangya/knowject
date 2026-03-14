@@ -6,17 +6,18 @@
 
 Knowject 是一个面向开发团队的项目级 AI 知识工作台，目标是把代码、文档、设计资产与项目上下文沉淀成可持续复用的项目记忆，让搜索、协作与决策建立在真实仓库语境之上。
 
-当前仓库处于“基础框架已打通、核心 AI 工作流持续落地”的阶段：产品壳、鉴权、项目与成员主数据链路、项目资源绑定正式持久化、项目对话只读链路和 Docker 部署基线已经具备，消息写入、`skills / agents` 正式化与更深的检索闭环仍在持续实现中。
+当前仓库处于“基础框架已打通、核心 AI 工作流持续落地”的阶段：产品壳、鉴权、项目与成员主数据链路、项目资源绑定正式持久化、项目对话只读链路、全局知识库 / 技能 / 智能体治理链路，以及 Docker 部署基线已经具备；消息写入、项目侧资产消费收口与更深的检索 / 运行时闭环仍在持续实现中。
 
 ## 当前状态
 
-- `apps/platform` 已提供登录后产品壳、项目路由、成员管理界面，以及首个正式接线的全局知识库管理页。
-- `apps/api` 已提供 `health`、`auth`、`members`、`projects`、`memberships`、知识库 CRUD / 上传 / 检索接口，以及演示性质的 `memory` 接口。
+- `apps/platform` 已提供登录后产品壳、项目路由、成员管理界面，以及全局知识库 / 技能 / 智能体正式管理页。
+- `apps/api` 已提供 `health`、`auth`、`members`、`projects`、`memberships`、知识库 CRUD / 上传 / 检索接口、内置 `skills` registry 只读接口、正式 `agents` CRUD / 绑定接口，以及演示性质的 `memory` 接口。
 - 项目列表、项目基础信息、成员 roster、项目资源绑定、项目对话列表 / 详情与全局成员总览已经接入 `/api/projects*` 与 `/api/members`。
 - `knowject_project_resource_bindings` 现在只保留为历史本地数据的一次性迁移来源，运行时项目资源绑定已经持久化到后端项目模型。
 - 项目概览仍保留成员协作快照与部分展示文案的本地补充数据；`/project/:projectId/resources` 对 `skills / agents` 仍使用本地目录 fallback。
-- `/knowledge` 已切到正式后端知识库接口，支持列表、创建、编辑、删除、上传与状态观测；`/skills`、`/agents` 仍以治理壳层为主。
+- `/knowledge`、`/skills`、`/agents` 已切到正式后端资产接口；项目内 `skills / agents` 消费仍使用本地目录 fallback。
 - `GET /api/projects/:projectId/conversations` 与 `GET /api/projects/:projectId/conversations/:conversationId` 已提供当前项目对话读链路，但消息写入还未落地。
+- `pnpm verify:global-assets-foundation` 已作为 Week 3-4 最小自动验证入口，统一执行 API 测试、Python indexer 测试与前端类型检查。
 - 仓库已经提供本地与线上风格的 Docker Compose 基线，覆盖 `platform + api + indexer-py + mongodb + chroma`。
 - MongoDB 是当前正式主存储；Chroma 当前只承担索引 / 检索层，已进入 `global_docs` 正式链路，`global_code` 仍只保留命名空间预留。
 
@@ -100,6 +101,7 @@ pnpm dev:web
 pnpm dev:api
 pnpm --filter indexer-py dev
 pnpm test
+pnpm verify:global-assets-foundation
 pnpm check-types
 pnpm build
 pnpm host:up

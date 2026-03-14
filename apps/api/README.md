@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-14，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入与统一检索闭环；`skills / agents` 仍停留在鉴权占位响应阶段。
+截至 2026-03-14，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入与统一检索闭环；`skills` 已完成内置 Skill 代码 registry 与只读查询接口，`agents` 已完成正式模型、CRUD 和绑定校验。
 
 ## 当前接口
 
@@ -94,10 +94,25 @@
   - `global_code` 当前只有 collection 预留，没有真实数据导入；若切到 `global_code`，通常返回空结果。
 - `GET /api/skills`
   - 需要 `Authorization: Bearer <token>`。
-  - 返回 GA-02 阶段的 Skill 模块占位响应，当前 `items` 为空数组。
+  - 返回 3 个系统内置 Skill 的正式只读列表：`search_codebase`、`check_git_log`、`search_documents`。
+  - 当前对外稳定字段为 `id / name / description / type / source / handler / parametersSchema / status`。
+  - `search_documents` 的 handler 对齐服务端统一知识检索契约；`search_codebase / check_git_log` 当前仅冻结 handler 与参数 schema，状态为 `contract_only`。
 - `GET /api/agents`
   - 需要 `Authorization: Bearer <token>`。
-  - 返回 GA-02 阶段的 Agent 模块占位响应，当前 `items` 为空数组。
+  - 返回全局 Agent 正式列表：`id / name / description / systemPrompt / boundSkillIds / boundKnowledgeIds / model / status / createdBy / createdAt / updatedAt`。
+- `GET /api/agents/:agentId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 返回单个 Agent 详情。
+- `POST /api/agents`
+  - 需要 `Authorization: Bearer <token>`。
+  - 接收 `name`、可选 `description`、`systemPrompt`、可选 `boundSkillIds / boundKnowledgeIds / status`。
+  - 当前 `model` 固定由服务端写入 `server-default`，不开放请求侧覆盖。
+- `PATCH /api/agents/:agentId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 支持更新 `name / description / systemPrompt / boundSkillIds / boundKnowledgeIds / status`。
+- `DELETE /api/agents/:agentId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
 - `GET /api/memory/overview`
   - 需要 `Authorization: Bearer <token>`。
   - 返回项目简介与统计信息。
@@ -128,8 +143,8 @@
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
 - `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / delete、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；前端 `/knowledge` 已正式接线。
-- `skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入。
-- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路和成员管理接口；仍未落地的是项目对话消息写入、`skills / agents` 正式主数据，以及更深的项目级检索 / 编排链路。
+- `skills` 当前已完成代码 registry、内置 Skill 定义与只读查询接口；`agents` 已完成 Mongo 正式模型、CRUD 和绑定校验。
+- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路、知识库正式检索、Skill registry 与 Agent CRUD；仍未落地的是项目对话消息写入、项目资源页 `skills / agents` fallback 收口、`global_code` 真实导入、重建 / 诊断接口，以及更深的 Skill / Agent 运行时编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
@@ -197,8 +212,8 @@
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
 - `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储、CRUD、详情接口、文档上传入口、后台状态推进、Chroma 统一检索 service 与 Python indexer 触发。
 - `src/modules/knowledge/knowledge.search.ts`：统一知识检索 service、Python indexer 健康探活，以及当前过渡期的向量删除适配；Node 直连 Chroma 读侧 query 在这里作为架构例外保留。
-- `src/modules/skills/*`：全局 Skill 模块最小骨架，当前仅提供鉴权占位响应。
-- `src/modules/agents/*`：全局 Agent 模块最小骨架，当前仅提供鉴权占位响应。
+- `src/modules/skills/*`：全局 Skill 模块，当前已提供代码 registry、3 个内置 Skill 标准化定义与只读查询接口；其中 `search_documents` 复用服务端统一知识检索契约。
+- `src/modules/agents/*`：全局 Agent 模块，当前已提供 Mongo 正式模型、CRUD、引用校验与最小测试。
 - `src/routes/health.ts`：健康检查。
 - `src/routes/memory.ts`：记忆概览与检索演示接口，当前已复用 JWT 中间件。
 - `src/middleware/*`：请求上下文、404、统一错误处理。
@@ -215,4 +230,6 @@ pnpm --filter indexer-py dev
 pnpm --filter api test
 pnpm --filter api check-types
 pnpm --filter api build
+# 仓库根最小验证入口
+pnpm verify:global-assets-foundation
 ```

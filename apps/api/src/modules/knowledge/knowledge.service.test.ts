@@ -125,6 +125,82 @@ test('listKnowledge hydrates maintainer and creator names', async () => {
   assert.equal(response.items[0]?.createdByName, '创建人名称');
 });
 
+test('searchDocuments normalizes query filters and delegates to the shared search service', async () => {
+  const capturedInputs: Array<{
+    query: string;
+    knowledgeId?: string;
+    sourceType: 'global_docs' | 'global_code';
+    topK: number;
+  }> = [];
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+  } as unknown as KnowledgeRepository;
+
+  const searchService = {
+    ensureCollections: async () => undefined,
+    searchDocuments: async (input: Parameters<KnowledgeSearchService['searchDocuments']>[0]) => {
+      capturedInputs.push(input);
+
+      return {
+        query: input.query,
+        sourceType: input.sourceType,
+        total: 1,
+        items: [
+          {
+            knowledgeId: input.knowledgeId ?? '507f1f77bcf86cd799439011',
+            documentId: '507f1f77bcf86cd799439099',
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            type: input.sourceType,
+            source: 'README.md',
+            content: 'project knowledge',
+            distance: 0.12,
+          },
+        ],
+      };
+    },
+    deleteKnowledgeChunks: async () => undefined,
+    deleteDocumentChunks: async () => undefined,
+  } as KnowledgeSearchService;
+
+  const authRepository = {
+    findProfilesByIds: async () => [],
+  } as unknown as AuthRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-knowledge-search'),
+    repository,
+    searchService,
+    authRepository,
+  });
+
+  const response = await service.searchDocuments(
+    {
+      actor: {
+        id: '507f1f77bcf86cd799439099',
+        username: 'langya',
+      },
+    },
+    {
+      query: '  project knowledge  ',
+      knowledgeId: ' 507f1f77bcf86cd799439011 ',
+      topK: '3',
+    },
+  );
+
+  assert.deepEqual(capturedInputs, [
+    {
+      query: 'project knowledge',
+      knowledgeId: '507f1f77bcf86cd799439011',
+      sourceType: 'global_docs',
+      topK: 3,
+    },
+  ]);
+  assert.equal(response.total, 1);
+  assert.equal(response.items[0]?.type, 'global_docs');
+});
+
 test('deleteKnowledge continues when Chroma cleanup fails', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-service-'));
   const knowledgeId = '507f1f77bcf86cd799439011';
