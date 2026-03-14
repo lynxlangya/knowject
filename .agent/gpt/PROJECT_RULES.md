@@ -30,10 +30,10 @@
 ## 4. 当前项目最重要的架构边界
 
 - `apps/platform`
-  - 登录后产品壳、路由、项目态页面、全局资产治理壳层。
+  - 登录后产品壳、路由、项目态页面，以及全局 `/knowledge`、`/skills`、`/agents` 正式管理页。
 - `apps/api`
   - 正式业务主后端。
-  - 当前已落地 auth、members、projects、memberships、knowledge、memory。
+  - 当前已落地 auth、members、projects、memberships、knowledge、skills、agents、memory。
 - MongoDB
   - 正式业务主数据库。
 - Chroma

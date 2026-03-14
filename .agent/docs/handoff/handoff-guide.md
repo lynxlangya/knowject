@@ -83,7 +83,7 @@
   - 知识库分组元数据来自 `/api/knowledge`
 - 项目 `资源` 页只消费“当前项目已绑定的全局资产”，不是全局治理入口。
 - `project.mock.ts` 当前主要保留项目概览补充文案、成员协作快照，以及 `skills / agents` 目录 fallback。
-- 全局 `知识库 / 技能 / 智能体` 页面已经有治理壳层，但“新建资产 / 引入到项目”仍是占位交互，没有真实数据写入。
+- 全局 `/knowledge`、`/skills`、`/agents` 页面已分别接入正式接口；其中 `/skills` 为系统内置只读目录，`/agents` 已支持创建 / 编辑 / 删除与知识库 / Skill 绑定，项目内引入仍主要通过项目资源绑定与消费态 fallback。
 - 成员数据现在分两层：
   - 全局成员基础档案在 `project.catalog.ts`
   - 项目成员协作快照在 `project.mock.ts`
@@ -102,17 +102,20 @@
   - 项目对话只读接口 `GET /api/projects/:projectId/conversations*`
   - 项目成员管理接口 `/api/projects/:projectId/members*`
   - 已注册用户搜索 `GET /api/auth/users`
+  - 全局 Skill registry 只读接口 `GET /api/skills`
+  - 全局 Agent 正式 CRUD 与绑定校验 `/api/agents*`
+  - 知识库 CRUD、文档上传、状态推进与统一检索
   - `memory/overview` 与 `memory/query` 演示接口
-- 因此当前项目页内容应写成“项目主数据、资源绑定、对话读链路与成员关系已经切到后端，但消息写入、`skills / agents` 正式主数据和协作演示补充层仍未完成”；基础框架阶段本身已完成。
+- 因此当前项目页内容应写成“项目主数据、资源绑定、对话读链路与成员关系已经切到后端，但消息写入、项目资源页 `skills / agents` fallback 收口，以及 Skill / Agent 运行时仍未完成”；基础框架阶段本身已完成。
 
 ## 如果你要继续开发，先按这个顺序推进
 
 1. 保持当前 canonical 路由和信息架构稳定，不再做大幅重命名。
 2. 优先补项目对话消息写路径、来源引用与真正的上下文沉淀。
-3. 再推进 `skills / agents` 正式主数据与项目资源页的 fallback 清理。
+3. 再推进项目资源页 `skills / agents` fallback 清理，以及后续 Skill runtime / Agent 编排入口。
 4. 最后逐步替换概览补充文案和成员协作快照这些剩余展示 Mock。
 
-这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“消息写路径、`skills / agents` 正式化和 AI 主链路仍未形成”。
+这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“消息写路径、项目资源页 `skills / agents` fallback 收口，以及 AI 主链路仍未形成”。
 
 ## 这一轮文档迭代做了什么
 
@@ -121,7 +124,7 @@
   - 项目资源绑定已进入后端项目模型
   - 项目对话读链路已接入正式 `/api/projects/:projectId/conversations*`
   - `resources?focus=*` 的兼容定位逻辑
-  - 全局资产页占位交互现状
+  - 全局 `/skills`、`/agents` 正式接线与历史壳层退场现状
 - README、子系统 README 与 handoff 文档已同步新增 `pnpm test` 入口和项目读链路现状。
 - 新增了三份文档：
   - `.agent/docs/plans/doc-iteration-handoff-plan.md`

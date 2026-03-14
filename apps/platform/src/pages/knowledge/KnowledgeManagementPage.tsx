@@ -24,6 +24,7 @@ import {
   Select,
   Spin,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd';
 import type { ChangeEvent } from 'react';
@@ -128,6 +129,9 @@ const DOCUMENT_UPLOAD_SOFT_WARNING_BYTES = 20 * 1024 * 1024;
 const SUPPORTED_DOCUMENT_EXTENSIONS = ['.md', '.markdown', '.txt'] as const;
 const MAX_POLLING_ATTEMPTS = 20;
 const POLLING_INTERVAL_MS = 1500;
+const KNOWLEDGE_PAGE_SUBTITLE = '统一索引全局文档，供技能与智能体复用';
+const KNOWLEDGE_UPLOAD_TOOLTIP =
+  '支持 .md /.txt 上传，单文件上限 50 MB，20 MB 以上建议拆分上传。';
 
 const formatDateTime = (value: string | null | undefined): string => {
   if (!value) {
@@ -341,32 +345,15 @@ const buildKnowledgeStats = (items: KnowledgeSummaryResponse[]) => {
     (sum, knowledge) => sum + knowledge.documentCount,
     0,
   );
-  const totalChunks = items.reduce((sum, knowledge) => sum + knowledge.chunkCount, 0);
-  const processingCount = items.filter(
-    (knowledge) =>
-      knowledge.indexStatus === 'pending' || knowledge.indexStatus === 'processing',
-  ).length;
 
   return [
     {
       label: '知识库总数',
       value: `${items.length} 个`,
-      hint: '当前正式持久化到 MongoDB 的全局知识库数量。',
     },
     {
       label: '文档总数',
       value: `${totalDocuments} 份`,
-      hint: '已写入正式文档记录的上传文件数量。',
-    },
-    {
-      label: '索引中',
-      value: `${processingCount} 个`,
-      hint: '存在排队中或处理中任务的知识库数量。',
-    },
-    {
-      label: '累计分块',
-      value: `${totalChunks} 段`,
-      hint: '成功写入向量索引后的累计 chunk 数。',
     },
   ];
 };
@@ -379,40 +366,11 @@ const buildKnowledgeDetailOverviewStats = (knowledge: KnowledgeDetailResponse) =
       emphasis: 'number' as const,
     },
     {
-      label: '分块数量',
-      value: `${knowledge.chunkCount}`,
-      emphasis: 'number' as const,
-    },
-    {
       label: '最近更新',
       value: formatDateTime(knowledge.updatedAt),
       emphasis: 'time' as const,
     },
   ];
-};
-
-const buildKnowledgeDetailMeta = (
-  knowledge: KnowledgeDetailResponse,
-) => {
-  const items = [
-    {
-      label: '维护人',
-      value: knowledge.maintainerName ?? knowledge.maintainerId,
-    },
-    {
-      label: '创建时间',
-      value: formatDateTime(knowledge.createdAt),
-    },
-  ];
-
-  if (knowledge.createdBy !== knowledge.maintainerId) {
-    items.splice(1, 0, {
-      label: '创建人',
-      value: knowledge.createdByName ?? knowledge.createdBy,
-    });
-  }
-
-  return items;
 };
 
 export const KnowledgeManagementPage = () => {
@@ -450,9 +408,6 @@ export const KnowledgeManagementPage = () => {
     : null;
   const activeOverviewStats = activeKnowledge
     ? buildKnowledgeDetailOverviewStats(activeKnowledge)
-    : [];
-  const activeMetaItems = activeKnowledge
-    ? buildKnowledgeDetailMeta(activeKnowledge)
     : [];
   const shouldPoll = hasProcessingDocuments(activeKnowledge);
   const pollingAttempts = activeKnowledgeId
@@ -1067,15 +1022,24 @@ export const KnowledgeManagementPage = () => {
         className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4"
       >
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Typography.Text strong className="text-slate-800!">
-                {document.fileName}
-              </Typography.Text>
-              <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
-              <Tag>{document.mimeType}</Tag>
+          <Tooltip
+            title={
+              <div className="space-y-1 text-xs">
+                <div>格式：{document.mimeType}</div>
+                <div>索引完成：{formatDateTime(indexedAt)}</div>
+                <div>分块数量：{document.chunkCount}</div>
+              </div>
+            }
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <Typography.Text strong className="text-slate-800!">
+                  {document.fileName}
+                </Typography.Text>
+                <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
+              </div>
             </div>
-          </div>
+          </Tooltip>
 
           <Dropdown
             trigger={['click']}
@@ -1095,20 +1059,9 @@ export const KnowledgeManagementPage = () => {
           </Dropdown>
         </div>
 
-        <div className="mt-3 grid gap-3 text-xs text-slate-500 sm:grid-cols-3">
-          <div>
-            <div className="text-slate-400">上传时间</div>
-            <div className="mt-1 text-slate-600">{formatDateTime(document.uploadedAt)}</div>
-          </div>
-          <div>
-            <div className="text-slate-400">索引完成</div>
-            <div className="mt-1 text-slate-600">{formatDateTime(indexedAt)}</div>
-          </div>
-          <div>
-            <div className="text-slate-400">分块数量</div>
-            <div className="mt-1 text-slate-600">{document.chunkCount}</div>
-          </div>
-        </div>
+        <Typography.Text className="mt-3 block text-xs text-slate-500">
+          上传于 {formatDateTime(document.uploadedAt)}
+        </Typography.Text>
 
         {document.errorMessage ? (
           <Alert
@@ -1166,15 +1119,11 @@ export const KnowledgeManagementPage = () => {
       >
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
-            <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              全局知识资产
-            </Typography.Text>
-            <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
-              全局知识库正式接线与状态观测
+            <Typography.Title level={3} className="mb-0! text-slate-800!">
+              全局知识库
             </Typography.Title>
-            <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-              当前页面已切到正式后端知识库接口，负责最小管理闭环：列表、创建、编辑、删除、上传文档与观察
-              `pending / processing / completed / failed` 状态流。业务主数据继续由 MongoDB 托管，向量索引只走统一检索链路。
+            <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
+              {KNOWLEDGE_PAGE_SUBTITLE}
             </Typography.Paragraph>
           </div>
 
@@ -1186,25 +1135,27 @@ export const KnowledgeManagementPage = () => {
             >
               新建知识库
             </Button>
-            <Button
-              icon={<ReloadOutlined />}
-              loading={refreshing}
-              onClick={() => {
-                resetPollingAttempts(activeKnowledgeId);
-                reloadKnowledgeList(activeKnowledgeId);
-                reloadKnowledgeDetail();
-              }}
-            >
-              刷新状态
-            </Button>
+            <Tooltip title="刷新状态">
+              <Button
+                aria-label="刷新状态"
+                shape="circle"
+                icon={<ReloadOutlined />}
+                loading={refreshing}
+                onClick={() => {
+                  resetPollingAttempts(activeKnowledgeId);
+                  reloadKnowledgeList(activeKnowledgeId);
+                  reloadKnowledgeDetail();
+                }}
+              />
+            </Tooltip>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 flex flex-wrap gap-3">
           {stats.map((item) => (
             <div
               key={item.label}
-              className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
+              className="min-w-[160px] rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
             >
               <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
                 {item.label}
@@ -1212,9 +1163,6 @@ export const KnowledgeManagementPage = () => {
               <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
                 {item.value}
               </Typography.Title>
-              <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                {item.hint}
-              </Typography.Paragraph>
             </div>
           ))}
         </div>
@@ -1346,14 +1294,24 @@ export const KnowledgeManagementPage = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    icon={<CloudUploadOutlined />}
-                    loading={uploading}
-                    disabled={activeKnowledge.sourceType !== 'global_docs'}
-                    onClick={openUploadFlow}
+                  <Tooltip
+                    title={
+                      activeKnowledge.sourceType === 'global_docs'
+                        ? KNOWLEDGE_UPLOAD_TOOLTIP
+                        : 'global_code 当前不支持上传文档。'
+                    }
                   >
-                    上传文档
-                  </Button>
+                    <span>
+                      <Button
+                        icon={<CloudUploadOutlined />}
+                        loading={uploading}
+                        disabled={activeKnowledge.sourceType !== 'global_docs'}
+                        onClick={openUploadFlow}
+                      >
+                        上传文档
+                      </Button>
+                    </span>
+                  </Tooltip>
                   <Button icon={<EditOutlined />} onClick={openEditModal}>
                     编辑
                   </Button>
@@ -1380,7 +1338,7 @@ export const KnowledgeManagementPage = () => {
               </div>
 
               <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                <div className="grid gap-px bg-slate-200 md:grid-cols-3">
+                <div className="grid gap-px bg-slate-200 md:grid-cols-2">
                   {activeOverviewStats.map((item) => (
                     <div
                       key={item.label}
@@ -1401,43 +1359,17 @@ export const KnowledgeManagementPage = () => {
                     </div>
                   ))}
                 </div>
-
-                <div className="flex flex-wrap gap-x-6 gap-y-3 border-t border-slate-200 bg-white/90 px-4 py-3.5">
-                  {activeMetaItems.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-baseline gap-2"
-                    >
-                      <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">
-                        {item.label}
-                      </Typography.Text>
-                      <Typography.Text className="text-sm font-medium text-slate-700!">
-                        {item.value}
-                      </Typography.Text>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-4">
-                  <Alert
-                    type={activeKnowledge.sourceType === 'global_docs' ? 'info' : 'warning'}
-                    showIcon
-                    title={
-                      activeKnowledge.sourceType === 'global_docs'
-                        ? '当前支持 .md、.txt 文档上传；单文件上限 50 MB，20 MB 以上建议按主题拆分上传。'
-                        : 'global_code 当前只保留集合与契约，不做真实导入、分块或上传入口。'
-                    }
-                  />
-
                   {shouldPoll ? (
                     <Alert
                       type={pollingStopped ? 'warning' : 'info'}
                       showIcon
                       title={
                         pollingStopped
-                          ? '自动刷新已达到本轮上限，请手动点击“刷新状态”继续观察。'
+                          ? '自动刷新已达到本轮上限，请手动刷新继续观察。'
                           : '检测到待处理文档，页面会做最小轮询以更新索引状态。'
                       }
                     />

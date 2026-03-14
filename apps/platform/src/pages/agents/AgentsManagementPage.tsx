@@ -1,8 +1,17 @@
 import {
+  DeleteOutlined,
+  EditOutlined,
+  MoreOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
+import {
   Alert,
   App,
   Button,
   Card,
+  Dropdown,
   Empty,
   Form,
   Input,
@@ -10,6 +19,7 @@ import {
   Select,
   Spin,
   Tag,
+  Tooltip,
   Typography,
 } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
@@ -30,6 +40,7 @@ import {
   listSkills,
   type SkillSummaryResponse,
 } from '@api/skills';
+import type { MenuProps } from 'antd';
 
 type ModalMode = 'create' | 'edit' | null;
 
@@ -62,6 +73,7 @@ const updatedAtFormatter = new Intl.DateTimeFormat('zh-CN', {
   hour: '2-digit',
   minute: '2-digit',
 });
+const AGENTS_PAGE_SUBTITLE = '复用角色与流程，项目内绑定执行';
 
 const sortAgentsByUpdatedAt = (items: AgentResponse[]): AgentResponse[] => {
   return [...items].sort(
@@ -70,14 +82,30 @@ const sortAgentsByUpdatedAt = (items: AgentResponse[]): AgentResponse[] => {
   );
 };
 
-const resolveBoundLabels = (
-  ids: string[],
-  labelMap: Map<string, string>,
-  fallbackPrefix: string,
-): string[] => {
-  return ids.map(
-    (id) => labelMap.get(id) ?? `未知${fallbackPrefix}（${id}）`,
-  );
+const createAgentPayload = (
+  source: Pick<
+    AgentResponse | AgentFormValues,
+    'name' | 'description' | 'systemPrompt' | 'boundKnowledgeIds' | 'boundSkillIds' | 'status'
+  >,
+) => {
+  return {
+    name: source.name.trim(),
+    description: source.description.trim(),
+    systemPrompt: source.systemPrompt.trim(),
+    boundKnowledgeIds: source.boundKnowledgeIds ?? [],
+    boundSkillIds: source.boundSkillIds ?? [],
+    status: source.status,
+  };
+};
+
+const buildPromptPreview = (systemPrompt: string): string => {
+  const normalized = systemPrompt.replace(/\s+/g, ' ').trim();
+
+  if (!normalized) {
+    return '当前未填写提示词。';
+  }
+
+  return normalized.length > 60 ? `${normalized.slice(0, 60)}…` : normalized;
 };
 
 export const AgentsManagementPage = () => {
@@ -95,6 +123,7 @@ export const AgentsManagementPage = () => {
   const [editingAgent, setEditingAgent] = useState<AgentResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
+  const [updatingStatusAgentId, setUpdatingStatusAgentId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,14 +169,6 @@ export const AgentsManagementPage = () => {
     };
   }, [reloadToken]);
 
-  const knowledgeNameMap = useMemo(() => {
-    return new Map(knowledgeItems.map((item) => [item.id, item.name]));
-  }, [knowledgeItems]);
-
-  const skillNameMap = useMemo(() => {
-    return new Map(skillItems.map((item) => [item.id, item.name]));
-  }, [skillItems]);
-
   const knowledgeOptions = useMemo(() => {
     return knowledgeItems.map((item) => ({
       value: item.id,
@@ -170,35 +191,15 @@ export const AgentsManagementPage = () => {
 
   const summaryItems = useMemo(() => {
     const activeCount = items.filter((item) => item.status === 'active').length;
-    const disabledCount = items.filter(
-      (item) => item.status === 'disabled',
-    ).length;
-    const totalBindings = items.reduce(
-      (total, item) =>
-        total + item.boundKnowledgeIds.length + item.boundSkillIds.length,
-      0,
-    );
 
     return [
       {
         label: '智能体总数',
         value: `${items.length} 个`,
-        hint: '当前账号可见的全局 Agent 配置总数。',
       },
       {
         label: '启用中',
         value: `${activeCount} 个`,
-        hint: '可直接参与后续项目绑定与执行编排的 Agent。',
-      },
-      {
-        label: '已绑资源',
-        value: `${totalBindings} 项`,
-        hint: '所有 Agent 当前累计绑定的知识库与 Skill 数量。',
-      },
-      {
-        label: '已停用',
-        value: `${disabledCount} 个`,
-        hint: '配置保留但当前不参与默认使用的 Agent。',
       },
     ];
   }, [items]);
@@ -252,14 +253,7 @@ export const AgentsManagementPage = () => {
     setSubmitting(true);
 
     try {
-      const payload = {
-        name: values.name.trim(),
-        description: values.description.trim(),
-        systemPrompt: values.systemPrompt.trim(),
-        boundKnowledgeIds: values.boundKnowledgeIds ?? [],
-        boundSkillIds: values.boundSkillIds ?? [],
-        status: values.status,
-      };
+      const payload = createAgentPayload(values);
 
       const result =
         modalMode === 'edit' && editingAgent
@@ -276,6 +270,33 @@ export const AgentsManagementPage = () => {
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleToggleAgentStatus = async (agent: AgentResponse) => {
+    const nextStatus: AgentStatus =
+      agent.status === 'active' ? 'disabled' : 'active';
+
+    setUpdatingStatusAgentId(agent.id);
+
+    try {
+      const result = await updateAgent(
+        agent.id,
+        createAgentPayload({
+          ...agent,
+          status: nextStatus,
+        }),
+      );
+
+      upsertAgent(result.agent);
+      message.success(nextStatus === 'disabled' ? '智能体已停用' : '智能体已启用');
+    } catch (currentError) {
+      console.error('[AgentsManagementPage] 更新智能体状态失败:', currentError);
+      message.error(
+        extractApiErrorMessage(currentError, '更新智能体状态失败，请稍后重试'),
+      );
+    } finally {
+      setUpdatingStatusAgentId(null);
     }
   };
 
@@ -314,6 +335,55 @@ export const AgentsManagementPage = () => {
     });
   };
 
+  const buildAgentActionMenuItems = (
+    agent: AgentResponse,
+  ): NonNullable<MenuProps['items']> => {
+    const busy =
+      deletingAgentId === agent.id || updatingStatusAgentId === agent.id;
+    const toggleToDisabled = agent.status === 'active';
+
+    return [
+      {
+        key: 'edit',
+        icon: <EditOutlined />,
+        label: '编辑配置',
+        disabled: busy,
+      },
+      {
+        key: 'toggle-status',
+        icon: toggleToDisabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />,
+        label: toggleToDisabled ? '停用' : '启用',
+        disabled: busy,
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: '删除',
+        danger: true,
+        disabled: busy,
+      },
+    ];
+  };
+
+  const handleAgentMenuAction = (agent: AgentResponse, key: string) => {
+    if (key === 'edit') {
+      openEditModal(agent);
+      return;
+    }
+
+    if (key === 'toggle-status') {
+      void handleToggleAgentStatus(agent);
+      return;
+    }
+
+    if (key === 'delete') {
+      confirmDeleteAgent(agent);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[420px] items-center justify-center">
@@ -330,51 +400,50 @@ export const AgentsManagementPage = () => {
       >
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              全局资产管理中心
-            </Typography.Text>
-            <Typography.Title level={2} className="mb-1! mt-2 text-slate-900!">
+            <Typography.Title level={2} className="mb-1! text-slate-900!">
               智能体
             </Typography.Title>
-            <Typography.Paragraph className="mb-0! max-w-2xl text-sm! text-slate-500!">
-              全局智能体负责封装可复用的角色、提示词和协作流程，项目内仅做绑定和执行编排，不直接修改全局定义。
+            <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
+              {AGENTS_PAGE_SUBTITLE}
             </Typography.Paragraph>
           </div>
-          <div className="flex max-w-md flex-col gap-3 rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Tag color="blue">正式配置</Tag>
-              <Tag color="geekblue">服务端校验</Tag>
-            </div>
-            <Typography.Paragraph className="mb-0! text-sm! text-slate-500!">
-              当前模型由服务端固定为 <code>server-default</code>，绑定知识库和 Skill 时会做存在性校验。
-            </Typography.Paragraph>
+          <div className="flex flex-col items-start gap-3 lg:items-end">
+            <Typography.Text className="text-xs text-slate-400">
+              模型由服务端固定，绑定资源时会做存在性校验
+            </Typography.Text>
             <div className="flex flex-wrap gap-2">
               <Button type="primary" onClick={openCreateModal}>
                 新建智能体
               </Button>
-              <Button onClick={handleReload}>刷新目录</Button>
+              <Tooltip title="刷新目录">
+                <Button
+                  aria-label="刷新目录"
+                  shape="circle"
+                  icon={<ReloadOutlined />}
+                  onClick={handleReload}
+                />
+              </Tooltip>
             </div>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {summaryItems.map((item) => (
-            <div
-              key={item.label}
-              className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
-            >
-              <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-                {item.label}
-              </Typography.Text>
-              <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
-                {item.value}
-              </Typography.Title>
-              <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                {item.hint}
-              </Typography.Paragraph>
-            </div>
-          ))}
-        </div>
+        {items.length > 0 ? (
+          <div className="mt-5 flex flex-wrap gap-3">
+            {summaryItems.map((item) => (
+              <div
+                key={item.label}
+                className="min-w-[160px] rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
+              >
+                <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+                  {item.label}
+                </Typography.Text>
+                <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
+                  {item.value}
+                </Typography.Title>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </Card>
 
       {error ? (
@@ -407,38 +476,57 @@ export const AgentsManagementPage = () => {
         <div className="grid gap-4 xl:grid-cols-2">
           {items.map((agent) => {
             const statusMeta = AGENT_STATUS_META[agent.status];
-            const boundKnowledgeLabels = resolveBoundLabels(
-              agent.boundKnowledgeIds,
-              knowledgeNameMap,
-              '知识库',
-            );
-            const boundSkillLabels = resolveBoundLabels(
-              agent.boundSkillIds,
-              skillNameMap,
-              'Skill',
-            );
+            const promptPreview = buildPromptPreview(agent.systemPrompt);
+            const isBusy =
+              deletingAgentId === agent.id || updatingStatusAgentId === agent.id;
 
             return (
               <article
                 key={agent.id}
-                className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]"
+                className="group rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]"
               >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Typography.Title level={4} className="mb-0! text-slate-900!">
                         {agent.name}
                       </Typography.Title>
                       <Tag color={statusMeta.tagColor}>{statusMeta.label}</Tag>
-                      <Tag color="default">模型：{agent.model}</Tag>
                     </div>
-                    <Typography.Paragraph className="mb-0! mt-3 text-sm! text-slate-500!">
+                    <Typography.Paragraph
+                      className="mb-0! mt-3 text-sm! text-slate-500!"
+                      ellipsis={{ rows: 2 }}
+                    >
                       {agent.description || '当前未补充智能体描述。'}
                     </Typography.Paragraph>
                   </div>
-                  <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-500">
-                    {agent.id}
-                  </span>
+
+                  <Dropdown
+                    trigger={['click']}
+                    placement="bottomRight"
+                    menu={{
+                      items: buildAgentActionMenuItems(agent),
+                      onClick: ({ key }) => handleAgentMenuAction(agent, key),
+                    }}
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<MoreOutlined />}
+                      loading={isBusy}
+                      aria-label={`更多操作：${agent.name}`}
+                      className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                    />
+                  </Dropdown>
+                </div>
+
+                <div className="mt-3 flex items-start gap-2 text-xs">
+                  <Typography.Text className="shrink-0 text-slate-400!">
+                    提示词
+                  </Typography.Text>
+                  <Typography.Text className="min-w-0 text-slate-500!">
+                    {promptPreview}
+                  </Typography.Text>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-slate-600">
@@ -451,80 +539,6 @@ export const AgentsManagementPage = () => {
                   <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium">
                     最近更新：{updatedAtFormatter.format(new Date(agent.updatedAt))}
                   </span>
-                </div>
-
-                <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3">
-                  <Typography.Text className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    System Prompt
-                  </Typography.Text>
-                  <Typography.Paragraph
-                    className="mb-0! mt-2 whitespace-pre-wrap text-sm! text-slate-600!"
-                    style={{
-                      display: '-webkit-box',
-                      overflow: 'hidden',
-                      WebkitLineClamp: 4,
-                      WebkitBoxOrient: 'vertical',
-                    }}
-                  >
-                    {agent.systemPrompt}
-                  </Typography.Paragraph>
-                </div>
-
-                <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3">
-                    <Typography.Text className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      绑定知识库
-                    </Typography.Text>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {boundKnowledgeLabels.length > 0 ? (
-                        boundKnowledgeLabels.map((label) => (
-                          <span
-                            key={`${agent.id}-knowledge-${label}`}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-600"
-                          >
-                            {label}
-                          </span>
-                        ))
-                      ) : (
-                        <Typography.Text className="text-sm text-slate-500">
-                          当前未绑定知识库
-                        </Typography.Text>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3">
-                    <Typography.Text className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      绑定 Skill
-                    </Typography.Text>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {boundSkillLabels.length > 0 ? (
-                        boundSkillLabels.map((label) => (
-                          <span
-                            key={`${agent.id}-skill-${label}`}
-                            className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-600"
-                          >
-                            {label}
-                          </span>
-                        ))
-                      ) : (
-                        <Typography.Text className="text-sm text-slate-500">
-                          当前未绑定 Skill
-                        </Typography.Text>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button onClick={() => openEditModal(agent)}>编辑配置</Button>
-                  <Button
-                    danger
-                    loading={deletingAgentId === agent.id}
-                    onClick={() => confirmDeleteAgent(agent)}
-                  >
-                    删除
-                  </Button>
                 </div>
               </article>
             );

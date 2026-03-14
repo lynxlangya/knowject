@@ -22,8 +22,8 @@
 
 - 当前仓库的宿主机默认开发拓扑是：`platform + api + indexer-py`，推荐再配合 Docker 托管 `mongodb + chroma`。
 - 当前容器化部署拓扑已包含：`platform + api + indexer-py + mongodb + chroma`。
-- 当前 `apps/api` 已具备正式的 `auth / members / projects / memberships` 基础框架，但 `memory` 仍是演示接口。
-- 当前全局 `知识库` 页面已形成正式最小数据闭环；`技能 / 智能体` 页面仍主要是管理壳层。
+- 当前 `apps/api` 已具备正式的 `auth / members / projects / memberships / knowledge / skills / agents` 基础框架，但 `memory` 仍是演示接口。
+- 当前全局 `知识库 / 技能 / 智能体` 页面都已切到正式后端接口；其中 `skills` 为内置 registry 只读目录，`agents` 已支持正式配置 CRUD，运行时仍未落地。
 - 当前仓库已经正式接入：
   - Chroma 容器、持久化卷与 API 健康诊断
   - `apps/indexer-py` FastAPI + `uv` 内部索引控制面

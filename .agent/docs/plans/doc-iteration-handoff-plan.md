@@ -19,14 +19,14 @@
   - `apps/api/src/modules/auth/*`
   - `apps/api/src/routes/memory.ts`
 - 当前实现摘要：
-  - 前端产品壳、项目页 canonical 路由、全局资产治理壳层和项目资源消费层已经收敛。
+  - 前端产品壳、项目页 canonical 路由、全局资产正式管理页和项目资源消费层已经收敛。
   - 前端登录页已经接入正式注册 / 登录、JWT、用户快照和“记住用户名”。
-  - 后端已经完成 `health / auth / projects / memberships / memory` 最小链路，前端项目列表、项目基础信息与成员 roster 已接到后端。
-  - 项目资源绑定仍由前端本地状态维护，`knowject_projects` 已退为历史 Mock 缓存键。
+  - 后端已经完成 `health / auth / members / projects / memberships / knowledge / skills / agents / memory` 正式基线，前端项目列表、项目基础信息、成员 roster、全局资产页与资源绑定已接到后端。
+  - 项目资源绑定已写入后端项目模型，`knowject_projects` 已退为历史 Mock 缓存键。
 - 已确认的路由 / 接口 / 数据来源：
   - canonical 路由：`/home`、`/project/:projectId/*`
   - 兼容路由：`/workspace`、`/home/project/*`、`/project/:projectId/knowledge|skills|agents`
-  - 现有接口：`GET /api/health`、`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/projects`、`POST /api/projects`、`PATCH /api/projects/:projectId`、`DELETE /api/projects/:projectId`、`POST /api/projects/:projectId/members`、`PATCH /api/projects/:projectId/members/:userId`、`DELETE /api/projects/:projectId/members/:userId`、`GET /api/memory/overview`、`POST /api/memory/query`
+  - 现有接口：`GET /api/health`、`POST /api/auth/register`、`POST /api/auth/login`、`GET /api/auth/users`、`GET /api/members`、`GET /api/projects`、`POST /api/projects`、`PATCH /api/projects/:projectId`、`DELETE /api/projects/:projectId`、`POST /api/projects/:projectId/members`、`PATCH /api/projects/:projectId/members/:userId`、`DELETE /api/projects/:projectId/members/:userId`、`GET /api/knowledge`、`POST /api/knowledge`、`POST /api/knowledge/search`、`GET /api/skills`、`GET /api/agents`、`POST /api/agents`、`PATCH /api/agents/:agentId`、`DELETE /api/agents/:agentId`、`GET /api/memory/overview`、`POST /api/memory/query`
   - 项目态页面主数据来源：后端 `ProjectContext + /api/projects*`，辅以前端 `project.storage + project.catalog + project.mock`
 - 已知历史兼容或废弃项：
   - `/workspace` 仅作兼容入口，必须重定向到 `/home`
@@ -47,8 +47,8 @@
   - 但对“新接手者如何快速建立事实”和“这一轮新增业务逻辑应该看哪里”仍缺少统一入口。
   - 当前业务事实里有几处容易被误读：
     - 登录页已经是正式 auth 接口接入，不再是纯演示入口。
-    - 项目侧栏创建 / 编辑流程仍把资源绑定字段写在前端本地模型里。
-    - 全局资产页仍是治理壳层，占位交互不产生真实状态变更。
+    - 项目侧栏创建 / 编辑流程已经把资源绑定字段写回后端项目模型，但项目资源页中的 `skills / agents` 仍保留 fallback。
+    - 全局 `/skills` 为系统内置只读目录，`/agents` 已有正式 CRUD / 绑定写路径；`GlobalAssetManagementPage.tsx` 已退为历史壳层。
     - 项目资源页会消费兼容跳转带来的 `focus` 查询参数，但 canonical URL 仍保持无查询串。
 - 代码 / 配置证据：
   - `apps/platform/src/pages/login/LoginPage.tsx`

@@ -52,7 +52,7 @@
 - 当前项目列表、项目基础信息、成员 roster、项目资源绑定和项目对话列表 / 详情已来自后端 `/api/projects*`，但概览补充文案、成员协作快照与 `skills / agents` fallback 仍依赖前端 Mock。
 - 后端已经落地 MongoDB、JWT、注册 / 登录、全局成员概览、最小项目 CRUD、成员接口、健康检查和 memory 演示接口。
 - `/workspace`、`/home/project/*` 和旧 `knowledge|skills|agents` 项目路由都只是兼容入口。
-- 项目资源页只负责消费项目已绑定的全局资产；知识库元数据优先来自 `/api/knowledge`，`skills / agents` 仍使用本地目录 fallback；全局资产页仍是治理壳层，占位交互未落地真实写操作。
+- 项目资源页只负责消费项目已绑定的全局资产；知识库元数据优先来自 `/api/knowledge`，项目资源页中的 `skills / agents` 仍使用本地目录 fallback；全局 `/skills` 为系统内置只读目录，`/agents` 已有正式 CRUD / 绑定表单。
 - `knowject_project_pins` 当前承载前端置顶偏好，`knowject_project_resource_bindings` 已退为历史资源绑定迁移缓存。
 - `knowject_projects` 已退为历史本地 Mock 缓存键，当前只在首次刷新时作为一次性迁移源读取。
 - 项目成员正式管理接口已经落地，前端成员页当前已切到正式后端 roster，全局成员页也已切到 `/api/members`。
@@ -71,7 +71,7 @@
 - 以最小可行改动推进，不做未来抽象，不为了“显得完整”引入新层级。
 - 改路由、数据来源、localStorage 键、API 边界或文档角色时，必须同步更新 `.agent/docs/current/architecture.md` 和 `.agent/docs/README.md`，必要时更新 `README.md` 与 `.agent/docs/contracts/auth-contract.md`。
 - 不要把 `.agent/docs/roadmap/target-architecture.md` 中的目标能力表述成当前现状。
-- 在没有完成正式消息写入 / `skills / agents` 主数据切换前，不要继续把更多真实业务逻辑堆进 `project.mock.ts` 和 `project.catalog.ts`。
+- 在没有完成正式消息写入、项目资源页 `skills / agents` fallback 清理，以及 Skill / Agent 运行时前，不要继续把更多真实业务逻辑堆进 `project.mock.ts` 和 `project.catalog.ts`。
 ```
 
 ## 人类接手 Prompt
@@ -107,14 +107,15 @@
    - 哪些行为是兼容跳转，不是 canonical 设计
    - 需要同步更新哪些文档
 4. 最小验证至少执行：
+   - `pnpm verify:global-assets-foundation`
    - `pnpm check-types`
    - `pnpm lint`
    - `pnpm test`
 
 请始终记住：
 
-- 当前最稳定的是信息架构、产品壳、项目主数据、项目资源绑定和项目对话读链路；消息写入、`skills / agents` 主数据与 AI 能力仍未正式化。
-- 当前 auth、全局成员概览、最小项目 CRUD、项目资源绑定、项目对话只读接口和成员接口已经落地；剩余主要断层在消息写入、`skills / agents` 正式数据与检索融合链路。
+- 当前最稳定的是信息架构、产品壳、项目主数据、项目资源绑定、全局知识库 / 技能 / 智能体管理页，以及项目对话读链路；消息写入、项目资源页 `skills / agents` fallback 与 AI 运行时仍未正式化。
+- 当前 auth、全局成员概览、最小项目 CRUD、项目资源绑定、项目对话只读接口、Knowledge / Skill / Agent 全局资产接口和成员接口已经落地；剩余主要断层在消息写入、项目资源页 `skills / agents` fallback 收口、Skill / Agent 运行时与检索融合链路。
 - 如果你的改动影响路由、主数据来源、认证契约或存储键，文档必须同步更新。
 ```
 

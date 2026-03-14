@@ -12,7 +12,7 @@
 - 当前产品主线：
   - 登录后产品壳
   - 项目态页面
-  - 全局资产管理页壳层
+  - 全局资产正式管理页
   - 基础框架 API 基线
 
 ## 2. 当前服务拓扑
@@ -91,14 +91,13 @@
 - 项目资源绑定
 - 项目对话列表 / 详情读链路
 - 全局成员概览
-- `/knowledge` 正式后端接口
+- `/knowledge`、`/skills`、`/agents` 正式后端接口
 
 ### 仍主要依赖前端 Mock / 本地状态
 
 - 项目概览
 - 项目对话消息
 - 项目资源消费态中的 `skills / agents` fallback
-- 全局资产治理页中 `skills / agents` 的真实写操作
 
 ### 当前关键 localStorage
 
@@ -132,6 +131,12 @@
 - `DELETE /api/knowledge/:knowledgeId`
 - `POST /api/knowledge/:knowledgeId/documents`
 - `POST /api/knowledge/search`
+- `GET /api/skills`
+- `GET /api/agents`
+- `GET /api/agents/:agentId`
+- `POST /api/agents`
+- `PATCH /api/agents/:agentId`
+- `DELETE /api/agents/:agentId`
 - `GET /api/memory/overview`
 - `POST /api/memory/query`
 
@@ -147,7 +152,7 @@
 
 ## 7. 当前明确未落地能力
 
-- `skills / agents` 正式模块
+- 项目资源页 `skills / agents` fallback 收口，以及 Skill / Agent 运行时
 - 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建仍未落地
 - SSE 流式对话链路与来源引用
 - 项目私有知识库持久化
