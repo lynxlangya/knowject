@@ -332,14 +332,9 @@ export const MembersPage = () => {
             }}
           >
             <div className="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  成员目录
-                </Typography.Text>
-                <Typography.Title level={5} className="mb-0! mt-2 text-slate-800!">
-                  当前可见成员
-                </Typography.Title>
-              </div>
+              <Typography.Title level={5} className="mb-0! text-slate-800!">
+                当前可见成员
+              </Typography.Title>
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">

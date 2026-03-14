@@ -22,7 +22,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   createAgent,
   deleteAgent,
@@ -32,17 +32,20 @@ import {
   type AgentStatus,
 } from '@api/agents';
 import { extractApiErrorMessage } from '@api/error';
-import {
-  listKnowledge,
-  type KnowledgeSummaryResponse,
-} from '@api/knowledge';
-import {
-  listSkills,
-  type SkillSummaryResponse,
-} from '@api/skills';
+import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
+import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import type { MenuProps } from 'antd';
+import {
+  GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME,
+  GlobalAssetPageHeader,
+  GlobalAssetPageLayout,
+  GlobalAssetSidebar,
+  GlobalAssetSidebarItem,
+  GlobalAssetSidebarSection,
+} from '@pages/assets/components/GlobalAssetLayout';
 
 type ModalMode = 'create' | 'edit' | null;
+type AgentSidebarFilter = 'all' | 'recent' | 'active' | 'disabled';
 
 interface AgentFormValues {
   name: string;
@@ -85,7 +88,12 @@ const sortAgentsByUpdatedAt = (items: AgentResponse[]): AgentResponse[] => {
 const createAgentPayload = (
   source: Pick<
     AgentResponse | AgentFormValues,
-    'name' | 'description' | 'systemPrompt' | 'boundKnowledgeIds' | 'boundSkillIds' | 'status'
+    | 'name'
+    | 'description'
+    | 'systemPrompt'
+    | 'boundKnowledgeIds'
+    | 'boundSkillIds'
+    | 'status'
   >,
 ) => {
   return {
@@ -108,13 +116,33 @@ const buildPromptPreview = (systemPrompt: string): string => {
   return normalized.length > 60 ? `${normalized.slice(0, 60)}…` : normalized;
 };
 
+const filterAgents = (
+  items: AgentResponse[],
+  filter: AgentSidebarFilter,
+): AgentResponse[] => {
+  if (filter === 'recent') {
+    return items.slice(0, 5);
+  }
+
+  if (filter === 'active') {
+    return items.filter((item) => item.status === 'active');
+  }
+
+  if (filter === 'disabled') {
+    return items.filter((item) => item.status === 'disabled');
+  }
+
+  return items;
+};
+
 export const AgentsManagementPage = () => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<AgentFormValues>();
+  const agentCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [items, setItems] = useState<AgentResponse[]>([]);
-  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeSummaryResponse[]>(
-    [],
-  );
+  const [knowledgeItems, setKnowledgeItems] = useState<
+    KnowledgeSummaryResponse[]
+  >([]);
   const [skillItems, setSkillItems] = useState<SkillSummaryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +151,12 @@ export const AgentsManagementPage = () => {
   const [editingAgent, setEditingAgent] = useState<AgentResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
-  const [updatingStatusAgentId, setUpdatingStatusAgentId] = useState<string | null>(null);
+  const [updatingStatusAgentId, setUpdatingStatusAgentId] = useState<
+    string | null
+  >(null);
+  const [selectedFilter, setSelectedFilter] =
+    useState<AgentSidebarFilter>('all');
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -133,11 +166,9 @@ export const AgentsManagementPage = () => {
       setError(null);
 
       try {
-        const [agentsResult, knowledgeResult, skillsResult] = await Promise.all([
-          listAgents(),
-          listKnowledge(),
-          listSkills(),
-        ]);
+        const [agentsResult, knowledgeResult, skillsResult] = await Promise.all(
+          [listAgents(), listKnowledge(), listSkills()],
+        );
 
         if (cancelled) {
           return;
@@ -151,9 +182,15 @@ export const AgentsManagementPage = () => {
           return;
         }
 
-        console.error('[AgentsManagementPage] 加载智能体目录失败:', currentError);
+        console.error(
+          '[AgentsManagementPage] 加载智能体目录失败:',
+          currentError,
+        );
         setError(
-          extractApiErrorMessage(currentError, '加载智能体目录失败，请稍后重试'),
+          extractApiErrorMessage(
+            currentError,
+            '加载智能体目录失败，请稍后重试',
+          ),
         );
       } finally {
         if (!cancelled) {
@@ -203,9 +240,42 @@ export const AgentsManagementPage = () => {
       },
     ];
   }, [items]);
+  const filteredAgents = filterAgents(items, selectedFilter);
+  const agentFilters = [
+    {
+      key: 'all' as const,
+      label: '全部',
+      count: items.length,
+    },
+    {
+      key: 'recent' as const,
+      label: '最近使用',
+      count: filterAgents(items, 'recent').length,
+    },
+    {
+      key: 'active' as const,
+      label: '启用中',
+      count: filterAgents(items, 'active').length,
+    },
+    {
+      key: 'disabled' as const,
+      label: '已停用',
+      count: filterAgents(items, 'disabled').length,
+    },
+  ];
 
   const handleReload = () => {
     setReloadToken((currentValue) => currentValue + 1);
+  };
+
+  const highlightAgentCard = (agentId: string) => {
+    setSelectedAgentId(agentId);
+    window.setTimeout(() => {
+      agentCardRefs.current[agentId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }, 0);
   };
 
   const openCreateModal = () => {
@@ -241,6 +311,8 @@ export const AgentsManagementPage = () => {
   };
 
   const upsertAgent = (nextAgent: AgentResponse) => {
+    setSelectedFilter('all');
+    highlightAgentCard(nextAgent.id);
     setItems((currentItems) =>
       sortAgentsByUpdatedAt([
         nextAgent,
@@ -289,7 +361,9 @@ export const AgentsManagementPage = () => {
       );
 
       upsertAgent(result.agent);
-      message.success(nextStatus === 'disabled' ? '智能体已停用' : '智能体已启用');
+      message.success(
+        nextStatus === 'disabled' ? '智能体已停用' : '智能体已启用',
+      );
     } catch (currentError) {
       console.error('[AgentsManagementPage] 更新智能体状态失败:', currentError);
       message.error(
@@ -308,6 +382,9 @@ export const AgentsManagementPage = () => {
       setItems((currentItems) =>
         currentItems.filter((item) => item.id !== agent.id),
       );
+      setSelectedAgentId((currentId) =>
+        currentId === agent.id ? null : currentId,
+      );
       message.success('智能体已删除');
     } catch (currentError) {
       console.error('[AgentsManagementPage] 删除智能体失败:', currentError);
@@ -318,6 +395,16 @@ export const AgentsManagementPage = () => {
       setDeletingAgentId(null);
     }
   };
+
+  useEffect(() => {
+    if (!selectedAgentId) {
+      return;
+    }
+
+    if (!filteredAgents.some((agent) => agent.id === selectedAgentId)) {
+      setSelectedAgentId(null);
+    }
+  }, [filteredAgents, selectedAgentId]);
 
   const confirmDeleteAgent = (agent: AgentResponse) => {
     modal.confirm({
@@ -351,7 +438,11 @@ export const AgentsManagementPage = () => {
       },
       {
         key: 'toggle-status',
-        icon: toggleToDisabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />,
+        icon: toggleToDisabled ? (
+          <PauseCircleOutlined />
+        ) : (
+          <PlayCircleOutlined />
+        ),
         label: toggleToDisabled ? '停用' : '启用',
         disabled: busy,
       },
@@ -393,74 +484,137 @@ export const AgentsManagementPage = () => {
   }
 
   return (
-    <section className="space-y-5">
-      <Card
-        className="mb-5! rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
-        styles={{ body: { padding: '22px 22px 20px' } }}
-      >
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <Typography.Title level={2} className="mb-1! text-slate-900!">
-              智能体
-            </Typography.Title>
-            <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
-              {AGENTS_PAGE_SUBTITLE}
-            </Typography.Paragraph>
-          </div>
-          <div className="flex flex-col items-start gap-3 lg:items-end">
-            <Typography.Text className="text-xs text-slate-400">
-              模型由服务端固定，绑定资源时会做存在性校验
-            </Typography.Text>
-            <div className="flex flex-wrap gap-2">
-              <Button type="primary" onClick={openCreateModal}>
-                新建智能体
-              </Button>
-              <Tooltip title="刷新目录">
-                <Button
-                  aria-label="刷新目录"
-                  shape="circle"
-                  icon={<ReloadOutlined />}
-                  onClick={handleReload}
-                />
-              </Tooltip>
-            </div>
-          </div>
-        </div>
-
-        {items.length > 0 ? (
-          <div className="mt-5 flex flex-wrap gap-3">
-            {summaryItems.map((item) => (
-              <div
-                key={item.label}
-                className="min-w-[160px] rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
-              >
-                <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-                  {item.label}
-                </Typography.Text>
-                <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
-                  {item.value}
-                </Typography.Title>
+    <GlobalAssetPageLayout
+      header={
+        <GlobalAssetPageHeader
+          title="智能体"
+          subtitle={AGENTS_PAGE_SUBTITLE}
+          summaryItems={summaryItems}
+          actions={
+            <div className="flex flex-col items-start gap-3 lg:items-end">
+              <Typography.Text className="text-xs text-slate-400">
+                模型由服务端固定，绑定资源时会做存在性校验
+              </Typography.Text>
+              <div className="flex flex-wrap gap-2">
+                <Button type="primary" onClick={openCreateModal}>
+                  新建智能体
+                </Button>
+                <Tooltip title="刷新目录">
+                  <Button
+                    aria-label="刷新目录"
+                    shape="circle"
+                    icon={<ReloadOutlined />}
+                    onClick={handleReload}
+                  />
+                </Tooltip>
               </div>
-            ))}
-          </div>
-        ) : null}
-      </Card>
-
-      {error ? (
-        <Alert
-          type="error"
-          showIcon
-          message={error}
-          action={
-            <Button size="small" onClick={handleReload}>
-              重试
-            </Button>
+            </div>
           }
         />
-      ) : null}
+      }
+      alert={
+        error ? (
+          <Alert
+            type="error"
+            showIcon
+            message={error}
+            action={
+              <Button size="small" onClick={handleReload}>
+                重试
+              </Button>
+            }
+          />
+        ) : null
+      }
+      sidebar={
+        <GlobalAssetSidebar
+          header={
+            <div className="flex items-end justify-between gap-3">
+              <Typography.Title level={5} className="mb-0! text-slate-800!">
+                分组与定位
+              </Typography.Title>
+              <Typography.Text className="text-xs text-slate-400">
+                共 {items.length} 个
+              </Typography.Text>
+            </div>
+          }
+        >
+          <GlobalAssetSidebarSection title="分组浏览">
+            {agentFilters.map((filter) => (
+              <GlobalAssetSidebarItem
+                key={filter.key}
+                active={selectedFilter === filter.key}
+                onClick={() => {
+                  setSelectedFilter(filter.key);
+                }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <Typography.Text
+                    className={`text-sm font-medium ${
+                      selectedFilter === filter.key
+                        ? 'text-slate-900!'
+                        : 'text-slate-600!'
+                    }`}
+                  >
+                    {filter.label}
+                  </Typography.Text>
+                  <Typography.Text className="text-xs text-slate-400">
+                    {filter.count}
+                  </Typography.Text>
+                </div>
+              </GlobalAssetSidebarItem>
+            ))}
+          </GlobalAssetSidebarSection>
 
+          <GlobalAssetSidebarSection title="智能体列表">
+            {filteredAgents.length === 0 ? (
+              <div className="px-2 py-4">
+                <Typography.Text className="text-sm text-slate-400">
+                  当前分组下暂无智能体。
+                </Typography.Text>
+              </div>
+            ) : (
+              filteredAgents.map((agent) => {
+                const statusMeta = AGENT_STATUS_META[agent.status];
+
+                return (
+                  <GlobalAssetSidebarItem
+                    key={agent.id}
+                    active={selectedAgentId === agent.id}
+                    onClick={() => {
+                      highlightAgentCard(agent.id);
+                    }}
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <Typography.Text
+                          className={`truncate text-sm font-medium ${
+                            selectedAgentId === agent.id
+                              ? 'text-slate-900!'
+                              : 'text-slate-700!'
+                          }`}
+                        >
+                          {agent.name}
+                        </Typography.Text>
+                        <Typography.Text className="text-[11px] text-slate-400">
+                          {statusMeta.label}
+                        </Typography.Text>
+                      </div>
+                      <Typography.Text className="block text-[11px] text-slate-500">
+                        最近更新：
+                        {updatedAtFormatter.format(new Date(agent.updatedAt))}
+                      </Typography.Text>
+                    </div>
+                  </GlobalAssetSidebarItem>
+                );
+              })
+            )}
+          </GlobalAssetSidebarSection>
+        </GlobalAssetSidebar>
+      }
+    >
       {!error && items.length === 0 ? (
-        <Card className="mb-5! rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!">
+        <Card className={GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME}>
           <Empty
             description="当前还没有全局智能体配置"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -472,23 +626,44 @@ export const AgentsManagementPage = () => {
         </Card>
       ) : null}
 
-      {!error && items.length > 0 ? (
+      {!error && items.length > 0 && filteredAgents.length === 0 ? (
+        <Card className={GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME}>
+          <Empty
+            description="当前分组下暂无智能体"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        </Card>
+      ) : null}
+
+      {!error && filteredAgents.length > 0 ? (
         <div className="grid gap-4 xl:grid-cols-2">
-          {items.map((agent) => {
+          {filteredAgents.map((agent) => {
             const statusMeta = AGENT_STATUS_META[agent.status];
             const promptPreview = buildPromptPreview(agent.systemPrompt);
             const isBusy =
-              deletingAgentId === agent.id || updatingStatusAgentId === agent.id;
+              deletingAgentId === agent.id ||
+              updatingStatusAgentId === agent.id;
+            const isHighlighted = selectedAgentId === agent.id;
 
             return (
               <article
                 key={agent.id}
-                className="group rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]"
+                ref={(node) => {
+                  agentCardRefs.current[agent.id] = node;
+                }}
+                className={`group rounded-[24px] border bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)] transition ${
+                  isHighlighted
+                    ? 'border-emerald-300 bg-emerald-50/40 shadow-[0_18px_36px_rgba(16,185,129,0.12)]'
+                    : 'border-slate-200'
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Typography.Title level={4} className="mb-0! text-slate-900!">
+                      <Typography.Title
+                        level={4}
+                        className="mb-0! text-slate-900!"
+                      >
                         {agent.name}
                       </Typography.Title>
                       <Tag color={statusMeta.tagColor}>{statusMeta.label}</Tag>
@@ -537,7 +712,8 @@ export const AgentsManagementPage = () => {
                     Skill：{agent.boundSkillIds.length}
                   </span>
                   <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium">
-                    最近更新：{updatedAtFormatter.format(new Date(agent.updatedAt))}
+                    最近更新：
+                    {updatedAtFormatter.format(new Date(agent.updatedAt))}
                   </span>
                 </div>
               </article>
@@ -600,7 +776,11 @@ export const AgentsManagementPage = () => {
             name="systemPrompt"
             label="System Prompt"
             rules={[
-              { required: true, whitespace: true, message: '请输入 System Prompt' },
+              {
+                required: true,
+                whitespace: true,
+                message: '请输入 System Prompt',
+              },
             ]}
           >
             <Input.TextArea
@@ -641,6 +821,6 @@ export const AgentsManagementPage = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </section>
+    </GlobalAssetPageLayout>
   );
 };

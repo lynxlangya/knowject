@@ -54,6 +54,14 @@ import {
   type KnowledgeTextInputValues,
 } from './components/KnowledgeTextInputModal';
 import type { MenuProps } from 'antd';
+import {
+  GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME,
+  GlobalAssetPageHeader,
+  GlobalAssetPageLayout,
+  GlobalAssetSidebar,
+  GlobalAssetSidebarItem,
+  GlobalAssetSidebarSection,
+} from '@pages/assets/components/GlobalAssetLayout';
 
 interface KnowledgeFormValues {
   name: string;
@@ -122,8 +130,7 @@ const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {
   global_code: 'border-violet-200 bg-violet-50 text-violet-700',
 };
 
-const DOCUMENT_UPLOAD_ACCEPT =
-  '.md,.markdown,.txt,text/markdown,text/plain';
+const DOCUMENT_UPLOAD_ACCEPT = '.md,.markdown,.txt,text/markdown,text/plain';
 const DOCUMENT_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 const DOCUMENT_UPLOAD_SOFT_WARNING_BYTES = 20 * 1024 * 1024;
 const SUPPORTED_DOCUMENT_EXTENSIONS = ['.md', '.markdown', '.txt'] as const;
@@ -176,7 +183,11 @@ const getFileExtension = (fileName: string): string => {
 const validateKnowledgeSourceFile = (file: File): string | null => {
   const extension = getFileExtension(file.name);
 
-  if (!SUPPORTED_DOCUMENT_EXTENSIONS.includes(extension as (typeof SUPPORTED_DOCUMENT_EXTENSIONS)[number])) {
+  if (
+    !SUPPORTED_DOCUMENT_EXTENSIONS.includes(
+      extension as (typeof SUPPORTED_DOCUMENT_EXTENSIONS)[number],
+    )
+  ) {
     return '仅支持 md、markdown、txt 文件';
   }
 
@@ -247,7 +258,9 @@ const pickNextActiveKnowledgeId = (
   return items[0]?.id ?? null;
 };
 
-const hasProcessingDocuments = (knowledge: KnowledgeDetailResponse | null): boolean => {
+const hasProcessingDocuments = (
+  knowledge: KnowledgeDetailResponse | null,
+): boolean => {
   return (
     knowledge?.documents.some(
       (document) =>
@@ -308,14 +321,24 @@ const removeDocumentFromKnowledgeDetail = (
   knowledge: KnowledgeDetailResponse,
   documentId: string,
 ): KnowledgeDetailResponse => {
-  const targetDocument = knowledge.documents.find((document) => document.id === documentId);
-  const documents = knowledge.documents.filter((document) => document.id !== documentId);
+  const targetDocument = knowledge.documents.find(
+    (document) => document.id === documentId,
+  );
+  const documents = knowledge.documents.filter(
+    (document) => document.id !== documentId,
+  );
 
   return {
     ...knowledge,
     documents,
-    documentCount: Math.max(knowledge.documentCount - (targetDocument ? 1 : 0), 0),
-    chunkCount: Math.max(knowledge.chunkCount - (targetDocument?.chunkCount ?? 0), 0),
+    documentCount: Math.max(
+      knowledge.documentCount - (targetDocument ? 1 : 0),
+      0,
+    ),
+    chunkCount: Math.max(
+      knowledge.chunkCount - (targetDocument?.chunkCount ?? 0),
+      0,
+    ),
     indexStatus: resolveKnowledgeIndexStatus(documents),
     updatedAt: new Date().toISOString(),
   };
@@ -358,7 +381,9 @@ const buildKnowledgeStats = (items: KnowledgeSummaryResponse[]) => {
   ];
 };
 
-const buildKnowledgeDetailOverviewStats = (knowledge: KnowledgeDetailResponse) => {
+const buildKnowledgeDetailOverviewStats = (
+  knowledge: KnowledgeDetailResponse,
+) => {
   return [
     {
       label: '文档数量',
@@ -384,10 +409,11 @@ export const KnowledgeManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeKnowledgeId, setActiveKnowledgeId] = useState<string | null>(null);
-  const [activeKnowledge, setActiveKnowledge] = useState<KnowledgeDetailResponse | null>(
+  const [activeKnowledgeId, setActiveKnowledgeId] = useState<string | null>(
     null,
   );
+  const [activeKnowledge, setActiveKnowledge] =
+    useState<KnowledgeDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [listReloadToken, setListReloadToken] = useState(0);
@@ -395,10 +421,18 @@ export const KnowledgeManagementPage = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadFlowStep, setUploadFlowStep] = useState<UploadFlowStep | null>(null);
-  const [deletingKnowledgeId, setDeletingKnowledgeId] = useState<string | null>(null);
-  const [retryingDocumentId, setRetryingDocumentId] = useState<string | null>(null);
-  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
+  const [uploadFlowStep, setUploadFlowStep] = useState<UploadFlowStep | null>(
+    null,
+  );
+  const [deletingKnowledgeId, setDeletingKnowledgeId] = useState<string | null>(
+    null,
+  );
+  const [retryingDocumentId, setRetryingDocumentId] = useState<string | null>(
+    null,
+  );
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
+    null,
+  );
 
   const stats = buildKnowledgeStats(items);
   const activeSummary =
@@ -411,7 +445,7 @@ export const KnowledgeManagementPage = () => {
     : [];
   const shouldPoll = hasProcessingDocuments(activeKnowledge);
   const pollingAttempts = activeKnowledgeId
-    ? pollingAttemptsRef.current[activeKnowledgeId] ?? 0
+    ? (pollingAttemptsRef.current[activeKnowledgeId] ?? 0)
     : 0;
   const pollingStopped = shouldPoll && pollingAttempts >= MAX_POLLING_ATTEMPTS;
 
@@ -454,7 +488,10 @@ export const KnowledgeManagementPage = () => {
           currentError,
         );
         setError(
-          extractApiErrorMessage(currentError, '加载知识库列表失败，请稍后重试'),
+          extractApiErrorMessage(
+            currentError,
+            '加载知识库列表失败，请稍后重试',
+          ),
         );
       } finally {
         if (isMounted) {
@@ -504,7 +541,10 @@ export const KnowledgeManagementPage = () => {
         );
         setActiveKnowledge(null);
         setDetailError(
-          extractApiErrorMessage(currentError, '加载知识库详情失败，请稍后重试'),
+          extractApiErrorMessage(
+            currentError,
+            '加载知识库详情失败，请稍后重试',
+          ),
         );
       } finally {
         if (isMounted) {
@@ -659,7 +699,8 @@ export const KnowledgeManagementPage = () => {
 
     try {
       const nextCandidateId =
-        items.find((knowledge) => knowledge.id !== activeKnowledgeId)?.id ?? null;
+        items.find((knowledge) => knowledge.id !== activeKnowledgeId)?.id ??
+        null;
 
       await deleteKnowledge(activeKnowledgeId);
 
@@ -815,7 +856,9 @@ export const KnowledgeManagementPage = () => {
   };
 
   const isDocumentBusy = (documentId: string): boolean => {
-    return retryingDocumentId === documentId || deletingDocumentId === documentId;
+    return (
+      retryingDocumentId === documentId || deletingDocumentId === documentId
+    );
   };
 
   const refreshDocumentStatus = (knowledgeId: string) => {
@@ -853,10 +896,7 @@ export const KnowledgeManagementPage = () => {
       );
       refreshDocumentStatus(activeKnowledgeId);
     } catch (currentError) {
-      console.error(
-        '[KnowledgeManagement] 重试文档索引失败:',
-        currentError,
-      );
+      console.error('[KnowledgeManagement] 重试文档索引失败:', currentError);
       message.error(
         extractApiErrorMessage(
           currentError,
@@ -884,7 +924,10 @@ export const KnowledgeManagementPage = () => {
       removeActiveKnowledgeDocument(document.id);
       patchKnowledgeSummary(activeKnowledgeId, {
         documentCount: Math.max((activeSummary?.documentCount ?? 1) - 1, 0),
-        chunkCount: Math.max((activeSummary?.chunkCount ?? 0) - document.chunkCount, 0),
+        chunkCount: Math.max(
+          (activeSummary?.chunkCount ?? 0) - document.chunkCount,
+          0,
+        ),
         updatedAt: new Date().toISOString(),
       });
       message.success('文档已删除');
@@ -1099,7 +1142,7 @@ export const KnowledgeManagementPage = () => {
 
   if (error && items.length === 0) {
     return (
-      <Card className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!">
+      <Card className={GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME}>
         <Typography.Title level={4} className="text-slate-800!">
           知识库
         </Typography.Title>
@@ -1112,78 +1155,52 @@ export const KnowledgeManagementPage = () => {
   }
 
   return (
-    <section className="flex min-h-full flex-col gap-4 pr-4 md:pr-5">
-      <Card
-        className="rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!"
-        styles={{ body: { padding: '22px 22px 20px' } }}
-      >
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <Typography.Title level={3} className="mb-0! text-slate-800!">
-              全局知识库
-            </Typography.Title>
-            <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
-              {KNOWLEDGE_PAGE_SUBTITLE}
-            </Typography.Paragraph>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openCreateModal}
-            >
-              新建知识库
-            </Button>
-            <Tooltip title="刷新状态">
+    <GlobalAssetPageLayout
+      header={
+        <GlobalAssetPageHeader
+          title="全局知识库"
+          subtitle={KNOWLEDGE_PAGE_SUBTITLE}
+          summaryItems={stats}
+          actions={
+            <div className="flex flex-wrap gap-2">
               <Button
-                aria-label="刷新状态"
-                shape="circle"
-                icon={<ReloadOutlined />}
-                loading={refreshing}
-                onClick={() => {
-                  resetPollingAttempts(activeKnowledgeId);
-                  reloadKnowledgeList(activeKnowledgeId);
-                  reloadKnowledgeDetail();
-                }}
-              />
-            </Tooltip>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-3">
-          {stats.map((item) => (
-            <div
-              key={item.label}
-              className="min-w-[160px] rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
-            >
-              <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-                {item.label}
-              </Typography.Text>
-              <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
-                {item.value}
-              </Typography.Title>
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openCreateModal}
+              >
+                新建知识库
+              </Button>
+              <Tooltip title="刷新状态">
+                <Button
+                  aria-label="刷新状态"
+                  shape="circle"
+                  icon={<ReloadOutlined />}
+                  loading={refreshing}
+                  onClick={() => {
+                    resetPollingAttempts(activeKnowledgeId);
+                    reloadKnowledgeList(activeKnowledgeId);
+                    reloadKnowledgeDetail();
+                  }}
+                />
+              </Tooltip>
             </div>
-          ))}
-        </div>
-      </Card>
-
-      {error ? <Alert type="error" showIcon title={error} /> : null}
-
-      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <Card
-          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
-          styles={{ body: { padding: '20px' } }}
+          }
+        />
+      }
+      alert={error ? <Alert type="error" showIcon message={error} /> : null}
+      sidebar={
+        <GlobalAssetSidebar
+          header={
+            <div className="flex items-end justify-between gap-3">
+              <Typography.Title level={5} className="mb-0! text-slate-800!">
+                知识库列表
+              </Typography.Title>
+              <Typography.Text className="text-xs text-slate-400">
+                共 {items.length} 个
+              </Typography.Text>
+            </div>
+          }
         >
-          <div className="flex items-center justify-between gap-3">
-            <Typography.Title level={5} className="mb-0! text-slate-800!">
-              知识库列表
-            </Typography.Title>
-            <Typography.Text className="text-xs text-slate-400">
-              共 {items.length} 个
-            </Typography.Text>
-          </div>
-
           {items.length === 0 ? (
             <Empty
               className="my-10"
@@ -1194,9 +1211,10 @@ export const KnowledgeManagementPage = () => {
               </Button>
             </Empty>
           ) : (
-            <div className="mt-5 flex flex-col gap-2">
+            <GlobalAssetSidebarSection>
               {items.map((knowledge) => {
-                const indexStatusMeta = INDEX_STATUS_META[knowledge.indexStatus];
+                const indexStatusMeta =
+                  INDEX_STATUS_META[knowledge.indexStatus];
                 const sourceTypeMeta = SOURCE_TYPE_META[knowledge.sourceType];
                 const isActive = knowledge.id === activeKnowledgeId;
                 const compactMeta = `${knowledge.documentCount} 份文档 · ${formatCompactDate(
@@ -1204,19 +1222,13 @@ export const KnowledgeManagementPage = () => {
                 )} 更新`;
 
                 return (
-                  <button
+                  <GlobalAssetSidebarItem
                     key={knowledge.id}
-                    type="button"
-                    aria-pressed={isActive}
+                    active={isActive}
                     onClick={() => {
                       pollingAttemptsRef.current[knowledge.id] = 0;
                       setActiveKnowledgeId(knowledge.id);
                     }}
-                    className={`w-full rounded-[16px] border px-3 py-2.5 text-left transition ${
-                      isActive
-                        ? 'border-emerald-200 bg-emerald-50/70'
-                        : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white'
-                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar
@@ -1228,7 +1240,11 @@ export const KnowledgeManagementPage = () => {
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Typography.Text className="truncate text-[13px] font-semibold text-slate-800!">
+                          <Typography.Text
+                            className={`truncate text-[13px] font-semibold ${
+                              isActive ? 'text-slate-900!' : 'text-slate-800!'
+                            }`}
+                          >
                             {knowledge.name}
                           </Typography.Text>
                           <span
@@ -1248,187 +1264,191 @@ export const KnowledgeManagementPage = () => {
                         </Typography.Text>
                       </div>
                     </div>
-                  </button>
+                  </GlobalAssetSidebarItem>
                 );
               })}
-            </div>
+            </GlobalAssetSidebarSection>
           )}
-        </Card>
-
-        <Card
-          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
-          styles={{ body: { padding: '20px' } }}
-        >
-          {!activeKnowledgeId ? (
-            <Empty
-              className="my-16"
-              description="请选择左侧知识库，查看文档与状态详情。"
-            />
-          ) : detailLoading && !activeKnowledge ? (
-            <div className="flex min-h-90 items-center justify-center">
-              <Spin size="large" />
-            </div>
-          ) : detailError ? (
-            <div className="space-y-4">
-              <Alert type="error" showIcon title={detailError} />
-              <Button onClick={reloadKnowledgeDetail}>重试加载详情</Button>
-            </div>
-          ) : activeKnowledge ? (
-            <div className="space-y-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="max-w-3xl">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Typography.Title level={4} className="mb-0! text-slate-800!">
-                      {activeKnowledge.name}
-                    </Typography.Title>
-                    {activeSourceMeta ? (
-                      <Tag color={activeSourceMeta.color}>{activeSourceMeta.label}</Tag>
-                    ) : null}
-                    <Tag color={INDEX_STATUS_META[activeKnowledge.indexStatus].color}>
-                      {INDEX_STATUS_META[activeKnowledge.indexStatus].label}
+        </GlobalAssetSidebar>
+      }
+    >
+      <Card
+        className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+        styles={{ body: { padding: '20px' } }}
+      >
+        {!activeKnowledgeId ? (
+          <Empty
+            className="my-16"
+            description="请选择左侧知识库，查看文档与状态详情。"
+          />
+        ) : detailLoading && !activeKnowledge ? (
+          <div className="flex min-h-90 items-center justify-center">
+            <Spin size="large" />
+          </div>
+        ) : detailError ? (
+          <div className="space-y-4">
+            <Alert type="error" showIcon title={detailError} />
+            <Button onClick={reloadKnowledgeDetail}>重试加载详情</Button>
+          </div>
+        ) : activeKnowledge ? (
+          <div className="space-y-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Typography.Title level={4} className="mb-0! text-slate-800!">
+                    {activeKnowledge.name}
+                  </Typography.Title>
+                  {activeSourceMeta ? (
+                    <Tag color={activeSourceMeta.color}>
+                      {activeSourceMeta.label}
                     </Tag>
-                  </div>
-                  <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-                    {activeKnowledge.description || '当前未填写描述。'}
-                  </Typography.Paragraph>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Tooltip
-                    title={
-                      activeKnowledge.sourceType === 'global_docs'
-                        ? KNOWLEDGE_UPLOAD_TOOLTIP
-                        : 'global_code 当前不支持上传文档。'
-                    }
-                  >
-                    <span>
-                      <Button
-                        icon={<CloudUploadOutlined />}
-                        loading={uploading}
-                        disabled={activeKnowledge.sourceType !== 'global_docs'}
-                        onClick={openUploadFlow}
-                      >
-                        上传文档
-                      </Button>
-                    </span>
-                  </Tooltip>
-                  <Button icon={<EditOutlined />} onClick={openEditModal}>
-                    编辑
-                  </Button>
-                  <Popconfirm
-                    title="删除知识库"
-                    description="会删除 Mongo 元数据、原始文件，并清理对应 Chroma 向量记录。"
-                    okText="删除"
-                    cancelText="取消"
-                    okButtonProps={{
-                      danger: true,
-                      loading: deletingKnowledgeId === activeKnowledge.id,
-                    }}
-                    onConfirm={() => void handleDeleteKnowledge()}
-                  >
-                    <Button
-                      danger
-                      icon={<DeleteOutlined />}
-                      loading={deletingKnowledgeId === activeKnowledge.id}
-                    >
-                      删除
-                    </Button>
-                  </Popconfirm>
-                </div>
-              </div>
-
-              <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-                <div className="grid gap-px bg-slate-200 md:grid-cols-2">
-                  {activeOverviewStats.map((item) => (
-                    <div
-                      key={item.label}
-                      className="bg-slate-50/75 px-4 py-4"
-                    >
-                      <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-                        {item.label}
-                      </Typography.Text>
-                      <Typography.Text
-                        className={`mt-3 block text-slate-800 ${
-                          item.emphasis === 'number'
-                            ? 'text-[30px] font-semibold leading-none tracking-tight'
-                            : 'text-lg font-semibold leading-7'
-                        }`}
-                      >
-                        {item.value}
-                      </Typography.Text>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-4">
-                  {shouldPoll ? (
-                    <Alert
-                      type={pollingStopped ? 'warning' : 'info'}
-                      showIcon
-                      title={
-                        pollingStopped
-                          ? '自动刷新已达到本轮上限，请手动刷新继续观察。'
-                          : '检测到待处理文档，页面会做最小轮询以更新索引状态。'
-                      }
-                    />
                   ) : null}
+                  <Tag
+                    color={INDEX_STATUS_META[activeKnowledge.indexStatus].color}
+                  >
+                    {INDEX_STATUS_META[activeKnowledge.indexStatus].label}
+                  </Tag>
                 </div>
+                <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
+                  {activeKnowledge.description || '当前未填写描述。'}
+                </Typography.Paragraph>
+              </div>
 
-                <div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <FileTextOutlined className="text-slate-400" />
-                      <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        文档列表
-                      </Typography.Title>
-                    </div>
-                    <Typography.Text className="text-xs text-slate-400">
-                      共 {activeKnowledge.documents.length} 份
+              <div className="flex flex-wrap gap-2">
+                <Tooltip
+                  title={
+                    activeKnowledge.sourceType === 'global_docs'
+                      ? KNOWLEDGE_UPLOAD_TOOLTIP
+                      : 'global_code 当前不支持上传文档。'
+                  }
+                >
+                  <span>
+                    <Button
+                      icon={<CloudUploadOutlined />}
+                      loading={uploading}
+                      disabled={activeKnowledge.sourceType !== 'global_docs'}
+                      onClick={openUploadFlow}
+                    >
+                      上传文档
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Button icon={<EditOutlined />} onClick={openEditModal}>
+                  编辑
+                </Button>
+                <Popconfirm
+                  title="删除知识库"
+                  description="会删除 Mongo 元数据、原始文件，并清理对应 Chroma 向量记录。"
+                  okText="删除"
+                  cancelText="取消"
+                  okButtonProps={{
+                    danger: true,
+                    loading: deletingKnowledgeId === activeKnowledge.id,
+                  }}
+                  onConfirm={() => void handleDeleteKnowledge()}
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    loading={deletingKnowledgeId === activeKnowledge.id}
+                  >
+                    删除
+                  </Button>
+                </Popconfirm>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <div className="grid gap-px bg-slate-200 md:grid-cols-2">
+                {activeOverviewStats.map((item) => (
+                  <div key={item.label} className="bg-slate-50/75 px-4 py-4">
+                    <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                      {item.label}
+                    </Typography.Text>
+                    <Typography.Text
+                      className={`mt-3 block text-slate-800 ${
+                        item.emphasis === 'number'
+                          ? 'text-[30px] font-semibold leading-none tracking-tight'
+                          : 'text-lg font-semibold leading-7'
+                      }`}
+                    >
+                      {item.value}
                     </Typography.Text>
                   </div>
-
-                  {activeKnowledge.documents.length === 0 ? (
-                    <Empty
-                      className="my-12"
-                      description={
-                        activeKnowledge.sourceType === 'global_docs'
-                          ? '当前知识库还没有文档，上传一份 .md 或 .txt 开始索引。'
-                          : 'global_code 当前还没有真实代码导入入口。'
-                      }
-                    >
-                      {activeKnowledge.sourceType === 'global_docs' ? (
-                        <Button
-                          type="primary"
-                          icon={<CloudUploadOutlined />}
-                          loading={uploading}
-                          onClick={openUploadFlow}
-                        >
-                          上传第一份文档
-                        </Button>
-                      ) : null}
-                    </Empty>
-                  ) : (
-                    <div className="mt-4 space-y-3">
-                      {activeKnowledge.documents.map(renderDocumentCard)}
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
             </div>
-          ) : (
-            <Empty
-              className="my-16"
-              description={
-                activeSummary
-                  ? `知识库“${activeSummary.name}”详情暂不可用，请稍后重试。`
-                  : '请选择左侧知识库查看详情。'
-              }
-            />
-          )}
-        </Card>
-      </div>
+
+            <div className="space-y-4">
+              <div className="space-y-4">
+                {shouldPoll ? (
+                  <Alert
+                    type={pollingStopped ? 'warning' : 'info'}
+                    showIcon
+                    title={
+                      pollingStopped
+                        ? '自动刷新已达到本轮上限，请手动刷新继续观察。'
+                        : '检测到待处理文档，页面会做最小轮询以更新索引状态。'
+                    }
+                  />
+                ) : null}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <FileTextOutlined className="text-slate-400" />
+                    <Typography.Title
+                      level={5}
+                      className="mb-0! text-slate-800!"
+                    >
+                      文档列表
+                    </Typography.Title>
+                  </div>
+                  <Typography.Text className="text-xs text-slate-400">
+                    共 {activeKnowledge.documents.length} 份
+                  </Typography.Text>
+                </div>
+
+                {activeKnowledge.documents.length === 0 ? (
+                  <Empty
+                    className="my-12"
+                    description={
+                      activeKnowledge.sourceType === 'global_docs'
+                        ? '当前知识库还没有文档，上传一份 .md 或 .txt 开始索引。'
+                        : 'global_code 当前还没有真实代码导入入口。'
+                    }
+                  >
+                    {activeKnowledge.sourceType === 'global_docs' ? (
+                      <Button
+                        type="primary"
+                        icon={<CloudUploadOutlined />}
+                        loading={uploading}
+                        onClick={openUploadFlow}
+                      >
+                        上传第一份文档
+                      </Button>
+                    ) : null}
+                  </Empty>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {activeKnowledge.documents.map(renderDocumentCard)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <Empty
+            className="my-16"
+            description={
+              activeSummary
+                ? `知识库“${activeSummary.name}”详情暂不可用，请稍后重试。`
+                : '请选择左侧知识库查看详情。'
+            }
+          />
+        )}
+      </Card>
 
       <input
         ref={fileInputRef}
@@ -1494,7 +1514,10 @@ export const KnowledgeManagementPage = () => {
               <Select
                 options={[
                   { value: 'global_docs', label: 'global_docs · 全局文档' },
-                  { value: 'global_code', label: 'global_code · 全局代码（预留）' },
+                  {
+                    value: 'global_code',
+                    label: 'global_code · 全局代码（预留）',
+                  },
                 ]}
               />
             </Form.Item>
@@ -1509,6 +1532,6 @@ export const KnowledgeManagementPage = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </section>
+    </GlobalAssetPageLayout>
   );
 };
