@@ -2,6 +2,7 @@ import { App, Button, Card, Empty, Pagination, Spin, Typography } from 'antd';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { extractApiErrorMessage } from '@api/error';
 import { getMembersOverview, type MemberOverviewResponseItem } from '@api/members';
+import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import { getAuthUser } from '@app/auth/user';
 import { useProjectContext } from '@app/project/useProjectContext';
 import { MemberDetailPanel } from './components/MemberDetailPanel';
@@ -34,6 +35,7 @@ export const MembersPage = () => {
   const filtersRef = useRef<HTMLDivElement | null>(null);
   const [filters, setFilters] = useState<MemberFiltersState>(DEFAULT_FILTERS);
   const [items, setItems] = useState<MemberOverviewResponseItem[]>([]);
+  const [skillsCatalog, setSkillsCatalog] = useState<SkillSummaryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
@@ -46,8 +48,23 @@ export const MembersPage = () => {
       setError(null);
 
       try {
-        const result = await getMembersOverview();
-        setItems(result.items);
+        const [membersResult, skillsResult] = await Promise.allSettled([
+          getMembersOverview(),
+          listSkills(),
+        ]);
+
+        if (membersResult.status === 'rejected') {
+          throw membersResult.reason;
+        }
+
+        setItems(membersResult.value.items);
+
+        if (skillsResult.status === 'fulfilled') {
+          setSkillsCatalog(skillsResult.value.items);
+        } else {
+          console.error('[MembersPage] 加载 Skill 目录失败:', skillsResult.reason);
+          setSkillsCatalog([]);
+        }
       } catch (currentError) {
         console.error('[MembersPage] 加载成员概览失败:', currentError);
         setError(
@@ -66,8 +83,9 @@ export const MembersPage = () => {
       items,
       projects,
       currentUserId: authUser?.id ?? null,
+      skillsCatalog,
     });
-  }, [authUser?.id, items, projects]);
+  }, [authUser?.id, items, projects, skillsCatalog]);
 
   const filteredMembers = useMemo(() => {
     return filterMemberViewModels(members, filters);
@@ -219,7 +237,7 @@ export const MembersPage = () => {
   }
 
   return (
-    <section ref={sectionRef} className="flex min-h-full flex-col gap-4 pr-4 md:pr-5">
+    <section ref={sectionRef} className="flex min-h-full flex-col gap-4">
       <Card
         className="shrink-0 rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
         styles={{ body: { padding: '22px 22px 20px' } }}

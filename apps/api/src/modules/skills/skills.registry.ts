@@ -1,22 +1,119 @@
 import type { KnowledgeSourceType } from '@modules/knowledge/knowledge.types.js';
-import type { SkillSummaryResponse } from './skills.types.js';
+import type {
+  SkillDetailResponse,
+  SkillParametersSchema,
+  SkillSummaryResponse,
+} from './skills.types.js';
 
 const DEFAULT_CODEBASE_LIMIT = 20;
 const DEFAULT_GIT_LOG_LIMIT = 20;
 const DEFAULT_TOP_K = 5;
+const BUILTIN_SKILL_TIMESTAMP = '2026-03-10T00:00:00.000Z';
 
 const KNOWLEDGE_SOURCE_OPTIONS: readonly KnowledgeSourceType[] = [
   'global_docs',
   'global_code',
 ];
 
-const BUILTIN_SKILLS: readonly SkillSummaryResponse[] = [
-  {
+const createBuiltinSkillMarkdown = (
+  skill: Pick<
+    SkillDetailResponse,
+    | 'name'
+    | 'description'
+    | 'handler'
+    | 'runtimeStatus'
+    | 'lifecycleStatus'
+    | 'parametersSchema'
+  >,
+): string => {
+  const parameterSection = !skill.parametersSchema
+    ? '当前没有额外参数。'
+    : Object.entries(skill.parametersSchema.properties)
+        .map(([parameterName, property]) => {
+          const required = skill.parametersSchema?.required.includes(parameterName)
+            ? '必填'
+            : '可选';
+          const range =
+            property.minimum !== undefined && property.maximum !== undefined
+              ? `，范围 ${property.minimum}-${property.maximum}`
+              : '';
+
+          return `- \`${parameterName}\`（${required} / ${property.type}${range}）：${property.description}`;
+        })
+        .join('\n');
+
+  return `---
+name: ${skill.name}
+description: ${skill.description}
+---
+
+# ${skill.name}
+
+- source: system
+- runtimeStatus: ${skill.runtimeStatus}
+- lifecycleStatus: ${skill.lifecycleStatus}
+- handler: ${skill.handler ?? 'N/A'}
+
+## Parameters
+
+${parameterSection}
+`;
+};
+
+const createBuiltinSkill = (skill: {
+  id: string;
+  name: string;
+  description: string;
+  type: SkillDetailResponse['type'];
+  handler: SkillDetailResponse['handler'];
+  parametersSchema: SkillParametersSchema;
+  runtimeStatus: SkillDetailResponse['runtimeStatus'];
+}): SkillDetailResponse => {
+  const skillMarkdown = createBuiltinSkillMarkdown({
+    name: skill.name,
+    description: skill.description,
+    handler: skill.handler,
+    runtimeStatus: skill.runtimeStatus,
+    lifecycleStatus: 'published',
+    parametersSchema: skill.parametersSchema,
+  });
+
+  return {
+    id: skill.id,
+    slug: skill.id,
+    name: skill.name,
+    description: skill.description,
+    type: skill.type,
+    source: 'system',
+    origin: null,
+    handler: skill.handler,
+    parametersSchema: skill.parametersSchema,
+    runtimeStatus: skill.runtimeStatus,
+    lifecycleStatus: 'published',
+    bindable: true,
+    markdownExcerpt: skill.description,
+    bundleFileCount: 1,
+    importProvenance: null,
+    skillMarkdown,
+    bundleFiles: [
+      {
+        path: 'SKILL.md',
+        size: Buffer.byteLength(skillMarkdown),
+      },
+    ],
+    createdBy: 'system',
+    createdAt: BUILTIN_SKILL_TIMESTAMP,
+    updatedAt: BUILTIN_SKILL_TIMESTAMP,
+    publishedAt: BUILTIN_SKILL_TIMESTAMP,
+  };
+};
+
+const BUILTIN_SKILLS: readonly SkillDetailResponse[] = [
+  createBuiltinSkill({
     id: 'search_codebase',
     name: '搜索代码库',
     description: '按关键词或路径范围搜索当前仓库中的代码与配置片段。',
     type: 'repository_search',
-    source: 'system',
     handler: 'repository.search_codebase',
     parametersSchema: {
       type: 'object',
@@ -41,14 +138,13 @@ const BUILTIN_SKILLS: readonly SkillSummaryResponse[] = [
       },
       required: ['query'],
     },
-    status: 'contract_only',
-  },
-  {
+    runtimeStatus: 'contract_only',
+  }),
+  createBuiltinSkill({
     id: 'check_git_log',
     name: '检查 Git 历史',
     description: '查询提交历史、提交人和时间窗口，用于辅助回溯变更上下文。',
     type: 'repository_inspection',
-    source: 'system',
     handler: 'repository.check_git_log',
     parametersSchema: {
       type: 'object',
@@ -73,14 +169,13 @@ const BUILTIN_SKILLS: readonly SkillSummaryResponse[] = [
       },
       required: [],
     },
-    status: 'contract_only',
-  },
-  {
+    runtimeStatus: 'contract_only',
+  }),
+  createBuiltinSkill({
     id: 'search_documents',
     name: '搜索知识文档',
     description: '复用服务端统一知识检索能力查询全局知识库文档，不直连底层 Chroma。',
     type: 'knowledge_search',
-    source: 'system',
     handler: 'knowledge.search_documents',
     parametersSchema: {
       type: 'object',
@@ -111,15 +206,22 @@ const BUILTIN_SKILLS: readonly SkillSummaryResponse[] = [
       },
       required: ['query'],
     },
-    status: 'available',
-  },
+    runtimeStatus: 'available',
+  }),
 ] as const;
 
-export const listRegisteredSkills = (): SkillSummaryResponse[] => {
-  return Array.from(BUILTIN_SKILLS, (skill) => structuredClone(skill));
+const toSkillSummary = (
+  skill: SkillDetailResponse,
+): SkillSummaryResponse => {
+  const { skillMarkdown: _skillMarkdown, bundleFiles: _bundleFiles, ...summary } = skill;
+  return structuredClone(summary);
 };
 
-export const findRegisteredSkillById = (skillId: string): SkillSummaryResponse | null => {
+export const listRegisteredSkills = (): SkillSummaryResponse[] => {
+  return Array.from(BUILTIN_SKILLS, (skill) => toSkillSummary(skill));
+};
+
+export const findRegisteredSkillById = (skillId: string): SkillDetailResponse | null => {
   const skill = BUILTIN_SKILLS.find((item) => item.id === skillId);
   return skill ? structuredClone(skill) : null;
 };

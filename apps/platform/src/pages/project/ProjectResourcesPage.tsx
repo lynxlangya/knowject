@@ -30,8 +30,13 @@ export const ProjectResourcesPage = () => {
     activeProject,
     knowledgeCatalog,
     knowledgeCatalogError,
+    skillsCatalog,
+    skillsCatalogError,
   } = useProjectPageContext();
-  const groups = getProjectResourceGroups(activeProject, knowledgeCatalog);
+  const groups = getProjectResourceGroups(activeProject, {
+    knowledgeCatalog,
+    skillsCatalog,
+  });
   const rawFocus = searchParams.get('focus');
   const focus = isProjectResourceFocus(rawFocus) ? rawFocus : null;
   const knowledgeRef = useRef<HTMLDivElement>(null);
@@ -140,6 +145,15 @@ export const ProjectResourcesPage = () => {
             showIcon
             message="知识库元数据加载失败"
             description={knowledgeCatalogError}
+          />
+        ) : null}
+
+        {skillsCatalogError ? (
+          <Alert
+            type="warning"
+            showIcon
+            message="Skill 元数据加载失败"
+            description={skillsCatalogError}
           />
         ) : null}
 

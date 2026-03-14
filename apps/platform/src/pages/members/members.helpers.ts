@@ -1,5 +1,6 @@
 import type { MemberOverviewResponseItem } from '@api/members';
 import type { ProjectRole } from '@api/projects';
+import type { SkillSummaryResponse } from '@api/skills';
 import {
   GLOBAL_ASSET_TITLES,
   getCatalogMembers,
@@ -167,6 +168,32 @@ const resolveMemberAsset = (
   return getGlobalAssetById(type, id) ?? buildUnknownAssetItem(type, id);
 };
 
+const resolveSkillAsset = (
+  id: string,
+  skillsCatalog: SkillSummaryResponse[],
+): GlobalAssetItem => {
+  const skill = skillsCatalog.find((item) => item.id === id);
+
+  if (!skill) {
+    return buildUnknownAssetItem('skills', id);
+  }
+
+  return {
+    id: skill.id,
+    type: 'skills',
+    name: skill.name,
+    description: skill.description,
+    updatedAt: dateTimeFormatter.format(new Date(skill.updatedAt)),
+    owner:
+      skill.source === 'system'
+        ? '系统内置'
+        : skill.source === 'imported'
+          ? '公网导入'
+          : '当前团队',
+    usageCount: 0,
+  };
+};
+
 const dedupeAssets = (items: GlobalAssetItem[]): GlobalAssetItem[] => {
   const assetMap = new Map<string, GlobalAssetItem>();
 
@@ -227,6 +254,7 @@ const buildMemberProjects = (
 const buildMemberAssets = (
   memberProjects: MemberProjectViewModel[],
   projects: ProjectSummary[],
+  skillsCatalog: SkillSummaryResponse[],
 ): MemberAssetSummary => {
   const projectMap = new Map(projects.map((project) => [project.id, project] as const));
   const knowledgeIds = new Set<string>();
@@ -255,7 +283,7 @@ const buildMemberAssets = (
       Array.from(knowledgeIds).map((id) => resolveMemberAsset('knowledge', id)),
     ),
     skills: dedupeAssets(
-      Array.from(skillIds).map((id) => resolveMemberAsset('skills', id)),
+      Array.from(skillIds).map((id) => resolveSkillAsset(id, skillsCatalog)),
     ),
     agents: dedupeAssets(
       Array.from(agentIds).map((id) => resolveMemberAsset('agents', id)),
@@ -267,10 +295,12 @@ export const buildMemberViewModels = ({
   items,
   projects,
   currentUserId,
+  skillsCatalog,
 }: {
   items: MemberOverviewResponseItem[];
   projects: ProjectSummary[];
   currentUserId: string | null;
+  skillsCatalog: SkillSummaryResponse[];
 }): MemberViewModel[] => {
   const avatarMap = new Map(
     getCatalogMembers().map((member) => [member.id, member.avatarUrl] as const),
@@ -280,7 +310,7 @@ export const buildMemberViewModels = ({
   return items.map((item) => {
     const memberProjects = buildMemberProjects(item, projects, snapshotIndex);
     const primaryProject = pickPrimaryProject(memberProjects);
-    const assets = buildMemberAssets(memberProjects, projects);
+    const assets = buildMemberAssets(memberProjects, projects, skillsCatalog);
     const responsibilityTags = Array.from(
       new Set(memberProjects.flatMap((project) => project.responsibilityTags)),
     ).slice(0, 6);

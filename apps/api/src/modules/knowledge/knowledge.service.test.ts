@@ -39,6 +39,9 @@ const createTestEnv = (storageRoot: string): AppEnv => {
       indexerUrl: 'http://127.0.0.1:8001',
       indexerRequestTimeoutMs: 1000,
     },
+    skills: {
+      storageRoot: '/tmp/knowject-skills',
+    },
     openai: {
       apiKey: null,
       baseUrl: 'https://api.openai.com/v1',

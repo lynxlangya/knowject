@@ -4,6 +4,7 @@ import {
   readOptionalStringField,
 } from '@lib/validation.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
+import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
 import { ProjectsRepository } from './projects.repository.js';
 import {
   buildProjectMemberProfileMap,
@@ -193,9 +194,11 @@ const applyProjectPatch = (
 export const createProjectsService = ({
   repository,
   authRepository,
+  skillBindingValidator,
 }: {
   repository: ProjectsRepository;
   authRepository: AuthRepository;
+  skillBindingValidator: SkillBindingValidator;
 }): ProjectsService => {
   return {
     listProjects: async ({ actor }) => {
@@ -248,6 +251,9 @@ export const createProjectsService = ({
         agentIds,
         skillIds,
       } = validateCreateProjectInput(input);
+      await skillBindingValidator.assertBindableSkillIds(skillIds, {
+        fieldName: 'skillIds',
+      });
       const now = new Date();
       const project = await repository.createProject({
         name,
@@ -269,6 +275,13 @@ export const createProjectsService = ({
     updateProject: async ({ actor }, projectId, input) => {
       const currentProject = await requireAdminProject(repository, projectId, actor);
       const patch = validateUpdateProjectInput(input);
+
+      if (patch.skillIds !== undefined) {
+        await skillBindingValidator.assertBindableSkillIds(patch.skillIds, {
+          fieldName: 'skillIds',
+        });
+      }
+
       const updatedProject = await repository.updateProject(
         currentProject._id.toHexString(),
         applyProjectPatch(currentProject, patch),

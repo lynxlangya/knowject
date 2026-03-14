@@ -116,6 +116,28 @@ const buildPromptPreview = (systemPrompt: string): string => {
   return normalized.length > 60 ? `${normalized.slice(0, 60)}…` : normalized;
 };
 
+const resolveSelectableOptions = (
+  selectedIds: string[],
+  baseOptions: Array<{ value: string; label: string }>,
+): Array<{ value: string; label: string }> => {
+  const optionMap = new Map(
+    baseOptions.map((option) => [option.value, option] as const),
+  );
+
+  selectedIds.forEach((resourceId) => {
+    if (optionMap.has(resourceId)) {
+      return;
+    }
+
+    optionMap.set(resourceId, {
+      value: resourceId,
+      label: `未知 Skill（${resourceId}）`,
+    });
+  });
+
+  return Array.from(optionMap.values());
+};
+
 const filterAgents = (
   items: AgentResponse[],
   filter: AgentSidebarFilter,
@@ -138,6 +160,7 @@ const filterAgents = (
 export const AgentsManagementPage = () => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<AgentFormValues>();
+  const selectedSkillIds = Form.useWatch('boundSkillIds', form) ?? [];
   const agentCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [items, setItems] = useState<AgentResponse[]>([]);
   const [knowledgeItems, setKnowledgeItems] = useState<
@@ -167,7 +190,7 @@ export const AgentsManagementPage = () => {
 
       try {
         const [agentsResult, knowledgeResult, skillsResult] = await Promise.all(
-          [listAgents(), listKnowledge(), listSkills()],
+          [listAgents(), listKnowledge(), listSkills({ bindable: true })],
         );
 
         if (cancelled) {
@@ -217,14 +240,16 @@ export const AgentsManagementPage = () => {
   }, [knowledgeItems]);
 
   const skillOptions = useMemo(() => {
-    return skillItems.map((item) => ({
+    const baseOptions = skillItems.map((item) => ({
       value: item.id,
       label:
-        item.status === 'available'
+        item.runtimeStatus === 'available'
           ? `${item.name} · 已接服务`
           : `${item.name} · 契约预留`,
     }));
-  }, [skillItems]);
+
+    return resolveSelectableOptions(selectedSkillIds, baseOptions);
+  }, [selectedSkillIds, skillItems]);
 
   const summaryItems = useMemo(() => {
     const activeCount = items.filter((item) => item.status === 'active').length;

@@ -28,6 +28,7 @@ import { createProjectsService } from '@modules/projects/projects.service.js';
 import { createSkillsRepository } from '@modules/skills/skills.repository.js';
 import { createSkillsRouter } from '@modules/skills/skills.router.js';
 import { createSkillsService } from '@modules/skills/skills.service.js';
+import { createSkillBindingValidator } from '@modules/skills/skills.binding.js';
 import { createHealthRouter } from '@routes/health.js';
 import { createMemoryRouter } from '@routes/memory.js';
 
@@ -41,9 +42,14 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   const authRepository = createAuthRepository({ mongo });
   const authService = createAuthService({ env, repository: authRepository });
   const projectsRepository = createProjectsRepository({ mongo });
+  const skillsRepository = createSkillsRepository({ mongo });
+  const skillBindingValidator = createSkillBindingValidator({
+    repository: skillsRepository,
+  });
   const projectsService = createProjectsService({
     repository: projectsRepository,
     authRepository,
+    skillBindingValidator,
   });
   const knowledgeRepository = createKnowledgeRepository({ mongo });
   const knowledgeSearchService = createKnowledgeSearchService({ env });
@@ -53,14 +59,28 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
     searchService: knowledgeSearchService,
     authRepository,
   });
-  const skillsRepository = createSkillsRepository({ mongo });
-  const skillsService = createSkillsService({
-    repository: skillsRepository,
-  });
   const agentsRepository = createAgentsRepository({ mongo });
+  const skillsService = createSkillsService({
+    env,
+    repository: skillsRepository,
+    usageLookup: {
+      countManagedSkillReferences: async (skillId) => {
+        const [projectCount, agentCount] = await Promise.all([
+          projectsRepository.countBySkillId(skillId),
+          agentsRepository.countByBoundSkillId(skillId),
+        ]);
+
+        return {
+          projectCount,
+          agentCount,
+        };
+      },
+    },
+  });
   const agentsService = createAgentsService({
     repository: agentsRepository,
     knowledgeRepository,
+    skillBindingValidator,
   });
   const membershipsService = createMembershipsService({
     projectsRepository,
@@ -111,6 +131,8 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/knowledge/:knowledgeId',
         '/api/knowledge/:knowledgeId/documents',
         '/api/skills',
+        '/api/skills/:skillId',
+        '/api/skills/import',
         '/api/agents',
         '/api/agents/:agentId',
         '/api/memory/overview',

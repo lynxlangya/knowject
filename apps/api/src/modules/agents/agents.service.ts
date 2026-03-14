@@ -5,7 +5,7 @@ import {
   readOptionalStringField,
 } from '@lib/validation.js';
 import type { KnowledgeRepository } from '@modules/knowledge/knowledge.repository.js';
-import { findRegisteredSkillById } from '@modules/skills/skills.registry.js';
+import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
 import type { AgentsRepository } from './agents.repository.js';
 import { toAgentResponse } from './agents.shared.js';
 import type {
@@ -240,16 +240,6 @@ const applyAgentPatch = (
   };
 };
 
-const validateBoundSkillIds = (skillIds: string[]): void => {
-  const invalidSkillIds = skillIds.filter((skillId) => !findRegisteredSkillById(skillId));
-
-  if (invalidSkillIds.length > 0) {
-    throw createValidationAppError('存在未注册的 Skill 绑定', {
-      boundSkillIds: `以下 Skill 不存在：${invalidSkillIds.join(', ')}`,
-    });
-  }
-};
-
 const validateBoundKnowledgeIds = async (
   knowledgeRepository: KnowledgeRepository,
   knowledgeIds: string[],
@@ -273,9 +263,11 @@ const validateBoundKnowledgeIds = async (
 export const createAgentsService = ({
   repository,
   knowledgeRepository,
+  skillBindingValidator,
 }: {
   repository: AgentsRepository;
   knowledgeRepository: KnowledgeRepository;
+  skillBindingValidator: SkillBindingValidator;
 }): AgentsService => {
   return {
     listAgents: async () => {
@@ -301,7 +293,9 @@ export const createAgentsService = ({
     createAgent: async ({ actor }, input) => {
       const document = validateCreateAgentInput(input, actor.id);
 
-      validateBoundSkillIds(document.boundSkillIds);
+      await skillBindingValidator.assertBindableSkillIds(document.boundSkillIds, {
+        fieldName: 'boundSkillIds',
+      });
       await validateBoundKnowledgeIds(knowledgeRepository, document.boundKnowledgeIds);
 
       const agent = await repository.createAgent(document);
@@ -320,7 +314,9 @@ export const createAgentsService = ({
       const patch = validateUpdateAgentInput(input);
 
       if (patch.boundSkillIds !== undefined) {
-        validateBoundSkillIds(patch.boundSkillIds);
+        await skillBindingValidator.assertBindableSkillIds(patch.boundSkillIds, {
+          fieldName: 'boundSkillIds',
+        });
       }
 
       if (patch.boundKnowledgeIds !== undefined) {

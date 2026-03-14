@@ -42,6 +42,11 @@ export class ProjectsRepository {
     return collection.findOne({ _id: objectId });
   }
 
+  async countBySkillId(skillId: string): Promise<number> {
+    const collection = await this.getCollection();
+    return collection.countDocuments({ skillIds: skillId });
+  }
+
   async createProject(document: Omit<ProjectDocument, '_id'>): Promise<WithId<ProjectDocument>> {
     const collection = await this.getCollection();
     const result = await collection.insertOne(document);
@@ -140,6 +145,7 @@ export class ProjectsRepository {
       this.ensureIndexesPromise = Promise.all([
         collection.createIndex({ 'members.userId': 1 }, { name: 'projects_members_user_id' }),
         collection.createIndex({ ownerId: 1 }, { name: 'projects_owner_id' }),
+        collection.createIndex({ skillIds: 1 }, { name: 'projects_skill_ids' }),
       ])
         .then(() => {
           this.indexesEnsured = true;

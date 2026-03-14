@@ -1,4 +1,5 @@
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
+import type { SkillSummaryResponse } from '@api/skills';
 import { useOutletContext } from 'react-router-dom';
 import type {
   ConversationSummary,
@@ -14,6 +15,9 @@ export interface ProjectPageContextValue extends ProjectWorkspaceSnapshot {
   knowledgeCatalog: KnowledgeSummaryResponse[];
   knowledgeCatalogLoading: boolean;
   knowledgeCatalogError: string | null;
+  skillsCatalog: SkillSummaryResponse[];
+  skillsCatalogLoading: boolean;
+  skillsCatalogError: string | null;
 }
 
 export const useProjectPageContext = (): ProjectPageContextValue => {

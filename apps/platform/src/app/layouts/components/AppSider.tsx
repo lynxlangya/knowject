@@ -27,6 +27,7 @@ import {
 import type { MenuProps } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import { listKnowledge } from "@api/knowledge";
+import { listSkills } from "@api/skills";
 import { KNOWJECT_BRAND } from "@styles/brand";
 import { getMenuPath, menuItems } from "@app/navigation/menu";
 import {
@@ -38,7 +39,6 @@ import { getAuthUser } from "@app/auth/user";
 import {
   GLOBAL_AGENT_OPTIONS,
   GLOBAL_KNOWLEDGE_OPTIONS,
-  GLOBAL_SKILL_OPTIONS,
 } from "@app/project/project.catalog";
 import type { ProjectSummary } from "@app/project/project.types";
 import { useProjectContext } from "@app/project/useProjectContext";
@@ -112,7 +112,11 @@ export const AppSider = ({
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectSubmitting, setProjectSubmitting] = useState(false);
   const [knowledgeOptionsLoading, setKnowledgeOptionsLoading] = useState(false);
+  const [skillOptionsLoading, setSkillOptionsLoading] = useState(false);
   const [knowledgeOptions, setKnowledgeOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [skillOptions, setSkillOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
@@ -155,23 +159,51 @@ export const AppSider = ({
   }, [editingProject, form, projectModalOpen]);
 
   useEffect(() => {
+    if (!projectModalOpen) {
+      return;
+    }
+
     let isMounted = true;
 
-    const loadKnowledgeOptions = async () => {
+    const loadProjectResourceOptions = async () => {
       setKnowledgeOptionsLoading(true);
+      setSkillOptionsLoading(true);
 
       try {
-        const result = await listKnowledge();
+        const [knowledgeResult, skillResult] = await Promise.allSettled([
+          listKnowledge(),
+          listSkills({ bindable: true }),
+        ]);
         if (!isMounted) {
           return;
         }
 
-        setKnowledgeOptions(
-          result.items.map((item) => ({
-            value: item.id,
-            label: item.name,
-          })),
-        );
+        if (knowledgeResult.status === "fulfilled") {
+          setKnowledgeOptions(
+            knowledgeResult.value.items.map((item) => ({
+              value: item.id,
+              label: item.name,
+            })),
+          );
+        } else {
+          console.error(knowledgeResult.reason);
+          setKnowledgeOptions([]);
+        }
+
+        if (skillResult.status === "fulfilled") {
+          setSkillOptions(
+            skillResult.value.items.map((item) => ({
+              value: item.id,
+              label:
+                item.runtimeStatus === "available"
+                  ? `${item.name} · 已接服务`
+                  : `${item.name} · 契约预留`,
+            })),
+          );
+        } else {
+          console.error(skillResult.reason);
+          setSkillOptions([]);
+        }
       } catch (loadError) {
         if (!isMounted) {
           return;
@@ -179,19 +211,21 @@ export const AppSider = ({
 
         console.error(loadError);
         setKnowledgeOptions([]);
+        setSkillOptions([]);
       } finally {
         if (isMounted) {
           setKnowledgeOptionsLoading(false);
+          setSkillOptionsLoading(false);
         }
       }
     };
 
-    void loadKnowledgeOptions();
+    void loadProjectResourceOptions();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [projectModalOpen]);
 
   const resolvedKnowledgeOptions = (() => {
     const optionMap = new Map(
@@ -227,7 +261,7 @@ export const AppSider = ({
   );
   const resolvedSkillOptions = resolveBoundResourceOptions(
     selectedSkillIds,
-    GLOBAL_SKILL_OPTIONS,
+    skillOptions,
   );
 
   const handleOpenProject = (projectId: string) => {
@@ -845,7 +879,9 @@ export const AppSider = ({
               mode="multiple"
               allowClear
               placeholder="可选"
+              loading={skillOptionsLoading}
               options={resolvedSkillOptions}
+              notFoundContent={skillOptionsLoading ? "加载中..." : "暂无可选 Skill"}
             />
           </Form.Item>
         </Form>

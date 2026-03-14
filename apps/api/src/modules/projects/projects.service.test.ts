@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ObjectId } from 'mongodb';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
+import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
 import { createProjectsService } from './projects.service.js';
 import type { ProjectsRepository } from './projects.repository.js';
 import type { ProjectDocument } from './projects.types.js';
@@ -15,6 +16,17 @@ const createAuthRepositoryStub = (): AuthRepository => {
         name: userId === 'user-1' ? 'Langya' : `User ${userId}`,
       })),
   } as unknown as AuthRepository;
+};
+
+const createSkillBindingValidatorStub = (
+  implementation?: (
+    skillIds: string[],
+    options: { fieldName: 'boundSkillIds' | 'skillIds' },
+  ) => Promise<void>,
+): SkillBindingValidator => {
+  return {
+    assertBindableSkillIds: implementation ?? (async () => undefined),
+  };
 };
 
 test('createProject persists resource bindings into the formal project model', async () => {
@@ -34,6 +46,7 @@ test('createProject persists resource bindings into the formal project model', a
   const service = createProjectsService({
     repository,
     authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   const response = await service.createProject(
@@ -99,6 +112,7 @@ test('listProjectConversations returns a default formal conversation when the pr
   const service = createProjectsService({
     repository,
     authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   const result = await service.listProjectConversations(
@@ -153,6 +167,7 @@ test('updateProject accepts resource-binding-only patches', async () => {
   const service = createProjectsService({
     repository,
     authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   const result = await service.updateProject(
@@ -174,4 +189,33 @@ test('updateProject accepts resource-binding-only patches', async () => {
   assert.deepEqual(result.knowledgeBaseIds, ['kb-real-1']);
   assert.deepEqual(result.agentIds, ['agent-keep']);
   assert.deepEqual(result.skillIds, ['skill-keep']);
+});
+
+test('createProject rejects unbindable managed skill ids', async () => {
+  const service = createProjectsService({
+    repository: {} as ProjectsRepository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(async (skillIds) => {
+      if (skillIds.includes('draft-skill')) {
+        throw new Error('draft skill');
+      }
+    }),
+  });
+
+  await assert.rejects(
+    () =>
+      service.createProject(
+        {
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+        },
+        {
+          name: '非法 Skill 绑定',
+          skillIds: ['draft-skill'],
+        },
+      ),
+    /draft skill/,
+  );
 });

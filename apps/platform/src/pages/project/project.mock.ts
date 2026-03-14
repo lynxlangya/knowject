@@ -1,4 +1,5 @@
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
+import type { SkillSummaryResponse } from '@api/skills';
 import {
   GLOBAL_ASSET_TITLES,
   getCatalogMembers,
@@ -252,8 +253,14 @@ const buildMissingProjectResourceItem = (
 const mapProjectResources = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
   focus: ProjectResourceFocus,
-  knowledgeCatalog: KnowledgeSummaryResponse[] = [],
+  catalogs: {
+    knowledgeCatalog?: KnowledgeSummaryResponse[];
+    skillsCatalog?: SkillSummaryResponse[];
+  } = {},
 ): ProjectResourceItem[] => {
+  const knowledgeCatalog = catalogs.knowledgeCatalog ?? [];
+  const skillsCatalog = catalogs.skillsCatalog ?? [];
+
   if (focus === 'knowledge') {
     const knowledgeById = new Map(
       knowledgeCatalog.map((knowledge) => [knowledge.id, knowledge] as const),
@@ -301,6 +308,36 @@ const mapProjectResources = (
       .filter(Boolean);
   }
 
+  if (focus === 'skills') {
+    const skillsById = new Map(
+      skillsCatalog.map((skill) => [skill.id, skill] as const),
+    );
+
+    return getResourceIdsByFocus(project, focus).map((resourceId) => {
+      const skill = skillsById.get(resourceId);
+
+      if (skill) {
+        return {
+          id: skill.id,
+          type: 'skills' as const,
+          name: skill.name,
+          description: skill.description,
+          updatedAt: compactDateFormatter.format(new Date(skill.updatedAt)),
+          owner:
+            skill.source === 'system'
+              ? '系统内置'
+              : skill.source === 'imported'
+                ? '公网导入'
+                : '当前团队',
+          usageCount: 0,
+          source: 'global' as const,
+        };
+      }
+
+      return buildMissingProjectResourceItem(focus, resourceId);
+    });
+  }
+
   return getResourceIdsByFocus(project, focus)
     .map((resourceId) => {
       const resource = getGlobalAssetById(focus, resourceId);
@@ -333,13 +370,16 @@ export const getProjectMembers = (
 
 export const getProjectResourceGroups = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
-  knowledgeCatalog: KnowledgeSummaryResponse[] = [],
+  catalogs: {
+    knowledgeCatalog?: KnowledgeSummaryResponse[];
+    skillsCatalog?: SkillSummaryResponse[];
+  } = {},
 ): ProjectResourceGroup[] => {
   return (['knowledge', 'skills', 'agents'] as const).map((focus) => ({
     key: focus,
     title: RESOURCE_GROUP_COPY[focus].title,
     description: RESOURCE_GROUP_COPY[focus].description,
-    items: mapProjectResources(project, focus, knowledgeCatalog),
+    items: mapProjectResources(project, focus, catalogs),
   }));
 };
 
@@ -367,10 +407,13 @@ export const getProjectWorkspaceSnapshot = (
 
 export const getRecentProjectResources = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
-  knowledgeCatalog: KnowledgeSummaryResponse[] = [],
+  catalogs: {
+    knowledgeCatalog?: KnowledgeSummaryResponse[];
+    skillsCatalog?: SkillSummaryResponse[];
+  } = {},
   limit = 4,
 ): ProjectResourceItem[] => {
-  return getProjectResourceGroups(project, knowledgeCatalog)
+  return getProjectResourceGroups(project, catalogs)
     .flatMap((group) => group.items)
     .slice(0, limit);
 };

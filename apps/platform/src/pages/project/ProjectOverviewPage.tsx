@@ -24,9 +24,13 @@ export const ProjectOverviewPage = () => {
     conversations,
     conversationsError,
     knowledgeCatalog,
+    skillsCatalog,
   } = useProjectPageContext();
   const recentConversations = conversations.slice(0, 3);
-  const recentResources = getRecentProjectResources(activeProject, knowledgeCatalog);
+  const recentResources = getRecentProjectResources(activeProject, {
+    knowledgeCatalog,
+    skillsCatalog,
+  });
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">

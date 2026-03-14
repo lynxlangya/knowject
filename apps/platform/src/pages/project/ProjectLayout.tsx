@@ -3,6 +3,7 @@ import { Alert, Button, Skeleton } from 'antd';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { extractApiErrorMessage } from '@api/error';
 import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
+import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import {
   listProjectConversations,
   type ProjectConversationSummaryResponse,
@@ -32,6 +33,9 @@ export const ProjectLayout = () => {
   >([]);
   const [knowledgeCatalogLoading, setKnowledgeCatalogLoading] = useState(false);
   const [knowledgeCatalogError, setKnowledgeCatalogError] = useState<string | null>(null);
+  const [skillsCatalog, setSkillsCatalog] = useState<SkillSummaryResponse[]>([]);
+  const [skillsCatalogLoading, setSkillsCatalogLoading] = useState(false);
+  const [skillsCatalogError, setSkillsCatalogError] = useState<string | null>(null);
   const activeProject = projectId ? getProjectById(projectId) : null;
 
   useEffect(() => {
@@ -44,10 +48,12 @@ export const ProjectLayout = () => {
     const loadProjectPageData = async () => {
       setConversationsLoading(true);
       setKnowledgeCatalogLoading(true);
+      setSkillsCatalogLoading(true);
 
-      const [conversationsResult, knowledgeResult] = await Promise.allSettled([
+      const [conversationsResult, knowledgeResult, skillsResult] = await Promise.allSettled([
         listProjectConversations(activeProject.id),
         listKnowledge(),
+        listSkills(),
       ]);
 
       if (!isMounted) {
@@ -88,8 +94,26 @@ export const ProjectLayout = () => {
         );
       }
 
+      if (skillsResult.status === 'fulfilled') {
+        setSkillsCatalog(skillsResult.value.items);
+        setSkillsCatalogError(null);
+      } else {
+        console.error(
+          '[ProjectLayout] 加载 Skill 目录失败:',
+          skillsResult.reason,
+        );
+        setSkillsCatalog([]);
+        setSkillsCatalogError(
+          extractApiErrorMessage(
+            skillsResult.reason,
+            '加载 Skill 元数据失败，请稍后重试。',
+          ),
+        );
+      }
+
       setConversationsLoading(false);
       setKnowledgeCatalogLoading(false);
+      setSkillsCatalogLoading(false);
     };
 
     void loadProjectPageData();
@@ -187,6 +211,9 @@ export const ProjectLayout = () => {
             knowledgeCatalog,
             knowledgeCatalogLoading,
             knowledgeCatalogError,
+            skillsCatalog,
+            skillsCatalogLoading,
+            skillsCatalogError,
           }}
         />
       </div>

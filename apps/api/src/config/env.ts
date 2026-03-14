@@ -31,6 +31,9 @@ export interface AppEnv {
     indexerUrl: string;
     indexerRequestTimeoutMs: number;
   };
+  skills: {
+    storageRoot: string;
+  };
   openai: {
     apiKey: string | null;
     baseUrl: string;
@@ -271,6 +274,11 @@ export const getEnv = (): AppEnv => {
         'KNOWLEDGE_INDEXER_TIMEOUT_MS',
         15000,
       ),
+    },
+    skills: {
+      storageRoot:
+        readOptionalString('SKILLS_STORAGE_ROOT') ??
+        join(workspaceRoot, '.knowject-storage', 'skills'),
     },
     openai: {
       apiKey: readOptionalString('OPENAI_API_KEY'),

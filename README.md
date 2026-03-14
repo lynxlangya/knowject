@@ -11,11 +11,11 @@ The repository is currently in an active foundation stage: the product shell, au
 ## Current Status
 
 - `apps/platform` already provides the authenticated shell, project routes, member management UI, and formal global knowledge/skill/agent management pages.
-- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, knowledge metadata CRUD/upload/search endpoints, the builtin `skills` registry/read APIs, formal `agents` CRUD/binding APIs, and demo `memory` endpoints.
+- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, knowledge metadata CRUD/upload/search endpoints, formal skill asset CRUD/import/publish APIs, formal `agents` CRUD/binding APIs, and demo `memory` endpoints.
 - Project lists, project basics, member rosters, project resource bindings, project conversation summaries/details, and the global members overview already use `/api/projects*` and `/api/members`.
 - `knowject_project_resource_bindings` now remains only as a one-time migration source for historical local data; runtime resource bindings are persisted on project documents.
-- Project overview still uses local display supplements for member collaboration snapshots and some fallback copy, while `/project/:projectId/resources` still falls back to local catalog data for `skills / agents`.
-- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; project-side `skills / agents` consumption still uses local fallback catalog data.
+- Project overview still uses local display supplements for member collaboration snapshots and some fallback copy, while `/project/:projectId/resources` still uses local fallback catalog data for `agents`.
+- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; project-side skill consumption is already backed by `/api/skills`, while `agents` still keep local display fallback.
 - `GET /api/projects/:projectId/conversations` and `GET /api/projects/:projectId/conversations/:conversationId` now provide the current project chat read-side; message creation is not implemented yet.
 - `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`, `DELETE /api/knowledge/:knowledgeId/documents/:documentId`, and `POST /api/knowledge/search` are available end-to-end for the current GA-07 knowledge flow.
 - JSON API responses now share the same envelope contract: `code`, `message`, `data`, and `meta`; frontend API wrappers unwrap `data` before UI consumption.

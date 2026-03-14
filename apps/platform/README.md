@@ -27,13 +27,13 @@
 
 - `src/app/project/ProjectContext.tsx`：项目列表与项目快照的运行时主状态源；组件初始化时会一次性清理已退役的 `knowject_project_resource_bindings` 与 `knowject_projects`。
 - `src/app/project/project.storage.ts`：仅负责 `knowject_project_pins` 的本地持久化。
-- `src/app/project/project.catalog.ts`：项目资源页所需的 `skills / agents` 目录 fallback 与成员基础档案 Mock 源。
-- `src/pages/project/project.mock.ts`：项目概览补充文案、成员协作快照，以及项目资源页的展示 fallback；当 `skills / agents` 绑定了未知 ID 时，会渲染占位项而不是静默丢失。
+- `src/app/project/project.catalog.ts`：项目资源页所需的 `agents` 目录 fallback 与成员基础档案 Mock 源；Skill 选项与展示已优先消费正式 `/api/skills`。
+- `src/pages/project/project.mock.ts`：项目概览补充文案、成员协作快照，以及项目资源展示映射；Skill 元数据优先来自正式目录，未知 `skills / agents` ID 会渲染占位项而不是静默丢失。
 - `src/api`：登录、项目、项目对话、成员、知识库、技能、智能体接口封装，以及统一错误提取 helper；项目列表、项目基础信息、项目资源绑定、项目对话读链路、全局成员概览、成员 roster、全局知识库、全局技能目录与全局智能体管理页已接入真实后端。
 - `src/api/*` 当前统一按 `ApiEnvelope<T>` 调用后端，并在 API 层解包 `data`；页面层继续消费原有业务对象，不直接感知 `code / message / meta`。
 - `/knowledge` 主要消费 `GET /api/knowledge`、`GET /api/knowledge/:knowledgeId`、`POST /api/knowledge`、`PATCH /api/knowledge/:knowledgeId`、`DELETE /api/knowledge/:knowledgeId` 与 `POST /api/knowledge/:knowledgeId/documents`；当前正式上传链路支持 `md / markdown / txt`，界面文案统一推荐 `.md / .txt`。
 - `/project/:projectId/chat` 主要消费 `GET /api/projects/:projectId/conversations` 与 `GET /api/projects/:projectId/conversations/:conversationId`；当前输入框仍保持禁用，等待正式消息写路径。
-- `/project/:projectId/resources` 主要消费后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`；其中知识库元数据优先来自 `/api/knowledge`，`skills / agents` 仍用本地目录 fallback，未知资源会展示占位卡片。
+- `/project/:projectId/resources` 主要消费后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`；其中知识库与 Skill 元数据优先来自 `/api/knowledge`、`/api/skills`，`agents` 仍用本地目录 fallback，未知资源会展示占位卡片。
 - `/members` 主要消费 `GET /api/members`；`/project/:projectId/members` 主要消费 `GET /api/auth/users` 与 `/api/projects/:projectId/members*`。
 
 ## 核心目录

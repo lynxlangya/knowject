@@ -3,6 +3,9 @@ import test from 'node:test';
 import { ObjectId } from 'mongodb';
 import { AppError } from '@lib/app-error.js';
 import type { KnowledgeRepository } from '@modules/knowledge/knowledge.repository.js';
+import { createSkillBindingValidator } from '@modules/skills/skills.binding.js';
+import type { SkillsRepository } from '@modules/skills/skills.repository.js';
+import type { SkillDocument } from '@modules/skills/skills.types.js';
 import { DEFAULT_AGENT_MODEL } from './agents.types.js';
 import type { AgentDocument } from './agents.types.js';
 import type { AgentsRepository } from './agents.repository.js';
@@ -17,6 +20,63 @@ const createKnowledgeRepositoryStub = (
         ? ({ _id: new ObjectId('507f1f77bcf86cd799439081') } as never)
         : null,
   } as unknown as KnowledgeRepository;
+};
+
+const createSkillBindingValidatorStub = (
+  managedSkills: Array<SkillDocument & { _id: NonNullable<SkillDocument['_id']> }> = [],
+) => {
+  return createSkillBindingValidator({
+    repository: {
+      findSkillsByIds: async (skillIds: string[]) =>
+        managedSkills.filter((skill) => skillIds.includes(skill._id.toHexString())),
+    } as Pick<SkillsRepository, 'findSkillsByIds'>,
+  });
+};
+
+const createManagedSkill = ({
+  id = new ObjectId(),
+  name,
+  lifecycleStatus,
+}: {
+  id?: ObjectId;
+  name: string;
+  lifecycleStatus: 'draft' | 'published';
+}): SkillDocument & { _id: NonNullable<SkillDocument['_id']> } => {
+  const markdown = `---
+name: ${name}
+description: ${name} description
+---
+
+# ${name}
+`;
+
+  return {
+    _id: id,
+    name,
+    slug: name.toLowerCase().replace(/\s+/g, '-'),
+    description: `${name} description`,
+    type: 'markdown_bundle',
+    source: 'custom',
+    origin: 'manual',
+    handler: null,
+    parametersSchema: null,
+    runtimeStatus: 'contract_only',
+    lifecycleStatus,
+    skillMarkdown: markdown,
+    markdownExcerpt: `${name} description`,
+    storagePath: id.toHexString(),
+    bundleFiles: [
+      {
+        path: 'SKILL.md',
+        size: Buffer.byteLength(markdown),
+      },
+    ],
+    importProvenance: null,
+    createdBy: 'user-1',
+    publishedAt: lifecycleStatus === 'published' ? new Date('2026-03-14T00:00:00.000Z') : null,
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
 };
 
 test('createAgent persists validated bindings with server-fixed model defaults', async () => {
@@ -36,6 +96,7 @@ test('createAgent persists validated bindings with server-fixed model defaults',
   const service = createAgentsService({
     repository,
     knowledgeRepository: createKnowledgeRepositoryStub(['kb-1', 'kb-2']),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   const result = await service.createAgent(
@@ -74,6 +135,7 @@ test('createAgent rejects unknown builtin skill ids', async () => {
   const service = createAgentsService({
     repository: {} as AgentsRepository,
     knowledgeRepository: createKnowledgeRepositoryStub(['kb-1']),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   await assert.rejects(
@@ -101,10 +163,75 @@ test('createAgent rejects unknown builtin skill ids', async () => {
   );
 });
 
+test('createAgent accepts published managed skill ids and rejects draft skill ids', async () => {
+  const publishedSkill = createManagedSkill({
+    id: new ObjectId('507f1f77bcf86cd799439061'),
+    name: 'Published Skill',
+    lifecycleStatus: 'published',
+  });
+  const draftSkill = createManagedSkill({
+    id: new ObjectId('507f1f77bcf86cd799439062'),
+    name: 'Draft Skill',
+    lifecycleStatus: 'draft',
+  });
+  const service = createAgentsService({
+    repository: {
+      createAgent: async (document: Omit<AgentDocument, '_id'>) => ({
+        ...document,
+        _id: new ObjectId('507f1f77bcf86cd799439063'),
+      }),
+    } as unknown as AgentsRepository,
+    knowledgeRepository: createKnowledgeRepositoryStub(['kb-1']),
+    skillBindingValidator: createSkillBindingValidatorStub([publishedSkill, draftSkill]),
+  });
+
+  const publishedResult = await service.createAgent(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    {
+      name: '已发布 Skill 绑定',
+      systemPrompt: '测试 published managed skill',
+      boundSkillIds: [publishedSkill._id.toHexString()],
+      boundKnowledgeIds: ['kb-1'],
+    },
+  );
+
+  assert.deepEqual(publishedResult.agent.boundSkillIds, [publishedSkill._id.toHexString()]);
+
+  await assert.rejects(
+    () =>
+      service.createAgent(
+        {
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+        },
+        {
+          name: '草稿 Skill 绑定',
+          systemPrompt: '测试 draft managed skill',
+          boundSkillIds: [draftSkill._id.toHexString()],
+          boundKnowledgeIds: ['kb-1'],
+        },
+      ),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.equal(error.code, 'VALIDATION_ERROR');
+      assert.match(error.message, /Skill 绑定校验失败/);
+      return true;
+    },
+  );
+});
+
 test('createAgent rejects null body with validation error', async () => {
   const service = createAgentsService({
     repository: {} as AgentsRepository,
     knowledgeRepository: createKnowledgeRepositoryStub([]),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   await assert.rejects(
@@ -158,6 +285,7 @@ test('updateAgent accepts binding-only patches and status changes', async () => 
   const service = createAgentsService({
     repository,
     knowledgeRepository: createKnowledgeRepositoryStub(['kb-real-1']),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   const result = await service.updateAgent(
@@ -221,6 +349,7 @@ test('updateAgent allows non-binding edits when existing knowledge bindings are 
   const service = createAgentsService({
     repository,
     knowledgeRepository,
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   const result = await service.updateAgent(
@@ -263,6 +392,7 @@ test('updateAgent rejects null body with validation error', async () => {
       findAgentById: async () => existingAgent,
     } as unknown as AgentsRepository,
     knowledgeRepository: createKnowledgeRepositoryStub([]),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   await assert.rejects(
@@ -317,6 +447,7 @@ test('deleteAgent removes an existing agent configuration', async () => {
   const service = createAgentsService({
     repository,
     knowledgeRepository: createKnowledgeRepositoryStub([]),
+    skillBindingValidator: createSkillBindingValidatorStub(),
   });
 
   await service.deleteAgent(

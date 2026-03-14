@@ -45,6 +45,11 @@ export class AgentsRepository {
     return collection.findOne({ _id: objectId });
   }
 
+  async countByBoundSkillId(skillId: string): Promise<number> {
+    const collection = await this.getAgentsCollection();
+    return collection.countDocuments({ boundSkillIds: skillId });
+  }
+
   async createAgent(
     document: Omit<AgentDocument, '_id'>,
   ): Promise<WithId<AgentDocument>> {
@@ -121,6 +126,7 @@ export class AgentsRepository {
         collection.createIndex({ name: 1 }, { name: 'agents_name' }),
         collection.createIndex({ createdBy: 1 }, { name: 'agents_created_by' }),
         collection.createIndex({ updatedAt: -1 }, { name: 'agents_updated_at_desc' }),
+        collection.createIndex({ boundSkillIds: 1 }, { name: 'agents_bound_skill_ids' }),
         collection.createIndex(
           { status: 1, updatedAt: -1 },
           { name: 'agents_status_updated_at_desc' },
