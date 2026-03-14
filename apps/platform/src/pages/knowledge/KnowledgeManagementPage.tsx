@@ -9,7 +9,6 @@ import {
   PlusOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { isApiError } from '@knowject/request';
 import {
   Alert,
   App,
@@ -29,6 +28,7 @@ import {
 } from 'antd';
 import type { ChangeEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { extractApiErrorMessage } from '@api/error';
 import {
   createKnowledge,
   deleteKnowledge,
@@ -122,10 +122,10 @@ const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {
 };
 
 const DOCUMENT_UPLOAD_ACCEPT =
-  '.md,.markdown,.txt,.pdf,text/markdown,text/plain,application/pdf';
+  '.md,.markdown,.txt,text/markdown,text/plain';
 const DOCUMENT_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 const DOCUMENT_UPLOAD_SOFT_WARNING_BYTES = 20 * 1024 * 1024;
-const SUPPORTED_DOCUMENT_EXTENSIONS = ['.md', '.markdown', '.txt', '.pdf'] as const;
+const SUPPORTED_DOCUMENT_EXTENSIONS = ['.md', '.markdown', '.txt'] as const;
 const MAX_POLLING_ATTEMPTS = 20;
 const POLLING_INTERVAL_MS = 1500;
 
@@ -173,7 +173,7 @@ const validateKnowledgeSourceFile = (file: File): string | null => {
   const extension = getFileExtension(file.name);
 
   if (!SUPPORTED_DOCUMENT_EXTENSIONS.includes(extension as (typeof SUPPORTED_DOCUMENT_EXTENSIONS)[number])) {
-    return '仅支持 md、markdown、txt、pdf 文件';
+    return '仅支持 md、markdown、txt 文件';
   }
 
   if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {
@@ -494,11 +494,12 @@ export const KnowledgeManagementPage = () => {
           return;
         }
 
-        console.error(currentError);
+        console.error(
+          '[KnowledgeManagement] 加载知识库列表失败:',
+          currentError,
+        );
         setError(
-          isApiError(currentError)
-            ? currentError.message
-            : '加载知识库列表失败，请稍后重试',
+          extractApiErrorMessage(currentError, '加载知识库列表失败，请稍后重试'),
         );
       } finally {
         if (isMounted) {
@@ -542,12 +543,13 @@ export const KnowledgeManagementPage = () => {
           return;
         }
 
-        console.error(currentError);
+        console.error(
+          '[KnowledgeManagement] 加载知识库详情失败:',
+          currentError,
+        );
         setActiveKnowledge(null);
         setDetailError(
-          isApiError(currentError)
-            ? currentError.message
-            : '加载知识库详情失败，请稍后重试',
+          extractApiErrorMessage(currentError, '加载知识库详情失败，请稍后重试'),
         );
       } finally {
         if (isMounted) {
@@ -675,13 +677,17 @@ export const KnowledgeManagementPage = () => {
       reloadKnowledgeList(result.knowledge.id);
       reloadKnowledgeDetail();
     } catch (currentError) {
-      console.error(currentError);
+      console.error(
+        '[KnowledgeManagement] 创建或更新知识库失败:',
+        currentError,
+      );
       message.error(
-        isApiError(currentError)
-          ? currentError.message
-          : modalMode === 'create'
+        extractApiErrorMessage(
+          currentError,
+          modalMode === 'create'
             ? '创建知识库失败，请稍后重试'
             : '更新知识库失败，请稍后重试',
+        ),
       );
     } finally {
       setModalSubmitting(false);
@@ -708,11 +714,9 @@ export const KnowledgeManagementPage = () => {
       message.success('知识库已删除');
       reloadKnowledgeList(nextCandidateId);
     } catch (currentError) {
-      console.error(currentError);
+      console.error('[KnowledgeManagement] 删除知识库失败:', currentError);
       message.error(
-        isApiError(currentError)
-          ? currentError.message
-          : '删除知识库失败，请稍后重试',
+        extractApiErrorMessage(currentError, '删除知识库失败，请稍后重试'),
       );
     } finally {
       setDeletingKnowledgeId(null);
@@ -765,11 +769,9 @@ export const KnowledgeManagementPage = () => {
       reloadKnowledgeList(activeKnowledgeId);
       reloadKnowledgeDetail();
     } catch (currentError) {
-      console.error(currentError);
+      console.error('[KnowledgeManagement] 上传文档失败:', currentError);
       message.error(
-        isApiError(currentError)
-          ? currentError.message
-          : '上传文档失败，请稍后重试',
+        extractApiErrorMessage(currentError, '上传文档失败，请稍后重试'),
       );
     } finally {
       setUploading(false);
@@ -896,13 +898,17 @@ export const KnowledgeManagementPage = () => {
       );
       refreshDocumentStatus(activeKnowledgeId);
     } catch (currentError) {
-      console.error(currentError);
+      console.error(
+        '[KnowledgeManagement] 重试文档索引失败:',
+        currentError,
+      );
       message.error(
-        isApiError(currentError)
-          ? currentError.message
-          : document.status === 'completed'
+        extractApiErrorMessage(
+          currentError,
+          document.status === 'completed'
             ? '重新索引失败，请稍后重试'
             : '重试索引失败，请稍后重试',
+        ),
       );
     } finally {
       setRetryingDocumentId(null);
@@ -929,11 +935,9 @@ export const KnowledgeManagementPage = () => {
       message.success('文档已删除');
       refreshDocumentStatus(activeKnowledgeId);
     } catch (currentError) {
-      console.error(currentError);
+      console.error('[KnowledgeManagement] 删除文档失败:', currentError);
       message.error(
-        isApiError(currentError)
-          ? currentError.message
-          : '删除文档失败，请稍后重试',
+        extractApiErrorMessage(currentError, '删除文档失败，请稍后重试'),
       );
     } finally {
       setDeletingDocumentId(null);
@@ -1422,7 +1426,7 @@ export const KnowledgeManagementPage = () => {
                     showIcon
                     title={
                       activeKnowledge.sourceType === 'global_docs'
-                        ? '当前最稳妥上传格式是 md / txt；单文件上限 50 MB，20 MB 以上建议按主题拆分上传；pdf 仍会走失败态用于验证状态机。'
+                        ? '当前支持 .md、.txt 文档上传；单文件上限 50 MB，20 MB 以上建议按主题拆分上传。'
                         : 'global_code 当前只保留集合与契约，不做真实导入、分块或上传入口。'
                     }
                   />
@@ -1458,7 +1462,7 @@ export const KnowledgeManagementPage = () => {
                       className="my-12"
                       description={
                         activeKnowledge.sourceType === 'global_docs'
-                          ? '当前知识库还没有文档，上传一份 md 或 txt 开始索引。'
+                          ? '当前知识库还没有文档，上传一份 .md 或 .txt 开始索引。'
                           : 'global_code 当前还没有真实代码导入入口。'
                       }
                     >

@@ -32,10 +32,15 @@
   - Node 侧统一知识检索 service
   - 非版本化运维探活 `GET /health`
   - 版本化内部写侧入口 `POST /internal/v1/index/documents`
+- 当前已收口的职责边界：
+  - Node 允许保留统一知识检索 service 的 Chroma 读侧 query 例外
+  - collection init 已下沉为 `indexer-py` 写侧生命周期的一部分
 - 当前仓库尚未正式接入：
   - `global_code` 真实导入链路
   - 项目私有知识库写入与检索
   - 文档 / 知识库级重建与 retry API
+- 当前仍处于过渡态的实现：
+  - 向量 delete 的正式 Python 内部接口尚未补齐，因此 Node 代码里仍保留过渡期直连 delete TODO
 - 当前阶段（Week 3-4）的核心任务是“全局资产正式化”，不是一次做完整 AI 对话系统。
 
 ## 3. 核心决策摘要
@@ -110,6 +115,20 @@
 - 当前内部写侧入口固定为 `POST /internal/v1/index/documents`；`GET /health` 保持非版本化，供 Docker / Compose 探活使用。
 - MongoDB 中的知识库 / 文档状态迁移、`retryCount`、`lastIndexedAt`、`errorMessage` 等业务字段，统一由 Node 写入。
 - 后续如果实现形式不是独立常驻服务，也至少要保持“Node 管业务、Python 管索引”的职责边界不变。
+
+## 6.1 Node 读侧例外条款
+
+固定约束：
+
+- Node 统一知识检索 service 允许直连 Chroma 执行读侧 query；这是已确认的架构例外，不视为写侧越界。
+- collection init、collection 生命周期管理与向量 delete 的职责统一归属 `apps/indexer-py`。
+- 前端、Skill 与业务模块不能绕过服务端知识检索 service，直接操作底层 Chroma。
+
+当前实现说明：
+
+- 当前 `apps/api/src/modules/knowledge/knowledge.search.ts` 里的 `searchDocuments()` 继续保留 Node 直连 Chroma 查询。
+- collection init 已从 Node 主动引导改为 `GET /health` 探活与 Python 写侧自行保证。
+- 向量 delete 的正式 Python 内部接口还未补齐，所以代码里保留了过渡期的 Node 直连 delete TODO；这不改变职责归属，只表示当前实现仍有收尾项。
 
 ## 7. Chroma 在 Knowject 中的角色边界
 

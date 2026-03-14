@@ -1,17 +1,9 @@
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import type { RequestHandler } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
 import { sendSuccess } from '@lib/api-response.js';
-import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
+import { getRequiredAuthUser } from '@lib/request-auth.js';
 import type { AgentsService } from './agents.service.js';
-
-const getRequiredAuthUser = (request: Request): AuthenticatedRequestUser => {
-  if (!request.authUser) {
-    throw new Error('Authenticated user is missing from request context');
-  }
-
-  return request.authUser;
-};
 
 export const createAgentsRouter = (
   agentsService: AgentsService,

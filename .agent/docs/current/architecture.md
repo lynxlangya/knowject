@@ -1,4 +1,4 @@
-# Knowject 架构事实（2026-03-13）
+# Knowject 架构事实（2026-03-14）
 
 本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `.agent/docs/roadmap/target-architecture.md` 与 `.agent/docs/roadmap/gap-analysis.md`。
 截至 2026-03-11，`.agent/docs/plans/tasks-foundation-framework.md` 中定义的基础框架阶段（`BF-01` ~ `BF-10`）已经完成。
@@ -39,12 +39,13 @@
 apps/
   platform/
     src/app/        鉴权、布局、导航、项目上下文
-    src/api/        auth / projects / members / memory 前端请求封装
+    src/api/        auth / projects / members / knowledge 前端请求封装
     src/pages/      登录页、主页、成员页、项目页、全局资产页
   api/
     src/app/        Express 应用组装
     src/config/     环境变量加载与校验
     src/db/         MongoDB 连接与健康快照
+    src/lib/        请求上下文与校验 helper
     src/modules/    auth / members / projects / memberships / knowledge / skills / agents 模块边界
     src/routes/     health / memory 当前接口
     src/middleware/ 请求上下文、404、统一错误处理
@@ -126,7 +127,6 @@ scripts/
 ### 4.2 兼容与重定向
 
 - `/` 重定向到 `/home`。
-- `/workspace` 重定向到 `/home`。
 - `/project/:projectId` 重定向到 `/project/:projectId/overview`。
 - `/project/:projectId/knowledge` 重定向到 `/project/:projectId/resources?focus=knowledge`。
 - `/project/:projectId/skills` 重定向到 `/project/:projectId/resources?focus=skills`。
@@ -154,8 +154,6 @@ scripts/
 - `knowject_auth_user`：当前登录用户信息。
 - `knowject_remembered_username`：登录页“记住用户名”缓存。
 - `knowject_project_pins`：项目置顶偏好。
-- `knowject_project_resource_bindings`：历史项目资源绑定迁移缓存，当前只在首次刷新后的补写迁移与残留清理中使用，不再作为运行时主状态源。
-- `knowject_projects`：历史本地 Mock 项目缓存键，当前仅作为一次性迁移源，不再作为项目主数据源。
 
 ### 5.2 鉴权与登录态
 
@@ -168,29 +166,28 @@ scripts/
 
 ### 5.3 API 环境与数据库基线
 
-- `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`；Docker 编排会额外注入 `KNOWLEDGE_STORAGE_ROOT=/var/lib/knowject/knowledge` 与 `KNOWLEDGE_INDEXER_URL=http://indexer-py:8001`，知识库上传单文件上限当前固定为 `50 MB`；当前稳定推荐 `md / txt`，`pdf` 会明确回写失败态用于验证状态机。
+- `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`；Docker 编排会额外注入 `KNOWLEDGE_STORAGE_ROOT=/var/lib/knowject/knowledge` 与 `KNOWLEDGE_INDEXER_URL=http://indexer-py:8001`，知识库上传单文件上限当前固定为 `50 MB`；当前正式上传链路支持 `md / markdown / txt`，界面文案统一推荐 `.md / .txt`。
 - 宿主机默认开发流已把 `apps/indexer-py` 纳入 workspace `pnpm dev`，因此本地 `platform + api + indexer-py` 会一并启动；若单独跑 `api`，仍需额外启动 Python indexer 才能验证知识上传闭环。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
 - `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘、Node 后台触发 Python indexer、`global_docs` Chroma 写入，以及统一知识检索 service。
 - `apps/indexer-py` 当前已切到 FastAPI + uv 基线，主内部写入口固定为 `POST /internal/v1/index/documents`，并开放 `/docs`、`/redoc`、`/openapi.json` 作为内部控制面文档入口；当前仍隐藏兼容旧路径 `POST /internal/index-documents`，用于开发态 / 滚动重启期间的平滑过渡。
 - 开发环境下若缺少 `OPENAI_API_KEY`，知识库上传链路会退化到 deterministic 本地 embedding，并把文档元数据标记为 `local_dev / hash-1536-dev`；生产与正式检索仍以真实 OpenAI-compatible embedding 为基线。
 - `GET /api/health` 会联动返回数据库状态与可选的 Chroma 心跳状态，因此服务可在依赖不可达时以 `degraded` 状态启动并提供诊断。
-- 当前 Chroma 已进入正式知识索引链路：`global_docs` 支持 collection 初始化、向量写入、按知识库过滤查询和知识库删除联动清理；`global_code` 当前只有 collection 预留，没有真实数据导入。
+- 当前 Chroma 已进入正式知识索引链路：`global_docs` 的 collection 生命周期与写侧索引由 `indexer-py` 负责，Node 侧统一知识检索 service 保留读侧 query 的架构例外；向量删除的正式 Python 内部接口仍待补齐，当前 Node 代码保留了过渡期直连 delete TODO。`global_code` 当前只有 collection 预留，没有真实数据导入。
 - 根 `scripts/knowject.sh` 已收口三类常用命令包装：`dev:*`（宿主机开发 + Docker 依赖）、`host:*`（兼容宿主机命令）和 `docker:*`（本地 / 线上部署与验收）。
 
 ### 5.4 项目状态与 Mock 资产
 
 - `apps/platform/src/app/project/ProjectContext.tsx`
   - 通过 `/api/projects` 管理项目列表的增删改查、置顶和按 ID 查询。
-  - 首次刷新时会把历史 `knowject_projects` 与 `knowject_project_resource_bindings` 迁移到后端项目模型。
+  - 组件初始化时会一次性清理已退役的 `knowject_projects` 与 `knowject_project_resource_bindings` 本地缓存墓碑。
   - 当前运行时 `ProjectSummary` 会把后端项目基础信息、成员 roster、后端资源绑定与本地 pin 偏好合并成页面消费模型。
 - `apps/platform/src/app/project/project.storage.ts`
-  - 管理 `knowject_project_pins` 本地偏好，以及 `knowject_project_resource_bindings`、`knowject_projects` 两类历史迁移缓存。
-  - 当前不会再把本地资源绑定作为项目资源页的运行时事实，只在迁移成功后做清理与兜底补写。
+  - 只管理 `knowject_project_pins` 本地偏好。
 - `apps/platform/src/app/project/project.catalog.ts`
   - 维护全局 `skills / agents` 目录 fallback、成员基础档案等共享 Mock 目录。
 - `apps/platform/src/pages/project/project.mock.ts`
-  - 维护项目概览补充文案、成员协作快照，以及 `skills / agents` 资源分组展示 fallback。
+  - 维护项目概览补充文案、成员协作快照，以及项目资源展示 fallback；当 `skills / agents` 绑定了未知 ID 时，会返回占位项而不是静默过滤。
 - `apps/platform/src/app/layouts/components/AppSider.tsx`
   - 当前项目创建 / 编辑流程会把 `name / description / knowledgeBaseIds / skillIds / agentIds` 一并提交到后端项目模型。
 - `apps/platform/src/pages/project/ProjectLayout.tsx`
@@ -204,6 +201,7 @@ scripts/
 - 项目 `资源` 页当前只展示“该项目已绑定的资产”。
 - 项目资源的实际来源已经切到后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`。
 - 其中知识库分组优先消费 `/api/knowledge` 的正式元数据；`skills / agents` 因正式主数据尚未落地，仍回退到 `project.catalog.ts` 中的共享目录。
+- 当项目或成员聚合里出现未知的 `skills / agents` 资源 ID 时，前端当前会渲染“未知资源（{id}）”占位项，而不是静默丢失。
 - 兼容跳转会临时落到 `/project/:projectId/resources?focus=*`；页面完成滚动定位后会回写 canonical URL `/project/:projectId/resources`。
 - `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx` 已接正式后端知识库接口，支持知识库 CRUD、文档上传、状态展示和上传后的最小轮询。
 - 知识库上传链路现在会在上传入口对 multipart 文件名做 UTF-8 纠偏，避免中文文件名因浏览器 / multer 参数编码差异出现乱码。
@@ -260,7 +258,7 @@ scripts/
 - `members`：聚合当前用户可见项目中的成员基础信息、项目参与关系和最小权限摘要。
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色、项目资源绑定字段，以及项目对话只读列表 / 详情接口。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
-- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口、单文档 retry / delete，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。上传单文件上限默认 `50 MB`，当前稳定链路仍更适合 `md / txt` 与按主题拆分后的文档；`pdf` 会明确回写失败态，不假装支持。单文档删除会尽量联动清理原始文件与 Chroma chunk；若删除和后台索引并发发生，服务端会在状态回写缺失时补做孤儿 chunk 清理。
+- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口、单文档 retry / delete，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。上传单文件上限默认 `50 MB`，当前支持 `md / markdown / txt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再恢复。Node 统一知识检索 service 当前保留读侧直连 Chroma query 的架构例外；collection init 已下沉到 Python 写侧保证，向量 delete 的正式 Python 内部接口仍待补齐，因此代码里暂保留过渡期直连 delete TODO。单文档删除会尽量联动清理原始文件与 Chroma chunk；若删除和后台索引并发发生，服务端会在状态回写缺失时补做孤儿 chunk 清理。
 - `skills`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接内置 Skill 注册表与只读查询。
 - `agents`：当前提供 GA-02 阶段的鉴权骨架与空列表占位响应，后续承接全局 Agent 配置模型与绑定关系。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
@@ -287,6 +285,7 @@ scripts/
 - `apps/api`
   - 本地联调与基础框架接口，当前已承担项目列表、项目基础信息与成员 roster 的正式主数据源。
   - 已具备 `config / db / middleware / modules` 基础骨架。
+  - `src/lib` 当前承载 `request-auth` 与 `validation` 等跨模块复用 helper。
   - `modules/auth` 当前已承载用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
   - `modules/members` 当前已承载全局成员聚合只读接口。
   - `modules/projects` 当前已承载项目模型、MongoDB 仓储、资源绑定字段、项目对话只读接口、权限校验与 CRUD 接口。

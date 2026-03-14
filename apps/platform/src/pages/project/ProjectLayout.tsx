@@ -1,7 +1,7 @@
-import { isApiError } from '@knowject/request';
 import { useEffect, useState } from 'react';
 import { Alert, Button, Skeleton } from 'antd';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { extractApiErrorMessage } from '@api/error';
 import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
 import {
   listProjectConversations,
@@ -16,10 +16,6 @@ import { useProjectContext } from '@app/project/useProjectContext';
 import { ProjectHeader } from './components/ProjectHeader';
 import { ProjectSectionNav } from './components/ProjectSectionNav';
 import { getProjectWorkspaceSnapshot } from './project.mock';
-
-const getLoadErrorMessage = (error: unknown, fallback: string): string => {
-  return isApiError(error) ? error.message : fallback;
-};
 
 export const ProjectLayout = () => {
   const navigate = useNavigate();
@@ -62,10 +58,13 @@ export const ProjectLayout = () => {
         setConversations(conversationsResult.value.items);
         setConversationsError(null);
       } else {
-        console.error('加载项目对话失败', conversationsResult.reason);
+        console.error(
+          '[ProjectLayout] 加载项目对话失败:',
+          conversationsResult.reason,
+        );
         setConversations([]);
         setConversationsError(
-          getLoadErrorMessage(
+          extractApiErrorMessage(
             conversationsResult.reason,
             '加载项目对话失败，请稍后重试。',
           ),
@@ -76,10 +75,13 @@ export const ProjectLayout = () => {
         setKnowledgeCatalog(knowledgeResult.value.items);
         setKnowledgeCatalogError(null);
       } else {
-        console.error('加载知识库目录失败', knowledgeResult.reason);
+        console.error(
+          '[ProjectLayout] 加载知识库目录失败:',
+          knowledgeResult.reason,
+        );
         setKnowledgeCatalog([]);
         setKnowledgeCatalogError(
-          getLoadErrorMessage(
+          extractApiErrorMessage(
             knowledgeResult.reason,
             '加载知识库元数据失败，请稍后重试。',
           ),

@@ -68,6 +68,28 @@ const toProjectFormValues = (project: ProjectSummary): ProjectFormValues => ({
   skillIds: project.skillIds,
 });
 
+const resolveBoundResourceOptions = (
+  selectedIds: string[],
+  baseOptions: Array<{ value: string; label: string }>,
+): Array<{ value: string; label: string }> => {
+  const optionMap = new Map(
+    baseOptions.map((option) => [option.value, option] as const),
+  );
+
+  selectedIds.forEach((resourceId) => {
+    if (optionMap.has(resourceId)) {
+      return;
+    }
+
+    optionMap.set(resourceId, {
+      value: resourceId,
+      label: `未知资源（${resourceId}）`,
+    });
+  });
+
+  return Array.from(optionMap.values());
+};
+
 export const AppSider = ({
   selectedKey,
   onNavigate,
@@ -101,6 +123,8 @@ export const AppSider = ({
   const activeProjectId = getProjectIdFromPathname(location.pathname);
   const authUser = getAuthUser();
   const selectedKnowledgeIds = Form.useWatch("knowledgeBaseIds", form) ?? [];
+  const selectedAgentIds = Form.useWatch("agentIds", form) ?? [];
+  const selectedSkillIds = Form.useWatch("skillIds", form) ?? [];
   const editingProject = editingProjectId
     ? (projects.find((project) => project.id === editingProjectId) ?? null)
     : null;
@@ -197,6 +221,14 @@ export const AppSider = ({
 
     return Array.from(optionMap.values());
   })();
+  const resolvedAgentOptions = resolveBoundResourceOptions(
+    selectedAgentIds,
+    GLOBAL_AGENT_OPTIONS,
+  );
+  const resolvedSkillOptions = resolveBoundResourceOptions(
+    selectedSkillIds,
+    GLOBAL_SKILL_OPTIONS,
+  );
 
   const handleOpenProject = (projectId: string) => {
     navigate(buildProjectOverviewPath(projectId));
@@ -804,7 +836,7 @@ export const AppSider = ({
               mode="multiple"
               allowClear
               placeholder="可选"
-              options={GLOBAL_AGENT_OPTIONS}
+              options={resolvedAgentOptions}
             />
           </Form.Item>
 
@@ -813,7 +845,7 @@ export const AppSider = ({
               mode="multiple"
               allowClear
               placeholder="可选"
-              options={GLOBAL_SKILL_OPTIONS}
+              options={resolvedSkillOptions}
             />
           </Form.Item>
         </Form>

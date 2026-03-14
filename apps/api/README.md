@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-13，服务端已经落下 `config / db / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除 / 统一检索闭环，`skills / agents` 仍停留在鉴权占位响应阶段。
+截至 2026-03-14，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立最小模块骨架，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入与统一检索闭环；`skills / agents` 仍停留在鉴权占位响应阶段。
 
 ## 当前接口
 
@@ -69,13 +69,13 @@
 - `POST /api/knowledge/:knowledgeId/documents`
   - 需要 `Authorization: Bearer <token>`。
   - 使用 `multipart/form-data` 上传单个文件，字段名固定为 `file`。
-  - 当前只支持 `md / txt / pdf`，单文件上限为 `50 MB`。
+  - 当前只支持 `md / markdown / txt`，单文件上限为 `50 MB`。
   - 上传成功后会先创建文档记录并返回 `pending`，随后由 Node 在后台切到 `processing` 并触发 Python indexer。
   - Node 当前调用 Python FastAPI 内部入口 `POST /internal/v1/index/documents`。
   - 若开发态 Python indexer 仍停在旧进程，Node 会自动回退兼容 `POST /internal/index-documents`，避免重启顺序造成 `txt/md` 上传直接 404。
-  - `md / txt` 当前会继续推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 先明确回写 `failed` 与 `errorMessage`，不假装支持。
+  - 当前稳定链路会把 `md / markdown / txt` 推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再统一加回。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
-  - `md / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings 并写入 Chroma `global_docs` collection。
+  - `md / markdown / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings 并写入 Chroma `global_docs` collection。
   - 完整 Docker 编排会通过内部 `indexer-py` 服务和共享知识存储卷推进这条链路；默认 `pnpm dev` 也会一并启动本地 `indexer-py`，若单独运行 `pnpm --filter api dev`，仍需额外启动 `pnpm --filter indexer-py dev`。
   - 开发环境下若缺少 `OPENAI_API_KEY`，Node 会把文档记录标记为 `embeddingProvider=local_dev`、`embeddingModel=hash-1536-dev`，Python indexer 会使用 deterministic 本地 embedding 写入 Chroma，保证上传状态流可用；正式检索与生产环境仍应使用真实 OpenAI-compatible embedding 配置。
 - `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`
@@ -127,13 +127,13 @@
 - 项目概览中的补充展示文案、成员协作快照，以及 `skills / agents` 资源目录 fallback 仍主要由 `apps/platform` 本地 Mock 驱动。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
-- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / delete、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入 / 删除和统一知识检索 service；前端 `/knowledge` 已正式接线。
+- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / delete、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；前端 `/knowledge` 已正式接线。
 - `skills / agents` 当前只完成了模块骨架、路由挂载和鉴权接入。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路和成员管理接口；仍未落地的是项目对话消息写入、`skills / agents` 正式主数据，以及更深的项目级检索 / 编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
-- 当前 Chroma 已进入正式知识索引链路：`global_docs` 支持写入、按知识库过滤查询和知识库删除联动清理；`global_code` 只完成 collection 初始化与命名空间预留。
+- 当前 Chroma 已进入正式知识索引链路：`global_docs` 的 collection 生命周期与写侧索引由 `indexer-py` 负责，Node 保留统一检索 service 的读侧 query 例外；向量删除的正式内部接口仍待 `indexer-py` 补齐，当前代码保留了过渡期直连 delete TODO。`global_code` 只完成命名空间预留。
 - Week 3-4 的推荐演进路径是：`apps/api` 继续负责业务主链路与对外 API，Python 独立索引运行时负责解析、分块、向量写入、重建与诊断，具体边界以 [`.agent/docs/contracts/chroma-decision.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/chroma-decision.md) 为准。
 - Docker 公共基线中的 `app / data` 网络默认保持 `internal`；本地若要从宿主机直接访问 API，则通过 `compose.local.yml` 额外挂载 `publish` 网络完成端口发布。
 - Docker 当前使用方式与部署边界见 [`.agent/docs/current/docker-usage.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/current/docker-usage.md)。
@@ -188,13 +188,15 @@
 - `src/app/create-app.ts`：统一路由挂载、中间件组装。
 - `src/config/env.ts`：环境变量加载与校验。
 - `src/lib/chroma-health.ts`：Chroma 心跳诊断。
+- `src/lib/request-auth.ts`：统一读取必需的 `authUser` 请求上下文。
+- `src/lib/validation.ts`：字段校验、必填字段错误与字符串读取 helper。
 - `src/db/mongo.ts`：MongoDB 连接管理与健康快照。
 - `src/modules/auth/*`：用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
 - `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。
 - `src/modules/projects/*`：项目模型、MongoDB 仓储、资源绑定字段、只读项目对话接口、权限校验和 CRUD 接口。
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
 - `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储、CRUD、详情接口、文档上传入口、后台状态推进、Chroma 统一检索 service 与 Python indexer 触发。
-- `src/modules/knowledge/knowledge.search.ts`：Chroma collection 初始化、统一知识检索 service，以及知识库删除时的向量清理。
+- `src/modules/knowledge/knowledge.search.ts`：统一知识检索 service、Python indexer 健康探活，以及当前过渡期的向量删除适配；Node 直连 Chroma 读侧 query 在这里作为架构例外保留。
 - `src/modules/skills/*`：全局 Skill 模块最小骨架，当前仅提供鉴权占位响应。
 - `src/modules/agents/*`：全局 Agent 模块最小骨架，当前仅提供鉴权占位响应。
 - `src/routes/health.ts`：健康检查。

@@ -128,10 +128,6 @@ export const routes: RouteObject[] = [
         path: PATHS.settings,
         element: <SettingsPage />,
       },
-      {
-        path: PATHS.workspace,
-        element: <Navigate to={PATHS.home} replace />,
-      },
     ],
   },
   {

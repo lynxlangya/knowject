@@ -10,6 +10,7 @@ import type {
   ProjectMember,
   ProjectMemberRecentActivity,
   ProjectMemberRole,
+  ProjectResourceFocus,
   ProjectMemberStatus,
   ProjectSummary,
 } from '@app/project/project.types';
@@ -144,13 +145,33 @@ const pickPrimaryProject = (
   return sortedProjects[0] ?? null;
 };
 
-const dedupeAssets = (items: Array<GlobalAssetItem | null>): GlobalAssetItem[] => {
+const buildUnknownAssetItem = (
+  type: ProjectResourceFocus,
+  id: string,
+): GlobalAssetItem => {
+  return {
+    id,
+    type,
+    name: `未知资源（${id}）`,
+    description: `该${GLOBAL_ASSET_TITLES[type]}已绑定到当前成员可见项目，但本地尚未拿到完整元数据。`,
+    updatedAt: '未记录',
+    owner: '未指定',
+    usageCount: 0,
+  };
+};
+
+const resolveMemberAsset = (
+  type: ProjectResourceFocus,
+  id: string,
+): GlobalAssetItem => {
+  return getGlobalAssetById(type, id) ?? buildUnknownAssetItem(type, id);
+};
+
+const dedupeAssets = (items: GlobalAssetItem[]): GlobalAssetItem[] => {
   const assetMap = new Map<string, GlobalAssetItem>();
 
   items.forEach((item) => {
-    if (item) {
-      assetMap.set(item.id, item);
-    }
+    assetMap.set(item.id, item);
   });
 
   return Array.from(assetMap.values());
@@ -231,13 +252,13 @@ const buildMemberAssets = (
 
   return {
     knowledge: dedupeAssets(
-      Array.from(knowledgeIds).map((id) => getGlobalAssetById('knowledge', id)),
+      Array.from(knowledgeIds).map((id) => resolveMemberAsset('knowledge', id)),
     ),
     skills: dedupeAssets(
-      Array.from(skillIds).map((id) => getGlobalAssetById('skills', id)),
+      Array.from(skillIds).map((id) => resolveMemberAsset('skills', id)),
     ),
     agents: dedupeAssets(
-      Array.from(agentIds).map((id) => getGlobalAssetById('agents', id)),
+      Array.from(agentIds).map((id) => resolveMemberAsset('agents', id)),
     ),
   };
 };

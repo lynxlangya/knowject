@@ -2,17 +2,9 @@ import { Router, type Request } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
 import type { RequestHandler } from 'express';
 import { sendCreated, sendSuccess } from '@lib/api-response.js';
-import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
+import { getRequiredAuthUser } from '@lib/request-auth.js';
 import type { ProjectsService } from './projects.service.js';
 import type { CreateProjectInput, UpdateProjectInput } from './projects.types.js';
-
-const getRequiredAuthUser = (request: Request): AuthenticatedRequestUser => {
-  if (!request.authUser) {
-    throw new Error('Authenticated user is missing from request context');
-  }
-
-  return request.authUser;
-};
 
 const getRequiredProjectId = (request: Request): string => {
   const projectId = request.params.projectId;

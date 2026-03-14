@@ -4,6 +4,11 @@ import { basename, extname, join } from 'node:path';
 import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import {
+  createRequiredFieldError,
+  createValidationAppError,
+  readOptionalStringField,
+} from '@lib/validation.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { AuthUserProfile } from '@modules/auth/auth.types.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
@@ -72,20 +77,6 @@ export interface KnowledgeService {
 
 type KnowledgeActorProfileMap = Map<string, AuthUserProfile>;
 
-const createValidationError = (
-  message: string,
-  fields: Record<string, string>,
-): AppError => {
-  return new AppError({
-    statusCode: 400,
-    code: 'VALIDATION_ERROR',
-    message,
-    details: {
-      fields,
-    },
-  });
-};
-
 const createKnowledgeNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
@@ -106,7 +97,7 @@ const createUploadNotSupportedError = (): AppError => {
   return new AppError({
     statusCode: 400,
     code: 'KNOWLEDGE_UPLOAD_UNSUPPORTED_TYPE',
-    message: '当前只支持上传 md、txt、pdf 文件',
+    message: '当前只支持上传 md、markdown、txt 文件',
   });
 };
 
@@ -134,40 +125,6 @@ const createDocumentRetryConflictError = (): AppError => {
   });
 };
 
-const readOptionalStringField = (
-  value: unknown,
-  field: 'name' | 'description',
-): string | undefined => {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (typeof value !== 'string') {
-    throw createValidationError(`${field} 必须为字符串`, {
-      [field]: `${field} 必须为字符串`,
-    });
-  }
-
-  return value.trim();
-};
-
-const readOptionalTrimmedString = (
-  value: unknown,
-  field: string,
-): string | undefined => {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (typeof value !== 'string') {
-    throw createValidationError(`${field} 必须为字符串`, {
-      [field]: `${field} 必须为字符串`,
-    });
-  }
-
-  return value.trim();
-};
-
 const readOptionalSourceType = (value: unknown): KnowledgeSourceType | undefined => {
   if (value === undefined) {
     return undefined;
@@ -177,7 +134,7 @@ const readOptionalSourceType = (value: unknown): KnowledgeSourceType | undefined
     return value;
   }
 
-  throw createValidationError('sourceType 不合法', {
+  throw createValidationAppError('sourceType 不合法', {
     sourceType: 'sourceType 只能为 global_docs 或 global_code',
   });
 };
@@ -191,7 +148,7 @@ const validateCreateKnowledgeInput = (
   const sourceType = readOptionalSourceType(input.sourceType) ?? 'global_docs';
 
   if (!name) {
-    throw createValidationError('请输入知识库名称', {
+    throw createValidationAppError('请输入知识库名称', {
       name: '请输入知识库名称',
     });
   }
@@ -219,14 +176,14 @@ const validateUpdateKnowledgeInput = (
   const description = readOptionalStringField(input.description, 'description');
 
   if (name === undefined && description === undefined) {
-    throw createValidationError('至少需要提供一个可更新字段', {
+    throw createValidationAppError('至少需要提供一个可更新字段', {
       name: '至少需要提供 name 或 description',
       description: '至少需要提供 name 或 description',
     });
   }
 
   if (input.name !== undefined && !name) {
-    throw createValidationError('请输入知识库名称', {
+    throw createValidationAppError('请输入知识库名称', {
       name: '请输入知识库名称',
     });
   }
@@ -246,14 +203,12 @@ const validateSearchDocumentsInput = (
   topK: number;
 } => {
   const query = typeof input.query === 'string' ? input.query.trim() : '';
-  const knowledgeId = readOptionalTrimmedString(input.knowledgeId, 'knowledgeId');
+  const knowledgeId = readOptionalStringField(input.knowledgeId, 'knowledgeId');
   const sourceType = readOptionalSourceType(input.sourceType) ?? 'global_docs';
   const rawTopK = input.topK;
 
   if (!query) {
-    throw createValidationError('query 为必填项', {
-      query: 'query 为必填项',
-    });
+    throw new AppError(createRequiredFieldError('query'));
   }
 
   let topK = 5;
@@ -265,7 +220,7 @@ const validateSearchDocumentsInput = (
   }
 
   if (!Number.isInteger(topK) || topK <= 0 || topK > 10) {
-    throw createValidationError('topK 必须是 1 到 10 之间的整数', {
+    throw createValidationAppError('topK 必须是 1 到 10 之间的整数', {
       topK: 'topK 必须是 1 到 10 之间的整数',
     });
   }
@@ -561,7 +516,6 @@ const processUploadedDocument = async ({
     }
 
     await repository.syncKnowledgeSummaryFromDocuments(knowledgeId, processingAt);
-    await searchService.ensureCollections();
 
     const result = await callKnowledgeIndexer(env, {
       knowledgeId,
@@ -663,9 +617,10 @@ export const createKnowledgeService = ({
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
   authRepository: AuthRepository;
-}): KnowledgeService => {
+  }): KnowledgeService => {
   return {
     initializeSearchInfrastructure: async () => {
+      // Startup 只探活 indexer；collection init 由 indexer-py 在写侧链路内保证。
       await searchService.ensureCollections();
     },
 

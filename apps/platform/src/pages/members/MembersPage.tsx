@@ -1,6 +1,6 @@
 import { App, Button, Card, Empty, Pagination, Spin, Typography } from 'antd';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { isApiError } from '@knowject/request';
+import { extractApiErrorMessage } from '@api/error';
 import { getMembersOverview, type MemberOverviewResponseItem } from '@api/members';
 import { getAuthUser } from '@app/auth/user';
 import { useProjectContext } from '@app/project/useProjectContext';
@@ -49,11 +49,9 @@ export const MembersPage = () => {
         const result = await getMembersOverview();
         setItems(result.items);
       } catch (currentError) {
-        console.error(currentError);
+        console.error('[MembersPage] 加载成员概览失败:', currentError);
         setError(
-          isApiError(currentError)
-            ? currentError.message
-            : '加载成员概览失败，请稍后重试',
+          extractApiErrorMessage(currentError, '加载成员概览失败，请稍后重试'),
         );
       } finally {
         setLoading(false);

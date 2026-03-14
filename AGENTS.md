@@ -38,8 +38,8 @@ scripts/     常用命令统一入口
 
 ## 2. 模块职责边界
 
-- `apps/platform`：承载登录后产品壳、路由、鉴权状态、项目态页面与全局资产管理页；当前主要由本地 Mock 数据和 `localStorage` 驱动。
-- `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`memory` 九组接口；其中项目列表、项目基础信息、成员 roster 与全局成员概览已经接入正式后端主链路，`knowledge / skills / agents` 当前仅为 GA-02 最小骨架与鉴权占位响应。
+- `apps/platform`：承载登录后产品壳、路由、鉴权状态、项目态页面与全局资产管理页；当前项目主数据、成员 roster、资源绑定与知识库管理页已接入正式后端，`skills / agents` 目录与协作快照仍包含本地 fallback。
+- `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`memory` 九组接口；其中 auth、projects、members、memberships、knowledge 已接入正式主链路，`skills / agents` 当前仍为鉴权占位响应，`memory` 保持系统 / 演示接口。
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
 - `apps/indexer-py`：承载内部 Python 索引控制面，当前采用 FastAPI + uv，已提供 `md / txt` 解析、清洗、分块、embedding 与 Chroma 写侧 HTTP 入口。
@@ -51,7 +51,6 @@ scripts/     常用命令统一入口
 ## 3. 当前产品信息架构（2026-03-10）
 
 - 登录页路径为 `/login`；登录后默认落点为 `/home`。
-- `/workspace` 仅保留为兼容入口，必须重定向到 `/home`。
 - 登录后主布局采用“左侧全局侧栏 + 右侧内容区”；侧栏包含品牌区、全局导航、“我的项目”列表与添加入口。
 - 平台主导航固定为：`/home`、`/knowledge`、`/skills`、`/agents`、`/members`、`/analytics`、`/settings`。
 - 项目页 canonical 路由为 `/project/:projectId/*`，子路由固定为：
@@ -71,12 +70,12 @@ scripts/     常用命令统一入口
 ## 4. 状态与数据来源约定
 
 - 鉴权 token 统一存储在 `localStorage`，键为 `knowject_token`。
-- 项目列表统一由 `apps/platform/src/app/project/ProjectContext.tsx` 管理，并持久化到 `localStorage`，键为 `knowject_projects`。
+- 项目列表统一由 `apps/platform/src/app/project/ProjectContext.tsx` 管理，运行时主数据来自 `/api/projects`；组件初始化时会一次性清理已退役的 `knowject_projects` 与 `knowject_project_resource_bindings`。
 - `apps/platform/src/app/project/project.catalog.ts` 维护全局知识库、技能、智能体、成员等共享 Mock 资产源。
-- `apps/platform/src/app/project/project.storage.ts` 负责默认项目与项目持久化。
-- `apps/platform/src/pages/project/project.mock.ts` 负责项目概览、对话、资源、成员等页面的演示数据。
-- 项目资源数据当前由“项目绑定的全局资产”映射得到；因此项目资源和全局资产在概念上分层，但当前数据来源仍复用全局 Mock 资产目录。
-- `apps/api` 已经承载 auth、项目主数据和成员关系的正式接口；当前仍保留演示性质的部分主要是 `memory` 与项目概览 / 对话 / 资源相关的前端 Mock 数据。
+- `apps/platform/src/app/project/project.storage.ts` 仅负责 `knowject_project_pins` 置顶偏好的本地持久化。
+- `apps/platform/src/pages/project/project.mock.ts` 负责项目概览、资源展示 fallback 与成员协作快照；其中 `skills / agents` 的未知 ID 会渲染占位项而不是静默丢失。
+- 项目资源数据当前由“项目绑定的全局资产”映射得到；知识库元数据优先来自正式 `/api/knowledge`，`skills / agents` 仍复用全局 Mock 资产目录。
+- `apps/api` 已经承载 auth、项目主数据、成员关系与知识库正式接口；当前仍保留演示性质的部分主要是 `memory` 与项目概览 / 资源相关的前端 Mock 补充数据。
 
 ## 5. 开发与文档同步约束
 

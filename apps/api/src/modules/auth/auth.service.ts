@@ -2,6 +2,10 @@ import argon2 from 'argon2';
 import type { WithId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import {
+  createRequiredFieldError,
+  createValidationAppError,
+} from '@lib/validation.js';
 import { signAccessToken, verifyAccessToken } from './auth.jwt.js';
 import {
   AuthRepository,
@@ -24,20 +28,6 @@ export interface AuthService {
   searchUsers(input: SearchUsersInput): Promise<SearchUsersResult>;
   verifyAccessToken(token: string): Promise<AuthenticatedRequestUser>;
 }
-
-const createValidationError = (
-  message: string,
-  fields: Record<string, string>,
-): AppError => {
-  return new AppError({
-    statusCode: 400,
-    code: 'VALIDATION_ERROR',
-    message,
-    details: {
-      fields,
-    },
-  });
-};
 
 const createUsernameConflictError = (cause?: unknown): AppError => {
   return new AppError({
@@ -90,13 +80,11 @@ const normalizeSearchLimit = (value: unknown): number => {
 
 const validatePassword = (password: string | undefined): string => {
   if (!password) {
-    throw createValidationError('请输入密码', {
-      password: '请输入密码',
-    });
+    throw new AppError(createRequiredFieldError('password'));
   }
 
   if (password.length < 8) {
-    throw createValidationError('密码至少需要 8 位', {
+    throw createValidationAppError('密码至少需要 8 位', {
       password: '密码至少需要 8 位',
     });
   }
@@ -139,13 +127,11 @@ export const createAuthService = ({
       const password = validatePassword(input.password);
 
       if (!username) {
-        throw createValidationError('请输入用户名', {
-          username: '请输入用户名',
-        });
+        throw new AppError(createRequiredFieldError('username'));
       }
 
       if (!name) {
-        throw createValidationError('请输入显示名称', {
+        throw createValidationAppError('请输入显示名称', {
           name: '请输入显示名称',
         });
       }
@@ -184,15 +170,11 @@ export const createAuthService = ({
       const password = input.password ?? '';
 
       if (!username) {
-        throw createValidationError('请输入用户名', {
-          username: '请输入用户名',
-        });
+        throw new AppError(createRequiredFieldError('username'));
       }
 
       if (!password) {
-        throw createValidationError('请输入密码', {
-          password: '请输入密码',
-        });
+        throw new AppError(createRequiredFieldError('password'));
       }
 
       const user = await repository.findByUsername(username);

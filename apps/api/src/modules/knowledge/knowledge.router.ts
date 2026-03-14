@@ -4,7 +4,7 @@ import type { RequestHandler } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
 import { AppError } from '@lib/app-error.js';
 import { sendCreated, sendSuccess } from '@lib/api-response.js';
-import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
+import { getRequiredAuthUser } from '@lib/request-auth.js';
 import {
   KNOWLEDGE_UPLOAD_FIELD_NAME,
   KNOWLEDGE_UPLOAD_MAX_BYTES,
@@ -17,14 +17,6 @@ import type {
   UpdateKnowledgeInput,
   UploadedKnowledgeFile,
 } from './knowledge.types.js';
-
-const getRequiredAuthUser = (request: Request): AuthenticatedRequestUser => {
-  if (!request.authUser) {
-    throw new Error('Authenticated user is missing from request context');
-  }
-
-  return request.authUser;
-};
 
 const getRequiredKnowledgeId = (request: Request): string => {
   const knowledgeId = request.params.knowledgeId;

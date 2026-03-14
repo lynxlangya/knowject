@@ -153,8 +153,8 @@ export const KnowledgeSourcePickerModal = ({
             将文档拖到这里
           </Typography.Title>
           <Typography.Paragraph className="mb-0! mt-3 max-w-lg text-sm! leading-6! text-slate-500!">
-            支持 md、markdown、txt、pdf，单个文件不超过 50 MB；20 MB 以上建议拆分上传；当前稳定推荐
-            md / txt
+            支持 .md、.txt，单个文件不超过 50 MB；20 MB 以上建议拆分上传；当前稳定推荐
+            .md / .txt
           </Typography.Paragraph>
         </button>
 

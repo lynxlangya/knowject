@@ -1,22 +1,14 @@
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import type { RequestHandler } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
 import { sendCreated, sendSuccess } from '@lib/api-response.js';
+import { getRequiredAuthUser } from '@lib/request-auth.js';
 import type { AuthService } from './auth.service.js';
 import type {
   LoginInput,
   RegisterInput,
   SearchUsersInput,
 } from './auth.types.js';
-import type { AuthenticatedRequestUser } from './auth.types.js';
-
-const getRequiredAuthUser = (request: Request): AuthenticatedRequestUser => {
-  if (!request.authUser) {
-    throw new Error('Authenticated user is missing from request context');
-  }
-
-  return request.authUser;
-};
 
 export const createAuthRouter = (
   authService: AuthService,

@@ -1,5 +1,8 @@
 import type { WithId } from 'mongodb';
-import { AppError } from '@lib/app-error.js';
+import {
+  createValidationAppError,
+  readOptionalStringField,
+} from '@lib/validation.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import { ProjectsRepository } from './projects.repository.js';
 import {
@@ -49,37 +52,6 @@ export interface ProjectsService {
   deleteProject(context: ProjectCommandContext, projectId: string): Promise<void>;
 }
 
-const createValidationError = (
-  message: string,
-  fields: Record<string, string>,
-): AppError => {
-  return new AppError({
-    statusCode: 400,
-    code: 'VALIDATION_ERROR',
-    message,
-    details: {
-      fields,
-    },
-  });
-};
-
-const readOptionalStringField = (
-  value: unknown,
-  field: 'name' | 'description',
-): string | undefined => {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (typeof value !== 'string') {
-    throw createValidationError(`${field} 必须为字符串`, {
-      [field]: `${field} 必须为字符串`,
-    });
-  }
-
-  return value.trim();
-};
-
 const readOptionalStringArrayField = (
   value: unknown,
   field: 'knowledgeBaseIds' | 'agentIds' | 'skillIds',
@@ -89,7 +61,7 @@ const readOptionalStringArrayField = (
   }
 
   if (!Array.isArray(value)) {
-    throw createValidationError(`${field} 必须为字符串数组`, {
+    throw createValidationAppError(`${field} 必须为字符串数组`, {
       [field]: `${field} 必须为字符串数组`,
     });
   }
@@ -100,7 +72,7 @@ const readOptionalStringArrayField = (
     .filter(Boolean);
 
   if (normalizedValues.length !== value.length) {
-    throw createValidationError(`${field} 必须为字符串数组`, {
+    throw createValidationAppError(`${field} 必须为字符串数组`, {
       [field]: `${field} 必须为字符串数组`,
     });
   }
@@ -122,7 +94,7 @@ const validateCreateProjectInput = (
   const skillIds = readOptionalStringArrayField(input.skillIds, 'skillIds') ?? [];
 
   if (!name) {
-    throw createValidationError('请输入项目名称', {
+    throw createValidationAppError('请输入项目名称', {
       name: '请输入项目名称',
     });
   }
@@ -160,7 +132,7 @@ const validateUpdateProjectInput = (
     agentIds === undefined &&
     skillIds === undefined
   ) {
-    throw createValidationError('至少需要提供一个可更新字段', {
+    throw createValidationAppError('至少需要提供一个可更新字段', {
       name: '至少需要提供 name 或 description',
       description: '至少需要提供 name 或 description',
       knowledgeBaseIds: '至少需要提供一个可更新字段',
@@ -170,7 +142,7 @@ const validateUpdateProjectInput = (
   }
 
   if (input.name !== undefined && !name) {
-    throw createValidationError('请输入项目名称', {
+    throw createValidationAppError('请输入项目名称', {
       name: '请输入项目名称',
     });
   }

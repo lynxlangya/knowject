@@ -1,5 +1,4 @@
 import { DeleteOutlined, UserAddOutlined } from "@ant-design/icons";
-import { isApiError } from "@knowject/request";
 import {
   Alert,
   App,
@@ -12,6 +11,7 @@ import {
   Typography,
 } from "antd";
 import { useMemo, useState } from "react";
+import { extractApiErrorMessage } from "@api/error";
 import {
   addProjectMember,
   removeProjectMember,
@@ -115,9 +115,9 @@ export const ProjectMembersPage = () => {
         ),
       );
     } catch (error) {
-      console.error(error);
+      console.error("[ProjectMembersPage] 加载可添加成员失败:", error);
       message.error(
-        isApiError(error) ? error.message : "加载可添加成员失败，请稍后重试",
+        extractApiErrorMessage(error, "加载可添加成员失败，请稍后重试"),
       );
     } finally {
       setCandidateSearching(false);
@@ -150,9 +150,9 @@ export const ProjectMembersPage = () => {
           latestProject = result.project;
           syncProject(result.project);
         } catch (error) {
-          console.error(error);
+          console.error("[ProjectMembersPage] 添加成员失败:", error);
           failedMessages.push(
-            `${username}：${isApiError(error) ? error.message : "添加失败"}`,
+            `${username}：${extractApiErrorMessage(error, "添加失败")}`,
           );
         }
       }
@@ -186,9 +186,9 @@ export const ProjectMembersPage = () => {
 
       message.error(failedMessages[0] ?? "添加成员失败，请稍后重试");
     } catch (error) {
-      console.error(error);
+      console.error("[ProjectMembersPage] 添加成员失败:", error);
       message.error(
-        isApiError(error) ? error.message : "添加成员失败，请稍后重试",
+        extractApiErrorMessage(error, "添加成员失败，请稍后重试"),
       );
     } finally {
       setSubmitting(false);
@@ -213,9 +213,9 @@ export const ProjectMembersPage = () => {
       syncProject(result.project);
       message.success("成员角色已更新");
     } catch (error) {
-      console.error(error);
+      console.error("[ProjectMembersPage] 更新成员角色失败:", error);
       message.error(
-        isApiError(error) ? error.message : "更新成员角色失败，请稍后重试",
+        extractApiErrorMessage(error, "更新成员角色失败，请稍后重试"),
       );
     } finally {
       setUpdatingUserId(null);
@@ -242,9 +242,9 @@ export const ProjectMembersPage = () => {
       syncProject(result.project);
       message.success("成员已移出项目");
     } catch (error) {
-      console.error(error);
+      console.error("[ProjectMembersPage] 移除成员失败:", error);
       message.error(
-        isApiError(error) ? error.message : "移除成员失败，请稍后重试",
+        extractApiErrorMessage(error, "移除成员失败，请稍后重试"),
       );
     } finally {
       setRemovingUserId(null);

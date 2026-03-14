@@ -174,17 +174,7 @@ export const createKnowledgeSearchService = ({
     });
   };
 
-  const createCollection = async (name: string): Promise<ChromaCollectionSummary> => {
-    return requestChromaJson<ChromaCollectionSummary>({
-      path: '/collections',
-      method: 'POST',
-      body: {
-        name,
-      },
-    });
-  };
-
-  const ensureCollection = async (name: string): Promise<ChromaCollectionSummary> => {
+  const getExistingCollection = async (name: string): Promise<ChromaCollectionSummary | null> => {
     const cached = collectionCache.get(name);
     if (cached) {
       return cached;
@@ -198,20 +188,43 @@ export const createKnowledgeSearchService = ({
       return existing;
     }
 
-    try {
-      const created = await createCollection(name);
-      collectionCache.set(name, created);
-      return created;
-    } catch (error) {
-      const refreshedCollections = await listCollections();
-      const refreshed = refreshedCollections.find((collection) => collection.name === name);
+    return null;
+  };
 
-      if (refreshed) {
-        collectionCache.set(name, refreshed);
-        return refreshed;
+  const requestIndexerHealth = async (): Promise<void> => {
+    let responseBody: unknown = null;
+
+    try {
+      const response = await fetch(buildApiUrl(env.knowledge.indexerUrl, '/health'), {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
+      });
+
+      const text = await response.text();
+
+      if (text) {
+        try {
+          responseBody = JSON.parse(text);
+        } catch {
+          responseBody = text;
+        }
       }
 
-      throw error;
+      if (!response.ok) {
+        throw createGatewayError(
+          `Python indexer 健康检查失败（HTTP ${response.status}）`,
+          responseBody,
+        );
+      }
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      throw createGatewayError('Python indexer 健康检查失败', error);
     }
   };
 
@@ -336,7 +349,11 @@ export const createKnowledgeSearchService = ({
     sourceType: KnowledgeSourceType;
     where: Record<string, unknown>;
   }): Promise<void> => {
-    const collection = await ensureCollection(getCollectionName(sourceType));
+    // TODO: 待 indexer-py 提供正式 delete 端点后，删除 Node 侧直连 Chroma delete。
+    const collection = await getExistingCollection(getCollectionName(sourceType));
+    if (!collection) {
+      return;
+    }
 
     await requestChromaJson({
       path: `/collections/${collection.id}/delete`,
@@ -349,18 +366,22 @@ export const createKnowledgeSearchService = ({
 
   return {
     ensureCollections: async () => {
-      if (!env.chroma.url) {
-        return;
-      }
-
-      await Promise.all([
-        ensureCollection(GLOBAL_DOCS_COLLECTION_NAME),
-        ensureCollection(GLOBAL_CODE_COLLECTION_NAME),
-      ]);
+      // Legacy bootstrap hook: collection 生命周期已下沉到 indexer-py，这里只做健康检查。
+      await requestIndexerHealth();
     },
 
+    // NOTE: Node 直连 Chroma 读侧 query 是已确认的架构例外条款
+    // 参见 .agent/docs/contracts/chroma-decision.md
     searchDocuments: async ({ query, knowledgeId, sourceType, topK }) => {
-      const collection = await ensureCollection(getCollectionName(sourceType));
+      const collection = await getExistingCollection(getCollectionName(sourceType));
+      if (!collection) {
+        return mapQueryResults({
+          query,
+          sourceType,
+          response: {},
+        });
+      }
+
       const [queryEmbedding] = await createEmbeddings([query]);
 
       const response = await requestChromaJson<ChromaQueryResponse>({

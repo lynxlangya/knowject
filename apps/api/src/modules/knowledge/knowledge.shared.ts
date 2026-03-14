@@ -16,12 +16,12 @@ export const KNOWLEDGE_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 export const SUPPORTED_KNOWLEDGE_UPLOAD_TYPES = [
   {
     sourceType: 'global_docs' satisfies KnowledgeSourceType,
-    extensions: ['.md', '.markdown', '.txt', '.pdf'],
+    extensions: ['.md', '.markdown', '.txt'],
+    // PDF 支持待 indexer-py 正式覆盖后再统一加回，见 pipeline.py
     mimeTypes: [
       'text/markdown',
       'text/x-markdown',
       'text/plain',
-      'application/pdf',
       'application/octet-stream',
     ],
   },

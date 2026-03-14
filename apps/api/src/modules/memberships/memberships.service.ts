@@ -1,4 +1,8 @@
 import { AppError } from "@lib/app-error.js";
+import {
+  createRequiredFieldError,
+  createValidationAppError,
+} from "@lib/validation.js";
 import type { AuthRepository } from "@modules/auth/auth.repository.js";
 import type {
   ProjectCommandContext,
@@ -39,20 +43,6 @@ export interface MembershipsService {
   ): Promise<ProjectMemberRemovalResponse>;
 }
 
-const createValidationError = (
-  message: string,
-  fields: Record<string, string>,
-): AppError => {
-  return new AppError({
-    statusCode: 400,
-    code: "VALIDATION_ERROR",
-    message,
-    details: {
-      fields,
-    },
-  });
-};
-
 const createUserNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
@@ -90,23 +80,19 @@ const readRequiredRole = (value: unknown): ProjectRole => {
     return value;
   }
 
-  throw createValidationError("role 必须为 admin 或 member", {
+  throw createValidationAppError("role 必须为 admin 或 member", {
     role: "role 必须为 admin 或 member",
   });
 };
 
 const readRequiredUsername = (value: unknown): string => {
   if (typeof value !== "string") {
-    throw createValidationError("请输入用户名", {
-      username: "请输入用户名",
-    });
+    throw new AppError(createRequiredFieldError("username"));
   }
 
   const username = value.trim();
   if (!username) {
-    throw createValidationError("请输入用户名", {
-      username: "请输入用户名",
-    });
+    throw new AppError(createRequiredFieldError("username"));
   }
 
   return username;
