@@ -33,7 +33,8 @@
 
 ### 2.1 本地宿主机开发拓扑
 
-- 宿主机开发仍保留原有主路径：`platform + api + mongodb`
+- 宿主机开发当前主路径为：`platform + api + indexer-py`
+- 推荐再配合 Docker 托管 `mongodb + chroma`。
 - 这一条路径主要服务日常开发、热更新和代码迭代。
 
 ### 2.2 本地容器化部署拓扑

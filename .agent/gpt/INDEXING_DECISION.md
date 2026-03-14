@@ -54,6 +54,7 @@
 
 - Python 独立索引服务 / worker / 控制面
 - 当前内部写侧入口：`POST /internal/v1/index/documents`
+- 开发态隐藏兼容旧路径：`POST /internal/index-documents`
 - 当前运维探活入口：`GET /health`
 - 当前内部文档入口：`/docs`、`/redoc`、`/openapi.json`
 - parse
@@ -84,7 +85,7 @@
 ### 1. 触发方式
 
 - Node -> Python 固定为本地 HTTP 服务。
-- 当前已冻结为版本化内部写接口 `POST /internal/v1/index/documents`；`GET /health` 保持非版本化。
+- 当前已冻结为版本化内部写接口 `POST /internal/v1/index/documents`；开发态仍隐藏兼容旧路径 `POST /internal/index-documents`；`GET /health` 保持非版本化。
 - CLI / 子进程只能作为内部过渡细节。
 
 ### 2. 状态回写
@@ -117,7 +118,7 @@
 2. Node 创建 knowledge/document 记录
 3. 状态初始化为 `pending`
 4. Node 落盘原始文件
-5. Node 调 Python `POST /internal/v1/index/documents`
+5. Node 优先调 Python `POST /internal/v1/index/documents`
 6. Python 解析、清洗、分块、embedding、写入 Chroma
 7. Python 把结果交回 Node
 8. Node 回写 `processing / completed / failed`
@@ -171,4 +172,4 @@
 
 - 如果讨论“为什么这里要 Python”，以这份文档为准。
 - 如果讨论“现在仓库里有没有 Python indexer”，答案是：有，路径为 `apps/indexer-py`。
-- 如果讨论“正式链路是否完全生产化”，答案是：`global_docs` 最小闭环已落地，但 `retry / rebuild / diagnostics` 仍未补齐，production 仍以真实 OpenAI-compatible embedding 为基线。
+- 如果讨论“正式链路是否完全生产化”，答案是：`global_docs` 最小闭环已落地，单文档 retry 已落地，但 rebuild / diagnostics 与知识库级重建仍未补齐，production 仍以真实 OpenAI-compatible embedding 为基线。
