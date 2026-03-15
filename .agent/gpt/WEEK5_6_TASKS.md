@@ -25,7 +25,7 @@
 - `IC-06`
   - 项目私有 knowledge 已开放 `list / create / detail / upload` 路由，并写入 `proj_{projectId}_docs`。
 - `IC-07`
-  - `/project/:projectId/resources` 已能同时展示“全局绑定知识”和“项目私有知识”，并支持项目知识最小创建 / 上传入口。
+  - `/project/:projectId/resources` 已能同时展示“全局绑定知识”和“项目私有知识”，并已补齐统一“接入知识库”入口与知识库详情抽屉。
 - `IC-09`
   - 已新增统一验证入口 `pnpm verify:index-ops-project-consumption`，并完成回归与文档同步。
 
@@ -36,7 +36,7 @@
 - 项目对话消息写入、SSE、来源引用没有进入本阶段。
 - `global_code` 真实 Git 导入没有进入本阶段。
 - Skill runtime / Agent runtime 没有进入本阶段。
-- 项目资源页内 project knowledge 的 rebuild / diagnostics 运维入口没有进入本阶段。
+- 项目知识原文预览 / 下载没有进入本阶段。
 
 ## 4. 本阶段最重要的固定结论
 

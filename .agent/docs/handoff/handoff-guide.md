@@ -86,7 +86,9 @@
   - 项目对话列表 / 详情来自 `/api/projects/:projectId/conversations*`
   - 项目资源绑定来自 `/api/projects`
   - 资源页知识分组同时消费 `/api/knowledge` 与 `/api/projects/:projectId/knowledge`
-- 项目 `资源` 页当前同时展示“项目绑定的全局资产”和“项目私有知识”，不是全局治理入口；项目私有知识已支持最小 `create -> upload -> indexStatus 回显` 闭环。
+- 项目 `资源` 页当前同时展示“项目绑定的全局资产”和“项目私有知识”，不是全局治理入口；知识库分组现已补齐统一“接入知识库”入口和详情抽屉。
+- 全局绑定知识在项目内保持只读：可查看文档、解除绑定、跳转全局治理，但不在项目页直接编辑或删除全局知识内容。
+- 项目私有知识在项目内支持轻维护：创建、编辑、删除、上传文档、文档级 retry / rebuild / delete，以及最小 diagnostics / rebuild 操作。
 - `project.mock.ts` 当前主要保留项目概览补充文案、成员协作快照，以及项目资源展示映射补充层。
 - 全局 `/knowledge`、`/skills`、`/agents` 页面已分别接入正式接口；其中 `/skills` 已支持原生 `SKILL.md` 自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已支持创建 / 编辑 / 删除与知识库 / Skill 绑定。
 - 成员数据现在分两层：

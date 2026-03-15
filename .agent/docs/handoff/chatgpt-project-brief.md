@@ -112,7 +112,7 @@
 ## 7. 当前明确还没落地的能力
 
 - Skill / Agent 执行闭环
-- 项目级合并检索，以及项目资源页内 project knowledge 的 rebuild / diagnostics 运维入口
+- 项目级合并检索，以及项目知识原文的预览 / 下载能力
 - `global_code` 真实导入与项目级合并检索
 - 对话消息写入、流式消息链路、来源引用渲染
 - refresh token、组织级 RBAC、邀请链接、密码找回

@@ -6,6 +6,7 @@ import {
 import { Modal, Typography } from 'antd';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { useRef, useState } from 'react';
+import { KNOWLEDGE_UPLOAD_MAX_FILES } from '../knowledgeUpload.shared';
 
 interface KnowledgeSourcePickerModalProps {
   open: boolean;
@@ -153,8 +154,8 @@ export const KnowledgeSourcePickerModal = ({
             将文档拖到这里
           </Typography.Title>
           <Typography.Paragraph className="mb-0! mt-3 max-w-lg text-sm! leading-6! text-slate-500!">
-            支持 .md、.txt，单个文件不超过 50 MB；20 MB 以上建议拆分上传；当前稳定推荐
-            .md / .txt
+            支持 .md、.txt，单个文件不超过 50 MB；单次最多 {KNOWLEDGE_UPLOAD_MAX_FILES}{' '}
+            个文件；20 MB 以上建议拆分上传
           </Typography.Paragraph>
         </button>
 
@@ -162,7 +163,7 @@ export const KnowledgeSourcePickerModal = ({
           <SourceActionCard
             icon={<CloudUploadOutlined />}
             label="上传文件"
-            description="从本地选择文档，继续走现有上传与索引链路。"
+            description={`从本地选择文档，单次最多 ${KNOWLEDGE_UPLOAD_MAX_FILES} 个，系统会按队列逐个上传。`}
             onClick={onUploadClick}
           />
           <SourceActionCard

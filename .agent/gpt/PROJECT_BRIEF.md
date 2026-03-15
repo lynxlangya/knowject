@@ -53,7 +53,7 @@
 - `global_code` 真实导入与项目级合并检索
 - 项目对话消息写入与 SSE
 - 来源引用渲染
-- 项目资源页内 project knowledge 的 rebuild / diagnostics 运维入口
+- 项目知识原文的预览 / 下载能力
 
 ## 4. 当前信息架构
 
@@ -172,7 +172,7 @@
 
 - `/knowledge` 的 document / knowledge rebuild 与 diagnostics
 - 项目资源页 `agents` 正式消费切换
-- 项目私有知识的 `scope / projectId` 模型、`proj_{projectId}_docs` 写侧，以及资源页最小 create / upload 闭环
+- 项目私有知识的 `scope / projectId` 模型、`proj_{projectId}_docs` 写侧，以及资源页中的统一知识接入入口与详情抽屉
 - Week 5-6 统一验证入口 `pnpm verify:index-ops-project-consumption`
 
 ### 顺延到下一阶段
@@ -181,7 +181,7 @@
 - 项目 + 全局知识合并检索
 - `global_code` 真实 Git 导入
 - 完整 Agent runtime
-- 项目资源页内 project knowledge 的 rebuild / diagnostics 运维入口
+- 项目知识原文的预览 / 下载能力
 
 ## 10. 给 ChatGPT 的工作约束
 

@@ -44,12 +44,12 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
 - `agents` 已完成正式 CRUD、知识库 / Skill 绑定校验，与全局 `/agents` 管理页。
 - 项目模型已正式持久化 `knowledgeBaseIds / skillIds / agentIds` 绑定，并打通项目对话列表 / 详情读链路。
 - 项目私有 knowledge 已完成 `scope / projectId` 模型、项目级 `list / create / detail / upload` 路由、`proj_{projectId}_docs` 写侧与删除项目时的级联清理。
-- `/knowledge` 已具备最小状态展示与上传后轮询，前端可以观察 `pending / processing / completed / failed` 变化；项目资源页也已能展示项目私有知识，并提供最小创建 / 上传入口。
+- `/knowledge` 已具备最小状态展示与上传后轮询，前端可以观察 `pending / processing / completed / failed` 变化；项目资源页也已具备统一“接入知识库”入口、知识库详情抽屉，以及全局绑定 / 项目私有双层知识消费与轻维护能力。
 
 ### 当前明确未完成
 
 - `pdf / docx` 还没有回到当前正式上传契约；当前只稳定支持 `md / markdown / txt`。
-- 项目资源页中的 project knowledge 仍未接入 `rebuild / diagnostics` 运维入口。
+- 项目资源页中的知识原文预览 / 下载仍未补齐；全局绑定知识也还不能在项目内直接打开原文。
 
 ### 当前不应重复立项
 
@@ -378,8 +378,9 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
 - 已完成记录：
   - `ProjectLayout` 已新增项目私有知识目录加载与独立刷新入口，项目页上下文会同时下发全局知识目录与 `/api/projects/:projectId/knowledge` 返回的 project scope knowledge 列表。
   - `project.mock.ts` 已收口知识分组映射：项目资源页与项目概览最近资源卡片都会同时展示“绑定的全局知识”和“项目私有知识”，并通过 `source` 标签区分 `全局绑定 / 项目私有`。
-  - `/project/:projectId/resources` 已补齐项目私有知识最小管理入口：可以在知识分组里创建项目知识库，并直接复用现有上传 / 文本录入模态框上传 `md / markdown / txt` 文档。
-  - 项目私有知识卡片当前已展示最小 `indexStatus + documentCount`，并提供“上传文档”操作；全局绑定知识继续回到全局 `/knowledge` 页面治理，没有把两条职责重新混在一起。
+  - `/project/:projectId/resources` 已补齐统一“接入知识库”入口：可以在知识分组里直接选择“引入全局知识库”或“新建项目知识库”，后者继续复用现有上传 / 文本录入模态框上传 `md / markdown / txt` 文档。
+  - 项目资源页已新增知识库详情抽屉：全局绑定知识在项目中只读查看文档、允许解除绑定并跳转全局治理；项目私有知识则支持编辑、删除、上传文档、文档级 retry / rebuild / delete，以及最小 diagnostics / rebuild 运维。
+  - 项目私有知识卡片当前已展示最小 `indexStatus + documentCount`，并通过详情抽屉收口轻维护动作；没有把项目资源页扩成第二个全局知识治理页。
   - `KnowledgeManagementPage` 的上传约束与文本文件生成逻辑已抽到共享 helper，避免全局知识页和项目资源页各自维护一份文件校验规则。
 - 建议子任务：
   - 保持“治理在全局、消费在项目”的信息架构不变。
@@ -415,7 +416,7 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
   - 仓库根已新增 `pnpm verify:index-ops-project-consumption`，统一执行 `apps/api` 中与项目知识 / 索引运维直接相关的测试、`apps/indexer-py` 全量测试，以及 `apps/platform` 类型检查。
   - 已实际执行 `pnpm verify:index-ops-project-consumption`：`apps/api` 54 个测试全部通过，`apps/indexer-py` 18 个测试全部通过，`apps/platform` 类型检查通过。
   - 本轮已同步更新 `.agent/docs/current/architecture.md`、`.agent/docs/roadmap/target-architecture.md`、`.agent/docs/roadmap/gap-analysis.md`、`.agent/docs/README.md`、`.agent/docs/handoff/handoff-guide.md`、`.agent/docs/handoff/handoff-prompt.md`、根 `README*` 与子系统 README，清理 Week 5-6 / Week 7-10 混写。
-  - 已形成 Week 7-8 顺延项清单：消息写链路、项目 + 全局知识合并检索、来源引用、Skill runtime / Agent 编排，以及 project knowledge 的项目内 rebuild / diagnostics。
+  - 已形成 Week 7-8 顺延项清单：消息写链路、项目 + 全局知识合并检索、来源引用、Skill runtime / Agent 编排，以及项目知识原文预览 / 下载能力。
   - 关于“项目内创建知识库 -> 上传文档 -> 索引完成 -> 资源页可见”的验收，本轮采用“自动化 + 半自动”组合记录：后端 `knowledge.service / projects.service` 测试覆盖项目知识 `create / upload / collection / cleanup`，Python indexer 测试覆盖上传与索引链路，前端通过 `platform` 类型检查与资源映射 contract 保证 `resources` 页正式消费 project knowledge；当前仓库尚无浏览器级 E2E，因此这部分仍不是完整 UI 自动化。
 - 建议子任务：
   - 为 rebuild / diagnostics 补 API 与 indexer 测试。

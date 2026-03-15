@@ -63,7 +63,11 @@ import {
 import {
   createTextSourceFile,
   DOCUMENT_UPLOAD_ACCEPT,
+  formatKnowledgeSourceFileIssues,
+  formatKnowledgeSourceLargeFileWarning,
+  formatKnowledgeSourceOverflowMessage,
   KNOWLEDGE_UPLOAD_TOOLTIP,
+  prepareKnowledgeSourceFiles,
   shouldWarnLargeKnowledgeSourceFile,
   validateKnowledgeSourceFile,
 } from './knowledgeUpload.shared';
@@ -89,6 +93,40 @@ interface KnowledgeSourceMeta {
 }
 
 type UploadFlowStep = 'picker' | 'text';
+
+interface UploadKnowledgeSourceOptions {
+  manageLoading?: boolean;
+  notifySuccess?: boolean;
+  notifyError?: boolean;
+  refreshAfterUpload?: boolean;
+  showLargeFileWarning?: boolean;
+}
+
+interface UploadKnowledgeSourceResult {
+  success: boolean;
+  reason?: string;
+}
+
+const KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY = 'knowledge-batch-upload';
+
+const formatKnowledgeBatchUploadProgress = (
+  current: number,
+  total: number,
+): string => {
+  return `正在上传文档 ${current}/${total}`;
+};
+
+const formatKnowledgeBatchUploadSuccessMessage = (
+  successCount: number,
+  totalCount: number,
+): string => {
+  if (successCount === totalCount) {
+    return `已上传 ${successCount} 个文件，正在进入索引队列`;
+  }
+
+  return `已上传 ${successCount}/${totalCount} 个文件，正在进入索引队列`;
+};
+
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -793,44 +831,100 @@ export const KnowledgeManagementPage = () => {
     setUploadFlowStep('picker');
   };
 
-  const uploadKnowledgeSource = async (file: File) => {
+  const uploadKnowledgeSource = async (
+    file: File,
+    options?: UploadKnowledgeSourceOptions,
+  ): Promise<UploadKnowledgeSourceResult> => {
+    const notifyError = options?.notifyError !== false;
+
     if (!activeKnowledgeId || !activeKnowledge) {
-      message.info('请先选择一个知识库');
-      return;
+      const reason = '请先选择一个知识库';
+
+      if (notifyError) {
+        message.info(reason);
+      }
+
+      return {
+        success: false,
+        reason,
+      };
     }
 
     if (activeKnowledge.sourceType !== 'global_docs') {
-      message.info('global_code 目前只冻结命名空间，暂不支持真实导入');
-      return;
+      const reason = 'global_code 目前只冻结命名空间，暂不支持真实导入';
+
+      if (notifyError) {
+        message.info(reason);
+      }
+
+      return {
+        success: false,
+        reason,
+      };
     }
 
     const validationError = validateKnowledgeSourceFile(file);
 
     if (validationError) {
-      message.error(validationError);
-      return;
+      if (notifyError) {
+        message.error(validationError);
+      }
+
+      return {
+        success: false,
+        reason: validationError,
+      };
     }
 
-    if (shouldWarnLargeKnowledgeSourceFile(file)) {
+    if (
+      options?.showLargeFileWarning !== false &&
+      shouldWarnLargeKnowledgeSourceFile(file)
+    ) {
       message.warning('文件超过 20 MB，建议按主题拆分上传，索引更快也更稳');
     }
 
-    setUploading(true);
+    const manageLoading = options?.manageLoading !== false;
+
+    if (manageLoading) {
+      setUploading(true);
+    }
 
     try {
       await uploadKnowledgeDocument(activeKnowledgeId, file);
 
-      message.success('文档已上传，正在进入索引队列');
-      refreshDocumentStatus(activeKnowledgeId, {
-        reloadDiagnostics: true,
-      });
+      if (options?.notifySuccess !== false) {
+        message.success('文档已上传，正在进入索引队列');
+      }
+
+      if (options?.refreshAfterUpload !== false) {
+        refreshDocumentStatus(activeKnowledgeId, {
+          reloadDiagnostics: true,
+        });
+      }
+
+      return {
+        success: true,
+      };
     } catch (currentError) {
-      console.error('[KnowledgeManagement] 上传文档失败:', currentError);
-      message.error(
-        extractApiErrorMessage(currentError, '上传文档失败，请稍后重试'),
+      const errorMessage = extractApiErrorMessage(
+        currentError,
+        '上传文档失败，请稍后重试',
       );
+
+      console.error('[KnowledgeManagement] 上传文档失败:', currentError);
+
+      if (notifyError) {
+        message.error(errorMessage);
+      }
+
+      return {
+        success: false,
+        reason: errorMessage,
+      };
     } finally {
-      setUploading(false);
+      if (manageLoading) {
+        setUploading(false);
+      }
     }
   };
 
@@ -843,13 +937,105 @@ export const KnowledgeManagementPage = () => {
       return;
     }
 
-    closeUploadFlow();
+    const {
+      acceptedFiles,
+      fileIssues,
+      overflowCount,
+      largeFileCount,
+    } = prepareKnowledgeSourceFiles(files);
 
-    if (files.length > 1) {
-      message.info('当前一次仅支持上传 1 个文件');
+    if (overflowCount > 0) {
+      message.warning(formatKnowledgeSourceOverflowMessage(overflowCount));
     }
 
-    await uploadKnowledgeSource(files[0]);
+    if (fileIssues.length > 0) {
+      message.warning(`已跳过 ${fileIssues.length} 个文件：${formatKnowledgeSourceFileIssues(fileIssues)}`);
+    }
+
+    if (acceptedFiles.length === 0) {
+      return;
+    }
+
+    if (largeFileCount > 0) {
+      message.warning(formatKnowledgeSourceLargeFileWarning(largeFileCount));
+    }
+
+    closeUploadFlow();
+
+    if (acceptedFiles.length === 1) {
+      await uploadKnowledgeSource(acceptedFiles[0], {
+        showLargeFileWarning: false,
+      });
+      return;
+    }
+
+    const failedFiles: Array<{ fileName: string; reason: string }> = [];
+    let successCount = 0;
+
+    setUploading(true);
+
+    try {
+      for (const [index, file] of acceptedFiles.entries()) {
+        message.open({
+          key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
+          type: 'loading',
+          content: formatKnowledgeBatchUploadProgress(
+            index + 1,
+            acceptedFiles.length,
+          ),
+          duration: 0,
+        });
+
+        const result = await uploadKnowledgeSource(file, {
+          manageLoading: false,
+          notifySuccess: false,
+          notifyError: false,
+          refreshAfterUpload: false,
+          showLargeFileWarning: false,
+        });
+
+        if (result.success) {
+          successCount += 1;
+          continue;
+        }
+
+        failedFiles.push({
+          fileName: file.name,
+          reason: result.reason ?? '上传失败，请稍后重试',
+        });
+      }
+    } finally {
+      setUploading(false);
+    }
+
+    if (successCount > 0 && activeKnowledgeId) {
+      refreshDocumentStatus(activeKnowledgeId, {
+        reloadDiagnostics: true,
+      });
+    }
+
+    if (successCount > 0) {
+      message.open({
+        key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
+        type: failedFiles.length === 0 ? 'success' : 'warning',
+        content: formatKnowledgeBatchUploadSuccessMessage(
+          successCount,
+          acceptedFiles.length,
+        ),
+        duration: 4,
+      });
+    } else {
+      message.open({
+        key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
+        type: 'error',
+        content: '所选文件上传失败，请稍后重试',
+        duration: 4,
+      });
+    }
+
+    if (failedFiles.length > 0) {
+      message.error(`上传失败的文件：${formatKnowledgeSourceFileIssues(failedFiles)}`);
+    }
   };
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -1807,6 +1993,7 @@ export const KnowledgeManagementPage = () => {
         ref={fileInputRef}
         type="file"
         accept={DOCUMENT_UPLOAD_ACCEPT}
+        multiple
         className="hidden"
         onChange={(event) => void handleFileChange(event)}
       />

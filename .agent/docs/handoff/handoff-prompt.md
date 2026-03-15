@@ -56,7 +56,7 @@
 - 当前项目列表、项目基础信息、成员 roster、项目资源绑定、项目私有知识目录和项目对话列表 / 详情已来自后端 `/api/projects*` 与 `/api/projects/:projectId/knowledge*`，但概览补充文案、成员协作快照仍依赖前端补充层。
 - 后端已经落地 MongoDB、JWT、注册 / 登录、全局成员概览、最小项目 CRUD、成员接口、健康检查和 memory 演示接口。
 - `/workspace`、`/home/project/*` 和旧 `knowledge|skills|agents` 项目路由都只是兼容入口。
-- 项目资源页当前同时消费项目已绑定的全局资产和项目私有知识；知识库与 Skill / Agent 元数据优先来自 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`；全局 `/skills` 已支持自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已有正式 CRUD / 绑定表单。
+- 项目资源页当前同时消费项目已绑定的全局资产和项目私有知识；知识库与 Skill / Agent 元数据优先来自 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`。知识库分组现已补齐统一“接入知识库”弹层和知识库详情抽屉：全局绑定知识在项目内只读查看文档并允许解除绑定，项目私有知识则支持编辑、删除、上传文档和最小 diagnostics / rebuild 运维；全局 `/skills` 已支持自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已有正式 CRUD / 绑定表单。
 - `knowject_project_pins` 当前承载前端置顶偏好，`knowject_project_resource_bindings` 已退为历史资源绑定迁移缓存。
 - `knowject_projects` 已退为历史本地 Mock 缓存键，当前只在首次刷新时作为一次性迁移源读取。
 - 项目成员正式管理接口已经落地，前端成员页当前已切到正式后端 roster，全局成员页也已切到 `/api/members`。

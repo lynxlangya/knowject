@@ -37,6 +37,10 @@ import {
 import {
   createTextSourceFile,
   DOCUMENT_UPLOAD_ACCEPT,
+  formatKnowledgeSourceFileIssues,
+  formatKnowledgeSourceLargeFileWarning,
+  formatKnowledgeSourceOverflowMessage,
+  prepareKnowledgeSourceFiles,
   shouldWarnLargeKnowledgeSourceFile,
   validateKnowledgeSourceFile,
 } from '@pages/knowledge/knowledgeUpload.shared';
@@ -56,6 +60,39 @@ interface EditKnowledgeFormValues {
 }
 
 type UploadFlowStep = 'picker' | 'text';
+
+interface UploadProjectKnowledgeSourceOptions {
+  manageLoading?: boolean;
+  notifySuccess?: boolean;
+  notifyError?: boolean;
+  refreshAfterUpload?: boolean;
+  showLargeFileWarning?: boolean;
+}
+
+interface UploadProjectKnowledgeSourceResult {
+  success: boolean;
+  reason?: string;
+}
+
+const PROJECT_KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY = 'project-knowledge-batch-upload';
+
+const formatProjectKnowledgeBatchUploadProgress = (
+  current: number,
+  total: number,
+): string => {
+  return `正在上传项目文档 ${current}/${total}`;
+};
+
+const formatProjectKnowledgeBatchUploadSuccessMessage = (
+  successCount: number,
+  totalCount: number,
+): string => {
+  if (successCount === totalCount) {
+    return `已上传 ${successCount} 个文件，正在进入项目索引队列`;
+  }
+
+  return `已上传 ${successCount}/${totalCount} 个文件，正在进入项目索引队列`;
+};
 
 const GLOBAL_PATH_BY_FOCUS: Record<ProjectResourceFocus, string> = {
   knowledge: PATHS.knowledge,
@@ -382,35 +419,71 @@ export const ProjectResourcesPage = () => {
   const uploadProjectKnowledgeSource = async (
     knowledgeId: string,
     file: File,
-  ): Promise<boolean> => {
+    options?: UploadProjectKnowledgeSourceOptions,
+  ): Promise<UploadProjectKnowledgeSourceResult> => {
+    const notifyError = options?.notifyError !== false;
     const validationError = validateKnowledgeSourceFile(file);
 
     if (validationError) {
-      message.error(validationError);
-      return false;
+      if (notifyError) {
+        message.error(validationError);
+      }
+
+      return {
+        success: false,
+        reason: validationError,
+      };
     }
 
-    if (shouldWarnLargeKnowledgeSourceFile(file)) {
+    if (
+      options?.showLargeFileWarning !== false &&
+      shouldWarnLargeKnowledgeSourceFile(file)
+    ) {
       message.warning('文件超过 20 MB，建议按主题拆分上传，索引更快也更稳');
     }
 
-    setUploadingKnowledgeId(knowledgeId);
+    const manageLoading = options?.manageLoading !== false;
+
+    if (manageLoading) {
+      setUploadingKnowledgeId(knowledgeId);
+    }
 
     try {
       await uploadProjectKnowledgeDocument(activeProject.id, knowledgeId, file);
-      message.success('文档已上传，正在进入项目索引队列');
-      refreshProjectKnowledge();
-      setActiveKnowledgeId(knowledgeId);
-      setActiveKnowledgeReloadToken((value) => value + 1);
-      return true;
+
+      if (options?.notifySuccess !== false) {
+        message.success('文档已上传，正在进入项目索引队列');
+      }
+
+      if (options?.refreshAfterUpload !== false) {
+        refreshProjectKnowledge();
+        setActiveKnowledgeId(knowledgeId);
+        setActiveKnowledgeReloadToken((value) => value + 1);
+      }
+
+      return {
+        success: true,
+      };
     } catch (currentError) {
-      console.error('[ProjectResources] 上传项目知识文档失败:', currentError);
-      message.error(
-        extractApiErrorMessage(currentError, '上传项目知识文档失败，请稍后重试'),
+      const errorMessage = extractApiErrorMessage(
+        currentError,
+        '上传项目知识文档失败，请稍后重试',
       );
-      return false;
+
+      console.error('[ProjectResources] 上传项目知识文档失败:', currentError);
+
+      if (notifyError) {
+        message.error(errorMessage);
+      }
+
+      return {
+        success: false,
+        reason: errorMessage,
+      };
     } finally {
-      setUploadingKnowledgeId(null);
+      if (manageLoading) {
+        setUploadingKnowledgeId(null);
+      }
     }
   };
 
@@ -419,14 +492,106 @@ export const ProjectResourcesPage = () => {
       return;
     }
 
+    const {
+      acceptedFiles,
+      fileIssues,
+      overflowCount,
+      largeFileCount,
+    } = prepareKnowledgeSourceFiles(files);
+
+    if (overflowCount > 0) {
+      message.warning(formatKnowledgeSourceOverflowMessage(overflowCount));
+    }
+
+    if (fileIssues.length > 0) {
+      message.warning(`已跳过 ${fileIssues.length} 个文件：${formatKnowledgeSourceFileIssues(fileIssues)}`);
+    }
+
+    if (acceptedFiles.length === 0) {
+      return;
+    }
+
+    if (largeFileCount > 0) {
+      message.warning(formatKnowledgeSourceLargeFileWarning(largeFileCount));
+    }
+
     const knowledgeId = uploadTargetKnowledgeId;
     closeUploadFlow();
 
-    if (files.length > 1) {
-      message.info('当前一次仅支持上传 1 个文件');
+    if (acceptedFiles.length === 1) {
+      await uploadProjectKnowledgeSource(knowledgeId, acceptedFiles[0], {
+        showLargeFileWarning: false,
+      });
+      return;
     }
 
-    await uploadProjectKnowledgeSource(knowledgeId, files[0]);
+    const failedFiles: Array<{ fileName: string; reason: string }> = [];
+    let successCount = 0;
+
+    setUploadingKnowledgeId(knowledgeId);
+
+    try {
+      for (const [index, file] of acceptedFiles.entries()) {
+        message.open({
+          key: PROJECT_KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
+          type: 'loading',
+          content: formatProjectKnowledgeBatchUploadProgress(
+            index + 1,
+            acceptedFiles.length,
+          ),
+          duration: 0,
+        });
+
+        const result = await uploadProjectKnowledgeSource(knowledgeId, file, {
+          manageLoading: false,
+          notifySuccess: false,
+          notifyError: false,
+          refreshAfterUpload: false,
+          showLargeFileWarning: false,
+        });
+
+        if (result.success) {
+          successCount += 1;
+          continue;
+        }
+
+        failedFiles.push({
+          fileName: file.name,
+          reason: result.reason ?? '上传项目知识文档失败，请稍后重试',
+        });
+      }
+    } finally {
+      setUploadingKnowledgeId(null);
+    }
+
+    if (successCount > 0) {
+      refreshProjectKnowledge();
+      setActiveKnowledgeId(knowledgeId);
+      setActiveKnowledgeReloadToken((value) => value + 1);
+    }
+
+    if (successCount > 0) {
+      message.open({
+        key: PROJECT_KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
+        type: failedFiles.length === 0 ? 'success' : 'warning',
+        content: formatProjectKnowledgeBatchUploadSuccessMessage(
+          successCount,
+          acceptedFiles.length,
+        ),
+        duration: 4,
+      });
+    } else {
+      message.open({
+        key: PROJECT_KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
+        type: 'error',
+        content: '所选文件上传失败，请稍后重试',
+        duration: 4,
+      });
+    }
+
+    if (failedFiles.length > 0) {
+      message.error(`上传失败的文件：${formatKnowledgeSourceFileIssues(failedFiles)}`);
+    }
   };
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -459,7 +624,7 @@ export const ProjectResourcesPage = () => {
       createTextSourceFile(values),
     );
 
-    if (uploadSucceeded) {
+    if (uploadSucceeded.success) {
       closeUploadFlow();
     }
   };
@@ -977,6 +1142,7 @@ export const ProjectResourcesPage = () => {
         ref={fileInputRef}
         type="file"
         accept={DOCUMENT_UPLOAD_ACCEPT}
+        multiple
         className="hidden"
         onChange={(event) => void handleFileChange(event)}
       />
