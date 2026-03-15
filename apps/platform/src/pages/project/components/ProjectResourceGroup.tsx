@@ -77,6 +77,86 @@ export const ProjectResourceGroup = ({
     onItemClick(item);
   };
 
+  const renderResourceCard = (item: ProjectResourceItem) => (
+    <article
+      key={item.id}
+      className={[
+        'rounded-[20px] border border-slate-200 bg-slate-50/55 p-4 shadow-[0_4px_16px_rgba(15,23,42,0.02)] transition',
+        onItemClick
+          ? 'cursor-pointer hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_12px_24px_rgba(15,23,42,0.06)]'
+          : '',
+      ].join(' ')}
+      role={onItemClick ? 'button' : undefined}
+      tabIndex={onItemClick ? 0 : undefined}
+      onClick={onItemClick ? () => onItemClick(item) : undefined}
+      onKeyDown={
+        onItemClick
+          ? (event) => handleItemKeyDown(event, item)
+          : undefined
+      }
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Typography.Text className="text-base font-semibold text-slate-800">
+              {item.name}
+            </Typography.Text>
+            <Tag color={SOURCE_TAG_META[item.source].color}>
+              {SOURCE_TAG_META[item.source].label}
+            </Tag>
+            {item.type === 'knowledge' && item.indexStatus ? (
+              <Tag color={KNOWLEDGE_INDEX_META[item.indexStatus].color}>
+                {KNOWLEDGE_INDEX_META[item.indexStatus].label}
+              </Tag>
+            ) : null}
+          </div>
+        </div>
+
+        {renderItemActions ? (
+          <div
+            className="shrink-0"
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+            onKeyDown={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            {renderItemActions(item)}
+          </div>
+        ) : null}
+      </div>
+      <Typography.Paragraph className="mb-0! mt-3 text-sm! text-slate-600!">
+        {item.description}
+      </Typography.Paragraph>
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
+        <span>维护方：{item.owner}</span>
+        <span>最近更新：{item.updatedAt}</span>
+        {item.type === 'knowledge' ? (
+          <span>文档数：{item.documentCount ?? 0}</span>
+        ) : (
+          <span>使用项目：{item.usageCount}</span>
+        )}
+      </div>
+    </article>
+  );
+
+  const knowledgeSections =
+    group.key === 'knowledge'
+      ? [
+          {
+            key: 'project',
+            label: '项目私有',
+            items: group.items.filter((item) => item.source === 'project'),
+          },
+          {
+            key: 'global',
+            label: '全局绑定',
+            items: group.items.filter((item) => item.source === 'global'),
+          },
+        ].filter((section) => section.items.length > 0)
+      : [];
+
   return (
     <section
       className={[
@@ -109,71 +189,30 @@ export const ProjectResourceGroup = ({
 
       <div className="mt-5">
         {group.items.length > 0 ? (
-          <div className="grid gap-3 xl:grid-cols-2">
-            {group.items.map((item) => (
-              <article
-                key={item.id}
-                className={[
-                  'rounded-[20px] border border-slate-200 bg-slate-50/55 p-4 shadow-[0_4px_16px_rgba(15,23,42,0.02)] transition',
-                  onItemClick
-                    ? 'cursor-pointer hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_12px_24px_rgba(15,23,42,0.06)]'
-                    : '',
-                ].join(' ')}
-                role={onItemClick ? 'button' : undefined}
-                tabIndex={onItemClick ? 0 : undefined}
-                onClick={onItemClick ? () => onItemClick(item) : undefined}
-                onKeyDown={
-                  onItemClick
-                    ? (event) => handleItemKeyDown(event, item)
-                    : undefined
-                }
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Typography.Text className="text-base font-semibold text-slate-800">
-                        {item.name}
-                      </Typography.Text>
-                      <Tag color={SOURCE_TAG_META[item.source].color}>
-                        {SOURCE_TAG_META[item.source].label}
-                      </Tag>
-                      {item.type === 'knowledge' && item.indexStatus ? (
-                        <Tag color={KNOWLEDGE_INDEX_META[item.indexStatus].color}>
-                          {KNOWLEDGE_INDEX_META[item.indexStatus].label}
-                        </Tag>
-                      ) : null}
-                    </div>
+          group.key === 'knowledge' ? (
+            <div className="space-y-5">
+              {knowledgeSections.map((section, index) => (
+                <div
+                  key={section.key}
+                  className={index > 0 ? 'border-t border-slate-100 pt-5' : ''}
+                >
+                  <div className="mb-3">
+                    <Typography.Text className="text-sm font-medium text-slate-500">
+                      {section.label} · {section.items.length} 个
+                    </Typography.Text>
                   </div>
 
-                  {renderItemActions ? (
-                    <div
-                      className="shrink-0"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                      }}
-                      onKeyDown={(event) => {
-                        event.stopPropagation();
-                      }}
-                    >
-                      {renderItemActions(item)}
-                    </div>
-                  ) : null}
+                  <div className="grid gap-3 xl:grid-cols-2">
+                    {section.items.map(renderResourceCard)}
+                  </div>
                 </div>
-                <Typography.Paragraph className="mb-0! mt-3 text-sm! text-slate-600!">
-                  {item.description}
-                </Typography.Paragraph>
-                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
-                  <span>维护方：{item.owner}</span>
-                  <span>最近更新：{item.updatedAt}</span>
-                  {item.type === 'knowledge' ? (
-                    <span>文档数：{item.documentCount ?? 0}</span>
-                  ) : (
-                    <span>使用项目：{item.usageCount}</span>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-3 xl:grid-cols-2">
+              {group.items.map(renderResourceCard)}
+            </div>
+          )
         ) : (
           <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/50 px-4 py-8">
             <Empty
