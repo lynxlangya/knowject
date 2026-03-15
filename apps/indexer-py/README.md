@@ -1,6 +1,6 @@
 # `apps/indexer-py`
 
-状态：截至 2026-03-14，已切到 FastAPI + uv 的内部索引控制面基线。
+状态：截至 2026-03-15，已切到 FastAPI + uv 的内部索引控制面基线。
 
 本目录承接 Knowject 的 Python 索引处理链路，当前已完成 `global_docs` 的“解析、清洗、分块、embedding、Chroma 写入/删除、结果回传”最小闭环；`global_code` 仍只保留命名空间契约，不做真实导入。
 
@@ -10,6 +10,8 @@
   - 提供 FastAPI/ASGI 应用入口。
   - `GET /health`：返回服务状态、chunk 配置和当前支持格式。
   - `POST /internal/v1/index/documents`：接收 Node 下发的文档处理请求。
+  - `POST /internal/v1/index/documents/{documentId}/rebuild`：接收单文档 rebuild 请求。
+  - `GET /internal/v1/index/diagnostics`：返回当前 chunk 配置、embedding provider 和 Chroma 可达性诊断。
   - 继续兼容旧入口 `POST /internal/index-documents`，用于开发态 / 滚动重启期间的平滑过渡。
   - `/docs`、`/redoc`、`/openapi.json`：内部文档与 schema 入口。
 - `app/domain/indexing/pipeline.py`
@@ -45,7 +47,10 @@
 
 - Node / Express 仍是业务主链路入口。
 - Node 触发 Python 的长期契约固定为本地 HTTP。
-- 当前版本化内部写入口固定为 `POST /internal/v1/index/documents`。
+- 当前版本化内部入口固定为：
+  - `POST /internal/v1/index/documents`
+  - `POST /internal/v1/index/documents/{documentId}/rebuild`
+  - `GET /internal/v1/index/diagnostics`
 - 为避免开发态 API / indexer 重启顺序导致上传 404，当前仍兼容旧路径 `POST /internal/index-documents`。
 - MongoDB 中的知识库 / 文档状态只能由 Node 回写。
 - Python 当前只返回处理结果；Node 负责把状态推进为 `processing / completed / failed`。
@@ -105,7 +110,7 @@ Docker Compose 完整编排下会自动构建并启动 `indexer-py` 服务，不
 - 不落地 `global_code` 真实导入。
 - 不让 Python 直接写 MongoDB 业务主状态。
 - 不提供统一知识检索 API；检索统一留给 `apps/api`。
-- 不提供已实现的 `retry / rebuild / diagnostics` 业务接口；当前只固定未来命名空间，不注册假实现。
+- 不提供知识库级 rebuild 内部入口；当前由 Node 在业务侧遍历文档触发单文档 rebuild。
 
 ## 后续任务承接
 

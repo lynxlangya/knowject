@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
-import { ObjectId } from 'mongodb';
+import { ObjectId, type WithId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
 import {
@@ -23,9 +23,11 @@ import type {
   CreateKnowledgeInput,
   KnowledgeCommandContext,
   KnowledgeBaseDocument,
+  KnowledgeDiagnosticsResponse,
   KnowledgeDetailEnvelope,
   KnowledgeDocumentRecord,
   KnowledgeDocumentUploadResponse,
+  KnowledgeIndexerDiagnosticsResponse,
   KnowledgeIndexerDocumentRequest,
   KnowledgeIndexerResponse,
   KnowledgeListResponse,
@@ -69,6 +71,16 @@ export interface KnowledgeService {
     knowledgeId: string,
     documentId: string,
   ): Promise<void>;
+  rebuildDocument(
+    context: KnowledgeCommandContext,
+    knowledgeId: string,
+    documentId: string,
+  ): Promise<void>;
+  rebuildKnowledge(context: KnowledgeCommandContext, knowledgeId: string): Promise<void>;
+  getKnowledgeDiagnostics(
+    context: KnowledgeCommandContext,
+    knowledgeId: string,
+  ): Promise<KnowledgeDiagnosticsResponse>;
   searchDocuments(
     context: KnowledgeCommandContext,
     input: SearchKnowledgeDocumentsInput,
@@ -122,6 +134,22 @@ const createDocumentRetryConflictError = (): AppError => {
     statusCode: 409,
     code: 'KNOWLEDGE_DOCUMENT_RETRY_CONFLICT',
     message: '文档已在索引中，请稍后刷新状态',
+  });
+};
+
+const createKnowledgeRebuildConflictError = (): AppError => {
+  return new AppError({
+    statusCode: 409,
+    code: 'KNOWLEDGE_REBUILD_CONFLICT',
+    message: '知识库存在正在索引的文档，请稍后再试',
+  });
+};
+
+const createKnowledgeRebuildEmptyError = (): AppError => {
+  return new AppError({
+    statusCode: 409,
+    code: 'KNOWLEDGE_REBUILD_EMPTY',
+    message: '知识库当前没有可重建的文档',
   });
 };
 
@@ -279,9 +307,22 @@ const buildStoragePath = (
   );
 };
 
+const KNOWLEDGE_DIAGNOSTICS_STALE_PROCESSING_MS = 15 * 60 * 1000;
 const KNOWLEDGE_INDEXER_DOCUMENT_PATHS = [
   '/internal/v1/index/documents',
   '/internal/index-documents',
+] as const;
+const KNOWLEDGE_INDEXER_REBUILD_DOCUMENT_PATHS = (
+  documentId: string,
+) =>
+  [
+    `/internal/v1/index/documents/${encodeURIComponent(documentId)}/rebuild`,
+    '/internal/v1/index/documents',
+    '/internal/index-documents',
+  ] as const;
+const KNOWLEDGE_INDEXER_DIAGNOSTICS_PATHS = [
+  '/internal/v1/index/diagnostics',
+  '/health',
 ] as const;
 
 const buildKnowledgeIndexerUrls = (baseUrl: string): string[] => {
@@ -289,6 +330,41 @@ const buildKnowledgeIndexerUrls = (baseUrl: string): string[] => {
     new Set(
       KNOWLEDGE_INDEXER_DOCUMENT_PATHS.map((path) => new URL(path, baseUrl).toString()),
     ),
+  );
+};
+
+const buildKnowledgeIndexerRebuildUrls = (
+  baseUrl: string,
+  documentId: string,
+): string[] => {
+  return Array.from(
+    new Set(
+      KNOWLEDGE_INDEXER_REBUILD_DOCUMENT_PATHS(documentId).map((path) =>
+        new URL(path, baseUrl).toString(),
+      ),
+    ),
+  );
+};
+
+const buildKnowledgeIndexerDiagnosticsUrls = (baseUrl: string): string[] => {
+  return Array.from(
+    new Set(
+      KNOWLEDGE_INDEXER_DIAGNOSTICS_PATHS.map((path) => new URL(path, baseUrl).toString()),
+    ),
+  );
+};
+
+const buildExpectedCollectionName = (sourceType: KnowledgeSourceType): string => {
+  return sourceType === 'global_code' ? 'global_code' : 'global_docs';
+};
+
+const isStaleProcessingDocument = (
+  document: Pick<KnowledgeDocumentRecord, 'status' | 'updatedAt'>,
+  now: Date,
+): boolean => {
+  return (
+    document.status === 'processing' &&
+    now.getTime() - document.updatedAt.getTime() >= KNOWLEDGE_DIAGNOSTICS_STALE_PROCESSING_MS
   );
 };
 
@@ -360,11 +436,30 @@ const resolveKnowledgeIndexerErrorMessage = (
   return `Python indexer 请求失败（HTTP ${response.status}）`;
 };
 
+const resolveDiagnosticsErrorMessage = (error: unknown): string => {
+  if (error instanceof AppError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return '诊断请求失败';
+};
+
 const callKnowledgeIndexer = async (
   env: AppEnv,
   payload: KnowledgeIndexerDocumentRequest,
+  options?: {
+    mode?: 'index' | 'rebuild';
+  },
 ): Promise<KnowledgeIndexerResponse> => {
-  const indexerUrls = buildKnowledgeIndexerUrls(env.knowledge.indexerUrl);
+  const mode = options?.mode ?? 'index';
+  const indexerUrls =
+    mode === 'rebuild'
+      ? buildKnowledgeIndexerRebuildUrls(env.knowledge.indexerUrl, payload.documentId)
+      : buildKnowledgeIndexerUrls(env.knowledge.indexerUrl);
 
   for (let index = 0; index < indexerUrls.length; index += 1) {
     const indexerUrl = indexerUrls[index];
@@ -415,6 +510,49 @@ const callKnowledgeIndexer = async (
   throw new Error('Python indexer 请求失败（HTTP 404）');
 };
 
+const parseKnowledgeIndexerDiagnosticsResponse = (
+  responseBody: unknown,
+): KnowledgeIndexerDiagnosticsResponse => {
+  if (
+    !responseBody ||
+    typeof responseBody !== 'object' ||
+    !('status' in responseBody) ||
+    (responseBody.status !== 'ok' && responseBody.status !== 'degraded') ||
+    !('service' in responseBody) ||
+    typeof responseBody.service !== 'string' ||
+    !('chunkSize' in responseBody) ||
+    typeof responseBody.chunkSize !== 'number' ||
+    !('chunkOverlap' in responseBody) ||
+    typeof responseBody.chunkOverlap !== 'number' ||
+    !('supportedFormats' in responseBody) ||
+    !Array.isArray(responseBody.supportedFormats)
+  ) {
+    throw new Error('Python indexer 诊断响应格式不合法');
+  }
+
+  return {
+    status: responseBody.status,
+    service: responseBody.service,
+    chunkSize: responseBody.chunkSize,
+    chunkOverlap: responseBody.chunkOverlap,
+    supportedFormats: responseBody.supportedFormats.filter(
+      (value): value is string => typeof value === 'string',
+    ),
+    embeddingProvider:
+      'embeddingProvider' in responseBody && typeof responseBody.embeddingProvider === 'string'
+        ? responseBody.embeddingProvider
+        : null,
+    chromaReachable:
+      'chromaReachable' in responseBody && typeof responseBody.chromaReachable === 'boolean'
+        ? responseBody.chromaReachable
+        : null,
+    errorMessage:
+      'errorMessage' in responseBody && typeof responseBody.errorMessage === 'string'
+        ? responseBody.errorMessage
+        : null,
+  };
+};
+
 const persistProcessingFailure = async ({
   repository,
   knowledgeId,
@@ -458,6 +596,68 @@ const persistProcessingFailure = async ({
   console.error(`[knowledge-indexer] document ${documentId} processing failed: ${errorMessage}`);
 };
 
+const readDocumentStoragePresence = async (
+  env: AppEnv,
+  document: Pick<KnowledgeDocumentRecord, 'storagePath'>,
+): Promise<boolean> => {
+  try {
+    await access(join(env.knowledge.storageRoot, document.storagePath));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const readKnowledgeIndexerDiagnostics = async (
+  env: AppEnv,
+): Promise<KnowledgeIndexerDiagnosticsResponse> => {
+  const diagnosticsUrls = buildKnowledgeIndexerDiagnosticsUrls(env.knowledge.indexerUrl);
+
+  for (let index = 0; index < diagnosticsUrls.length; index += 1) {
+    const diagnosticsUrl = diagnosticsUrls[index];
+    if (!diagnosticsUrl) {
+      continue;
+    }
+
+    let response: Response;
+
+    try {
+      response = await fetch(diagnosticsUrl, {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
+      });
+    } catch (error) {
+      if (index < diagnosticsUrls.length - 1) {
+        continue;
+      }
+
+      throw new Error(
+        `Python indexer 诊断不可达，请确认本地索引服务已启动（${diagnosticsUrl}）。原始错误：${normalizeIndexerErrorMessage(
+          error,
+          'unknown fetch error',
+        )}`,
+      );
+    }
+
+    const responseBody = await parseKnowledgeIndexerResponseBody(response);
+
+    if (response.status === 404 && index < diagnosticsUrls.length - 1) {
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new Error(resolveKnowledgeIndexerErrorMessage(response, responseBody));
+    }
+
+    return parseKnowledgeIndexerDiagnosticsResponse(responseBody);
+  }
+
+  throw new Error('Python indexer 诊断请求失败（HTTP 404）');
+};
+
 const cleanupDetachedDocumentChunks = async ({
   searchService,
   documentId,
@@ -490,6 +690,7 @@ const processUploadedDocument = async ({
   mimeType,
   sourceType,
   documentVersionHash,
+  mode = 'index',
 }: {
   env: AppEnv;
   repository: KnowledgeRepository;
@@ -501,6 +702,7 @@ const processUploadedDocument = async ({
   mimeType: string;
   sourceType: KnowledgeSourceType;
   documentVersionHash: string;
+  mode?: 'index' | 'rebuild';
 }): Promise<void> => {
   try {
     const processingAt = new Date();
@@ -525,6 +727,8 @@ const processUploadedDocument = async ({
       mimeType,
       storagePath,
       documentVersionHash,
+    }, {
+      mode,
     });
 
     if (result.status === 'failed') {
@@ -573,6 +777,7 @@ const queueDocumentProcessing = ({
   mimeType,
   sourceType,
   documentVersionHash,
+  mode = 'index',
 }: {
   env: AppEnv;
   repository: KnowledgeRepository;
@@ -584,6 +789,7 @@ const queueDocumentProcessing = ({
   mimeType: string;
   sourceType: KnowledgeSourceType;
   documentVersionHash: string;
+  mode?: 'index' | 'rebuild';
 }): void => {
   setImmediate(() => {
     void processUploadedDocument({
@@ -597,6 +803,7 @@ const queueDocumentProcessing = ({
       mimeType,
       sourceType,
       documentVersionHash,
+      mode,
     }).catch((error) => {
       console.error(
         `[knowledge-indexer] detached processing crashed for document ${documentId}: ${normalizeIndexerErrorMessage(
@@ -604,6 +811,52 @@ const queueDocumentProcessing = ({
         )}`,
       );
     });
+  });
+};
+
+const queueExistingKnowledgeDocument = async ({
+  env,
+  repository,
+  searchService,
+  knowledgeId,
+  document,
+  sourceType,
+  mode,
+}: {
+  env: AppEnv;
+  repository: KnowledgeRepository;
+  searchService: KnowledgeSearchService;
+  knowledgeId: string;
+  document: WithId<KnowledgeDocumentRecord>;
+  sourceType: KnowledgeSourceType;
+  mode: 'index' | 'rebuild';
+}): Promise<void> => {
+  const queuedAt = new Date();
+  const queuedDocument = await repository.updateKnowledgeDocument(document._id.toHexString(), {
+    status: 'pending',
+    errorMessage: null,
+    processedAt: null,
+    updatedAt: queuedAt,
+  });
+
+  if (!queuedDocument) {
+    throw createKnowledgeDocumentNotFoundError();
+  }
+
+  await repository.syncKnowledgeSummaryFromDocuments(knowledgeId, queuedAt);
+
+  queueDocumentProcessing({
+    env,
+    repository,
+    searchService,
+    knowledgeId,
+    documentId: document._id.toHexString(),
+    storagePath: join(env.knowledge.storageRoot, document.storagePath),
+    fileName: document.fileName,
+    mimeType: document.mimeType,
+    sourceType,
+    documentVersionHash: document.documentVersionHash,
+    mode,
   });
 };
 
@@ -883,32 +1136,163 @@ export const createKnowledgeService = ({
         throw createDocumentRetryConflictError();
       }
 
-      const queuedAt = new Date();
-      const queuedDocument = await repository.updateKnowledgeDocument(documentId, {
-        status: 'pending',
-        errorMessage: null,
-        processedAt: null,
-        updatedAt: queuedAt,
-      });
-
-      if (!queuedDocument) {
-        throw createKnowledgeDocumentNotFoundError();
-      }
-
-      await repository.syncKnowledgeSummaryFromDocuments(knowledgeId, queuedAt);
-
-      queueDocumentProcessing({
+      await queueExistingKnowledgeDocument({
         env,
         repository,
         searchService,
         knowledgeId,
-        documentId,
-        storagePath: join(env.knowledge.storageRoot, document.storagePath),
-        fileName: document.fileName,
-        mimeType: document.mimeType,
+        document,
         sourceType: knowledge.sourceType,
-        documentVersionHash: document.documentVersionHash,
+        mode: 'index',
       });
+    },
+
+    rebuildDocument: async (context, knowledgeId, documentId) => {
+      void context;
+      await repository.ensureMetadataModel();
+      const knowledge = await repository.findKnowledgeById(knowledgeId);
+
+      if (!knowledge) {
+        throw createKnowledgeNotFoundError();
+      }
+
+      const document = await repository.findKnowledgeDocumentById(documentId);
+
+      if (!document || document.knowledgeId !== knowledgeId) {
+        throw createKnowledgeDocumentNotFoundError();
+      }
+
+      if (document.status === 'pending' || document.status === 'processing') {
+        throw createDocumentRetryConflictError();
+      }
+
+      await queueExistingKnowledgeDocument({
+        env,
+        repository,
+        searchService,
+        knowledgeId,
+        document,
+        sourceType: knowledge.sourceType,
+        mode: 'rebuild',
+      });
+    },
+
+    rebuildKnowledge: async (context, knowledgeId) => {
+      void context;
+      await repository.ensureMetadataModel();
+      const knowledge = await repository.findKnowledgeById(knowledgeId);
+
+      if (!knowledge) {
+        throw createKnowledgeNotFoundError();
+      }
+
+      const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
+
+      if (documents.length === 0) {
+        throw createKnowledgeRebuildEmptyError();
+      }
+
+      if (documents.some((document) => document.status === 'pending' || document.status === 'processing')) {
+        throw createKnowledgeRebuildConflictError();
+      }
+
+      await Promise.all(
+        documents.map((document) =>
+          queueExistingKnowledgeDocument({
+            env,
+            repository,
+            searchService,
+            knowledgeId,
+            document,
+            sourceType: knowledge.sourceType,
+            mode: 'rebuild',
+          }),
+        ),
+      );
+    },
+
+    getKnowledgeDiagnostics: async (context, knowledgeId) => {
+      void context;
+      await repository.ensureMetadataModel();
+      const knowledge = await repository.findKnowledgeById(knowledgeId);
+
+      if (!knowledge) {
+        throw createKnowledgeNotFoundError();
+      }
+
+      const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
+      const now = new Date();
+      const documentsWithStorageState = await Promise.all(
+        documents.map(async (document) => {
+          const storageExists = await readDocumentStoragePresence(env, document);
+          const staleProcessing = isStaleProcessingDocument(document, now);
+
+          return {
+            document,
+            storageExists,
+            staleProcessing,
+          };
+        }),
+      );
+
+      const collectionDiagnostics = await searchService.getDiagnostics({
+        collectionName: buildExpectedCollectionName(knowledge.sourceType),
+      });
+      let indexerDiagnostics: KnowledgeDiagnosticsResponse['indexer'];
+
+      try {
+        const diagnostics = await readKnowledgeIndexerDiagnostics(env);
+        indexerDiagnostics = {
+          status: diagnostics.status,
+          service: diagnostics.service,
+          supportedFormats: diagnostics.supportedFormats,
+          chunkSize: diagnostics.chunkSize,
+          chunkOverlap: diagnostics.chunkOverlap,
+          embeddingProvider: diagnostics.embeddingProvider,
+          chromaReachable: diagnostics.chromaReachable,
+          errorMessage: diagnostics.errorMessage,
+        };
+      } catch (error) {
+        indexerDiagnostics = {
+          status: 'degraded',
+          service: null,
+          supportedFormats: [],
+          chunkSize: null,
+          chunkOverlap: null,
+          embeddingProvider: null,
+          chromaReachable: null,
+          errorMessage: resolveDiagnosticsErrorMessage(error),
+        };
+      }
+
+      return {
+        knowledgeId,
+        sourceType: knowledge.sourceType,
+        expectedCollectionName: collectionDiagnostics.collection.name,
+        indexStatus: knowledge.indexStatus,
+        documentSummary: {
+          total: documents.length,
+          pending: documents.filter((document) => document.status === 'pending').length,
+          processing: documents.filter((document) => document.status === 'processing').length,
+          completed: documents.filter((document) => document.status === 'completed').length,
+          failed: documents.filter((document) => document.status === 'failed').length,
+          missingStorage: documentsWithStorageState.filter((item) => !item.storageExists).length,
+          staleProcessing: documentsWithStorageState.filter((item) => item.staleProcessing).length,
+        },
+        collection: collectionDiagnostics.collection,
+        indexer: indexerDiagnostics,
+        documents: documentsWithStorageState.map(({ document, storageExists, staleProcessing }) => ({
+          id: document._id.toHexString(),
+          status: document.status,
+          fileName: document.fileName,
+          retryCount: document.retryCount,
+          lastIndexedAt: document.lastIndexedAt?.toISOString() ?? null,
+          errorMessage: document.errorMessage,
+          updatedAt: document.updatedAt.toISOString(),
+          missingStorage: !storageExists,
+          staleProcessing,
+        })),
+      };
     },
 
     searchDocuments: async (context, input) => {

@@ -217,6 +217,49 @@ export const createKnowledgeRouter = (
     }),
   );
 
+  knowledgeRouter.post(
+    '/:knowledgeId/documents/:documentId/rebuild',
+    asyncHandler(async (req, res) => {
+      await knowledgeService.rebuildDocument(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredKnowledgeId(req),
+        getRequiredDocumentId(req),
+      );
+
+      sendSuccess(res, null);
+    }),
+  );
+
+  knowledgeRouter.post(
+    '/:knowledgeId/rebuild',
+    asyncHandler(async (req, res) => {
+      await knowledgeService.rebuildKnowledge(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredKnowledgeId(req),
+      );
+
+      sendSuccess(res, null);
+    }),
+  );
+
+  knowledgeRouter.get(
+    '/:knowledgeId/diagnostics',
+    asyncHandler(async (req, res) => {
+      const result = await knowledgeService.getKnowledgeDiagnostics(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredKnowledgeId(req),
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
   knowledgeRouter.delete(
     '/:knowledgeId/documents/:documentId',
     asyncHandler(async (req, res) => {

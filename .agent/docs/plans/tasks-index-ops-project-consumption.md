@@ -1,6 +1,6 @@
 # 索引运维与项目层消费开发任务（Week 5-6，规划拆解）
 
-状态：截至 2026-03-15，Week 3-4 全局资产基础已完成；`IC-01` 已完成，`IC-02 ~ IC-09` 待启动；本文件当前同时承担“Week 5-6 任务清单 + 执行记录”角色。
+状态：截至 2026-03-15，Week 3-4 全局资产基础已完成；`IC-01`、`IC-02` 已完成，`IC-03 ~ IC-09` 待启动；本文件当前同时承担“Week 5-6 任务清单 + 执行记录”角色。
 
 本文件用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md` 中的 `Week 5-6 索引运维 + 项目层消费`，结合当前已落地的 `knowledge / skills / agents / projects` 主链路事实，收敛成可执行、可排期、可验收的任务清单。
 
@@ -47,8 +47,7 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
 
 ### 当前明确未完成
 
-- `apps/indexer-py` 当前只有 `POST /internal/v1/index/documents` 正式写侧入口，没有 `rebuild` / `diagnostics` 正式接口。
-- `knowledge` 模块当前没有知识库级 `rebuild`、文档级 `rebuild` 与 diagnostics 对外 API。
+- `/knowledge` 页面当前还没有 rebuild / diagnostics 的正式前端操作入口，运维能力暂时停留在 API 层。
 - 项目资源页中的 `agents` 仍依赖 `apps/platform/src/app/project/project.catalog.ts` 的本地目录 fallback。
 - 当前知识库模型只有 `global_docs / global_code` source type，没有项目级 scope / `projectId` 扩展位。
 - 当前不存在项目私有知识库的正式上传、索引写入与项目内展示链路。
@@ -264,7 +263,7 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
   - 后续任务不再对“项目知识是 binding 还是 ownership”反复改口。
   - 团队对 `pdf` 是否属于硬性目标没有二义性。
 
-### IC-02 · 补齐 `global_docs` 的 rebuild / diagnostics 正式 API
+### IC-02 DONE（2026-03-15）· 补齐 `global_docs` 的 rebuild / diagnostics 正式 API
 
 - 目标：让当前最小索引闭环进入“可修复、可诊断”状态。
 - 输出：
@@ -272,6 +271,11 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
   - Python 对内 rebuild / diagnostics 入口或等价 service contract。
   - 状态机与错误语义说明。
 - 依赖：`IC-01`。
+- 已完成记录：
+  - `apps/api` 已补齐 `POST /api/knowledge/:knowledgeId/documents/:documentId/rebuild`、`POST /api/knowledge/:knowledgeId/rebuild`、`GET /api/knowledge/:knowledgeId/diagnostics`。
+  - `apps/indexer-py` 已补齐 `POST /internal/v1/index/documents/{documentId}/rebuild` 与 `GET /internal/v1/index/diagnostics`，并继续保留旧写入口兼容。
+  - Node diagnostics 已按 best-effort 降级：即使 Chroma collection 检查失败或 Python indexer 不可达，API 仍返回 `collection / indexer` 的降级状态，而不是整体 500。
+  - 已补齐最小自动化验证：`apps/api` knowledge service 测试覆盖 rebuild / diagnostics，`apps/indexer-py` API 测试覆盖 rebuild / diagnostics。
 - 建议子任务：
   - 明确 document rebuild 与 retry 的差异：retry 重跑失败 / 已终止文档，rebuild 可以强制重建现有 completed 文档。
   - 补 knowledge rebuild 的批量顺序与去重策略。

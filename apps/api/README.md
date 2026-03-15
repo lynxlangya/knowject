@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-14，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写，以及 `global_docs` 的 Chroma 写入与统一检索闭环；`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
+截至 2026-03-15，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
 
 ## 当前接口
 
@@ -84,6 +84,18 @@
   - 需要 `Authorization: Bearer <token>`。
   - 对 `failed / completed` 文档重新入队索引；若文档仍处于 `pending / processing`，返回冲突错误，避免并发重复触发。
   - 响应返回 `HTTP 200`，`data` 为 `null`；前端应继续通过详情刷新或轮询观察后续状态。
+- `POST /api/knowledge/:knowledgeId/documents/:documentId/rebuild`
+  - 需要 `Authorization: Bearer <token>`。
+  - 对单个已落库文档执行 rebuild；Node 会优先调用 Python 内部 `POST /internal/v1/index/documents/:documentId/rebuild`，若开发态 indexer 仍停留在旧版本，再回退兼容旧写入口。
+  - 若文档当前仍处于 `pending / processing`，返回冲突错误，避免并发重复触发。
+- `POST /api/knowledge/:knowledgeId/rebuild`
+  - 需要 `Authorization: Bearer <token>`。
+  - 对当前知识库下全部文档批量重新入队 rebuild。
+  - 若知识库内没有文档，或仍有文档处于 `pending / processing`，会直接返回显式冲突 / 空重建错误，避免批量任务与现有索引状态互相覆盖。
+- `GET /api/knowledge/:knowledgeId/diagnostics`
+  - 需要 `Authorization: Bearer <token>`。
+  - 返回知识库当前期望 collection、文档状态摘要、原始文件缺失情况、长时间 `processing` 卡住的文档，以及 Python indexer 运行态诊断。
+  - 该接口按 best-effort 降级：即使 Chroma 或 Python indexer 不可达，仍返回 `collection / indexer` 的降级结果，而不是整体 500。
 - `DELETE /api/knowledge/:knowledgeId/documents/:documentId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除单个文档记录、本地原始文件目录，并尝试清理对应 Chroma 向量。
@@ -163,9 +175,9 @@
 - 项目概览中的补充展示文案、成员协作快照，以及 `agents` 资源目录 fallback 仍主要由 `apps/platform` 本地 Mock 驱动；项目侧 Skill 展示已切正式 `/api/skills`。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
-- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / delete、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；前端 `/knowledge` 已正式接线。
+- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写、knowledge diagnostics，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；前端 `/knowledge` 已正式接线。
 - `skills` 当前已完成正式 Skill 资产仓储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、详情读取、引用保护与绑定校验；`agents` 已完成 Mongo 正式模型、CRUD 和绑定校验。
-- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路、知识库正式检索、Skill 资产管理与 Agent CRUD；仍未落地的是项目对话消息写入、项目资源页 `agents` fallback 收口、`global_code` 真实导入、重建 / 诊断接口，以及更深的 Skill / Agent 运行时编排链路。
+- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路、知识库正式检索、知识索引运维基础接口、Skill 资产管理与 Agent CRUD；仍未落地的是项目对话消息写入、项目资源页 `agents` fallback 收口、`global_code` 真实导入，以及更深的 Skill / Agent 运行时编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
@@ -233,8 +245,8 @@
 - `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。
 - `src/modules/projects/*`：项目模型、MongoDB 仓储、资源绑定字段、只读项目对话接口、权限校验和 CRUD 接口。
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
-- `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储、CRUD、详情接口、文档上传入口、后台状态推进、Chroma 统一检索 service 与 Python indexer 触发。
-- `src/modules/knowledge/knowledge.search.ts`：统一知识检索 service、Python indexer 健康探活，以及当前过渡期的向量删除适配；Node 直连 Chroma 读侧 query 在这里作为架构例外保留。
+- `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储、CRUD、详情接口、文档上传入口、retry / rebuild / diagnostics、后台状态推进、Chroma 统一检索 service 与 Python indexer 触发。
+- `src/modules/knowledge/knowledge.search.ts`：统一知识检索 service、collection 诊断、Python indexer 健康探活，以及当前过渡期的向量删除适配；Node 直连 Chroma 读侧 query 在这里作为架构例外保留。
 - `src/modules/skills/*`：全局 Skill 模块，当前已提供系统内置 Skill registry、Mongo 元数据仓储、bundle 文件存储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、引用保护与正式 CRUD 接口；其中 `search_documents` 复用服务端统一知识检索契约。
 - `src/modules/agents/*`：全局 Agent 模块，当前已提供 Mongo 正式模型、CRUD、引用校验与最小测试。
 - `src/routes/health.ts`：健康检查。

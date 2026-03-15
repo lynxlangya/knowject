@@ -47,8 +47,17 @@ class IndexerHealthResponse(CamelCaseModel):
     supported_formats: list[str] = Field(alias="supportedFormats")
 
 
+class IndexerDiagnosticsResponse(CamelCaseModel):
+    status: Literal["ok", "degraded"]
+    service: str
+    chunk_size: int = Field(alias="chunkSize")
+    chunk_overlap: int = Field(alias="chunkOverlap")
+    supported_formats: list[str] = Field(alias="supportedFormats")
+    embedding_provider: str = Field(alias="embeddingProvider")
+    chroma_reachable: bool = Field(alias="chromaReachable")
+    error_message: str | None = Field(alias="errorMessage")
+
+
 # Reserved for future internal control-plane schemas in the same namespace:
 # - POST /internal/v1/index/documents/{documentId}/retry
-# - POST /internal/v1/index/documents/{documentId}/rebuild
 # - POST /internal/v1/index/knowledge/{knowledgeId}/rebuild
-# - GET /internal/v1/index/diagnostics

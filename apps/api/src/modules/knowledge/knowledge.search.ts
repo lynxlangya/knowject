@@ -21,6 +21,10 @@ interface SearchDocumentsInput {
   topK: number;
 }
 
+interface SearchDiagnosticsInput {
+  collectionName: string;
+}
+
 interface ChromaQueryResponse {
   ids?: string[][];
   documents?: Array<Array<string | null>> | null;
@@ -31,6 +35,13 @@ interface ChromaQueryResponse {
 export interface KnowledgeSearchService {
   ensureCollections(): Promise<void>;
   searchDocuments(input: SearchDocumentsInput): Promise<KnowledgeSearchResponse>;
+  getDiagnostics(input: SearchDiagnosticsInput): Promise<{
+    collection: {
+      name: string;
+      exists: boolean;
+      errorMessage: string | null;
+    };
+  }>;
   deleteKnowledgeChunks(knowledgeId: string, sourceType: KnowledgeSourceType): Promise<void>;
   deleteDocumentChunks(documentId: string, sourceType: KnowledgeSourceType): Promise<void>;
 }
@@ -77,6 +88,18 @@ const getCollectionName = (sourceType: KnowledgeSourceType): string => {
   return sourceType === 'global_code'
     ? GLOBAL_CODE_COLLECTION_NAME
     : GLOBAL_DOCS_COLLECTION_NAME;
+};
+
+const resolveDiagnosticsErrorMessage = (error: unknown): string => {
+  if (error instanceof AppError) {
+    return error.message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  return 'Chroma 诊断失败';
 };
 
 export const createKnowledgeSearchService = ({
@@ -174,10 +197,17 @@ export const createKnowledgeSearchService = ({
     });
   };
 
-  const getExistingCollection = async (name: string): Promise<ChromaCollectionSummary | null> => {
-    const cached = collectionCache.get(name);
-    if (cached) {
-      return cached;
+  const getExistingCollection = async (
+    name: string,
+    options?: {
+      bypassCache?: boolean;
+    },
+  ): Promise<ChromaCollectionSummary | null> => {
+    if (!options?.bypassCache) {
+      const cached = collectionCache.get(name);
+      if (cached) {
+        return cached;
+      }
     }
 
     const existingCollections = await listCollections();
@@ -186,6 +216,10 @@ export const createKnowledgeSearchService = ({
     if (existing) {
       collectionCache.set(name, existing);
       return existing;
+    }
+
+    if (options?.bypassCache) {
+      collectionCache.delete(name);
     }
 
     return null;
@@ -406,6 +440,40 @@ export const createKnowledgeSearchService = ({
         sourceType,
         response,
       });
+    },
+
+    getDiagnostics: async ({ collectionName }) => {
+      if (!env.chroma.url) {
+        return {
+          collection: {
+            name: collectionName,
+            exists: false,
+            errorMessage: 'Chroma 未配置，当前无法执行知识索引和检索',
+          },
+        };
+      }
+
+      try {
+        const collection = await getExistingCollection(collectionName, {
+          bypassCache: true,
+        });
+
+        return {
+          collection: {
+            name: collectionName,
+            exists: Boolean(collection),
+            errorMessage: null,
+          },
+        };
+      } catch (error) {
+        return {
+          collection: {
+            name: collectionName,
+            exists: false,
+            errorMessage: resolveDiagnosticsErrorMessage(error),
+          },
+        };
+      }
     },
 
     deleteKnowledgeChunks: async (knowledgeId, sourceType) => {

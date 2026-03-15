@@ -28,6 +28,7 @@ DEFAULT_CHROMA_TIMEOUT_MS = read_optional_positive_integer("CHROMA_TIMEOUT_MS", 
 DEFAULT_CHROMA_TENANT = read_optional_string("CHROMA_TENANT") or "default_tenant"
 DEFAULT_CHROMA_DATABASE = read_optional_string("CHROMA_DATABASE") or "default_database"
 SUPPORTED_EXTENSIONS = {".md", ".markdown", ".txt"}
+SUPPORTED_FORMAT_LABELS = ["md", "txt"]
 COLLECTION_NAME_BY_SOURCE_TYPE = {
     "global_docs": "global_docs",
     "global_code": "global_code",
@@ -284,6 +285,63 @@ def resolve_collection_name(source_type: str) -> str:
     if not collection_name:
         raise IndexerError(f"当前暂不支持 {source_type} 索引命名空间")
     return collection_name
+
+
+def resolve_embedding_provider() -> tuple[str, str | None]:
+    api_key = read_optional_string("OPENAI_API_KEY")
+    if api_key:
+        return "openai", None
+
+    if (read_optional_string("NODE_ENV") or "development") == "development":
+        return "local_dev", None
+
+    return "unconfigured", "OPENAI_API_KEY 未配置，无法生成 embedding"
+
+
+def merge_diagnostic_error(current: str | None, message: str | None) -> str | None:
+    if not message:
+        return current
+
+    if not current:
+        return message
+
+    if message in current:
+        return current
+
+    return f"{current}; {message}"
+
+
+def collect_diagnostics() -> dict[str, Any]:
+    status = "ok"
+    chroma_reachable = True
+    error_message: str | None = None
+    embedding_provider, embedding_error = resolve_embedding_provider()
+
+    if embedding_error:
+        status = "degraded"
+        error_message = merge_diagnostic_error(error_message, embedding_error)
+
+    try:
+        request_json(
+            build_chroma_database_url("/collections"),
+            timeout_ms=DEFAULT_CHROMA_TIMEOUT_MS,
+            error_prefix="Chroma 诊断失败",
+        )
+    except IndexerError as error:
+        chroma_reachable = False
+        status = "degraded"
+        error_message = merge_diagnostic_error(error_message, str(error))
+
+    return {
+        "status": status,
+        "service": "knowject-indexer-py",
+        "chunkSize": DEFAULT_CHUNK_SIZE,
+        "chunkOverlap": DEFAULT_CHUNK_OVERLAP,
+        "supportedFormats": SUPPORTED_FORMAT_LABELS,
+        "embeddingProvider": embedding_provider,
+        "chromaReachable": chroma_reachable,
+        "errorMessage": error_message,
+    }
 
 
 def create_embeddings(texts: list[str]) -> list[list[float]]:

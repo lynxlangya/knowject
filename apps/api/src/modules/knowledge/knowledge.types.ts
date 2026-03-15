@@ -140,6 +140,50 @@ export interface KnowledgeDocumentUploadResponse {
   document: KnowledgeDocumentResponse;
 }
 
+export interface KnowledgeDiagnosticsDocumentResponse {
+  id: string;
+  status: KnowledgeDocumentStatus;
+  fileName: string;
+  retryCount: number;
+  lastIndexedAt: string | null;
+  errorMessage: string | null;
+  updatedAt: string;
+  missingStorage: boolean;
+  staleProcessing: boolean;
+}
+
+export interface KnowledgeDiagnosticsResponse {
+  knowledgeId: string;
+  sourceType: KnowledgeSourceType;
+  expectedCollectionName: string;
+  indexStatus: KnowledgeIndexStatus;
+  documentSummary: {
+    total: number;
+    pending: number;
+    processing: number;
+    completed: number;
+    failed: number;
+    missingStorage: number;
+    staleProcessing: number;
+  };
+  collection: {
+    name: string;
+    exists: boolean;
+    errorMessage: string | null;
+  };
+  indexer: {
+    status: 'ok' | 'degraded';
+    service: string | null;
+    supportedFormats: string[];
+    chunkSize: number | null;
+    chunkOverlap: number | null;
+    embeddingProvider: string | null;
+    chromaReachable: boolean | null;
+    errorMessage: string | null;
+  };
+  documents: KnowledgeDiagnosticsDocumentResponse[];
+}
+
 export interface KnowledgeIndexerDocumentRequest {
   knowledgeId: string;
   documentId: string;
@@ -170,6 +214,17 @@ export interface KnowledgeIndexerFailureResponse {
 export type KnowledgeIndexerResponse =
   | KnowledgeIndexerSuccessResponse
   | KnowledgeIndexerFailureResponse;
+
+export interface KnowledgeIndexerDiagnosticsResponse {
+  status: 'ok' | 'degraded';
+  service: string;
+  chunkSize: number;
+  chunkOverlap: number;
+  supportedFormats: string[];
+  embeddingProvider: string | null;
+  chromaReachable: boolean | null;
+  errorMessage: string | null;
+}
 
 export interface SearchKnowledgeDocumentsInput {
   query?: unknown;

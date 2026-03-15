@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { access, mkdir, mkdtemp } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -66,6 +66,30 @@ const createTestEnv = (storageRoot: string): AppEnv => {
   };
 };
 
+const createSearchServiceStub = (
+  overrides: Partial<KnowledgeSearchService> = {},
+): KnowledgeSearchService => {
+  return {
+    ensureCollections: async () => undefined,
+    searchDocuments: async () => ({
+      query: '',
+      sourceType: 'global_docs',
+      total: 0,
+      items: [],
+    }),
+    getDiagnostics: async ({ collectionName }) => ({
+      collection: {
+        name: collectionName,
+        exists: true,
+        errorMessage: null,
+      },
+    }),
+    deleteKnowledgeChunks: async () => undefined,
+    deleteDocumentChunks: async () => undefined,
+    ...overrides,
+  };
+};
+
 test('listKnowledge hydrates maintainer and creator names', async () => {
   const knowledge: KnowledgeBaseDocument & {
     _id: NonNullable<KnowledgeBaseDocument['_id']>;
@@ -88,17 +112,7 @@ test('listKnowledge hydrates maintainer and creator names', async () => {
     listKnowledgeBases: async () => [knowledge],
   } as unknown as KnowledgeRepository;
 
-  const searchService = {
-    ensureCollections: async () => undefined,
-    searchDocuments: async () => ({
-      query: '',
-      sourceType: 'global_docs',
-      total: 0,
-      items: [],
-    }),
-    deleteKnowledgeChunks: async () => undefined,
-    deleteDocumentChunks: async () => undefined,
-  } as KnowledgeSearchService;
+  const searchService = createSearchServiceStub();
 
   const authRepository = {
     findProfilesByIds: async (userIds: string[]) =>
@@ -140,8 +154,7 @@ test('searchDocuments normalizes query filters and delegates to the shared searc
     ensureMetadataModel: async () => undefined,
   } as unknown as KnowledgeRepository;
 
-  const searchService = {
-    ensureCollections: async () => undefined,
+  const searchService = createSearchServiceStub({
     searchDocuments: async (input: Parameters<KnowledgeSearchService['searchDocuments']>[0]) => {
       capturedInputs.push(input);
 
@@ -163,9 +176,7 @@ test('searchDocuments normalizes query filters and delegates to the shared searc
         ],
       };
     },
-    deleteKnowledgeChunks: async () => undefined,
-    deleteDocumentChunks: async () => undefined,
-  } as KnowledgeSearchService;
+  });
 
   const authRepository = {
     findProfilesByIds: async () => [],
@@ -240,19 +251,11 @@ test('deleteKnowledge continues when Chroma cleanup fails', async () => {
     },
   } as unknown as KnowledgeRepository;
 
-  const searchService = {
-    ensureCollections: async () => undefined,
-    searchDocuments: async () => ({
-      query: '',
-      sourceType: 'global_docs',
-      total: 0,
-      items: [],
-    }),
+  const searchService = createSearchServiceStub({
     deleteKnowledgeChunks: async () => {
       throw new Error('Chroma down');
     },
-    deleteDocumentChunks: async () => undefined,
-  } as KnowledgeSearchService;
+  });
 
   const authRepository = {
     findProfilesByIds: async () => [],
@@ -364,17 +367,7 @@ test('uploadDocument falls back to legacy indexer route after 404 on versioned p
     syncKnowledgeSummaryFromDocuments: async () => undefined,
   } as unknown as KnowledgeRepository;
 
-  const searchService = {
-    ensureCollections: async () => undefined,
-    searchDocuments: async () => ({
-      query: '',
-      sourceType: 'global_docs',
-      total: 0,
-      items: [],
-    }),
-    deleteKnowledgeChunks: async () => undefined,
-    deleteDocumentChunks: async () => undefined,
-  } as KnowledgeSearchService;
+  const searchService = createSearchServiceStub();
 
   const authRepository = {
     findProfilesByIds: async () => [],
@@ -550,17 +543,7 @@ test('retryDocument marks document pending and schedules detached processing', a
     syncKnowledgeSummaryFromDocuments: async () => undefined,
   } as unknown as KnowledgeRepository;
 
-  const searchService = {
-    ensureCollections: async () => undefined,
-    searchDocuments: async () => ({
-      query: '',
-      sourceType: 'global_docs',
-      total: 0,
-      items: [],
-    }),
-    deleteKnowledgeChunks: async () => undefined,
-    deleteDocumentChunks: async () => undefined,
-  } as KnowledgeSearchService;
+  const searchService = createSearchServiceStub();
 
   const authRepository = {
     findProfilesByIds: async () => [],
@@ -626,6 +609,476 @@ test('retryDocument marks document pending and schedules detached processing', a
   ]);
 });
 
+test('rebuildDocument uses the document-scoped rebuild endpoint and refreshes document status', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-rebuild-document-'));
+  const knowledgeId = '507f1f77bcf86cd799439011';
+  const documentId = '507f1f77bcf86cd799439099';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证 rebuild document',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 4,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const document = {
+    _id: new ObjectId(documentId),
+    knowledgeId,
+    fileName: 'README.md',
+    mimeType: 'text/markdown',
+    storagePath: `${knowledgeId}/${documentId}/hash-1/README.md`,
+    status: 'completed' as const,
+    chunkCount: 4,
+    documentVersionHash: 'hash-1',
+    embeddingProvider: 'openai' as const,
+    embeddingModel: 'text-embedding-3-small' as const,
+    lastIndexedAt: new Date('2026-03-14T00:00:10.000Z'),
+    retryCount: 0,
+    errorMessage: null,
+    uploadedBy: '507f1f77bcf86cd799439012',
+    uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+    processedAt: new Date('2026-03-14T00:00:10.000Z'),
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:10.000Z'),
+  };
+
+  let updatedToPending = false;
+  let completedChunkCount = 0;
+  let resolveCompleted: (() => void) | null = null;
+  const processingCompleted = new Promise<void>((resolve) => {
+    resolveCompleted = resolve;
+  });
+  const fetchCalls: string[] = [];
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeDocumentById: async (id: string) => (id === documentId ? document : null),
+    updateKnowledgeDocument: async (
+      _documentId: string,
+      patch: Partial<
+        Pick<
+          KnowledgeDocumentRecord,
+          'status' | 'chunkCount' | 'lastIndexedAt' | 'errorMessage' | 'processedAt' | 'updatedAt'
+        >
+      >,
+    ) => {
+      if (patch.status === 'pending') {
+        updatedToPending = true;
+      }
+
+      if (patch.status === 'completed') {
+        completedChunkCount = patch.chunkCount ?? 0;
+        resolveCompleted?.();
+      }
+
+      return {
+        ...document,
+        status: patch.status ?? document.status,
+        chunkCount: patch.chunkCount ?? document.chunkCount,
+        lastIndexedAt: patch.lastIndexedAt ?? document.lastIndexedAt,
+        errorMessage: patch.errorMessage ?? document.errorMessage,
+        processedAt: patch.processedAt ?? document.processedAt,
+        updatedAt: patch.updatedAt ?? document.updatedAt,
+      };
+    },
+    syncKnowledgeSummaryFromDocuments: async () => undefined,
+  } as unknown as KnowledgeRepository;
+
+  const authRepository = {
+    findProfilesByIds: async () => [],
+  } as unknown as AuthRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    fetchCalls.push(url);
+
+    return new Response(
+      JSON.stringify({
+        status: 'completed',
+        knowledgeId,
+        documentId,
+        chunkCount: 6,
+        characterCount: 120,
+        parser: 'markdown',
+        collectionName: 'global_docs',
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    await service.rebuildDocument(
+      {
+        actor: {
+          id: '507f1f77bcf86cd799439012',
+          username: 'langya',
+        },
+      },
+      knowledgeId,
+      documentId,
+    );
+
+    await Promise.race([
+      processingCompleted,
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for detached rebuild processing');
+      }),
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(updatedToPending, true);
+  assert.equal(completedChunkCount, 6);
+  assert.deepEqual(fetchCalls, [
+    `http://127.0.0.1:8001/internal/v1/index/documents/${documentId}/rebuild`,
+  ]);
+});
+
+test('rebuildKnowledge rejects when there are documents still indexing', async () => {
+  const knowledgeId = '507f1f77bcf86cd799439011';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证 rebuild knowledge 冲突',
+    sourceType: 'global_docs',
+    indexStatus: 'processing',
+    documentCount: 2,
+    chunkCount: 4,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+
+  let updateCalled = false;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    listDocumentsByKnowledgeId: async () => [
+      {
+        _id: new ObjectId('507f1f77bcf86cd799439099'),
+        knowledgeId,
+        fileName: 'README.md',
+        mimeType: 'text/markdown',
+        storagePath: `${knowledgeId}/507f1f77bcf86cd799439099/hash-1/README.md`,
+        status: 'processing' as const,
+        chunkCount: 2,
+        documentVersionHash: 'hash-1',
+        embeddingProvider: 'openai' as const,
+        embeddingModel: 'text-embedding-3-small' as const,
+        lastIndexedAt: null,
+        retryCount: 0,
+        errorMessage: null,
+        uploadedBy: '507f1f77bcf86cd799439012',
+        uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+        processedAt: null,
+        createdAt: new Date('2026-03-14T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-14T00:05:00.000Z'),
+      },
+    ],
+    updateKnowledgeDocument: async () => {
+      updateCalled = true;
+      return null;
+    },
+  } as unknown as KnowledgeRepository;
+
+  const authRepository = {
+    findProfilesByIds: async () => [],
+  } as unknown as AuthRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-knowledge-rebuild-conflict'),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository,
+  });
+
+  await assert.rejects(
+    () =>
+      service.rebuildKnowledge(
+        {
+          actor: {
+            id: '507f1f77bcf86cd799439012',
+            username: 'langya',
+          },
+        },
+        knowledgeId,
+      ),
+    (error) => error instanceof Error && error.message === '知识库存在正在索引的文档，请稍后再试',
+  );
+
+  assert.equal(updateCalled, false);
+});
+
+test('getKnowledgeDiagnostics degrades gracefully when collection or indexer checks fail', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-diagnostics-'));
+  const knowledgeId = '507f1f77bcf86cd799439011';
+  const existingDocumentId = '507f1f77bcf86cd799439099';
+  const staleDocumentId = '507f1f77bcf86cd799439098';
+  const existingStoragePath = `${knowledgeId}/${existingDocumentId}/hash-1/README.md`;
+  const existingStorageAbsolutePath = join(storageRoot, existingStoragePath);
+
+  await mkdir(join(storageRoot, knowledgeId, existingDocumentId, 'hash-1'), { recursive: true });
+  await writeFile(existingStorageAbsolutePath, '# hello\n', 'utf-8');
+
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证 diagnostics',
+    sourceType: 'global_docs',
+    indexStatus: 'processing',
+    documentCount: 2,
+    chunkCount: 2,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const documents = [
+    {
+      _id: new ObjectId(existingDocumentId),
+      knowledgeId,
+      fileName: 'README.md',
+      mimeType: 'text/markdown',
+      storagePath: existingStoragePath,
+      status: 'completed' as const,
+      chunkCount: 2,
+      documentVersionHash: 'hash-1',
+      embeddingProvider: 'openai' as const,
+      embeddingModel: 'text-embedding-3-small' as const,
+      lastIndexedAt: new Date('2026-03-14T00:10:00.000Z'),
+      retryCount: 0,
+      errorMessage: null,
+      uploadedBy: '507f1f77bcf86cd799439012',
+      uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+      processedAt: new Date('2026-03-14T00:10:00.000Z'),
+      createdAt: new Date('2026-03-14T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-14T00:10:00.000Z'),
+    },
+    {
+      _id: new ObjectId(staleDocumentId),
+      knowledgeId,
+      fileName: 'missing.md',
+      mimeType: 'text/markdown',
+      storagePath: `${knowledgeId}/${staleDocumentId}/hash-2/missing.md`,
+      status: 'processing' as const,
+      chunkCount: 0,
+      documentVersionHash: 'hash-2',
+      embeddingProvider: 'openai' as const,
+      embeddingModel: 'text-embedding-3-small' as const,
+      lastIndexedAt: null,
+      retryCount: 2,
+      errorMessage: null,
+      uploadedBy: '507f1f77bcf86cd799439012',
+      uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+      processedAt: null,
+      createdAt: new Date('2026-03-14T00:00:00.000Z'),
+      updatedAt: new Date(Date.now() - 16 * 60 * 1000),
+    },
+  ];
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    listDocumentsByKnowledgeId: async () => documents,
+  } as unknown as KnowledgeRepository;
+
+  const authRepository = {
+    findProfilesByIds: async () => [],
+  } as unknown as AuthRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub({
+      getDiagnostics: async ({ collectionName }) => ({
+        collection: {
+          name: collectionName,
+          exists: false,
+          errorMessage: 'Chroma 请求失败',
+        },
+      }),
+    }),
+    authRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error('connection refused');
+  };
+
+  try {
+    const response = await service.getKnowledgeDiagnostics(
+      {
+        actor: {
+          id: '507f1f77bcf86cd799439012',
+          username: 'langya',
+        },
+      },
+      knowledgeId,
+    );
+
+    assert.equal(response.expectedCollectionName, 'global_docs');
+    assert.deepEqual(response.documentSummary, {
+      total: 2,
+      pending: 0,
+      processing: 1,
+      completed: 1,
+      failed: 0,
+      missingStorage: 1,
+      staleProcessing: 1,
+    });
+    assert.deepEqual(response.collection, {
+      name: 'global_docs',
+      exists: false,
+      errorMessage: 'Chroma 请求失败',
+    });
+    assert.equal(response.indexer.status, 'degraded');
+    assert.equal(response.indexer.service, null);
+    assert.equal(response.indexer.chromaReachable, null);
+    assert.equal(response.indexer.errorMessage?.includes('Python indexer 诊断不可达'), true);
+    assert.equal(response.documents.length, 2);
+    assert.equal(response.documents[0]?.missingStorage, false);
+    assert.equal(response.documents[1]?.missingStorage, true);
+    assert.equal(response.documents[1]?.staleProcessing, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('getKnowledgeDiagnostics accepts legacy /health fallback when versioned diagnostics is unavailable', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-diagnostics-health-'));
+  const knowledgeId = '507f1f77bcf86cd799439011';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证 diagnostics health fallback',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 0,
+    chunkCount: 0,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const fetchCalls: string[] = [];
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    listDocumentsByKnowledgeId: async () => [],
+  } as unknown as KnowledgeRepository;
+
+  const authRepository = {
+    findProfilesByIds: async () => [],
+  } as unknown as AuthRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    fetchCalls.push(url);
+
+    if (url.endsWith('/internal/v1/index/diagnostics')) {
+      return new Response(
+        JSON.stringify({
+          status: 'not_found',
+          message: 'Unknown route',
+        }),
+        {
+          status: 404,
+          headers: {
+            'content-type': 'application/json',
+          },
+        },
+      );
+    }
+
+    if (url.endsWith('/health')) {
+      return new Response(
+        JSON.stringify({
+          status: 'ok',
+          service: 'knowject-indexer-py',
+          chunkSize: 1000,
+          chunkOverlap: 200,
+          supportedFormats: ['md', 'txt'],
+        }),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch url: ${url}`);
+  };
+
+  try {
+    const response = await service.getKnowledgeDiagnostics(
+      {
+        actor: {
+          id: '507f1f77bcf86cd799439012',
+          username: 'langya',
+        },
+      },
+      knowledgeId,
+    );
+
+    assert.deepEqual(fetchCalls, [
+      'http://127.0.0.1:8001/internal/v1/index/diagnostics',
+      'http://127.0.0.1:8001/health',
+    ]);
+    assert.equal(response.indexer.status, 'ok');
+    assert.equal(response.indexer.service, 'knowject-indexer-py');
+    assert.equal(response.indexer.chunkSize, 1000);
+    assert.equal(response.indexer.chunkOverlap, 200);
+    assert.deepEqual(response.indexer.supportedFormats, ['md', 'txt']);
+    assert.equal(response.indexer.embeddingProvider, null);
+    assert.equal(response.indexer.chromaReachable, null);
+    assert.equal(response.indexer.errorMessage, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('deleteDocument deletes record and syncs knowledge summary even if Chroma cleanup fails', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-document-delete-'));
   const knowledgeId = '507f1f77bcf86cd799439011';
@@ -686,19 +1139,11 @@ test('deleteDocument deletes record and syncs knowledge summary even if Chroma c
     },
   } as unknown as KnowledgeRepository;
 
-  const searchService = {
-    ensureCollections: async () => undefined,
-    searchDocuments: async () => ({
-      query: '',
-      sourceType: 'global_docs',
-      total: 0,
-      items: [],
-    }),
-    deleteKnowledgeChunks: async () => undefined,
+  const searchService = createSearchServiceStub({
     deleteDocumentChunks: async () => {
       throw new Error('Chroma down');
     },
-  } as KnowledgeSearchService;
+  });
 
   const authRepository = {
     findProfilesByIds: async () => [],
