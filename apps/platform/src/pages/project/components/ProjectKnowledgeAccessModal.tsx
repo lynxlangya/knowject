@@ -5,7 +5,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
-import { Button, Empty, Form, Input, Modal, Segmented, Tag, Typography } from 'antd';
+import { Button, Empty, Form, Input, Modal, Pagination, Tag, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 
 export interface ProjectKnowledgeFormValues {
@@ -54,6 +54,8 @@ const INDEX_STATUS_META = {
   },
 } as const;
 
+const GLOBAL_KNOWLEDGE_PAGE_SIZE = 4;
+
 export const ProjectKnowledgeAccessModal = ({
   open,
   initialMode,
@@ -69,6 +71,7 @@ export const ProjectKnowledgeAccessModal = ({
 }: ProjectKnowledgeAccessModalProps) => {
   const [mode, setMode] = useState<ProjectKnowledgeAccessMode>(initialMode);
   const [globalSearchValue, setGlobalSearchValue] = useState('');
+  const [globalKnowledgePage, setGlobalKnowledgePage] = useState(1);
   const [selectedGlobalKnowledgeIds, setSelectedGlobalKnowledgeIds] = useState<string[]>([]);
   const [form] = Form.useForm<ProjectKnowledgeFormValues>();
 
@@ -79,6 +82,7 @@ export const ProjectKnowledgeAccessModal = ({
 
     setMode(initialMode);
     setGlobalSearchValue('');
+    setGlobalKnowledgePage(1);
     setSelectedGlobalKnowledgeIds([]);
     form.setFieldsValue({
       name: '',
@@ -100,11 +104,49 @@ export const ProjectKnowledgeAccessModal = ({
       knowledge.description.toLowerCase().includes(normalizedSearchValue)
     );
   });
+  const totalGlobalKnowledgePages = Math.max(
+    1,
+    Math.ceil(filteredGlobalKnowledge.length / GLOBAL_KNOWLEDGE_PAGE_SIZE),
+  );
+  const pagedGlobalKnowledge = filteredGlobalKnowledge.slice(
+    (globalKnowledgePage - 1) * GLOBAL_KNOWLEDGE_PAGE_SIZE,
+    globalKnowledgePage * GLOBAL_KNOWLEDGE_PAGE_SIZE,
+  );
   const isGlobalMode = mode === 'global';
   const confirmLoading = isGlobalMode ? binding : creating;
   const confirmDisabled = isGlobalMode
     ? selectedGlobalKnowledgeIds.length === 0
     : false;
+  const modeOptions = [
+    {
+      value: 'global' as const,
+      icon: <LinkOutlined />,
+      title: '引入全局知识库',
+      description: '复用团队已经治理好的知识资产，在项目中只读查看文档内容。',
+      helper: `已绑定 ${boundKnowledgeIds.length} 个，还可继续引入 ${availableGlobalKnowledge.length} 个`,
+      accentClassName: {
+        wrapper:
+          'border-sky-300 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(224,242,254,0.84))] shadow-[0_20px_40px_rgba(14,116,144,0.12)]',
+        icon: 'border-sky-200 bg-white text-sky-600',
+        badge: 'border-sky-200 bg-white/90 text-sky-700',
+        helper: 'text-sky-700',
+      },
+    },
+    {
+      value: 'project' as const,
+      icon: <FolderAddOutlined />,
+      title: '新建项目私有知识库',
+      description: '为当前项目沉淀专属上下文，创建后立即进入上传来源流程。',
+      helper: '仅当前项目内可见，可继续编辑、上传、重建与删除文档',
+      accentClassName: {
+        wrapper:
+          'border-emerald-300 bg-[linear-gradient(180deg,rgba(236,253,245,0.98),rgba(209,250,229,0.84))] shadow-[0_20px_40px_rgba(5,150,105,0.12)]',
+        icon: 'border-emerald-200 bg-white text-emerald-600',
+        badge: 'border-emerald-200 bg-white/90 text-emerald-700',
+        helper: 'text-emerald-700',
+      },
+    },
+  ];
 
   const handleToggleGlobalKnowledge = (knowledgeId: string) => {
     setSelectedGlobalKnowledgeIds((current) => {
@@ -115,6 +157,12 @@ export const ProjectKnowledgeAccessModal = ({
       return [...current, knowledgeId];
     });
   };
+
+  useEffect(() => {
+    if (globalKnowledgePage > totalGlobalKnowledgePages) {
+      setGlobalKnowledgePage(totalGlobalKnowledgePages);
+    }
+  }, [globalKnowledgePage, totalGlobalKnowledgePages]);
 
   const handleConfirm = () => {
     if (isGlobalMode) {
@@ -142,31 +190,87 @@ export const ProjectKnowledgeAccessModal = ({
       styles={{ body: { paddingTop: 12 } }}
     >
       <div className="space-y-6">
-        <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.9))] p-5">
-          <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-600!">
-            把团队已经治理好的全局知识库接入到当前项目，或直接新建只属于当前项目的私有知识库。前者复用全局资产，后者用于沉淀项目专属上下文。
-          </Typography.Paragraph>
-
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Segmented<ProjectKnowledgeAccessMode>
-              value={mode}
-              onChange={(value) => {
-                setMode(value);
-              }}
-              options={[
-                {
-                  label: '引入全局知识库',
-                  value: 'global',
-                },
-                {
-                  label: '新建项目私有知识库',
-                  value: 'project',
-                },
-              ]}
-            />
-            <Typography.Text className="text-xs text-slate-400">
-              当前已绑定 {boundKnowledgeIds.length} 个全局知识库
+        <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.9))] p-4">
+          <div className="flex flex-col gap-2">
+            <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400!">
+              接入方式
             </Typography.Text>
+            <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-600!">
+              把团队已经治理好的全局知识库接入到当前项目，或直接新建只属于当前项目的私有知识库。前者复用全局资产，后者用于沉淀项目专属上下文。
+            </Typography.Paragraph>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {modeOptions.map((option) => {
+              const selected = mode === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setMode(option.value)}
+                  className={[
+                    'group rounded-[22px] border px-4 py-3.5 text-left transition',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2',
+                    selected
+                      ? option.accentClassName.wrapper
+                      : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_32px_rgba(15,23,42,0.06)]',
+                  ].join(' ')}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span
+                      className={[
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border text-[18px] transition',
+                        selected
+                          ? option.accentClassName.icon
+                          : 'border-slate-200 bg-slate-50 text-slate-500',
+                      ].join(' ')}
+                    >
+                      {option.icon}
+                    </span>
+
+                    <span
+                      className={[
+                        'rounded-full border px-3 py-1 text-xs font-medium transition',
+                        selected
+                          ? option.accentClassName.badge
+                          : 'border-slate-200 bg-slate-50 text-slate-500',
+                      ].join(' ')}
+                    >
+                      {selected ? '当前选择' : '点击切换'}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-1.5">
+                    <Typography.Title level={5} className="mb-0! text-[18px]! text-slate-800!">
+                      {option.title}
+                    </Typography.Title>
+                    <Typography.Paragraph className="mb-0! text-[13px]! leading-5! text-slate-500!">
+                      {option.description}
+                    </Typography.Paragraph>
+                  </div>
+
+                  <div
+                    className={[
+                      'mt-3 rounded-[16px] border px-3.5 py-2 text-xs leading-5 transition',
+                      selected
+                        ? option.accentClassName.badge
+                        : 'border-slate-200 bg-slate-50 text-slate-500',
+                    ].join(' ')}
+                  >
+                    <span
+                      className={[
+                        'font-medium',
+                        selected ? option.accentClassName.helper : '',
+                      ].join(' ')}
+                    >
+                      {option.helper}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -190,7 +294,10 @@ export const ProjectKnowledgeAccessModal = ({
 
               <Input
                 value={globalSearchValue}
-                onChange={(event) => setGlobalSearchValue(event.target.value)}
+                onChange={(event) => {
+                  setGlobalSearchValue(event.target.value);
+                  setGlobalKnowledgePage(1);
+                }}
                 placeholder="搜索全局知识库名称或描述"
                 prefix={<SearchOutlined className="text-slate-400" />}
                 allowClear
@@ -222,56 +329,72 @@ export const ProjectKnowledgeAccessModal = ({
                 <Empty description="没有匹配的全局知识库，试试换个关键词。" />
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
-                {filteredGlobalKnowledge.map((knowledge) => {
-                  const selected = selectedGlobalKnowledgeIds.includes(knowledge.id);
-                  const statusMeta = INDEX_STATUS_META[knowledge.indexStatus];
+              <div className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  {pagedGlobalKnowledge.map((knowledge) => {
+                    const selected = selectedGlobalKnowledgeIds.includes(knowledge.id);
+                    const statusMeta = INDEX_STATUS_META[knowledge.indexStatus];
 
-                  return (
-                    <button
-                      key={knowledge.id}
-                      type="button"
-                      onClick={() => handleToggleGlobalKnowledge(knowledge.id)}
-                      className={[
-                        'group rounded-[24px] border p-4 text-left transition',
-                        selected
-                          ? 'border-sky-300 bg-sky-50/70 shadow-[0_14px_28px_rgba(14,116,144,0.08)]'
-                          : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_14px_28px_rgba(15,23,42,0.06)]',
-                      ].join(' ')}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Typography.Text className="text-base font-semibold text-slate-800!">
-                              {knowledge.name}
-                            </Typography.Text>
-                            <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
+                    return (
+                      <button
+                        key={knowledge.id}
+                        type="button"
+                        onClick={() => handleToggleGlobalKnowledge(knowledge.id)}
+                        className={[
+                          'group rounded-[24px] border p-4 text-left transition',
+                          selected
+                            ? 'border-sky-300 bg-sky-50/70 shadow-[0_14px_28px_rgba(14,116,144,0.08)]'
+                            : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_14px_28px_rgba(15,23,42,0.06)]',
+                        ].join(' ')}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Typography.Text className="text-base font-semibold text-slate-800!">
+                                {knowledge.name}
+                              </Typography.Text>
+                              <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
+                            </div>
+                            <Typography.Paragraph className="mb-0! mt-2 text-sm! leading-6! text-slate-500!">
+                              {knowledge.description || '暂无描述'}
+                            </Typography.Paragraph>
                           </div>
-                          <Typography.Paragraph className="mb-0! mt-2 text-sm! leading-6! text-slate-500!">
-                            {knowledge.description || '暂无描述'}
-                          </Typography.Paragraph>
+
+                          <span
+                            className={[
+                              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition',
+                              selected
+                                ? 'border-sky-300 bg-sky-500 text-white'
+                                : 'border-slate-200 bg-slate-50 text-slate-400',
+                            ].join(' ')}
+                          >
+                            {selected ? '已选' : '可选'}
+                          </span>
                         </div>
 
-                        <span
-                          className={[
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition',
-                            selected
-                              ? 'border-sky-300 bg-sky-500 text-white'
-                              : 'border-slate-200 bg-slate-50 text-slate-400',
-                          ].join(' ')}
-                        >
-                          {selected ? '已选' : '可选'}
-                        </span>
-                      </div>
+                        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
+                          <span>文档数：{knowledge.documentCount}</span>
+                          <span>分块数：{knowledge.chunkCount}</span>
+                          <span>维护方：{knowledge.maintainerName ?? knowledge.createdByName ?? '未指定'}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
 
-                      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
-                        <span>文档数：{knowledge.documentCount}</span>
-                        <span>分块数：{knowledge.chunkCount}</span>
-                        <span>维护方：{knowledge.maintainerName ?? knowledge.createdByName ?? '未指定'}</span>
-                      </div>
-                    </button>
-                  );
-                })}
+                {filteredGlobalKnowledge.length > GLOBAL_KNOWLEDGE_PAGE_SIZE ? (
+                  <div className="flex justify-center border-t border-slate-100 pt-3">
+                    <Pagination
+                      size="small"
+                      current={globalKnowledgePage}
+                      pageSize={GLOBAL_KNOWLEDGE_PAGE_SIZE}
+                      total={filteredGlobalKnowledge.length}
+                      showSizeChanger={false}
+                      showLessItems
+                      onChange={(page) => setGlobalKnowledgePage(page)}
+                    />
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
