@@ -25,12 +25,14 @@
     doc-iteration-handoff-plan.md
     tasks-foundation-framework.md
     tasks-global-assets-foundation.md
+    tasks-index-ops-project-consumption.md
   handoff/
     handoff-guide.md
     chatgpt-project-brief.md
     handoff-prompt.md
   inputs/
     知项Knowject-项目认知总结-v2.md
+    知项Knowject-项目认知总结-v3.md
   design/
     ...
   templates/
@@ -45,15 +47,16 @@
 2. 再读 `.agent/docs/current/architecture.md`
 3. 涉及基础框架阶段范围与完成记录时，再读 `.agent/docs/plans/tasks-foundation-framework.md`
 4. 涉及 Week 3-4 全局资产阶段拆分时，再读 `.agent/docs/plans/tasks-global-assets-foundation.md`
-5. 然后读 `.agent/docs/roadmap/gap-analysis.md`
-6. 涉及认证与环境时，再读 `.agent/docs/contracts/auth-contract.md`
-7. 涉及 Chroma、知识索引、collection 命名、metadata 或检索 service 边界时，再读 `.agent/docs/contracts/chroma-decision.md`
-8. 涉及 Docker、MongoDB 本地联调方式或部署现状时，再读 `.agent/docs/current/docker-usage.md`
-9. 需要直接执行本地登录、后端调用、Navicat 连接、Chroma 查看或开发 / 验收模式切换时，再读 `.agent/docs/current/docker-operation-checklist.md`
-10. 需要直接执行容器启动、TLS 入口或私有化部署命令时，再读 `docker/README.md`
-11. 需要给 ChatGPT / 外部大模型快速建立当前上下文时，先读 `.agent/docs/handoff/chatgpt-project-brief.md`
-12. 如果需要一组可直接上传到 ChatGPT Projects 的副本文件，读 `.agent/gpt/README.md`
-13. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
+5. 涉及 Week 5-6 索引运维与项目层消费时，再读 `.agent/docs/plans/tasks-index-ops-project-consumption.md`
+6. 然后读 `.agent/docs/roadmap/gap-analysis.md`
+7. 涉及认证与环境时，再读 `.agent/docs/contracts/auth-contract.md`
+8. 涉及 Chroma、知识索引、collection 命名、metadata 或检索 service 边界时，再读 `.agent/docs/contracts/chroma-decision.md`
+9. 涉及 Docker、MongoDB 本地联调方式或部署现状时，再读 `.agent/docs/current/docker-usage.md`
+10. 需要直接执行本地登录、后端调用、Navicat 连接、Chroma 查看或开发 / 验收模式切换时，再读 `.agent/docs/current/docker-operation-checklist.md`
+11. 需要直接执行容器启动、TLS 入口或私有化部署命令时，再读 `docker/README.md`
+12. 需要给 ChatGPT / 外部大模型快速建立当前上下文时，先读 `.agent/docs/handoff/chatgpt-project-brief.md`
+13. 如果需要一组可直接上传到 ChatGPT Projects 的副本文件，读 `.agent/gpt/README.md`
+14. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
 
 ### 理解产品现状与目标
 
@@ -70,9 +73,9 @@
 | 当前事实 | `.agent/docs/current`   | `architecture.md`、`docker-usage.md`、`docker-operation-checklist.md`                                | 现在的路由、数据来源、模块边界、API / Docker 边界，以及该怎么操作 |
 | 实施契约 | `.agent/docs/contracts` | `auth-contract.md`、`chroma-decision.md`                                                              | MongoDB、JWT、密码哈希、注册登录、Node / Python / Chroma 分层与检索约束怎么定 |
 | 路线蓝图 | `.agent/docs/roadmap`   | `target-architecture.md`、`gap-analysis.md`                                                           | 产品最终想做成什么、现在差多少、先补什么                          |
-| 阶段计划 | `.agent/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md` | 当前阶段具体怎么拆、顺序如何、DoD 怎么定                          |
+| 阶段计划 | `.agent/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md`、`tasks-index-ops-project-consumption.md` | 当前阶段具体怎么拆、顺序如何、DoD 怎么定                          |
 | 接手交接 | `.agent/docs/handoff`   | `handoff-guide.md`、`chatgpt-project-brief.md`、`handoff-prompt.md`                                  | 新协作者、ChatGPT 或外部模型如何快速建立事实并继续推进            |
-| 输入材料 | `.agent/docs/inputs`    | `知项Knowject-项目认知总结-v2.md`                                                                     | 认知总结原文是什么，哪些内容需要吸收为正式文档                    |
+| 输入材料 | `.agent/docs/inputs`    | `知项Knowject-项目认知总结-v2.md`、`知项Knowject-项目认知总结-v3.md`                                  | 认知总结原文是什么，哪些内容需要吸收为正式文档                    |
 | 设计资料 | `.agent/docs/design`    | 品牌与视觉资料                                                                                        | 品牌表达、图标、字标、视觉方向是什么                              |
 | 模板     | `.agent/docs/templates` | `PLANS.md`                                                                                            | 复杂任务、迁移和高风险变更该如何写执行计划                        |
 
@@ -112,6 +115,10 @@
   - Week 3-4 全局资产阶段的范围、顺序、依赖关系或 DoD 发生变化。
   - 已确认的前置决策、阶段取舍或风险止损策略发生变化。
   - 阶段状态从“待启动”变为“进行中 / 已完成 / 延后”时，需同步更新。
+- 更新 `.agent/docs/plans/tasks-index-ops-project-consumption.md`
+  - Week 5-6 索引运维与项目层消费阶段的范围、顺序、依赖关系或 DoD 发生变化。
+  - 项目私有知识库 scope、collection 命名、rebuild / diagnostics 边界发生变化。
+  - 阶段状态从“待启动”变为“进行中 / 已完成 / 延后”时，需同步更新。
 - 更新 `.agent/docs/handoff/handoff-guide.md`
   - 当前最重要的接手路径、阅读顺序、继续开发建议发生变化。
   - 有新的业务事实容易被误读，需要显式提醒接手者。
@@ -141,9 +148,11 @@
 - 关于“如何把上下文交给下一位协作者”的判断，以 `.agent/docs/handoff/handoff-prompt.md` 为准。
 - 关于“基础框架阶段先拆哪些任务”的判断，以 `.agent/docs/plans/tasks-foundation-framework.md` 为准。
 - 关于“全局资产阶段先拆哪些任务、执行顺序和 DoD 怎么定”的判断，以 `.agent/docs/plans/tasks-global-assets-foundation.md` 为准。
+- 关于“Week 5-6 先补哪些索引运维能力、项目层消费和项目私有知识如何落地”的判断，以 `.agent/docs/plans/tasks-index-ops-project-consumption.md` 为准。
 - 关于“基础框架阶段的环境变量和认证协议具体怎么实现”的判断，以 `.agent/docs/contracts/auth-contract.md` 为准。
 - 关于“Chroma 应该放在哪一层、Node 与 Python 如何分工、collection 怎么命名、metadata 与检索 service 如何分层”的判断，以 `.agent/docs/contracts/chroma-decision.md` 为准。
-- `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 不直接作为当前事实源引用；引用其中内容时，必须先判断它属于已落地事实、目标态还是待决策。
+- `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md` 是当前最新的认知总结输入材料，但仍不是当前事实源；引用其中内容时，必须先判断它属于已落地事实、目标态还是待决策。
+- `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md` 保留为历史输入材料，用于回看阶段演进，不作为最新规划依据。
 
 ## 6. 当前结论
 

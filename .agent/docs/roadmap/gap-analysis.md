@@ -1,4 +1,4 @@
-# Knowject 现状与目标差距分析（2026-03-14）
+# Knowject 现状与目标差距分析（2026-03-15）
 
 本文档用于回答“当前仓库离目标蓝图还有多远、先补哪里最划算”。判断基于三类证据：当前代码设计、现有文档、关键 git 演进记录。
 
@@ -14,7 +14,7 @@
   - 用户注册 / 登录、`argon2id`、JWT 与前端 `/login` 双模式入口。
 - 与目标蓝图之间的最大断层不在 UI，而在项目对话写链路、项目资源正式消费收口、Skill / Agent 运行时，以及检索链路运维能力。
 - 当前 RAG 基线已不再停留在概念层：`/knowledge`、Node -> Python indexer、`global_docs` Chroma 写入，以及 `POST /api/knowledge/search` 已形成最小正式闭环。
-- 因此后续开发不应继续把“最小知识链路未落地”当作主要阻塞，而应把重点转到项目对话消息写链路、项目资源页 `agents` fallback 收口、重建 / 重试 / 观测能力，以及 Skill / Agent 运行时。
+- 因此后续开发不应继续把“最小知识链路未落地”当作主要阻塞，而应把重点先落到 `global_docs` 运维闭环、项目资源页 `agents` fallback 收口、项目私有知识库 write-side，再进入消息写链路与 Skill / Agent 运行时。
 
 ## 2. 关键演进脉络
 
@@ -36,6 +36,9 @@
 - `3d9101b`（2026-03-10）
   - 新增 `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`，系统化提出全局层 / 项目层 / 对话层三层蓝图。
   - 含义：产品目标和技术蓝图已经被清晰表达，但尚未与当前事实完全分离。
+- `2026-03-14`
+  - 新增 `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md`，把索引服务分层、当前已落地能力与 Week 5-10 阶段边界收口到更接近源码的版本。
+  - 含义：蓝图开始显式区分“当前已落地、下一阶段、后续阶段”，可直接作为 Week 5-6 规划输入。
 
 ## 3. 六个核心 gap
 
@@ -79,7 +82,7 @@
 - 建议优先级
   - P0，最值得尽早切换。
 - 下一步动作
-- 基于已完成的项目主数据、资源绑定和对话读链路，优先补消息写路径，再逐步替换协作快照与 `agents` fallback 等剩余前端入口数据源。
+- 基于已完成的项目主数据、资源绑定和对话读链路，先收口项目资源页 `agents` fallback，再让项目私有 knowledge 进入正式 write-side；消息写路径放到下一阶段承接。
 
 ### 3.3 后端与数据层
 
@@ -104,7 +107,7 @@
 - 建议优先级
   - P0，与前端状态切换同级。
 - 下一步动作
-- 项目模型、资源绑定、会话读链路、成员接口、全局知识索引闭环，以及全局 `skills / agents` 正式管理页已经落地；下一步应优先补会话 / 消息主数据、项目资源页 `agents` fallback 收口，以及 `retry / rebuild / diagnostics` 这些索引运维缺口。
+- 项目模型、资源绑定、会话读链路、成员接口、全局知识索引闭环，以及全局 `skills / agents` 正式管理页已经落地；下一步应先补 `retry / rebuild / diagnostics`、项目资源页 `agents` fallback 收口，以及项目私有 knowledge 的正式模型与写侧。
 
 ### 3.4 AI / RAG / Skill / Agent
 
@@ -119,14 +122,14 @@
 - 证据来源
   - `apps/api/src/routes/memory.ts`
   - `apps/platform/src/app/project/project.catalog.ts`
-  - `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`
+  - `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md`
   - `3d9101b`
 - 风险
   - 如果在 `global_docs` 还没补齐重建 / 重试 / 诊断和项目级消费入口时，直接跳到完整 Agent 编排，容易在检索质量、工具边界和接口设计上一次性失控。
 - 建议优先级
   - P0，但应拆阶段推进。
 - 下一步动作
-- 建议按“补齐 `global_docs` 的 retry / rebuild / diagnostics -> 让项目对话与项目资源消费复用统一检索 service -> 收口项目资源页 `agents` fallback -> 再推进 Skill runtime 与 Agent 编排”顺序推进，而不是一次性并发铺开所有目标态能力。
+- 建议按“补齐 `global_docs` 的 retry / rebuild / diagnostics -> 收口项目资源页 `agents` fallback -> 让项目私有 knowledge 进入正式 write-side -> 再推进消息写链路、合并检索与 Agent 编排”顺序推进，而不是一次性并发铺开所有目标态能力。
 
 ### 3.5 部署与运维
 
@@ -140,7 +143,7 @@
   - 根 `package.json`
   - `pnpm-workspace.yaml`
   - `turbo.json`
-  - `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`
+  - `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md`
 - 风险
   - 如果后续继续扩项目资源、对话和 Agent 能力，但验证入口、运行观测和回滚策略没有同步补齐，开发环境和演示环境仍会迅速分叉。
 - 建议优先级
@@ -172,10 +175,11 @@
 ## 4. 推荐开发顺序
 
 1. 稳住当前信息架构，不再做大的页面和路由反复。
-2. 基于已落地的最小正式项目、资源绑定与会话读链路，优先继续收口最关键的前端 Mock 入口。
-3. 优先补项目对话消息写路径，以及项目资源页 `agents` 正式消费切换。
-4. 在 `global_docs` 已落地的基础上，补齐 `retry / rebuild / diagnostics`，再推进 `global_code`、项目级知识消费、Skill 执行与 Agent 编排。
-5. 在项目级正式链路继续扩展前，补 smoke、观测和回滚说明，避免部署与验证能力滞后。
+2. 在 `global_docs` 已落地的基础上，先补齐 `retry / rebuild / diagnostics`，让索引链路进入可维护状态。
+3. 收口项目资源页 `agents` 正式消费，继续删除剩余前端 fallback 入口。
+4. 扩展项目私有 knowledge 的正式模型与 write-side，但先不把消息写入、SSE 和 runtime 混进来。
+5. 在项目级知识 write-side 稳定后，再推进消息写链路、合并检索、Skill 执行与 Agent 编排。
+6. 在项目级正式链路继续扩展前，补 smoke、观测和回滚说明，避免部署与验证能力滞后。
 
 ## 5. 当前最值得避免的误区
 
@@ -189,4 +193,4 @@
 
 - 想看当前真实状态：读 `.agent/docs/current/architecture.md`。
 - 想看最终想做成什么：读 `.agent/docs/roadmap/target-architecture.md`。
-- 想决定下一个迭代该做什么：先看本文，再落执行计划。
+- 想决定下一个迭代该做什么：先看本文，再落对应阶段执行计划；Week 5-6 直接读 `.agent/docs/plans/tasks-index-ops-project-consumption.md`。

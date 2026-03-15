@@ -75,6 +75,7 @@ scripts/
     handoff/handoff-prompt.md    交接 Prompt 模板
     plans/tasks-foundation-framework.md  基础框架阶段任务归档
     plans/tasks-global-assets-foundation.md  全局资产阶段任务拆分
+    plans/tasks-index-ops-project-consumption.md  Week 5-6 任务拆分
     roadmap/target-architecture.md  目标蓝图
     roadmap/gap-analysis.md      current vs target 对照
     design/                      品牌与视觉资料
@@ -319,7 +320,7 @@ scripts/
 
 - 项目私有知识库、`proj_{projectId}_*` collection 真实写入与合并检索。
 - `global_code` 的真实 Git 导入、切分和索引写入。
-- 重建 / retry document / rebuild knowledge 的正式接口与调度链路。
+- 文档级 / 知识库级 rebuild、diagnostics 与系统级索引运维链路。
 - 项目对话消息写入、SSE 流式输出与来源引用渲染。
 - RBAC、成员邀请权限流、refresh token。
 - Git 仓库接入、Figma 接入、代码解析与向量化。
@@ -337,5 +338,6 @@ scripts/
 - `.agent/docs/handoff/handoff-prompt.md`：把当前上下文继续交给下一位协作者的模板。
 - `.agent/docs/roadmap/target-architecture.md`：目标蓝图与阶段能力。
 - `.agent/docs/roadmap/gap-analysis.md`：现状与目标差距、风险和建议优先级。
-- `.agent/docs/inputs/知项Knowject-项目认知总结-v2.md`：目标蓝图输入材料，不是当前事实源。
+- `.agent/docs/plans/tasks-index-ops-project-consumption.md`：Week 5-6 索引运维与项目层消费任务规划。
+- `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md`：最新目标蓝图输入材料，不是当前事实源。
 - `../../../docker/README.md`：Docker 本地 / 线上操作手册。
