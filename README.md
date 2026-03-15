@@ -149,4 +149,10 @@ For vulnerability reporting and current security support scope, see [SECURITY.md
 
 ## License
 
-This project is licensed under the [Apache License 2.0](./LICENSE).
+The current repository contents are provided under the
+[Knowject Proprietary Source-Available License](./LICENSE).
+Personal, non-commercial learning, private study, evaluation, and
+non-production experimentation are allowed.
+Any commercial use, company use, client use, deployment, hosting, SaaS,
+distribution, or monetized derivative work requires the Licensor's prior
+written permission.

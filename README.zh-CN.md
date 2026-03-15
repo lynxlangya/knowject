@@ -141,6 +141,10 @@ pnpm knowject:help
 
 漏洞披露方式与当前安全支持范围见 [SECURITY.md](./SECURITY.md)。
 
-## 开源协议
+## 许可说明
 
-本项目采用 [Apache License 2.0](./LICENSE)。
+当前仓库内容采用
+[Knowject Proprietary Source-Available License](./LICENSE)。
+允许个人非商业场景下的学习、私下研究、评估与非生产实验。
+任何商业使用、公司使用、客户项目、部署托管、SaaS、再分发或盈利性衍生使用，
+都必须事先获得许可方的书面授权。
