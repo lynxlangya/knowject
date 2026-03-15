@@ -1,3 +1,4 @@
+import type { AgentResponse } from '@api/agents';
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
 import type { SkillSummaryResponse } from '@api/skills';
 import {
@@ -255,10 +256,12 @@ const mapProjectResources = (
   focus: ProjectResourceFocus,
   catalogs: {
     knowledgeCatalog?: KnowledgeSummaryResponse[];
+    agentsCatalog?: AgentResponse[];
     skillsCatalog?: SkillSummaryResponse[];
   } = {},
 ): ProjectResourceItem[] => {
   const knowledgeCatalog = catalogs.knowledgeCatalog ?? [];
+  const agentsCatalog = catalogs.agentsCatalog ?? [];
   const skillsCatalog = catalogs.skillsCatalog ?? [];
 
   if (focus === 'knowledge') {
@@ -338,6 +341,39 @@ const mapProjectResources = (
     });
   }
 
+  if (focus === 'agents') {
+    const agentsById = new Map(
+      agentsCatalog.map((agent) => [agent.id, agent] as const),
+    );
+
+    return getResourceIdsByFocus(project, focus).map((resourceId) => {
+      const agent = agentsById.get(resourceId);
+
+      if (agent) {
+        return {
+          id: agent.id,
+          type: 'agents' as const,
+          name: agent.name,
+          description: agent.description,
+          updatedAt: compactDateFormatter.format(new Date(agent.updatedAt)),
+          owner: '当前团队',
+          usageCount: 0,
+          source: 'global' as const,
+        };
+      }
+
+      const legacyAgent = getGlobalAssetById('agents', resourceId);
+      if (legacyAgent) {
+        return {
+          ...legacyAgent,
+          source: 'global' as const,
+        };
+      }
+
+      return buildMissingProjectResourceItem(focus, resourceId);
+    });
+  }
+
   return getResourceIdsByFocus(project, focus)
     .map((resourceId) => {
       const resource = getGlobalAssetById(focus, resourceId);
@@ -372,6 +408,7 @@ export const getProjectResourceGroups = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
   catalogs: {
     knowledgeCatalog?: KnowledgeSummaryResponse[];
+    agentsCatalog?: AgentResponse[];
     skillsCatalog?: SkillSummaryResponse[];
   } = {},
 ): ProjectResourceGroup[] => {
@@ -409,6 +446,7 @@ export const getRecentProjectResources = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
   catalogs: {
     knowledgeCatalog?: KnowledgeSummaryResponse[];
+    agentsCatalog?: AgentResponse[];
     skillsCatalog?: SkillSummaryResponse[];
   } = {},
   limit = 4,

@@ -24,11 +24,13 @@ export const ProjectOverviewPage = () => {
     conversations,
     conversationsError,
     knowledgeCatalog,
+    agentsCatalog,
     skillsCatalog,
   } = useProjectPageContext();
   const recentConversations = conversations.slice(0, 3);
   const recentResources = getRecentProjectResources(activeProject, {
     knowledgeCatalog,
+    agentsCatalog,
     skillsCatalog,
   });
 

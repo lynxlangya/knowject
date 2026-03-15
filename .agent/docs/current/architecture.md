@@ -18,7 +18,7 @@
   - `packages/request`：Axios 请求封装。
   - `packages/ui`：通用 UI 组件，当前已包含 `SearchPanel` 及其 helper 分层。
 - 当前产品主线：登录后产品壳、项目态页面、全局资产正式管理页、基础框架 API 基线。
-- 当前项目态主数据流：项目列表、项目基础信息、成员 roster、项目资源绑定与项目对话读链路来自后端 `/api/projects*`；概览补充文案、成员协作快照与 `agents` 目录 fallback 仍依赖前端 Mock，Skill 元数据已切正式 `/api/skills`。
+- 当前项目态主数据流：项目列表、项目基础信息、成员 roster、项目资源绑定与项目对话读链路来自后端 `/api/projects*`；概览补充文案与成员协作快照仍依赖前端 Mock，项目资源与概览中的知识库 / Skill / Agent 元数据已切正式 `/api/knowledge`、`/api/skills`、`/api/agents`。
 - 当前默认宿主机开发拓扑：`platform + api + indexer-py`；依赖服务推荐由 Docker 提供 `mongodb + chroma`。
 - 当前容器化部署拓扑：
   - 本地：`platform + api + indexer-py + mongodb + chroma`
@@ -187,13 +187,13 @@ scripts/
 - `apps/platform/src/app/project/project.storage.ts`
   - 只管理 `knowject_project_pins` 本地偏好。
 - `apps/platform/src/app/project/project.catalog.ts`
-  - 维护项目资源页与成员聚合所需的 `agents` 目录 fallback、成员基础档案等共享 Mock 目录。
+  - 维护成员基础档案，以及项目创建 / 编辑表单仍在使用的演示资源选项；不再承担项目资源页的 agent 展示事实源。
 - `apps/platform/src/pages/project/project.mock.ts`
-  - 维护项目概览补充文案、成员协作快照，以及项目资源展示映射；Skill 元数据优先来自正式 `/api/skills`，未知 `skills / agents` 绑定会返回占位项而不是静默过滤。
+  - 维护项目概览补充文案、成员协作快照，以及项目资源展示映射；知识库 / Skill / Agent 元数据优先来自正式 `/api/knowledge`、`/api/skills`、`/api/agents`，未知资源绑定会返回占位项而不是静默过滤。
 - `apps/platform/src/app/layouts/components/AppSider.tsx`
   - 当前项目创建 / 编辑流程会把 `name / description / knowledgeBaseIds / skillIds / agentIds` 一并提交到后端项目模型。
 - `apps/platform/src/pages/project/ProjectLayout.tsx`
-  - 进入项目页时会并行拉取 `/api/projects/:projectId/conversations`、`/api/knowledge` 与 `/api/skills`，为概览 / 对话 / 资源三页提供正式只读数据。
+  - 进入项目页时会并行拉取 `/api/projects/:projectId/conversations`、`/api/knowledge`、`/api/skills` 与 `/api/agents`，为概览 / 对话 / 资源三页提供正式只读数据。
 - `apps/platform/src/pages/project/ProjectChatPage.tsx`
   - 对话详情通过 `/api/projects/:projectId/conversations/:conversationId` 读取；输入框当前保持禁用，消息写路径尚未落地。
 
@@ -202,7 +202,7 @@ scripts/
 - 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理入口；其中 `/knowledge`、`/skills` 与 `/agents` 已切正式接口。
 - 项目 `资源` 页当前只展示“该项目已绑定的资产”。
 - 项目资源的实际来源已经切到后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`。
-- 其中知识库与 Skill 分组优先消费 `/api/knowledge`、`/api/skills` 的正式元数据；`/agents` 页面消费 `/api/agents`、`/api/knowledge` 与 `/api/skills` 的正式数据，项目资源页中的 `agents` 仍回退到 `project.catalog.ts` 中的共享目录。
+- 其中知识库、Skill 与 Agent 分组优先消费 `/api/knowledge`、`/api/skills`、`/api/agents` 的正式元数据；`/agents` 页面与项目资源页当前消费同一份正式 agent 目录。
 - 当项目或成员聚合里出现未知的 `skills / agents` 资源 ID 时，前端当前会渲染“未知资源（{id}）”占位项，而不是静默丢失。
 - 兼容跳转会临时落到 `/project/:projectId/resources?focus=*`；页面完成滚动定位后会回写 canonical URL `/project/:projectId/resources`。
 - `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx` 已接正式后端知识库接口，支持知识库 CRUD、文档上传、文档级 retry / rebuild、知识库级 rebuild、diagnostics 面板、状态展示和上传后的最小轮询。

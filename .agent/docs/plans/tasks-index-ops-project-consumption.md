@@ -1,6 +1,6 @@
 # 索引运维与项目层消费开发任务（Week 5-6，规划拆解）
 
-状态：截至 2026-03-15，Week 3-4 全局资产基础已完成；`IC-01`、`IC-02`、`IC-03` 已完成，`IC-04 ~ IC-09` 待启动；本文件当前同时承担“Week 5-6 任务清单 + 执行记录”角色。
+状态：截至 2026-03-15，Week 3-4 全局资产基础已完成；`IC-01`、`IC-02`、`IC-03`、`IC-04` 已完成，`IC-05 ~ IC-09` 待启动；本文件当前同时承担“Week 5-6 任务清单 + 执行记录”角色。
 
 本文件用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md` 中的 `Week 5-6 索引运维 + 项目层消费`，结合当前已落地的 `knowledge / skills / agents / projects` 主链路事实，收敛成可执行、可排期、可验收的任务清单。
 
@@ -47,7 +47,6 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
 
 ### 当前明确未完成
 
-- 项目资源页中的 `agents` 仍依赖 `apps/platform/src/app/project/project.catalog.ts` 的本地目录 fallback。
 - 当前知识库模型只有 `global_docs / global_code` source type，没有项目级 scope / `projectId` 扩展位。
 - 当前不存在项目私有知识库的正式上传、索引写入与项目内展示链路。
 - `pdf / docx` 还没有回到当前正式上传契约；当前只稳定支持 `md / markdown / txt`。
@@ -304,7 +303,7 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
 - 验收：
   - 用户可以从 `/knowledge` 自助完成最小运维闭环。
 
-### IC-04 · 收口项目资源页 `agents` fallback
+### IC-04 DONE（2026-03-15）· 收口项目资源页 `agents` fallback
 
 - 目标：让项目资源页真正消费正式 agent 元数据。
 - 输出：
@@ -312,6 +311,11 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
   - `project.catalog.ts` 中面向资源页的 agent 目录删除或退役。
   - 未知 agent ID 仍保留占位项，而不是静默丢失。
 - 依赖：`IC-01`。
+- 已完成记录：
+  - `ProjectLayout` 已并行拉取 `/api/agents`，并通过 project page context 下发给概览页与资源页。
+  - `project.mock.ts` 已把 `agents` 资源映射切到正式 `agentsCatalog`，项目资源页与项目概览最近资源卡片不再读取本地 agent 目录。
+  - 未知 agent ID 继续渲染“未知资源（{id}）”占位项，没有因为 catalog 缺项而静默丢失。
+  - `project.catalog.ts` 当前只保留成员基础档案与项目表单演示选项，不再承担项目资源页的 agent 展示事实源。
 - 建议子任务：
   - 让 `ProjectLayout` 或 project page context 并行拉取 `/api/agents`。
   - 保留现有页面结构和文案，不重做资源页信息架构。

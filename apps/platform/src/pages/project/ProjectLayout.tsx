@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Skeleton } from 'antd';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { listAgents, type AgentResponse } from '@api/agents';
 import { extractApiErrorMessage } from '@api/error';
 import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
 import { listSkills, type SkillSummaryResponse } from '@api/skills';
@@ -33,6 +34,9 @@ export const ProjectLayout = () => {
   >([]);
   const [knowledgeCatalogLoading, setKnowledgeCatalogLoading] = useState(false);
   const [knowledgeCatalogError, setKnowledgeCatalogError] = useState<string | null>(null);
+  const [agentsCatalog, setAgentsCatalog] = useState<AgentResponse[]>([]);
+  const [agentsCatalogLoading, setAgentsCatalogLoading] = useState(false);
+  const [agentsCatalogError, setAgentsCatalogError] = useState<string | null>(null);
   const [skillsCatalog, setSkillsCatalog] = useState<SkillSummaryResponse[]>([]);
   const [skillsCatalogLoading, setSkillsCatalogLoading] = useState(false);
   const [skillsCatalogError, setSkillsCatalogError] = useState<string | null>(null);
@@ -48,11 +52,13 @@ export const ProjectLayout = () => {
     const loadProjectPageData = async () => {
       setConversationsLoading(true);
       setKnowledgeCatalogLoading(true);
+      setAgentsCatalogLoading(true);
       setSkillsCatalogLoading(true);
 
-      const [conversationsResult, knowledgeResult, skillsResult] = await Promise.allSettled([
+      const [conversationsResult, knowledgeResult, agentsResult, skillsResult] = await Promise.allSettled([
         listProjectConversations(activeProject.id),
         listKnowledge(),
+        listAgents(),
         listSkills(),
       ]);
 
@@ -94,6 +100,23 @@ export const ProjectLayout = () => {
         );
       }
 
+      if (agentsResult.status === 'fulfilled') {
+        setAgentsCatalog(agentsResult.value.items);
+        setAgentsCatalogError(null);
+      } else {
+        console.error(
+          '[ProjectLayout] 加载 Agent 目录失败:',
+          agentsResult.reason,
+        );
+        setAgentsCatalog([]);
+        setAgentsCatalogError(
+          extractApiErrorMessage(
+            agentsResult.reason,
+            '加载 Agent 元数据失败，请稍后重试。',
+          ),
+        );
+      }
+
       if (skillsResult.status === 'fulfilled') {
         setSkillsCatalog(skillsResult.value.items);
         setSkillsCatalogError(null);
@@ -113,6 +136,7 @@ export const ProjectLayout = () => {
 
       setConversationsLoading(false);
       setKnowledgeCatalogLoading(false);
+      setAgentsCatalogLoading(false);
       setSkillsCatalogLoading(false);
     };
 
@@ -211,6 +235,9 @@ export const ProjectLayout = () => {
             knowledgeCatalog,
             knowledgeCatalogLoading,
             knowledgeCatalogError,
+            agentsCatalog,
+            agentsCatalogLoading,
+            agentsCatalogError,
             skillsCatalog,
             skillsCatalogLoading,
             skillsCatalogError,

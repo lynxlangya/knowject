@@ -30,11 +30,14 @@ export const ProjectResourcesPage = () => {
     activeProject,
     knowledgeCatalog,
     knowledgeCatalogError,
+    agentsCatalog,
+    agentsCatalogError,
     skillsCatalog,
     skillsCatalogError,
   } = useProjectPageContext();
   const groups = getProjectResourceGroups(activeProject, {
     knowledgeCatalog,
+    agentsCatalog,
     skillsCatalog,
   });
   const rawFocus = searchParams.get('focus');
@@ -154,6 +157,15 @@ export const ProjectResourcesPage = () => {
             showIcon
             message="Skill 元数据加载失败"
             description={skillsCatalogError}
+          />
+        ) : null}
+
+        {agentsCatalogError ? (
+          <Alert
+            type="warning"
+            showIcon
+            message="Agent 元数据加载失败"
+            description={agentsCatalogError}
           />
         ) : null}
 
