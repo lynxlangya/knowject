@@ -1,6 +1,6 @@
 # Knowject 当前差距与演进顺序（ChatGPT Projects 上传版）
 
-状态：2026-03-14
+状态：2026-03-15
 来源：基于 `.agent/docs/roadmap/gap-analysis.md` 精简同步。  
 定位：用于回答“当前离目标还有多远、下一步先补哪里最划算”。
 
@@ -9,10 +9,10 @@
 - 当前仓库已经完成信息架构、登录、项目主数据和成员主链路的第一轮收口。
 - 当前最大断层不在 UI，而在：
   - 项目对话消息写链路
-  - 项目资源页 `agents` fallback 收口
+  - 项目级合并检索与来源引用
   - Skill / Agent 运行时与 AI 主链路
-- Chroma 已进入 `global_docs` 正式索引链路，而不只是基础设施层。
-- 当前已经有 Python indexer 与统一知识检索 service，但仍停留在最小闭环阶段。
+- Chroma 已进入 `global_docs` 正式索引链路，Week 5-6 的 rebuild / diagnostics 与项目 collection contract 也已落地。
+- 当前已经有 Python indexer、统一知识检索 service，以及项目私有 knowledge 最小闭环；下一阶段重点不再是基础设施收口，而是对话与运行时。
 
 ## 2. 六个核心 gap
 
@@ -23,12 +23,12 @@
 
 ### 2. 前端状态模型
 
-- 项目资源里的 `agents` fallback、对话与部分协作信息仍依赖 Mock / 本地状态
+- 项目对话消息与部分协作信息仍依赖 Mock / 本地状态
 
 ### 3. 后端与数据层
 
-- 项目、成员、全局资产管理页和知识索引已形成正式基线
-- 仍缺消息写链路、项目资源消费收口与更深的索引运维能力
+- 项目、成员、全局资产管理页、索引运维与项目私有 knowledge 已形成正式基线
+- 仍缺消息写链路、项目级合并检索与更深的运行时能力
 
 ### 4. AI / RAG / Skill / Agent
 
@@ -39,7 +39,8 @@
 ### 5. 部署与运维
 
 - Docker 基线已存在
-- 但知识索引运维能力、回滚与监控尚未进入正式阶段
+- 已有 `verify:global-assets-foundation` 与 `verify:index-ops-project-consumption`
+- 但回滚、CI 与监控尚未进入正式阶段
 
 ### 6. 文档治理
 
@@ -49,11 +50,10 @@
 ## 3. 推荐演进顺序
 
 1. 稳住当前信息架构
-2. 基于已落地的项目与成员模型，优先继续替换关键 Mock 主数据源
-3. 继续稳住 `apps/api + apps/indexer-py + Chroma` 的 `global_docs` 最小索引闭环
-4. 收口项目资源页 `agents` fallback
-5. 在 `global_docs` 稳定后，再扩到 `global_code`、项目级知识库、对话链路、Skill 执行与 Agent 编排
-6. 最后补更完整的部署与运维能力
+2. 直接推进项目对话消息写链路
+3. 在写链路稳定后，补项目 + 全局知识合并检索与来源引用
+4. 再推进 Skill 执行与 Agent 编排
+5. 最后补更完整的部署、CI 与运维能力
 
 ## 4. 当前最值得避免的误区
 
@@ -76,4 +76,4 @@
 
 ## 6. 一句话总结
 
-当前最划算的路径不是继续美化壳层，而是把已经打通的 `/knowledge`、`/skills`、`/agents` 全局资产基线稳住，再推进项目级知识 / 对话主链路、项目资源页 `agents` 收口与 Skill / Agent runtime。
+当前最划算的路径不是继续美化壳层，而是直接复用已经完成的 Week 5-6 基座，推进项目对话写链路、项目级合并检索与 Skill / Agent runtime。

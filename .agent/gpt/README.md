@@ -1,6 +1,6 @@
 # Knowject ChatGPT Projects 上传包
 
-状态：2026-03-14 同步。
+状态：2026-03-15 同步。
 定位：本目录是“给 ChatGPT Projects 上传用的派生文档包”，不是新的事实源。  
 事实、契约与任务的正式维护仍以仓库原文档为准：
 
@@ -28,12 +28,13 @@
 2. `PROJECT_RULES.md`
 3. `CURRENT_ARCHITECTURE.md`
 4. `INDEXING_DECISION.md`
-5. `WEEK3_4_TASKS.md`
+5. `WEEK5_6_TASKS.md`
 6. `GAP_ANALYSIS.md`
 
 ### 按需补传
 
-7. `AUTH_ENV_CONTRACT.md`
+7. `WEEK3_4_TASKS.md`（仅在需要回看上一阶段基线时）
+8. `AUTH_ENV_CONTRACT.md`
 
 适用场景：
 
@@ -57,8 +58,10 @@
   - 当前已经落地的系统事实。
 - `INDEXING_DECISION.md`
   - Node / Python / MongoDB / Chroma 的新分层决策。
+- `WEEK5_6_TASKS.md`
+  - 当前活跃阶段的完成记录、DoD、顺延项与验证入口。
 - `WEEK3_4_TASKS.md`
-  - 当前阶段任务边界、DoD 与执行顺序。
+  - 上一阶段的历史任务边界与 DoD。
 - `GAP_ANALYSIS.md`
   - 当前缺口和推荐演进顺序。
 - `AUTH_ENV_CONTRACT.md`
@@ -69,10 +72,10 @@
 - 这里的文件是“上传副本 / 精简同步版”，不是主维护入口。
 - 当原文档发生变化时，应优先更新原文，再同步这里。
 - 若这里与原文冲突，以原文为准。
-- 本轮已同步 `apps/indexer-py` 的 FastAPI + `uv` 迁移事实、版本化内部接口和 Docker / 运行方式更新，以及 Skill 资产治理从“只读目录”升级到“正式 CRUD / 导入 / 草稿发布 / 绑定校验”的当前事实。
+- 本轮已同步 Week 5-6 的索引运维、项目私有 knowledge 最小闭环、`/project/:projectId/resources` 正式消费，以及统一验证入口 `pnpm verify:index-ops-project-consumption`。
 
 ## 5. 一句话建议
 
 - 把 `PROJECT_BRIEF.md` 当成 ChatGPT Projects 的默认入口。
 - 把 `CURRENT_ARCHITECTURE.md` 和 `INDEXING_DECISION.md` 当成它判断“现在是什么、为什么这样做”的主依据。
-- 把 `WEEK3_4_TASKS.md` 当成它判断“当前阶段应该做什么、不该做什么”的主依据。
+- 把 `WEEK5_6_TASKS.md` 当成它判断“当前阶段已经做完什么、下一阶段应该接什么”的主依据。

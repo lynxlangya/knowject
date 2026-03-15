@@ -162,7 +162,6 @@
 ## 9. 当前阶段不做
 
 - `global_code` 真实 Git 导入
-- 项目私有知识库正式写入
 - 项目级合并检索
 - SSE
 - 来源引用 UI
@@ -172,4 +171,4 @@
 
 - 如果讨论“为什么这里要 Python”，以这份文档为准。
 - 如果讨论“现在仓库里有没有 Python indexer”，答案是：有，路径为 `apps/indexer-py`。
-- 如果讨论“正式链路是否完全生产化”，答案是：`global_docs` 最小闭环已落地，单文档 retry 已落地，但 rebuild / diagnostics 与知识库级重建仍未补齐，production 仍以真实 OpenAI-compatible embedding 为基线。
+- 如果讨论“正式链路是否完全生产化”，答案是：`global_docs` 最小闭环、document / knowledge rebuild、diagnostics 与项目私有 knowledge 最小写侧都已落地，但消息写链路、项目级合并检索与运行时仍未补齐，production 仍以真实 OpenAI-compatible embedding 为基线。

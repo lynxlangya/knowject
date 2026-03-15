@@ -111,8 +111,8 @@
 
 ## 7. 当前明确还没落地的能力
 
-- Skill / Agent 执行闭环，以及项目资源页 `agents` fallback 收口
-- 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建接口仍未落地
+- Skill / Agent 执行闭环
+- 项目级合并检索，以及项目资源页内 project knowledge 的 rebuild / diagnostics 运维入口
 - `global_code` 真实导入与项目级合并检索
 - 对话消息写入、流式消息链路、来源引用渲染
 - refresh token、组织级 RBAC、邀请链接、密码找回
@@ -156,4 +156,4 @@
 
 ## 11. 一句话总结
 
-当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路，以及全局 `/knowledge`、`/skills`、`/agents` 的正式管理页；当前最大的断层仍是项目对话消息写侧、项目资源页 `agents` fallback 与索引运维能力。
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路、`/knowledge` 的索引运维基线，以及项目私有 knowledge 最小闭环；当前最大的断层仍是项目对话消息写侧、项目级合并检索与 Skill / Agent 运行时。

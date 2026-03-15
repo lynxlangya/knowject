@@ -1,6 +1,6 @@
 # Knowject 当前架构事实（ChatGPT Projects 上传版）
 
-状态：2026-03-14
+状态：2026-03-15
 来源：基于 `.agent/docs/current/architecture.md` 精简同步。  
 定位：这是当前事实副本，只回答“现在是什么状态”。
 
@@ -33,7 +33,9 @@
 - 仓库里已经有独立 Python 索引服务代码，目录为 `apps/indexer-py`。
 - `apps/indexer-py` 当前已切到 FastAPI + `uv` 基线，主内部写侧入口固定为 `POST /internal/v1/index/documents`，并开放 `/docs`、`/redoc`、`/openapi.json` 作为内部控制面文档入口；当前仍隐藏兼容旧路径 `POST /internal/index-documents`。
 - `/knowledge` 已接正式后端接口，支持知识库 CRUD、文档上传、状态展示和最小轮询。
+- `/knowledge` 已接正式后端接口，支持知识库 CRUD、文档上传、document / knowledge rebuild、diagnostics、状态展示和最小轮询。
 - `global_docs` 已打通最小文档索引闭环；`global_code` 仍只保留命名空间与检索契约。
+- 项目资源页当前会同时展示“绑定的全局知识”和“项目私有知识”，并支持项目知识最小创建 / 上传入口。
 
 ## 3. 当前目录结构重点
 
@@ -89,6 +91,7 @@
 - 项目基础信息
 - 项目成员 roster
 - 项目资源绑定
+- 项目私有知识目录
 - 项目对话列表 / 详情读链路
 - 全局成员概览
 - `/knowledge`、`/skills`、`/agents` 正式后端接口
@@ -97,7 +100,7 @@
 
 - 项目概览
 - 项目对话消息
-- 项目资源消费态中的 `agents` fallback
+- 项目成员协作快照与概览补充文案
 
 ### 当前关键 localStorage
 
@@ -121,6 +124,10 @@
 - `POST /api/projects`
 - `PATCH /api/projects/:projectId`
 - `DELETE /api/projects/:projectId`
+- `GET /api/projects/:projectId/knowledge`
+- `GET /api/projects/:projectId/knowledge/:knowledgeId`
+- `POST /api/projects/:projectId/knowledge`
+- `POST /api/projects/:projectId/knowledge/:knowledgeId/documents`
 - `POST /api/projects/:projectId/members`
 - `PATCH /api/projects/:projectId/members/:userId`
 - `DELETE /api/projects/:projectId/members/:userId`
@@ -130,6 +137,10 @@
 - `PATCH /api/knowledge/:knowledgeId`
 - `DELETE /api/knowledge/:knowledgeId`
 - `POST /api/knowledge/:knowledgeId/documents`
+- `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`
+- `POST /api/knowledge/:knowledgeId/documents/:documentId/rebuild`
+- `POST /api/knowledge/:knowledgeId/rebuild`
+- `GET /api/knowledge/:knowledgeId/diagnostics`
 - `POST /api/knowledge/search`
 - `GET /api/skills`
 - `GET /api/skills/:skillId`
@@ -159,10 +170,9 @@
 
 ## 7. 当前明确未落地能力
 
-- 项目资源页 `agents` fallback 收口，以及 Skill / Agent 运行时
-- 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建仍未落地
+- Skill / Agent 运行时
 - SSE 流式对话链路与来源引用
-- 项目私有知识库持久化
+- 项目级合并检索，以及项目资源页内 project knowledge 的 rebuild / diagnostics 运维入口
 - `global_code` 真实导入与项目级合并检索
 
 ## 8. 当前事实判断规则

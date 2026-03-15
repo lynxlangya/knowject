@@ -38,7 +38,7 @@ scripts/     常用命令统一入口
 
 ## 2. 模块职责边界
 
-- `apps/platform`：承载登录后产品壳、路由、鉴权状态、项目态页面与全局资产管理页；当前项目主数据、成员 roster、资源绑定，以及全局 `/knowledge`、`/skills`、`/agents` 管理页已接入正式后端，项目资源页中的知识库 / Skill / Agent 元数据已切正式 `/api/knowledge`、`/api/skills`、`/api/agents`，成员协作快照仍包含本地 fallback。
+- `apps/platform`：承载登录后产品壳、路由、鉴权状态、项目态页面与全局资产管理页；当前项目主数据、成员 roster、资源绑定，以及全局 `/knowledge`、`/skills`、`/agents` 管理页已接入正式后端，项目资源页中的知识库 / Skill / Agent 元数据已切正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`，成员协作快照仍保留本地补充层。
 - `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`memory` 九组接口；其中 auth、projects、members、memberships、knowledge、skills、agents 已接入正式主链路，`skills` 当前支持系统内置 + 自建 + GitHub/URL 导入的正式资产治理、草稿/发布与绑定校验，`agents` 已支持正式 CRUD 与绑定校验，`memory` 保持系统 / 演示接口。
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
@@ -65,7 +65,7 @@ scripts/     常用命令统一入口
 - 项目内一级导航固定为：`概览`、`对话`、`资源`、`成员`。
 - 资产分为两层：`全局资产` 与 `项目资源`。
 - 全局 `知识库 / 技能 / 智能体` 页面负责跨项目资产治理、目录、版本与复用。
-- 项目内 `资源` 页负责展示和编排当前项目的知识、技能与智能体，只承载项目内消费态，不承担全局治理职责。
+- 项目内 `资源` 页负责展示和编排当前项目的知识、技能与智能体，并区分“绑定的全局知识”与“项目私有知识”；它只承载项目内消费态和最小入口，不承担全局治理职责。
 
 ## 4. 状态与数据来源约定
 
@@ -73,8 +73,8 @@ scripts/     常用命令统一入口
 - 项目列表统一由 `apps/platform/src/app/project/ProjectContext.tsx` 管理，运行时主数据来自 `/api/projects`；组件初始化时会一次性清理已退役的 `knowject_projects` 与 `knowject_project_resource_bindings`。
 - `apps/platform/src/app/project/project.catalog.ts` 维护成员聚合所需的共享 Mock 档案，以及项目创建 / 编辑表单仍在使用的演示资源选项；不再作为项目资源页的 agent 展示事实源。
 - `apps/platform/src/app/project/project.storage.ts` 仅负责 `knowject_project_pins` 置顶偏好的本地持久化。
-- `apps/platform/src/pages/project/project.mock.ts` 负责项目概览、资源展示映射与成员协作快照；知识库 / Skill / Agent 元数据优先来自正式 `/api/knowledge`、`/api/skills`、`/api/agents`，未知资源 ID 会渲染占位项而不是静默丢失。
-- 项目资源数据当前由“项目绑定的全局资产”映射得到；知识库、Skill 与 Agent 元数据优先来自正式 `/api/knowledge`、`/api/skills`、`/api/agents`。
+- `apps/platform/src/pages/project/project.mock.ts` 负责项目概览、资源展示映射与成员协作快照；知识库 / Skill / Agent 元数据优先来自正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`，未知资源 ID 会渲染占位项而不是静默丢失。
+- 项目资源数据当前由“项目绑定的全局资产 + 项目私有知识”共同组成；知识库、Skill 与 Agent 元数据优先来自正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`。
 - `apps/api` 已经承载 auth、项目主数据、成员关系、知识库、Skill 资产治理与 Agent 配置正式接口；当前仍保留演示性质的部分主要是 `memory` 与项目概览 / 资源相关的前端 Mock 补充数据。
 
 ## 5. 开发与文档同步约束

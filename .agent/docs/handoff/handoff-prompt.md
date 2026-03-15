@@ -53,10 +53,10 @@
 
 在开始实施前，必须先明确以下结论：
 
-- 当前项目列表、项目基础信息、成员 roster、项目资源绑定和项目对话列表 / 详情已来自后端 `/api/projects*`，但概览补充文案、成员协作快照与 `agents` fallback 仍依赖前端 Mock。
+- 当前项目列表、项目基础信息、成员 roster、项目资源绑定、项目私有知识目录和项目对话列表 / 详情已来自后端 `/api/projects*` 与 `/api/projects/:projectId/knowledge*`，但概览补充文案、成员协作快照仍依赖前端补充层。
 - 后端已经落地 MongoDB、JWT、注册 / 登录、全局成员概览、最小项目 CRUD、成员接口、健康检查和 memory 演示接口。
 - `/workspace`、`/home/project/*` 和旧 `knowledge|skills|agents` 项目路由都只是兼容入口。
-- 项目资源页只负责消费项目已绑定的全局资产；知识库与 Skill 元数据优先来自 `/api/knowledge`、`/api/skills`，项目资源页中的 `agents` 仍使用本地目录 fallback；全局 `/skills` 已支持自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已有正式 CRUD / 绑定表单。
+- 项目资源页当前同时消费项目已绑定的全局资产和项目私有知识；知识库与 Skill / Agent 元数据优先来自 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`；全局 `/skills` 已支持自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已有正式 CRUD / 绑定表单。
 - `knowject_project_pins` 当前承载前端置顶偏好，`knowject_project_resource_bindings` 已退为历史资源绑定迁移缓存。
 - `knowject_projects` 已退为历史本地 Mock 缓存键，当前只在首次刷新时作为一次性迁移源读取。
 - 项目成员正式管理接口已经落地，前端成员页当前已切到正式后端 roster，全局成员页也已切到 `/api/members`。
@@ -75,7 +75,7 @@
 - 以最小可行改动推进，不做未来抽象，不为了“显得完整”引入新层级。
 - 改路由、数据来源、localStorage 键、API 边界或文档角色时，必须同步更新 `.agent/docs/current/architecture.md` 和 `.agent/docs/README.md`，必要时更新 `README.md` 与 `.agent/docs/contracts/auth-contract.md`。
 - 不要把 `.agent/docs/roadmap/target-architecture.md` 中的目标能力表述成当前现状。
-- 在没有完成正式消息写入、项目资源页 `agents` fallback 清理，以及 Skill / Agent 运行时前，不要继续把更多真实业务逻辑堆进 `project.mock.ts` 和 `project.catalog.ts`。
+- 在没有完成正式消息写入、项目级合并检索，以及 Skill / Agent 运行时前，不要继续把更多真实业务逻辑堆进 `project.mock.ts` 和 `project.catalog.ts`。
 ```
 
 ## 人类接手 Prompt

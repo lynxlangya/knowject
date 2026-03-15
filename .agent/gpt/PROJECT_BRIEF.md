@@ -1,7 +1,7 @@
 # Knowject 项目简介（ChatGPT Projects 上传版）
 
-状态：2026-03-14
-来源：基于 `AGENTS.md`、`.agent/docs/current/architecture.md`、`.agent/docs/contracts/chroma-decision.md`、`.agent/docs/plans/tasks-global-assets-foundation.md`、`.agent/docs/roadmap/gap-analysis.md` 汇总。  
+状态：2026-03-15
+来源：基于 `AGENTS.md`、`.agent/docs/current/architecture.md`、`.agent/docs/contracts/chroma-decision.md`、`.agent/docs/plans/tasks-index-ops-project-consumption.md`、`.agent/docs/roadmap/gap-analysis.md` 汇总。
 定位：这是给 ChatGPT Projects 建立上下文的首份文档，不是主事实源。
 
 ## 1. 项目是什么
@@ -14,8 +14,8 @@
 - 当前项目阶段不是纯 Demo，也不是完整 AI 产品，而是：
   - 前后端基础框架已接通
   - 项目主数据与成员链路已落地
-  - 全局知识库最小正式闭环已落地
-  - 全局 Skill / Agent 管理页已落地，项目侧消费与运行时仍在推进
+  - 索引运维基线与项目私有 knowledge 最小闭环已落地
+  - 全局 Skill / Agent 管理页已落地，运行时仍在推进
 
 ## 2. 当前已经落地的事实
 
@@ -36,6 +36,7 @@
   - 项目基础信息
   - 成员 roster
   - 项目资源绑定
+  - 项目私有知识目录
   - 项目对话列表 / 详情
   - 全局成员页
   - `/knowledge`、`/skills`、`/agents` 全局资产管理页
@@ -48,11 +49,11 @@
 
 ## 3. 当前仍未落地的事实
 
-- 项目资源页 `agents` fallback 收口，以及 Skill / Agent 执行闭环
-- 单文档 retry / delete 已落地；`global_docs` 的 rebuild / diagnostics 与知识库级重建接口仍未落地
+- Skill / Agent 执行闭环
 - `global_code` 真实导入与项目级合并检索
 - 项目对话消息写入与 SSE
 - 来源引用渲染
+- 项目资源页内 project knowledge 的 rebuild / diagnostics 运维入口
 
 ## 4. 当前信息架构
 
@@ -85,14 +86,15 @@
 - 项目成员关系
 - 全局成员概览
 - 项目资源绑定
+- 项目私有知识目录
 - 项目对话列表 / 详情读链路
-- 知识库 CRUD、上传、状态推进与统一检索
+- 知识库 CRUD、上传、rebuild / diagnostics、状态推进与统一检索
 
 ### 仍主要依赖前端本地 / Mock
 
 - 项目概览页内容
 - 对话消息演示数据
-- 项目资源消费态中的 `agents` fallback
+- 项目成员协作快照与概览补充层
 
 ### 当前关键前端本地状态
 
@@ -111,7 +113,7 @@
 - `apps/indexer-py`
   - 负责索引处理链路。
   - 当前已落地 FastAPI + `uv` 控制面、`GET /health`、`POST /internal/v1/index/documents`，并隐藏兼容旧路径 `POST /internal/index-documents`。
-  - 当前已覆盖 parse / clean / chunk / embed / upsert / delete，并为 rebuild / retry / diagnostics 预留命名空间。
+  - 当前已覆盖 parse / clean / chunk / embed / upsert / delete，并已开放 rebuild / diagnostics 相关内部入口。
 - MongoDB
   - 负责业务主数据层。
   - 保存知识库元数据、文档记录、索引状态、失败原因、绑定关系。
@@ -164,27 +166,27 @@
 9. Node 的统一知识检索 service 查询 Chroma 并返回标准结果。
 10. `search_documents` Skill 只能调用统一知识检索 service，不能自己直连 Chroma。
 
-## 9. Week 3-4 当前阶段边界
+## 9. Week 5-6 当前阶段结果
 
-### 本阶段要做
+### 本阶段已完成
 
-- 全局资产正式化
-- `global_docs` 最小索引闭环
-- Skill registry 与治理最小闭环
-- Agent 配置模型最小闭环
+- `/knowledge` 的 document / knowledge rebuild 与 diagnostics
+- 项目资源页 `agents` 正式消费切换
+- 项目私有知识的 `scope / projectId` 模型、`proj_{projectId}_docs` 写侧，以及资源页最小 create / upload 闭环
+- Week 5-6 统一验证入口 `pnpm verify:index-ops-project-consumption`
 
-### 本阶段不做
+### 顺延到下一阶段
 
-- 项目私有知识库正式写入
+- 项目对话消息写入、SSE、来源引用 UI
+- 项目 + 全局知识合并检索
 - `global_code` 真实 Git 导入
-- 对话主链路、SSE、来源引用 UI
 - 完整 Agent runtime
-- LLM 自主调用 Skill 编排链路
+- 项目资源页内 project knowledge 的 rebuild / diagnostics 运维入口
 
 ## 10. 给 ChatGPT 的工作约束
 
 - 不要把目标蓝图当成当前事实。
-- 不要把 `/skills`、`/agents` 误判为已经进入运行时或项目侧消费完全收口；当前正式写链路已经覆盖 Knowledge 上传、Skill 资产治理与 Agent 配置，但项目资源页 `agents` fallback 与运行时仍未完成。
+- 不要把 `/skills`、`/agents` 误判为已经进入运行时；当前正式写链路已经覆盖 Knowledge 上传、索引运维、Skill 资产治理、Agent 配置与项目私有知识最小消费，但运行时仍未完成。
 - 不要把 Chroma 误判为正式业务主数据库。
 - 不要把“Node/Express 负责业务主链路，Python 负责索引处理链路”写成“全仓切 Python”。
 - 默认中文输出，结论先行，尽量最小改动。
@@ -194,10 +196,10 @@
 1. `PROJECT_RULES.md`
 2. `CURRENT_ARCHITECTURE.md`
 3. `INDEXING_DECISION.md`
-4. `WEEK3_4_TASKS.md`
+4. `WEEK5_6_TASKS.md`
 5. `GAP_ANALYSIS.md`
 6. `AUTH_ENV_CONTRACT.md`（按需）
 
 ## 12. 一句话总结
 
-当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路，以及全局 `/knowledge`、`/skills`、`/agents` 的正式管理页；当前最大的断层仍是项目对话消息写侧、项目资源页 `agents` fallback 与索引运维能力。
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路、`/knowledge` 的索引运维基线，以及项目私有 knowledge 最小闭环；当前最大的断层仍是项目对话消息写侧、项目级合并检索与 Skill / Agent 运行时。
