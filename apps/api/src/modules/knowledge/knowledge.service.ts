@@ -11,10 +11,13 @@ import {
 } from '@lib/validation.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { AuthUserProfile } from '@modules/auth/auth.types.js';
+import type { ProjectsRepository } from '@modules/projects/projects.repository.js';
+import { getProjectMember } from '@modules/projects/projects.shared.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
 import {
   SUPPORTED_KNOWLEDGE_UPLOAD_TYPES,
+  resolveKnowledgeScope,
   sanitizeFileName,
   toKnowledgeDocumentResponse,
   toKnowledgeSummaryResponse,
@@ -153,6 +156,10 @@ const createKnowledgeRebuildEmptyError = (): AppError => {
   });
 };
 
+const NOOP_PROJECTS_REPOSITORY = {
+  findById: async () => null,
+} as unknown as ProjectsRepository;
+
 const readOptionalSourceType = (value: unknown): KnowledgeSourceType | undefined => {
   if (value === undefined) {
     return undefined;
@@ -186,6 +193,8 @@ const validateCreateKnowledgeInput = (
   return {
     name,
     description: description ?? '',
+    scope: 'global' as const,
+    projectId: null,
     sourceType,
     indexStatus: 'idle' as const,
     documentCount: 0,
@@ -354,8 +363,53 @@ const buildKnowledgeIndexerDiagnosticsUrls = (baseUrl: string): string[] => {
   );
 };
 
-const buildExpectedCollectionName = (sourceType: KnowledgeSourceType): string => {
-  return sourceType === 'global_code' ? 'global_code' : 'global_docs';
+const buildKnowledgeCollectionName = (
+  knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId' | 'sourceType'>,
+): string => {
+  const scope = resolveKnowledgeScope(knowledge);
+
+  if (scope.scope === 'project' && scope.projectId) {
+    return knowledge.sourceType === 'global_code'
+      ? `proj_${scope.projectId}_code`
+      : `proj_${scope.projectId}_docs`;
+  }
+
+  return knowledge.sourceType === 'global_code' ? 'global_code' : 'global_docs';
+};
+
+const requireVisibleKnowledge = async ({
+  repository,
+  projectsRepository,
+  actorId,
+  knowledgeId,
+}: {
+  repository: KnowledgeRepository;
+  projectsRepository: ProjectsRepository;
+  actorId: string;
+  knowledgeId: string;
+}): Promise<WithId<KnowledgeBaseDocument>> => {
+  const knowledge = await repository.findKnowledgeById(knowledgeId);
+
+  if (!knowledge) {
+    throw createKnowledgeNotFoundError();
+  }
+
+  const scope = resolveKnowledgeScope(knowledge);
+
+  if (scope.scope !== 'project') {
+    return knowledge;
+  }
+
+  if (!scope.projectId) {
+    throw createKnowledgeNotFoundError();
+  }
+
+  const project = await projectsRepository.findById(scope.projectId);
+  if (!project || !getProjectMember(project, actorId)) {
+    throw createKnowledgeNotFoundError();
+  }
+
+  return knowledge;
 };
 
 const isStaleProcessingDocument = (
@@ -661,14 +715,16 @@ const readKnowledgeIndexerDiagnostics = async (
 const cleanupDetachedDocumentChunks = async ({
   searchService,
   documentId,
-  sourceType,
+  collectionName,
 }: {
   searchService: KnowledgeSearchService;
   documentId: string;
-  sourceType: KnowledgeSourceType;
+  collectionName: string;
 }): Promise<void> => {
   try {
-    await searchService.deleteDocumentChunks(documentId, sourceType);
+    await searchService.deleteDocumentChunks(documentId, {
+      collectionName,
+    });
   } catch (cleanupError) {
     console.warn(
       `[knowledge-indexer] orphan chunk cleanup failed for document ${documentId}: ${normalizeIndexerErrorMessage(
@@ -689,6 +745,7 @@ const processUploadedDocument = async ({
   fileName,
   mimeType,
   sourceType,
+  collectionName,
   documentVersionHash,
   mode = 'index',
 }: {
@@ -701,6 +758,7 @@ const processUploadedDocument = async ({
   fileName: string;
   mimeType: string;
   sourceType: KnowledgeSourceType;
+  collectionName: string;
   documentVersionHash: string;
   mode?: 'index' | 'rebuild';
 }): Promise<void> => {
@@ -723,6 +781,7 @@ const processUploadedDocument = async ({
       knowledgeId,
       documentId,
       sourceType,
+      collectionName,
       fileName,
       mimeType,
       storagePath,
@@ -749,7 +808,7 @@ const processUploadedDocument = async ({
       await cleanupDetachedDocumentChunks({
         searchService,
         documentId,
-        sourceType,
+        collectionName,
       });
       return;
     }
@@ -776,6 +835,7 @@ const queueDocumentProcessing = ({
   fileName,
   mimeType,
   sourceType,
+  collectionName,
   documentVersionHash,
   mode = 'index',
 }: {
@@ -788,6 +848,7 @@ const queueDocumentProcessing = ({
   fileName: string;
   mimeType: string;
   sourceType: KnowledgeSourceType;
+  collectionName: string;
   documentVersionHash: string;
   mode?: 'index' | 'rebuild';
 }): void => {
@@ -802,6 +863,7 @@ const queueDocumentProcessing = ({
       fileName,
       mimeType,
       sourceType,
+      collectionName,
       documentVersionHash,
       mode,
     }).catch((error) => {
@@ -821,6 +883,7 @@ const queueExistingKnowledgeDocument = async ({
   knowledgeId,
   document,
   sourceType,
+  collectionName,
   mode,
 }: {
   env: AppEnv;
@@ -829,6 +892,7 @@ const queueExistingKnowledgeDocument = async ({
   knowledgeId: string;
   document: WithId<KnowledgeDocumentRecord>;
   sourceType: KnowledgeSourceType;
+  collectionName: string;
   mode: 'index' | 'rebuild';
 }): Promise<void> => {
   const queuedAt = new Date();
@@ -855,6 +919,7 @@ const queueExistingKnowledgeDocument = async ({
     fileName: document.fileName,
     mimeType: document.mimeType,
     sourceType,
+    collectionName,
     documentVersionHash: document.documentVersionHash,
     mode,
   });
@@ -865,12 +930,14 @@ export const createKnowledgeService = ({
   repository,
   searchService,
   authRepository,
+  projectsRepository = NOOP_PROJECTS_REPOSITORY,
 }: {
   env: AppEnv;
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
   authRepository: AuthRepository;
-  }): KnowledgeService => {
+  projectsRepository?: ProjectsRepository;
+}): KnowledgeService => {
   return {
     initializeSearchInfrastructure: async () => {
       // Startup 只探活 indexer；collection init 由 indexer-py 在写侧链路内保证。
@@ -881,7 +948,7 @@ export const createKnowledgeService = ({
     listKnowledge: async (context) => {
       void context;
       await repository.ensureMetadataModel();
-      const items = await repository.listKnowledgeBases();
+      const items = await repository.listKnowledgeBases({ scope: 'global' });
       const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, items);
 
       return {
@@ -890,14 +957,14 @@ export const createKnowledgeService = ({
       };
     },
 
-    getKnowledgeDetail: async (context, knowledgeId) => {
-      void context;
+    getKnowledgeDetail: async ({ actor }, knowledgeId) => {
       await repository.ensureMetadataModel();
-      const knowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!knowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
 
       const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
       const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [knowledge]);
@@ -922,14 +989,14 @@ export const createKnowledgeService = ({
       };
     },
 
-    updateKnowledge: async (context, knowledgeId, input) => {
-      void context;
+    updateKnowledge: async ({ actor }, knowledgeId, input) => {
       await repository.ensureMetadataModel();
-      const currentKnowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!currentKnowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
 
       const patch = validateUpdateKnowledgeInput(input);
       const updatedKnowledge = await repository.updateKnowledgeBase(knowledgeId, {
@@ -948,17 +1015,20 @@ export const createKnowledgeService = ({
       };
     },
 
-    deleteKnowledge: async (context, knowledgeId) => {
-      void context;
+    deleteKnowledge: async ({ actor }, knowledgeId) => {
       await repository.ensureMetadataModel();
-      const knowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!knowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
+      const collectionName = buildKnowledgeCollectionName(knowledge);
 
       try {
-        await searchService.deleteKnowledgeChunks(knowledgeId, knowledge.sourceType);
+        await searchService.deleteKnowledgeChunks(knowledgeId, {
+          collectionName,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         console.warn(
@@ -979,14 +1049,15 @@ export const createKnowledgeService = ({
       });
     },
 
-    deleteDocument: async (context, knowledgeId, documentId) => {
-      void context;
+    deleteDocument: async ({ actor }, knowledgeId, documentId) => {
       await repository.ensureMetadataModel();
-      const knowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!knowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
+      const collectionName = buildKnowledgeCollectionName(knowledge);
 
       const document = await repository.findKnowledgeDocumentById(documentId);
 
@@ -995,7 +1066,9 @@ export const createKnowledgeService = ({
       }
 
       try {
-        await searchService.deleteDocumentChunks(documentId, knowledge.sourceType);
+        await searchService.deleteDocumentChunks(documentId, {
+          collectionName,
+        });
       } catch (error) {
         console.warn(
           `[knowledge-search] failed to cleanup document ${documentId} chunks before delete: ${normalizeIndexerErrorMessage(
@@ -1021,11 +1094,13 @@ export const createKnowledgeService = ({
 
     uploadDocument: async ({ actor }, knowledgeId, file) => {
       await repository.ensureMetadataModel();
-      const knowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!knowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
+      const collectionName = buildKnowledgeCollectionName(knowledge);
 
       validateUploadFile(knowledge.sourceType, file);
 
@@ -1097,6 +1172,7 @@ export const createKnowledgeService = ({
           fileName: basename(file.originalName),
           mimeType: file.mimeType,
           sourceType: knowledge.sourceType,
+          collectionName,
           documentVersionHash,
         });
 
@@ -1117,14 +1193,15 @@ export const createKnowledgeService = ({
       }
     },
 
-    retryDocument: async (context, knowledgeId, documentId) => {
-      void context;
+    retryDocument: async ({ actor }, knowledgeId, documentId) => {
       await repository.ensureMetadataModel();
-      const knowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!knowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
+      const collectionName = buildKnowledgeCollectionName(knowledge);
 
       const document = await repository.findKnowledgeDocumentById(documentId);
 
@@ -1143,18 +1220,20 @@ export const createKnowledgeService = ({
         knowledgeId,
         document,
         sourceType: knowledge.sourceType,
+        collectionName,
         mode: 'index',
       });
     },
 
-    rebuildDocument: async (context, knowledgeId, documentId) => {
-      void context;
+    rebuildDocument: async ({ actor }, knowledgeId, documentId) => {
       await repository.ensureMetadataModel();
-      const knowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!knowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
+      const collectionName = buildKnowledgeCollectionName(knowledge);
 
       const document = await repository.findKnowledgeDocumentById(documentId);
 
@@ -1173,18 +1252,20 @@ export const createKnowledgeService = ({
         knowledgeId,
         document,
         sourceType: knowledge.sourceType,
+        collectionName,
         mode: 'rebuild',
       });
     },
 
-    rebuildKnowledge: async (context, knowledgeId) => {
-      void context;
+    rebuildKnowledge: async ({ actor }, knowledgeId) => {
       await repository.ensureMetadataModel();
-      const knowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!knowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
+      const collectionName = buildKnowledgeCollectionName(knowledge);
 
       const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
 
@@ -1205,20 +1286,21 @@ export const createKnowledgeService = ({
             knowledgeId,
             document,
             sourceType: knowledge.sourceType,
+            collectionName,
             mode: 'rebuild',
           }),
         ),
       );
     },
 
-    getKnowledgeDiagnostics: async (context, knowledgeId) => {
-      void context;
+    getKnowledgeDiagnostics: async ({ actor }, knowledgeId) => {
       await repository.ensureMetadataModel();
-      const knowledge = await repository.findKnowledgeById(knowledgeId);
-
-      if (!knowledge) {
-        throw createKnowledgeNotFoundError();
-      }
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId,
+      });
 
       const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
       const now = new Date();
@@ -1236,7 +1318,7 @@ export const createKnowledgeService = ({
       );
 
       const collectionDiagnostics = await searchService.getDiagnostics({
-        collectionName: buildExpectedCollectionName(knowledge.sourceType),
+        collectionName: buildKnowledgeCollectionName(knowledge),
       });
       let indexerDiagnostics: KnowledgeDiagnosticsResponse['indexer'];
 
@@ -1295,9 +1377,26 @@ export const createKnowledgeService = ({
       };
     },
 
-    searchDocuments: async (context, input) => {
-      void context;
-      return searchService.searchDocuments(validateSearchDocumentsInput(input));
+    searchDocuments: async ({ actor }, input) => {
+      const validatedInput = validateSearchDocumentsInput(input);
+
+      if (!validatedInput.knowledgeId) {
+        return searchService.searchDocuments(validatedInput);
+      }
+
+      await repository.ensureMetadataModel();
+      const knowledge = await requireVisibleKnowledge({
+        repository,
+        projectsRepository,
+        actorId: actor.id,
+        knowledgeId: validatedInput.knowledgeId,
+      });
+
+      return searchService.searchDocuments({
+        ...validatedInput,
+        sourceType: knowledge.sourceType,
+        collectionName: buildKnowledgeCollectionName(knowledge),
+      });
     },
   };
 };

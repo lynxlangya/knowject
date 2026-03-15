@@ -4,6 +4,9 @@ import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 export const KNOWLEDGE_SOURCE_TYPES = ['global_docs', 'global_code'] as const;
 export type KnowledgeSourceType = (typeof KNOWLEDGE_SOURCE_TYPES)[number];
 
+export const KNOWLEDGE_SCOPES = ['global', 'project'] as const;
+export type KnowledgeScope = (typeof KNOWLEDGE_SCOPES)[number];
+
 export const KNOWLEDGE_INDEX_STATUSES = [
   'idle',
   'pending',
@@ -53,6 +56,8 @@ export interface KnowledgeBaseDocument {
   _id?: ObjectId;
   name: string;
   description: string;
+  scope?: KnowledgeScope;
+  projectId?: string | null;
   sourceType: KnowledgeSourceType;
   indexStatus: KnowledgeIndexStatus;
   documentCount: number;
@@ -88,6 +93,8 @@ export interface KnowledgeSummaryResponse {
   id: string;
   name: string;
   description: string;
+  scope: KnowledgeScope;
+  projectId: string | null;
   sourceType: KnowledgeSourceType;
   indexStatus: KnowledgeIndexStatus;
   documentCount: number;
@@ -188,6 +195,7 @@ export interface KnowledgeIndexerDocumentRequest {
   knowledgeId: string;
   documentId: string;
   sourceType: KnowledgeSourceType;
+  collectionName: string;
   fileName: string;
   mimeType: string;
   storagePath: string;

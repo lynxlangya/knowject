@@ -58,6 +58,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
     repository: knowledgeRepository,
     searchService: knowledgeSearchService,
     authRepository,
+    projectsRepository,
   });
   const agentsRepository = createAgentsRepository({ mongo });
   const skillsService = createSkillsService({

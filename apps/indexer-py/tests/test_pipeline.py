@@ -82,6 +82,7 @@ class ProcessDocumentTest(unittest.TestCase):
             knowledge_id="knowledge-1",
             document_id="document-1",
             source_type="global_docs",
+            collection_name="proj_project-1_docs",
             file_name="demo.md",
             mime_type="text/markdown",
             storage_path="/tmp/demo.md",
@@ -114,6 +115,22 @@ class ProcessDocumentTest(unittest.TestCase):
                 pipeline.process_document({})
 
         create_embeddings.assert_not_called()
+
+    def test_parse_request_prefers_explicit_collection_name(self):
+        request = pipeline.parse_request(
+            {
+                "knowledgeId": "knowledge-1",
+                "documentId": "document-1",
+                "sourceType": "global_docs",
+                "collectionName": "proj_project-1_docs",
+                "fileName": "demo.md",
+                "mimeType": "text/markdown",
+                "storagePath": "/tmp/demo.md",
+                "documentVersionHash": "hash-1",
+            }
+        )
+
+        self.assertEqual(request.collection_name, "proj_project-1_docs")
 
 
 if __name__ == "__main__":

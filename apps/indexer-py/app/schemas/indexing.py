@@ -13,6 +13,7 @@ class IndexDocumentRequestPayload(CamelCaseModel):
     knowledge_id: str = Field(alias="knowledgeId")
     document_id: str = Field(alias="documentId")
     source_type: str = Field(alias="sourceType")
+    collection_name: str | None = Field(default=None, alias="collectionName")
     file_name: str = Field(alias="fileName")
     mime_type: str = Field(alias="mimeType")
     storage_path: str = Field(alias="storagePath")

@@ -44,6 +44,7 @@ class IndexDocumentRequest:
     knowledge_id: str
     document_id: str
     source_type: str
+    collection_name: str
     file_name: str
     mime_type: str
     storage_path: str
@@ -84,7 +85,7 @@ def process_document(payload: dict[str, Any]) -> dict[str, Any]:
         raise IndexerError("文档未生成有效分块")
 
     chunk_records = build_chunk_records(request, chunk_texts)
-    collection = ensure_collection(resolve_collection_name(request.source_type))
+    collection = ensure_collection(request.collection_name)
     embeddings = create_embeddings([chunk.text for chunk in chunk_records])
     delete_document_chunks(collection["id"], request.document_id)
     upsert_chunk_records(collection["id"], chunk_records, embeddings)
@@ -117,6 +118,14 @@ def parse_request(payload: dict[str, Any]) -> IndexDocumentRequest:
         if not isinstance(raw_value, str) or not raw_value.strip():
             raise IndexerError(f"{raw_key} 缺失或格式不合法")
         values[target_key] = raw_value.strip()
+
+    raw_collection_name = payload.get("collectionName")
+    if raw_collection_name is None:
+        values["collection_name"] = resolve_collection_name(values["source_type"])
+    elif isinstance(raw_collection_name, str) and raw_collection_name.strip():
+        values["collection_name"] = raw_collection_name.strip()
+    else:
+        raise IndexerError("collectionName 缺失或格式不合法")
 
     return IndexDocumentRequest(**values)
 
@@ -255,7 +264,6 @@ def build_chunk_records(
     request: IndexDocumentRequest,
     chunk_texts: list[str],
 ) -> list[ChunkRecord]:
-    collection_name = resolve_collection_name(request.source_type)
     records: list[ChunkRecord] = []
 
     for index, chunk_text in enumerate(chunk_texts):
@@ -272,7 +280,7 @@ def build_chunk_records(
                     "chunkIndex": index,
                     "chunkId": chunk_id,
                     "documentVersionHash": request.document_version_hash,
-                    "collectionName": collection_name,
+                    "collectionName": request.collection_name,
                 },
             )
         )

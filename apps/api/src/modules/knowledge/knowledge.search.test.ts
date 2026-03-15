@@ -103,7 +103,9 @@ test('getDiagnostics bypasses cached collection state and re-reads Chroma', asyn
   };
 
   try {
-    await service.deleteDocumentChunks('document-1', 'global_docs');
+    await service.deleteDocumentChunks('document-1', {
+      collectionName: 'global_docs',
+    });
 
     const diagnostics = await service.getDiagnostics({
       collectionName: 'global_docs',
@@ -116,6 +118,100 @@ test('getDiagnostics bypasses cached collection state and re-reads Chroma', asyn
       'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections',
       'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-1/delete',
       'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections',
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('searchDocuments uses explicit collection name override when provided', async () => {
+  const service = createKnowledgeSearchService({
+    env: {
+      ...createTestEnv(),
+      openai: {
+        ...createTestEnv().openai,
+        apiKey: 'test-key',
+      },
+    },
+  });
+  const fetchCalls: string[] = [];
+  let queryPath = '';
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    fetchCalls.push(url);
+
+    if (url.endsWith('/collections') && init?.method === 'GET') {
+      return new Response(
+        JSON.stringify([{ id: 'collection-project', name: 'proj_project-1_docs' }]),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        },
+      );
+    }
+
+    if (url === 'https://api.openai.com/v1/embeddings' && init?.method === 'POST') {
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              embedding: [0.1, 0.2, 0.3],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        },
+      );
+    }
+
+    if (url.endsWith('/collections/collection-project/query') && init?.method === 'POST') {
+      queryPath = url;
+
+      return new Response(
+        JSON.stringify({
+          ids: [[]],
+          documents: [[]],
+          metadatas: [[]],
+          distances: [[]],
+        }),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${init?.method ?? 'GET'} ${url}`);
+  };
+
+  try {
+    const response = await service.searchDocuments({
+      query: 'project knowledge',
+      knowledgeId: 'knowledge-1',
+      sourceType: 'global_docs',
+      collectionName: 'proj_project-1_docs',
+      topK: 3,
+    });
+
+    assert.equal(response.total, 0);
+    assert.equal(
+      queryPath,
+      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-project/query',
+    );
+    assert.deepEqual(fetchCalls, [
+      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections',
+      'https://api.openai.com/v1/embeddings',
+      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-project/query',
     ]);
   } finally {
     globalThis.fetch = originalFetch;

@@ -1,4 +1,4 @@
-import { ObjectId, type Collection, type WithId } from 'mongodb';
+import { ObjectId, type Collection, type Filter, type WithId } from 'mongodb';
 import type { MongoDatabaseManager } from '@db/mongo.js';
 import {
   KNOWLEDGE_COLLECTION_NAME,
@@ -8,6 +8,7 @@ import type {
   KnowledgeBaseDocument,
   KnowledgeDocumentRecord,
   KnowledgeIndexStatus,
+  KnowledgeScope,
 } from './knowledge.types.js';
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
@@ -39,11 +40,14 @@ export class KnowledgeRepository {
     ]);
   }
 
-  async listKnowledgeBases(): Promise<WithId<KnowledgeBaseDocument>[]> {
+  async listKnowledgeBases(options?: {
+    scope?: KnowledgeScope;
+    projectId?: string;
+  }): Promise<WithId<KnowledgeBaseDocument>[]> {
     const collection = await this.getKnowledgeCollection();
 
     return collection
-      .find({})
+      .find(buildKnowledgeBaseFilter(options))
       .sort({
         updatedAt: -1,
         createdAt: -1,
@@ -284,6 +288,14 @@ export class KnowledgeRepository {
         collection.createIndex({ createdBy: 1 }, { name: 'knowledge_bases_created_by' }),
         collection.createIndex({ updatedAt: -1 }, { name: 'knowledge_bases_updated_at_desc' }),
         collection.createIndex(
+          { scope: 1, updatedAt: -1 },
+          { name: 'knowledge_bases_scope_updated_at_desc' },
+        ),
+        collection.createIndex(
+          { scope: 1, projectId: 1, updatedAt: -1 },
+          { name: 'knowledge_bases_scope_project_id_updated_at_desc' },
+        ),
+        collection.createIndex(
           { sourceType: 1, updatedAt: -1 },
           { name: 'knowledge_bases_source_type_updated_at_desc' },
         ),
@@ -361,6 +373,33 @@ const resolveKnowledgeIndexStatus = (
   }
 
   return 'idle';
+};
+
+const buildKnowledgeBaseFilter = (options?: {
+  scope?: KnowledgeScope;
+  projectId?: string;
+}): Filter<KnowledgeBaseDocument> => {
+  if (options?.scope === 'project') {
+    return {
+      scope: 'project',
+      ...(options.projectId
+        ? {
+            projectId: options.projectId,
+          }
+        : {}),
+    };
+  }
+
+  if (options?.scope === 'global') {
+    return {
+      $or: [
+        { scope: 'global' },
+        { scope: { $exists: false } },
+      ],
+    };
+  }
+
+  return {};
 };
 
 export const createKnowledgeRepository = ({

@@ -7,6 +7,7 @@ import test from 'node:test';
 import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
+import type { ProjectsRepository } from '@modules/projects/projects.repository.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
 import { createKnowledgeService } from './knowledge.service.js';
@@ -90,7 +91,16 @@ const createSearchServiceStub = (
   };
 };
 
-test('listKnowledge hydrates maintainer and creator names', async () => {
+const createProjectsRepositoryStub = (
+  overrides: Partial<ProjectsRepository> = {},
+): ProjectsRepository => {
+  return {
+    findById: async () => null,
+    ...overrides,
+  } as unknown as ProjectsRepository;
+};
+
+test('listKnowledge only returns global scope knowledge and hydrates actor names', async () => {
   const knowledge: KnowledgeBaseDocument & {
     _id: NonNullable<KnowledgeBaseDocument['_id']>;
   } = {
@@ -106,10 +116,14 @@ test('listKnowledge hydrates maintainer and creator names', async () => {
     createdAt: new Date('2026-03-13T00:00:00.000Z'),
     updatedAt: new Date('2026-03-13T00:00:00.000Z'),
   };
+  let listOptions: Parameters<KnowledgeRepository['listKnowledgeBases']>[0] | undefined;
 
   const repository = {
     ensureMetadataModel: async () => undefined,
-    listKnowledgeBases: async () => [knowledge],
+    listKnowledgeBases: async (options?: Parameters<KnowledgeRepository['listKnowledgeBases']>[0]) => {
+      listOptions = options;
+      return [knowledge];
+    },
   } as unknown as KnowledgeRepository;
 
   const searchService = createSearchServiceStub();
@@ -128,6 +142,7 @@ test('listKnowledge hydrates maintainer and creator names', async () => {
     repository,
     searchService,
     authRepository,
+    projectsRepository: createProjectsRepositoryStub(),
   });
 
   const response = await service.listKnowledge({
@@ -138,8 +153,159 @@ test('listKnowledge hydrates maintainer and creator names', async () => {
   });
 
   assert.equal(response.items.length, 1);
+  assert.deepEqual(listOptions, { scope: 'global' });
+  assert.equal(response.items[0]?.scope, 'global');
+  assert.equal(response.items[0]?.projectId, null);
   assert.equal(response.items[0]?.maintainerName, '维护人名称');
   assert.equal(response.items[0]?.createdByName, '创建人名称');
+});
+
+test('getKnowledgeDetail allows project scope knowledge for visible project members', async () => {
+  const knowledgeId = '507f1f77bcf86cd799439021';
+  const projectId = '507f1f77bcf86cd799439031';
+  const actorId = '507f1f77bcf86cd799439041';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '项目知识库',
+    description: '仅项目成员可见',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'idle',
+    documentCount: 0,
+    chunkCount: 0,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    listDocumentsByKnowledgeId: async () => [],
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-project-knowledge-detail'),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-15T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  const response = await service.getKnowledgeDetail(
+    {
+      actor: {
+        id: actorId,
+        username: 'langya',
+      },
+    },
+    knowledgeId,
+  );
+
+  assert.equal(response.knowledge.scope, 'project');
+  assert.equal(response.knowledge.projectId, projectId);
+});
+
+test('getKnowledgeDetail hides project scope knowledge from non-members', async () => {
+  const knowledgeId = '507f1f77bcf86cd799439051';
+  const projectId = '507f1f77bcf86cd799439061';
+  const actorId = '507f1f77bcf86cd799439071';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '项目知识库',
+    description: '仅项目成员可见',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'idle',
+    documentCount: 0,
+    chunkCount: 0,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-project-knowledge-forbidden'),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: 'owner-1',
+              members: [],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-15T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  await assert.rejects(
+    () =>
+      service.getKnowledgeDetail(
+        {
+          actor: {
+            id: actorId,
+            username: 'langya',
+          },
+        },
+        knowledgeId,
+      ),
+    (error: unknown) => {
+      assert.equal(error instanceof Error, true);
+      assert.equal((error as Error).message, '知识库不存在');
+      return true;
+    },
+  );
 });
 
 test('searchDocuments normalizes query filters and delegates to the shared search service', async () => {
@@ -147,11 +313,29 @@ test('searchDocuments normalizes query filters and delegates to the shared searc
     query: string;
     knowledgeId?: string;
     sourceType: 'global_docs' | 'global_code';
+    collectionName?: string;
     topK: number;
   }> = [];
+  const knowledgeId = '507f1f77bcf86cd799439011';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '全局知识库',
+    description: '',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: 'user-1',
+    createdBy: 'user-1',
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
 
   const repository = {
     ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
   } as unknown as KnowledgeRepository;
 
   const searchService = createSearchServiceStub({
@@ -159,15 +343,15 @@ test('searchDocuments normalizes query filters and delegates to the shared searc
       capturedInputs.push(input);
 
       return {
-        query: input.query,
-        sourceType: input.sourceType,
-        total: 1,
-        items: [
-          {
-            knowledgeId: input.knowledgeId ?? '507f1f77bcf86cd799439011',
-            documentId: '507f1f77bcf86cd799439099',
-            chunkId: 'chunk-1',
-            chunkIndex: 0,
+      query: input.query,
+      sourceType: input.sourceType,
+      total: 1,
+      items: [
+        {
+          knowledgeId: input.knowledgeId ?? knowledgeId,
+          documentId: '507f1f77bcf86cd799439099',
+          chunkId: 'chunk-1',
+          chunkIndex: 0,
             type: input.sourceType,
             source: 'README.md',
             content: 'project knowledge',
@@ -206,13 +390,195 @@ test('searchDocuments normalizes query filters and delegates to the shared searc
   assert.deepEqual(capturedInputs, [
     {
       query: 'project knowledge',
-      knowledgeId: '507f1f77bcf86cd799439011',
+      knowledgeId,
       sourceType: 'global_docs',
+      collectionName: 'global_docs',
       topK: 3,
     },
   ]);
   assert.equal(response.total, 1);
   assert.equal(response.items[0]?.type, 'global_docs');
+});
+
+test('searchDocuments resolves project scope knowledge to project collection for visible members', async () => {
+  const capturedInputs: Array<Parameters<KnowledgeSearchService['searchDocuments']>[0]> = [];
+  const knowledgeId = '507f1f77bcf86cd799439121';
+  const projectId = '507f1f77bcf86cd799439131';
+  const actorId = '507f1f77bcf86cd799439141';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '项目知识库',
+    description: '用于验证 project collection',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+  } as unknown as KnowledgeRepository;
+
+  const searchService = createSearchServiceStub({
+    searchDocuments: async (input: Parameters<KnowledgeSearchService['searchDocuments']>[0]) => {
+      capturedInputs.push(input);
+      return {
+        query: input.query,
+        sourceType: input.sourceType,
+        total: 0,
+        items: [],
+      };
+    },
+  });
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-project-knowledge-search'),
+    repository,
+    searchService,
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-15T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  await service.searchDocuments(
+    {
+      actor: {
+        id: actorId,
+        username: 'langya',
+      },
+    },
+    {
+      query: 'project knowledge',
+      knowledgeId,
+      topK: 2,
+    },
+  );
+
+  assert.deepEqual(capturedInputs, [
+    {
+      query: 'project knowledge',
+      knowledgeId,
+      sourceType: 'global_docs',
+      collectionName: `proj_${projectId}_docs`,
+      topK: 2,
+    },
+  ]);
+});
+
+test('deleteKnowledge uses project collection name during Chroma cleanup', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-project-delete-'));
+  const knowledgeId = '507f1f77bcf86cd799439151';
+  const projectId = '507f1f77bcf86cd799439161';
+  const actorId = '507f1f77bcf86cd799439171';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '项目知识库',
+    description: '',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+  let cleanupCollectionName = '';
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    deleteKnowledgeDocumentsByKnowledgeId: async () => 1,
+    deleteKnowledgeBase: async () => true,
+  } as unknown as KnowledgeRepository;
+
+  const searchService = createSearchServiceStub({
+    deleteKnowledgeChunks: async (_knowledgeId, { collectionName }) => {
+      cleanupCollectionName = collectionName;
+    },
+  });
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService,
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-15T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  await service.deleteKnowledge(
+    {
+      actor: {
+        id: actorId,
+        username: 'langya',
+      },
+    },
+    knowledgeId,
+  );
+
+  assert.equal(cleanupCollectionName, `proj_${projectId}_docs`);
 });
 
 test('deleteKnowledge continues when Chroma cleanup fails', async () => {

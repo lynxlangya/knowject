@@ -18,6 +18,7 @@ interface SearchDocumentsInput {
   query: string;
   knowledgeId?: string;
   sourceType: KnowledgeSourceType;
+  collectionName?: string;
   topK: number;
 }
 
@@ -42,8 +43,8 @@ export interface KnowledgeSearchService {
       errorMessage: string | null;
     };
   }>;
-  deleteKnowledgeChunks(knowledgeId: string, sourceType: KnowledgeSourceType): Promise<void>;
-  deleteDocumentChunks(documentId: string, sourceType: KnowledgeSourceType): Promise<void>;
+  deleteKnowledgeChunks(knowledgeId: string, input: { collectionName: string }): Promise<void>;
+  deleteDocumentChunks(documentId: string, input: { collectionName: string }): Promise<void>;
 }
 
 const createServiceUnavailableError = (code: string, message: string): AppError => {
@@ -377,14 +378,14 @@ export const createKnowledgeSearchService = ({
   };
 
   const deleteByWhere = async ({
-    sourceType,
+    collectionName,
     where,
   }: {
-    sourceType: KnowledgeSourceType;
+    collectionName: string;
     where: Record<string, unknown>;
   }): Promise<void> => {
     // TODO: 待 indexer-py 提供正式 delete 端点后，删除 Node 侧直连 Chroma delete。
-    const collection = await getExistingCollection(getCollectionName(sourceType));
+    const collection = await getExistingCollection(collectionName);
     if (!collection) {
       return;
     }
@@ -406,8 +407,10 @@ export const createKnowledgeSearchService = ({
 
     // NOTE: Node 直连 Chroma 读侧 query 是已确认的架构例外条款
     // 参见 .agent/docs/contracts/chroma-decision.md
-    searchDocuments: async ({ query, knowledgeId, sourceType, topK }) => {
-      const collection = await getExistingCollection(getCollectionName(sourceType));
+    searchDocuments: async ({ query, knowledgeId, sourceType, collectionName, topK }) => {
+      const collection = await getExistingCollection(
+        collectionName ?? getCollectionName(sourceType),
+      );
       if (!collection) {
         return mapQueryResults({
           query,
@@ -476,26 +479,26 @@ export const createKnowledgeSearchService = ({
       }
     },
 
-    deleteKnowledgeChunks: async (knowledgeId, sourceType) => {
+    deleteKnowledgeChunks: async (knowledgeId, { collectionName }) => {
       if (!env.chroma.url) {
         return;
       }
 
       await deleteByWhere({
-        sourceType,
+        collectionName,
         where: {
           knowledgeId,
         },
       });
     },
 
-    deleteDocumentChunks: async (documentId, sourceType) => {
+    deleteDocumentChunks: async (documentId, { collectionName }) => {
       if (!env.chroma.url) {
         return;
       }
 
       await deleteByWhere({
-        sourceType,
+        collectionName,
         where: {
           documentId,
         },

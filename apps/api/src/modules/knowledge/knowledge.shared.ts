@@ -4,6 +4,7 @@ import type {
   KnowledgeBaseDocument,
   KnowledgeDocumentRecord,
   KnowledgeDocumentResponse,
+  KnowledgeScope,
   KnowledgeSourceType,
   KnowledgeSummaryResponse,
 } from './knowledge.types.js';
@@ -175,14 +176,37 @@ export const sanitizeFileName = (fileName: string): string => {
 
 type KnowledgeActorProfileMap = Map<string, AuthUserProfile>;
 
+export const resolveKnowledgeScope = (
+  knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId'>,
+): {
+  scope: KnowledgeScope;
+  projectId: string | null;
+} => {
+  if (knowledge.scope === 'project') {
+    return {
+      scope: 'project',
+      projectId: knowledge.projectId ?? null,
+    };
+  }
+
+  return {
+    scope: 'global',
+    projectId: null,
+  };
+};
+
 export const toKnowledgeSummaryResponse = (
   knowledge: WithId<KnowledgeBaseDocument>,
   actorProfileMap: KnowledgeActorProfileMap = new Map(),
 ): KnowledgeSummaryResponse => {
+  const scope = resolveKnowledgeScope(knowledge);
+
   return {
     id: knowledge._id.toHexString(),
     name: knowledge.name,
     description: knowledge.description,
+    scope: scope.scope,
+    projectId: scope.projectId,
     sourceType: knowledge.sourceType,
     indexStatus: knowledge.indexStatus,
     documentCount: knowledge.documentCount,
