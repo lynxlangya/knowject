@@ -219,3 +219,70 @@ test('createProject rejects unbindable managed skill ids', async () => {
     /draft skill/,
   );
 });
+
+test('deleteProject cleans up project scoped knowledge before removing the project', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439014'),
+    name: '项目知识清理',
+    description: '验证删除项目前先清理私有知识',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [],
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+  const cleanupCalls: Array<{ projectId: string; actorId: string }> = [];
+  let deletedProjectId = '';
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    deleteProject: async (projectId: string) => {
+      deletedProjectId = projectId;
+      return true;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    knowledgeUsage: {
+      deleteProjectKnowledge: async (projectId, actor) => {
+        cleanupCalls.push({
+          projectId,
+          actorId: actor.id,
+        });
+      },
+    },
+  });
+
+  await service.deleteProject(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+  );
+
+  assert.deepEqual(cleanupCalls, [
+    {
+      projectId: project._id.toHexString(),
+      actorId: 'user-1',
+    },
+  ]);
+  assert.equal(deletedProjectId, project._id.toHexString());
+});

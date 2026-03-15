@@ -308,6 +308,372 @@ test('getKnowledgeDetail hides project scope knowledge from non-members', async 
   );
 });
 
+test('listProjectKnowledge only returns project scope knowledge for the target project', async () => {
+  const projectId = '507f1f77bcf86cd799439081';
+  const actorId = '507f1f77bcf86cd799439091';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439082'),
+    name: '项目知识库',
+    description: '只返回当前项目私有知识',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'idle',
+    documentCount: 0,
+    chunkCount: 0,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+  let listOptions: Parameters<KnowledgeRepository['listKnowledgeBases']>[0] | undefined;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    listKnowledgeBases: async (
+      options?: Parameters<KnowledgeRepository['listKnowledgeBases']>[0],
+    ) => {
+      listOptions = options;
+      return [knowledge];
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-project-knowledge-list'),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-15T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  const response = await service.listProjectKnowledge(
+    {
+      actor: {
+        id: actorId,
+        username: 'langya',
+      },
+    },
+    projectId,
+  );
+
+  assert.deepEqual(listOptions, {
+    scope: 'project',
+    projectId,
+  });
+  assert.equal(response.total, 1);
+  assert.equal(response.items[0]?.scope, 'project');
+  assert.equal(response.items[0]?.projectId, projectId);
+});
+
+test('createProjectKnowledge persists project scope metadata and rejects global_code', async () => {
+  const projectId = '507f1f77bcf86cd799439101';
+  const actorId = '507f1f77bcf86cd799439111';
+  let createdKnowledge: Omit<KnowledgeBaseDocument, '_id'> | null = null;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    createKnowledgeBase: async (document: Omit<KnowledgeBaseDocument, '_id'>) => {
+      createdKnowledge = document;
+      return {
+        ...document,
+        _id: new ObjectId('507f1f77bcf86cd799439112'),
+      };
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-project-knowledge-create'),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-15T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  const response = await service.createProjectKnowledge(
+    {
+      actor: {
+        id: actorId,
+        username: 'langya',
+      },
+    },
+    projectId,
+    {
+      name: '项目知识库',
+    },
+  );
+
+  assert.notEqual(createdKnowledge, null);
+  if (!createdKnowledge) {
+    throw new Error('createdKnowledge should not be null');
+  }
+
+  const persistedKnowledge: Omit<KnowledgeBaseDocument, '_id'> = createdKnowledge;
+
+  assert.equal(persistedKnowledge.scope, 'project');
+  assert.equal(persistedKnowledge.projectId, projectId);
+  assert.equal(persistedKnowledge.sourceType, 'global_docs');
+  assert.equal(response.knowledge.scope, 'project');
+  assert.equal(response.knowledge.projectId, projectId);
+
+  await assert.rejects(
+    () =>
+      service.createProjectKnowledge(
+        {
+          actor: {
+            id: actorId,
+            username: 'langya',
+          },
+        },
+        projectId,
+        {
+          name: '非法项目知识',
+          sourceType: 'global_code',
+        },
+      ),
+    /当前项目知识只支持 global_docs/,
+  );
+});
+
+test('uploadProjectKnowledgeDocument writes project storage path and project collection name', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-project-knowledge-upload-'));
+  const knowledgeId = '507f1f77bcf86cd799439122';
+  const projectId = '507f1f77bcf86cd799439132';
+  const actorId = '507f1f77bcf86cd799439142';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '项目知识库',
+    description: '用于验证项目上传写侧',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'idle',
+    documentCount: 0,
+    chunkCount: 0,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+  const updatedKnowledge = {
+    ...knowledge,
+    documentCount: 1,
+    updatedAt: new Date('2026-03-15T00:00:01.000Z'),
+  };
+
+  let createdDocument: (KnowledgeDocumentRecord & {
+    _id: NonNullable<KnowledgeDocumentRecord['_id']>;
+  }) | null = null;
+  let completedChunkCount = 0;
+  let resolveCompleted: (() => void) | null = null;
+  const processingCompleted = new Promise<void>((resolve) => {
+    resolveCompleted = resolve;
+  });
+  const fetchPayloads: Array<Record<string, unknown>> = [];
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    createKnowledgeDocument: async (
+      document: KnowledgeDocumentRecord & {
+        _id: NonNullable<KnowledgeDocumentRecord['_id']>;
+      },
+    ) => {
+      createdDocument = document;
+      return document;
+    },
+    updateKnowledgeSummaryAfterDocumentUpload: async () => updatedKnowledge,
+    updateKnowledgeDocument: async (
+      documentId: string,
+      patch: Partial<
+        Pick<
+          KnowledgeDocumentRecord,
+          'status' | 'chunkCount' | 'lastIndexedAt' | 'errorMessage' | 'processedAt' | 'updatedAt'
+        >
+      >,
+    ) => {
+      if (patch.status === 'completed') {
+        completedChunkCount = patch.chunkCount ?? 0;
+        resolveCompleted?.();
+      }
+
+      return {
+        _id: new ObjectId(documentId),
+        knowledgeId,
+        fileName: createdDocument?.fileName ?? 'README.md',
+        mimeType: createdDocument?.mimeType ?? 'text/markdown',
+        storagePath: createdDocument?.storagePath ?? '',
+        status: patch.status ?? 'pending',
+        chunkCount: patch.chunkCount ?? 0,
+        documentVersionHash: createdDocument?.documentVersionHash ?? 'hash-1',
+        embeddingProvider: createdDocument?.embeddingProvider ?? 'local_dev',
+        embeddingModel: createdDocument?.embeddingModel ?? 'hash-1536-dev',
+        lastIndexedAt: patch.lastIndexedAt ?? null,
+        retryCount: 0,
+        errorMessage: patch.errorMessage ?? null,
+        uploadedBy: actorId,
+        uploadedAt: new Date('2026-03-15T00:00:00.000Z'),
+        processedAt: patch.processedAt ?? null,
+        createdAt: new Date('2026-03-15T00:00:00.000Z'),
+        updatedAt: patch.updatedAt ?? new Date('2026-03-15T00:00:00.000Z'),
+      };
+    },
+    syncKnowledgeSummaryFromDocuments: async () => undefined,
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-15T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    fetchPayloads.push(JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>);
+    return new Response(
+      JSON.stringify({
+        status: 'completed',
+        knowledgeId,
+        documentId: createdDocument?._id.toHexString() ?? 'document-1',
+        chunkCount: 4,
+        characterCount: 64,
+        parser: 'markdown',
+        collectionName: `proj_${projectId}_docs`,
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    await service.uploadProjectKnowledgeDocument(
+      {
+        actor: {
+          id: actorId,
+          username: 'langya',
+        },
+      },
+      projectId,
+      knowledgeId,
+      {
+        originalName: 'README.md',
+        mimeType: 'text/markdown',
+        size: 20,
+        buffer: Buffer.from('# hello project\n', 'utf-8'),
+      },
+    );
+
+    await Promise.race([
+      processingCompleted,
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for project detached indexer processing');
+      }),
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.notEqual(createdDocument, null);
+  if (!createdDocument) {
+    throw new Error('createdDocument should not be null');
+  }
+
+  const persistedDocument: KnowledgeDocumentRecord & {
+    _id: NonNullable<KnowledgeDocumentRecord['_id']>;
+  } = createdDocument;
+
+  assert.equal(
+    persistedDocument.storagePath.startsWith(`projects/${projectId}/knowledge/${knowledgeId}/`),
+    true,
+  );
+  assert.equal(fetchPayloads[0]?.collectionName, `proj_${projectId}_docs`);
+  assert.equal(completedChunkCount, 4);
+});
+
 test('searchDocuments normalizes query filters and delegates to the shared search service', async () => {
   const capturedInputs: Array<{
     query: string;
@@ -503,6 +869,8 @@ test('deleteKnowledge uses project collection name during Chroma cleanup', async
   const knowledgeId = '507f1f77bcf86cd799439151';
   const projectId = '507f1f77bcf86cd799439161';
   const actorId = '507f1f77bcf86cd799439171';
+  const knowledgeDir = join(storageRoot, 'projects', projectId, 'knowledge', knowledgeId);
+  await mkdir(knowledgeDir, { recursive: true });
   const knowledge: KnowledgeBaseDocument & {
     _id: NonNullable<KnowledgeBaseDocument['_id']>;
   } = {
@@ -579,6 +947,7 @@ test('deleteKnowledge uses project collection name during Chroma cleanup', async
   );
 
   assert.equal(cleanupCollectionName, `proj_${projectId}_docs`);
+  await assert.rejects(access(knowledgeDir));
 });
 
 test('deleteKnowledge continues when Chroma cleanup fails', async () => {
@@ -1533,6 +1902,128 @@ test('deleteDocument deletes record and syncs knowledge summary even if Chroma c
       knowledgeId,
       documentId,
     ),
+  );
+
+  assert.equal(deletedDocument, true);
+  assert.equal(summarySynced, true);
+  await assert.rejects(access(documentDir));
+});
+
+test('deleteDocument removes project-scoped storage directories', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-project-document-delete-'));
+  const knowledgeId = '507f1f77bcf86cd799439211';
+  const documentId = '507f1f77bcf86cd799439212';
+  const projectId = '507f1f77bcf86cd799439213';
+  const actorId = '507f1f77bcf86cd799439214';
+  const documentDir = join(
+    storageRoot,
+    'projects',
+    projectId,
+    'knowledge',
+    knowledgeId,
+    documentId,
+    'hash-1',
+  );
+  await mkdir(documentDir, { recursive: true });
+  await writeFile(join(documentDir, 'README.md'), '# project document\n', 'utf8');
+
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '项目知识库 A',
+    description: '用于验证项目单文档删除',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 8,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+  const document = {
+    _id: new ObjectId(documentId),
+    knowledgeId,
+    fileName: 'README.md',
+    mimeType: 'text/markdown',
+    storagePath: `projects/${projectId}/knowledge/${knowledgeId}/${documentId}/hash-1/README.md`,
+    status: 'completed' as const,
+    chunkCount: 8,
+    documentVersionHash: 'hash-1',
+    embeddingProvider: 'openai' as const,
+    embeddingModel: 'text-embedding-3-small' as const,
+    lastIndexedAt: new Date('2026-03-15T00:00:10.000Z'),
+    retryCount: 0,
+    errorMessage: null,
+    uploadedBy: actorId,
+    uploadedAt: new Date('2026-03-15T00:00:00.000Z'),
+    processedAt: new Date('2026-03-15T00:00:10.000Z'),
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:10.000Z'),
+  };
+
+  let deletedDocument = false;
+  let summarySynced = false;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeDocumentById: async (id: string) => (id === documentId ? document : null),
+    deleteKnowledgeDocumentById: async () => {
+      deletedDocument = true;
+      return true;
+    },
+    syncKnowledgeSummaryFromDocuments: async () => {
+      summarySynced = true;
+      return knowledge;
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-15T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  await service.deleteDocument(
+    {
+      actor: {
+        id: actorId,
+        username: 'langya',
+      },
+    },
+    knowledgeId,
+    documentId,
   );
 
   assert.equal(deletedDocument, true);

@@ -53,6 +53,17 @@ export interface ProjectsService {
   deleteProject(context: ProjectCommandContext, projectId: string): Promise<void>;
 }
 
+interface ProjectKnowledgeUsage {
+  deleteProjectKnowledge(
+    projectId: string,
+    actor: ProjectCommandContext['actor'],
+  ): Promise<void>;
+}
+
+const NOOP_PROJECT_KNOWLEDGE_USAGE: ProjectKnowledgeUsage = {
+  deleteProjectKnowledge: async () => undefined,
+};
+
 const readOptionalStringArrayField = (
   value: unknown,
   field: 'knowledgeBaseIds' | 'agentIds' | 'skillIds',
@@ -195,10 +206,12 @@ export const createProjectsService = ({
   repository,
   authRepository,
   skillBindingValidator,
+  knowledgeUsage = NOOP_PROJECT_KNOWLEDGE_USAGE,
 }: {
   repository: ProjectsRepository;
   authRepository: AuthRepository;
   skillBindingValidator: SkillBindingValidator;
+  knowledgeUsage?: ProjectKnowledgeUsage;
 }): ProjectsService => {
   return {
     listProjects: async ({ actor }) => {
@@ -297,6 +310,7 @@ export const createProjectsService = ({
 
     deleteProject: async ({ actor }, projectId) => {
       const project = await requireAdminProject(repository, projectId, actor);
+      await knowledgeUsage.deleteProjectKnowledge(project._id.toHexString(), actor);
       const deleted = await repository.deleteProject(project._id.toHexString());
 
       if (!deleted) {

@@ -14,6 +14,7 @@ import { createRequireAuth } from '@modules/auth/auth.middleware.js';
 import { createAuthRepository } from '@modules/auth/auth.repository.js';
 import { createAuthRouter } from '@modules/auth/auth.router.js';
 import { createAuthService } from '@modules/auth/auth.service.js';
+import { createProjectKnowledgeRouter } from '@modules/knowledge/knowledge.project-router.js';
 import { createKnowledgeRepository } from '@modules/knowledge/knowledge.repository.js';
 import { createKnowledgeRouter } from '@modules/knowledge/knowledge.router.js';
 import { createKnowledgeSearchService } from '@modules/knowledge/knowledge.search.js';
@@ -46,11 +47,6 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   const skillBindingValidator = createSkillBindingValidator({
     repository: skillsRepository,
   });
-  const projectsService = createProjectsService({
-    repository: projectsRepository,
-    authRepository,
-    skillBindingValidator,
-  });
   const knowledgeRepository = createKnowledgeRepository({ mongo });
   const knowledgeSearchService = createKnowledgeSearchService({ env });
   const knowledgeService = createKnowledgeService({
@@ -59,6 +55,23 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
     searchService: knowledgeSearchService,
     authRepository,
     projectsRepository,
+  });
+  const projectsService = createProjectsService({
+    repository: projectsRepository,
+    authRepository,
+    skillBindingValidator,
+    knowledgeUsage: {
+      deleteProjectKnowledge: async (projectId, actor) => {
+        const knowledgeList = await knowledgeService.listProjectKnowledge(
+          { actor },
+          projectId,
+        );
+
+        for (const knowledge of knowledgeList.items) {
+          await knowledgeService.deleteKnowledge({ actor }, knowledge.id);
+        }
+      },
+    },
   });
   const agentsRepository = createAgentsRepository({ mongo });
   const skillsService = createSkillsService({
@@ -109,6 +122,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   app.use('/api/members', createMembersRouter(membersService, requireAuth));
   app.use('/api/projects', createProjectsRouter(projectsService, requireAuth));
   app.use('/api/projects', createMembershipsRouter(membershipsService, requireAuth));
+  app.use('/api/projects', createProjectKnowledgeRouter(knowledgeService, requireAuth));
   app.use('/api/knowledge', createKnowledgeRouter(knowledgeService, requireAuth));
   app.use('/api/skills', createSkillsRouter(skillsService, requireAuth));
   app.use('/api/agents', createAgentsRouter(agentsService, requireAuth));
@@ -127,6 +141,9 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/members',
         '/api/projects',
         '/api/projects/:projectId/members',
+        '/api/projects/:projectId/knowledge',
+        '/api/projects/:projectId/knowledge/:knowledgeId',
+        '/api/projects/:projectId/knowledge/:knowledgeId/documents',
         '/api/knowledge',
         '/api/knowledge/search',
         '/api/knowledge/:knowledgeId',

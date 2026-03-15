@@ -12,7 +12,7 @@ import {
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { AuthUserProfile } from '@modules/auth/auth.types.js';
 import type { ProjectsRepository } from '@modules/projects/projects.repository.js';
-import { getProjectMember } from '@modules/projects/projects.shared.js';
+import { getProjectMember, requireVisibleProject } from '@modules/projects/projects.shared.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
 import {
@@ -45,12 +45,26 @@ import type {
 export interface KnowledgeService {
   initializeSearchInfrastructure(): Promise<void>;
   listKnowledge(context: KnowledgeCommandContext): Promise<KnowledgeListResponse>;
+  listProjectKnowledge(
+    context: KnowledgeCommandContext,
+    projectId: string,
+  ): Promise<KnowledgeListResponse>;
   getKnowledgeDetail(
     context: KnowledgeCommandContext,
     knowledgeId: string,
   ): Promise<KnowledgeDetailEnvelope>;
+  getProjectKnowledgeDetail(
+    context: KnowledgeCommandContext,
+    projectId: string,
+    knowledgeId: string,
+  ): Promise<KnowledgeDetailEnvelope>;
   createKnowledge(
     context: KnowledgeCommandContext,
+    input: CreateKnowledgeInput,
+  ): Promise<KnowledgeMutationResponse>;
+  createProjectKnowledge(
+    context: KnowledgeCommandContext,
+    projectId: string,
     input: CreateKnowledgeInput,
   ): Promise<KnowledgeMutationResponse>;
   updateKnowledge(
@@ -66,6 +80,12 @@ export interface KnowledgeService {
   ): Promise<void>;
   uploadDocument(
     context: KnowledgeCommandContext,
+    knowledgeId: string,
+    file: UploadedKnowledgeFile,
+  ): Promise<KnowledgeDocumentUploadResponse>;
+  uploadProjectKnowledgeDocument(
+    context: KnowledgeCommandContext,
+    projectId: string,
     knowledgeId: string,
     file: UploadedKnowledgeFile,
   ): Promise<KnowledgeDocumentUploadResponse>;
@@ -206,6 +226,26 @@ const validateCreateKnowledgeInput = (
   };
 };
 
+const validateCreateProjectKnowledgeInput = (
+  input: CreateKnowledgeInput,
+  actorId: string,
+  projectId: string,
+) => {
+  const knowledge = validateCreateKnowledgeInput(input, actorId);
+
+  if (knowledge.sourceType !== 'global_docs') {
+    throw createValidationAppError('当前项目知识只支持 global_docs', {
+      sourceType: '当前项目知识只支持 global_docs',
+    });
+  }
+
+  return {
+    ...knowledge,
+    scope: 'project' as const,
+    projectId,
+  };
+};
+
 const validateUpdateKnowledgeInput = (
   input: UpdateKnowledgeInput,
 ) => {
@@ -237,6 +277,7 @@ const validateSearchDocumentsInput = (
   query: string;
   knowledgeId?: string;
   sourceType: KnowledgeSourceType;
+  collectionName: string;
   topK: number;
 } => {
   const query = typeof input.query === 'string' ? input.query.trim() : '';
@@ -266,6 +307,7 @@ const validateSearchDocumentsInput = (
     query,
     knowledgeId: knowledgeId || undefined,
     sourceType,
+    collectionName: sourceType === 'global_code' ? 'global_code' : 'global_docs',
     topK,
   };
 };
@@ -302,16 +344,48 @@ const buildDocumentVersionHash = (file: UploadedKnowledgeFile): string => {
   return createHash('sha256').update(file.buffer).digest('hex');
 };
 
+const buildStorageKnowledgeRootPath = (
+  knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId'>,
+  knowledgeId: string,
+): string => {
+  const scope = resolveKnowledgeScope(knowledge);
+
+  if (scope.scope === 'project' && scope.projectId) {
+    return join('projects', scope.projectId, 'knowledge', knowledgeId);
+  }
+
+  return knowledgeId;
+};
+
+const buildStorageDocumentRootPath = (
+  knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId'>,
+  knowledgeId: string,
+  documentId: string,
+): string => {
+  return join(buildStorageKnowledgeRootPath(knowledge, knowledgeId), documentId);
+};
+
+const buildStorageDocumentVersionPath = (
+  knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId'>,
+  knowledgeId: string,
+  documentId: string,
+  documentVersionHash: string,
+): string => {
+  return join(
+    buildStorageDocumentRootPath(knowledge, knowledgeId, documentId),
+    documentVersionHash,
+  );
+};
+
 const buildStoragePath = (
+  knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId'>,
   knowledgeId: string,
   documentId: string,
   documentVersionHash: string,
   fileName: string,
 ): string => {
   return join(
-    knowledgeId,
-    documentId,
-    documentVersionHash,
+    buildStorageDocumentVersionPath(knowledge, knowledgeId, documentId, documentVersionHash),
     sanitizeFileName(basename(fileName)),
   );
 };
@@ -406,6 +480,34 @@ const requireVisibleKnowledge = async ({
 
   const project = await projectsRepository.findById(scope.projectId);
   if (!project || !getProjectMember(project, actorId)) {
+    throw createKnowledgeNotFoundError();
+  }
+
+  return knowledge;
+};
+
+const requireKnowledgeInProject = async ({
+  repository,
+  projectsRepository,
+  actor,
+  projectId,
+  knowledgeId,
+}: {
+  repository: KnowledgeRepository;
+  projectsRepository: ProjectsRepository;
+  actor: KnowledgeCommandContext['actor'];
+  projectId: string;
+  knowledgeId: string;
+}): Promise<WithId<KnowledgeBaseDocument>> => {
+  await requireVisibleProject(projectsRepository, projectId, actor);
+
+  const knowledge = await repository.findKnowledgeById(knowledgeId);
+  if (!knowledge) {
+    throw createKnowledgeNotFoundError();
+  }
+
+  const scope = resolveKnowledgeScope(knowledge);
+  if (scope.scope !== 'project' || scope.projectId !== projectId) {
     throw createKnowledgeNotFoundError();
   }
 
@@ -925,6 +1027,152 @@ const queueExistingKnowledgeDocument = async ({
   });
 };
 
+const buildKnowledgeDetailEnvelope = async ({
+  repository,
+  authRepository,
+  knowledgeId,
+  knowledge,
+}: {
+  repository: KnowledgeRepository;
+  authRepository: AuthRepository;
+  knowledgeId: string;
+  knowledge: WithId<KnowledgeBaseDocument>;
+}): Promise<KnowledgeDetailEnvelope> => {
+  const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
+  const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [knowledge]);
+
+  return {
+    knowledge: {
+      ...toKnowledgeSummaryResponse(knowledge, actorProfileMap),
+      documents: documents.map(toKnowledgeDocumentResponse),
+    },
+  };
+};
+
+const uploadKnowledgeDocument = async ({
+  env,
+  repository,
+  searchService,
+  authRepository,
+  actor,
+  knowledgeId,
+  knowledge,
+  file,
+}: {
+  env: AppEnv;
+  repository: KnowledgeRepository;
+  searchService: KnowledgeSearchService;
+  authRepository: AuthRepository;
+  actor: KnowledgeCommandContext['actor'];
+  knowledgeId: string;
+  knowledge: WithId<KnowledgeBaseDocument>;
+  file: UploadedKnowledgeFile;
+}): Promise<KnowledgeDocumentUploadResponse> => {
+  const collectionName = buildKnowledgeCollectionName(knowledge);
+
+  validateUploadFile(knowledge.sourceType, file);
+
+  const documentId = new ObjectId();
+  const documentVersionHash = buildDocumentVersionHash(file);
+  const embeddingMetadata = resolveEmbeddingMetadata(env);
+  const documentRootPath = buildStorageDocumentRootPath(
+    knowledge,
+    knowledgeId,
+    documentId.toHexString(),
+  );
+  const documentVersionPath = buildStorageDocumentVersionPath(
+    knowledge,
+    knowledgeId,
+    documentId.toHexString(),
+    documentVersionHash,
+  );
+  const storagePath = buildStoragePath(
+    knowledge,
+    knowledgeId,
+    documentId.toHexString(),
+    documentVersionHash,
+    file.originalName,
+  );
+  const absoluteStoragePath = join(env.knowledge.storageRoot, storagePath);
+  const now = new Date();
+  let documentPersisted = false;
+  let knowledgeSummaryUpdated = false;
+
+  await mkdir(join(env.knowledge.storageRoot, documentVersionPath), {
+    recursive: true,
+  });
+
+  try {
+    await writeFile(absoluteStoragePath, file.buffer);
+
+    const documentRecord: KnowledgeDocumentRecord & {
+      _id: NonNullable<KnowledgeDocumentRecord['_id']>;
+    } = {
+      _id: documentId,
+      knowledgeId,
+      fileName: basename(file.originalName),
+      mimeType: file.mimeType,
+      storagePath,
+      status: 'pending',
+      chunkCount: 0,
+      documentVersionHash,
+      embeddingProvider: embeddingMetadata.embeddingProvider,
+      embeddingModel: embeddingMetadata.embeddingModel,
+      lastIndexedAt: null,
+      retryCount: 0,
+      errorMessage: null,
+      uploadedBy: actor.id,
+      uploadedAt: now,
+      processedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const document = await repository.createKnowledgeDocument(documentRecord);
+    documentPersisted = true;
+    const updatedKnowledge = await repository.updateKnowledgeSummaryAfterDocumentUpload(
+      knowledgeId,
+      now,
+    );
+
+    if (!updatedKnowledge) {
+      throw createKnowledgeNotFoundError();
+    }
+
+    const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [updatedKnowledge]);
+
+    knowledgeSummaryUpdated = true;
+    queueDocumentProcessing({
+      env,
+      repository,
+      searchService,
+      knowledgeId,
+      documentId: documentId.toHexString(),
+      storagePath: absoluteStoragePath,
+      fileName: basename(file.originalName),
+      mimeType: file.mimeType,
+      sourceType: knowledge.sourceType,
+      collectionName,
+      documentVersionHash,
+    });
+
+    return {
+      knowledge: toKnowledgeSummaryResponse(updatedKnowledge, actorProfileMap),
+      document: toKnowledgeDocumentResponse(document),
+    };
+  } catch (error) {
+    if (documentPersisted && !knowledgeSummaryUpdated) {
+      await repository.deleteKnowledgeDocumentById(documentId.toHexString());
+    }
+
+    await rm(join(env.knowledge.storageRoot, documentRootPath), {
+      recursive: true,
+      force: true,
+    });
+    throw error;
+  }
+};
+
 export const createKnowledgeService = ({
   env,
   repository,
@@ -957,6 +1205,21 @@ export const createKnowledgeService = ({
       };
     },
 
+    listProjectKnowledge: async ({ actor }, projectId) => {
+      await repository.ensureMetadataModel();
+      await requireVisibleProject(projectsRepository, projectId, actor);
+      const items = await repository.listKnowledgeBases({
+        scope: 'project',
+        projectId,
+      });
+      const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, items);
+
+      return {
+        total: items.length,
+        items: items.map((knowledge) => toKnowledgeSummaryResponse(knowledge, actorProfileMap)),
+      };
+    },
+
     getKnowledgeDetail: async ({ actor }, knowledgeId) => {
       await repository.ensureMetadataModel();
       const knowledge = await requireVisibleKnowledge({
@@ -966,21 +1229,49 @@ export const createKnowledgeService = ({
         knowledgeId,
       });
 
-      const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
-      const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [knowledge]);
+      return buildKnowledgeDetailEnvelope({
+        repository,
+        authRepository,
+        knowledgeId,
+        knowledge,
+      });
+    },
 
-      return {
-        knowledge: {
-          ...toKnowledgeSummaryResponse(knowledge, actorProfileMap),
-          documents: documents.map(toKnowledgeDocumentResponse),
-        },
-      };
+    getProjectKnowledgeDetail: async ({ actor }, projectId, knowledgeId) => {
+      await repository.ensureMetadataModel();
+      const knowledge = await requireKnowledgeInProject({
+        repository,
+        projectsRepository,
+        actor,
+        projectId,
+        knowledgeId,
+      });
+
+      return buildKnowledgeDetailEnvelope({
+        repository,
+        authRepository,
+        knowledgeId,
+        knowledge,
+      });
     },
 
     createKnowledge: async ({ actor }, input) => {
       await repository.ensureMetadataModel();
       const knowledge = await repository.createKnowledgeBase(
         validateCreateKnowledgeInput(input, actor.id),
+      );
+      const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [knowledge]);
+
+      return {
+        knowledge: toKnowledgeSummaryResponse(knowledge, actorProfileMap),
+      };
+    },
+
+    createProjectKnowledge: async ({ actor }, projectId, input) => {
+      await repository.ensureMetadataModel();
+      await requireVisibleProject(projectsRepository, projectId, actor);
+      const knowledge = await repository.createKnowledgeBase(
+        validateCreateProjectKnowledgeInput(input, actor.id, projectId),
       );
       const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [knowledge]);
 
@@ -1043,7 +1334,7 @@ export const createKnowledgeService = ({
         throw createKnowledgeNotFoundError();
       }
 
-      await rm(join(env.knowledge.storageRoot, knowledgeId), {
+      await rm(join(env.knowledge.storageRoot, buildStorageKnowledgeRootPath(knowledge, knowledgeId)), {
         recursive: true,
         force: true,
       });
@@ -1084,7 +1375,7 @@ export const createKnowledgeService = ({
         throw createKnowledgeDocumentNotFoundError();
       }
 
-      await rm(join(env.knowledge.storageRoot, knowledgeId, documentId), {
+      await rm(join(env.knowledge.storageRoot, buildStorageDocumentRootPath(knowledge, knowledgeId, documentId)), {
         recursive: true,
         force: true,
       });
@@ -1100,97 +1391,38 @@ export const createKnowledgeService = ({
         actorId: actor.id,
         knowledgeId,
       });
-      const collectionName = buildKnowledgeCollectionName(knowledge);
-
-      validateUploadFile(knowledge.sourceType, file);
-
-      const documentId = new ObjectId();
-      const documentVersionHash = buildDocumentVersionHash(file);
-      const embeddingMetadata = resolveEmbeddingMetadata(env);
-      const storagePath = buildStoragePath(
+      return uploadKnowledgeDocument({
+        env,
+        repository,
+        searchService,
+        authRepository,
+        actor,
         knowledgeId,
-        documentId.toHexString(),
-        documentVersionHash,
-        file.originalName,
-      );
-      const absoluteStoragePath = join(env.knowledge.storageRoot, storagePath);
-      const now = new Date();
-      let documentPersisted = false;
-      let knowledgeSummaryUpdated = false;
+        knowledge,
+        file,
+      });
+    },
 
-      await mkdir(join(env.knowledge.storageRoot, knowledgeId, documentId.toHexString(), documentVersionHash), {
-        recursive: true,
+    uploadProjectKnowledgeDocument: async ({ actor }, projectId, knowledgeId, file) => {
+      await repository.ensureMetadataModel();
+      const knowledge = await requireKnowledgeInProject({
+        repository,
+        projectsRepository,
+        actor,
+        projectId,
+        knowledgeId,
       });
 
-      try {
-        await writeFile(absoluteStoragePath, file.buffer);
-
-        const documentRecord: KnowledgeDocumentRecord & {
-          _id: NonNullable<KnowledgeDocumentRecord['_id']>;
-        } = {
-          _id: documentId,
-          knowledgeId,
-          fileName: basename(file.originalName),
-          mimeType: file.mimeType,
-          storagePath,
-          status: 'pending',
-          chunkCount: 0,
-          documentVersionHash,
-          embeddingProvider: embeddingMetadata.embeddingProvider,
-          embeddingModel: embeddingMetadata.embeddingModel,
-          lastIndexedAt: null,
-          retryCount: 0,
-          errorMessage: null,
-          uploadedBy: actor.id,
-          uploadedAt: now,
-          processedAt: null,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        const document = await repository.createKnowledgeDocument(documentRecord);
-        documentPersisted = true;
-        const updatedKnowledge = await repository.updateKnowledgeSummaryAfterDocumentUpload(
-          knowledgeId,
-          now,
-        );
-
-        if (!updatedKnowledge) {
-          throw createKnowledgeNotFoundError();
-        }
-
-        const actorProfileMap = await buildKnowledgeActorProfileMap(authRepository, [updatedKnowledge]);
-
-        knowledgeSummaryUpdated = true;
-        queueDocumentProcessing({
-          env,
-          repository,
-          searchService,
-          knowledgeId,
-          documentId: documentId.toHexString(),
-          storagePath: absoluteStoragePath,
-          fileName: basename(file.originalName),
-          mimeType: file.mimeType,
-          sourceType: knowledge.sourceType,
-          collectionName,
-          documentVersionHash,
-        });
-
-        return {
-          knowledge: toKnowledgeSummaryResponse(updatedKnowledge, actorProfileMap),
-          document: toKnowledgeDocumentResponse(document),
-        };
-      } catch (error) {
-        if (documentPersisted && !knowledgeSummaryUpdated) {
-          await repository.deleteKnowledgeDocumentById(documentId.toHexString());
-        }
-
-        await rm(join(env.knowledge.storageRoot, knowledgeId, documentId.toHexString()), {
-          recursive: true,
-          force: true,
-        });
-        throw error;
-      }
+      return uploadKnowledgeDocument({
+        env,
+        repository,
+        searchService,
+        authRepository,
+        actor,
+        knowledgeId,
+        knowledge,
+        file,
+      });
     },
 
     retryDocument: async ({ actor }, knowledgeId, documentId) => {
