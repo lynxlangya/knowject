@@ -7,10 +7,15 @@
   "cSpell.words": [
     "Appstore",
     "Deduper",
+    "fastapi",
     "haifang",
     "Haijing",
+    "httpx",
     "knowject",
+    "pytest",
     "Sider",
+    "testpaths",
+    "uvicorn",
     "Zheliban"
   ]
 }
