@@ -1,6 +1,6 @@
 # 索引运维与项目层消费开发任务（Week 5-6，规划拆解）
 
-状态：截至 2026-03-15，Week 3-4 全局资产基础已完成；本文件当前承担“Week 5-6 任务清单 + 排期基线”角色，尚未开始执行。
+状态：截至 2026-03-15，Week 3-4 全局资产基础已完成；`IC-01` 已完成，`IC-02 ~ IC-09` 待启动；本文件当前同时承担“Week 5-6 任务清单 + 执行记录”角色。
 
 本文件用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md` 中的 `Week 5-6 索引运维 + 项目层消费`，结合当前已落地的 `knowledge / skills / agents / projects` 主链路事实，收敛成可执行、可排期、可验收的任务清单。
 
@@ -241,7 +241,7 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
 
 ## 任务拆解
 
-### IC-01 · 冻结 Week 5-6 范围与 contract
+### IC-01 DONE（2026-03-15）· 冻结 Week 5-6 范围与 contract
 
 - 目标：把 Week 5-6 的“主线 / 延后项 / collection 命名 / scope 语义”先定死，避免做到一半再回退。
 - 输出：
@@ -250,6 +250,12 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
   - rebuild / diagnostics 对外 / 对内接口草案。
   - `pdf` 与 `docx` 的优先级结论。
 - 依赖：无。
+- 已完成记录：
+  - 已冻结 Week 5-6 主线顺序为“`global_docs` 运维闭环 -> 项目资源页 `agents` 正式消费 -> 项目私有 knowledge write-side”，并明确把消息写入、SSE、来源引用与 runtime 排除在本任务之外。
+  - 已冻结项目私有 knowledge 继续复用 `knowledge` 模块，以 `scope=global|project` 与 `projectId` 表达项目所有权，不新建平行领域模型。
+  - 已冻结 `projects.knowledgeBaseIds` 继续只表示“项目绑定的全局知识库”，项目私有 knowledge 不复制回写到该绑定数组。
+  - 已冻结 collection 命名：`global_docs`、`global_code`、`proj_{projectId}_docs`、`proj_{projectId}_code`；其中 Week 5-6 只允许真正落地 `proj_{projectId}_docs`。
+  - 已冻结文档格式优先级：`pdf` 仅作为不阻塞主线的有条件恢复项，`docx / Word` 不进入 Week 5-6 硬性 DoD。
 - 建议子任务：
   - 明确 `projects.knowledgeBaseIds` 与项目私有 knowledge 的关系。
   - 冻结 `proj_{projectId}_docs` collection 命名。
