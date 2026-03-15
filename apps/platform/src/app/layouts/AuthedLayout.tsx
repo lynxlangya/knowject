@@ -12,8 +12,14 @@ const { Content } = Layout;
 export const AuthedLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const pinnedContentScrollbarPaths = new Set<string>([
+    PATHS.members,
+    PATHS.knowledge,
+    PATHS.skills,
+    PATHS.agents,
+  ]);
   const shouldPinContentScrollbar =
-    location.pathname === PATHS.members || location.pathname === PATHS.knowledge;
+    pinnedContentScrollbarPaths.has(location.pathname);
 
   const handleLogout = () => {
     clearAuthSession();

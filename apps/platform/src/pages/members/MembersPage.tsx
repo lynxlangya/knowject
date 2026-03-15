@@ -5,6 +5,7 @@ import { getMembersOverview, type MemberOverviewResponseItem } from '@api/member
 import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import { getAuthUser } from '@app/auth/user';
 import { useProjectContext } from '@app/project/useProjectContext';
+import { GLOBAL_ASSET_PAGE_CLASS_NAME } from '@pages/assets/components/GlobalAssetLayout';
 import { MemberDetailPanel } from './components/MemberDetailPanel';
 import { MemberDirectoryList } from './components/MemberDirectoryList';
 import { MemberFiltersBar } from './components/MemberFiltersBar';
@@ -216,28 +217,32 @@ export const MembersPage = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-105 items-center justify-center">
-        <Spin size="large" />
-      </div>
+      <section className={GLOBAL_ASSET_PAGE_CLASS_NAME}>
+        <div className="flex min-h-105 items-center justify-center">
+          <Spin size="large" />
+        </div>
+      </section>
     );
   }
 
   if (error) {
     return (
-      <Card className="rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!">
-        <Typography.Title level={4} className="text-slate-800!">
-          成员
-        </Typography.Title>
-        <Typography.Paragraph className="text-slate-500!">
-          {error}
-        </Typography.Paragraph>
-        <Button onClick={() => window.location.reload()}>重新加载</Button>
-      </Card>
+      <section className={GLOBAL_ASSET_PAGE_CLASS_NAME}>
+        <Card className="rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!">
+          <Typography.Title level={4} className="text-slate-800!">
+            成员
+          </Typography.Title>
+          <Typography.Paragraph className="text-slate-500!">
+            {error}
+          </Typography.Paragraph>
+          <Button onClick={() => window.location.reload()}>重新加载</Button>
+        </Card>
+      </section>
     );
   }
 
   return (
-    <section ref={sectionRef} className="flex min-h-full flex-col gap-4">
+    <section ref={sectionRef} className={GLOBAL_ASSET_PAGE_CLASS_NAME}>
       <Card
         className="shrink-0 rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
         styles={{ body: { padding: '22px 22px 20px' } }}

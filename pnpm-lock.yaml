@@ -88,6 +88,8 @@ importers:
         specifier: 5.9.2
         version: 5.9.2
 
+  apps/indexer-py: {}
+
   apps/platform:
     dependencies:
       '@ant-design/icons':
