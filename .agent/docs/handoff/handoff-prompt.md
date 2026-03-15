@@ -114,14 +114,15 @@
    - 需要同步更新哪些文档
 4. 最小验证至少执行：
    - `pnpm verify:global-assets-foundation`
+   - `pnpm verify:index-ops-project-consumption`
    - `pnpm check-types`
    - `pnpm lint`
    - `pnpm test`
 
 请始终记住：
 
-- 当前最稳定的是信息架构、产品壳、项目主数据、项目资源绑定、全局知识库 / 技能 / 智能体管理页，以及项目对话读链路；消息写入、项目资源页 `agents` fallback 与 AI 运行时仍未正式化。
-- 当前 auth、全局成员概览、最小项目 CRUD、项目资源绑定、项目对话只读接口、Knowledge / Skill / Agent 全局资产接口和成员接口已经落地；剩余主要断层在消息写入、项目资源页 `agents` fallback 收口、Skill / Agent 运行时与检索融合链路。
+- 当前最稳定的是信息架构、产品壳、项目主数据、项目资源绑定、全局知识库 / 技能 / 智能体管理页、索引运维基线，以及项目私有 knowledge 最小闭环；消息写入与 AI 运行时仍未正式化。
+- 当前 auth、全局成员概览、最小项目 CRUD、项目资源绑定、项目对话只读接口、Knowledge / Skill / Agent 全局资产接口、项目私有 knowledge 接口与成员接口已经落地；剩余主要断层在消息写入、项目级合并检索、Skill / Agent 运行时与检索融合链路。
 - 如果你的改动影响路由、主数据来源、认证契约或存储键，文档必须同步更新。
 ```
 

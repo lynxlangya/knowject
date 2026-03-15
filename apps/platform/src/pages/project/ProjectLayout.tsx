@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Skeleton } from 'antd';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { listAgents, type AgentResponse } from '@api/agents';
 import { extractApiErrorMessage } from '@api/error';
-import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
+import {
+  listKnowledge,
+  listProjectKnowledge,
+  type KnowledgeSummaryResponse,
+} from '@api/knowledge';
 import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import {
   listProjectConversations,
@@ -18,6 +22,19 @@ import { useProjectContext } from '@app/project/useProjectContext';
 import { ProjectHeader } from './components/ProjectHeader';
 import { ProjectSectionNav } from './components/ProjectSectionNav';
 import { getProjectWorkspaceSnapshot } from './project.mock';
+
+const PROJECT_KNOWLEDGE_POLLING_MAX_ATTEMPTS = 20;
+const PROJECT_KNOWLEDGE_POLLING_INTERVAL_MS = 1500;
+
+const hasProjectKnowledgeInFlight = (
+  items: KnowledgeSummaryResponse[],
+): boolean => {
+  return items.some(
+    (knowledge) =>
+      knowledge.indexStatus === 'pending' ||
+      knowledge.indexStatus === 'processing',
+  );
+};
 
 export const ProjectLayout = () => {
   const navigate = useNavigate();
@@ -34,6 +51,16 @@ export const ProjectLayout = () => {
   >([]);
   const [knowledgeCatalogLoading, setKnowledgeCatalogLoading] = useState(false);
   const [knowledgeCatalogError, setKnowledgeCatalogError] = useState<string | null>(null);
+  const [projectKnowledgeCatalog, setProjectKnowledgeCatalog] = useState<
+    KnowledgeSummaryResponse[]
+  >([]);
+  const [projectKnowledgeLoading, setProjectKnowledgeLoading] = useState(false);
+  const [projectKnowledgeError, setProjectKnowledgeError] = useState<string | null>(
+    null,
+  );
+  const [projectKnowledgeReloadToken, setProjectKnowledgeReloadToken] = useState(0);
+  const projectKnowledgePollingAttemptsRef = useRef<Record<string, number>>({});
+  const projectKnowledgeCatalogProjectIdRef = useRef<string | null>(null);
   const [agentsCatalog, setAgentsCatalog] = useState<AgentResponse[]>([]);
   const [agentsCatalogLoading, setAgentsCatalogLoading] = useState(false);
   const [agentsCatalogError, setAgentsCatalogError] = useState<string | null>(null);
@@ -41,6 +68,17 @@ export const ProjectLayout = () => {
   const [skillsCatalogLoading, setSkillsCatalogLoading] = useState(false);
   const [skillsCatalogError, setSkillsCatalogError] = useState<string | null>(null);
   const activeProject = projectId ? getProjectById(projectId) : null;
+  const activeProjectId = activeProject?.id ?? null;
+  const shouldPollProjectKnowledge = hasProjectKnowledgeInFlight(
+    projectKnowledgeCatalog,
+  );
+  const refreshProjectKnowledge = () => {
+    if (activeProjectId) {
+      projectKnowledgePollingAttemptsRef.current[activeProjectId] = 0;
+    }
+
+    setProjectKnowledgeReloadToken((value) => value + 1);
+  };
 
   useEffect(() => {
     if (!activeProject) {
@@ -147,6 +185,102 @@ export const ProjectLayout = () => {
     };
   }, [activeProject]);
 
+  useEffect(() => {
+    if (!activeProject) {
+      setProjectKnowledgeCatalog([]);
+      setProjectKnowledgeError(null);
+      setProjectKnowledgeLoading(false);
+      projectKnowledgeCatalogProjectIdRef.current = null;
+      return;
+    }
+
+    const projectChanged =
+      projectKnowledgeCatalogProjectIdRef.current !== activeProject.id;
+
+    if (projectChanged) {
+      setProjectKnowledgeCatalog([]);
+      setProjectKnowledgeError(null);
+    }
+
+    let isMounted = true;
+
+    const loadProjectKnowledge = async () => {
+      setProjectKnowledgeLoading(true);
+
+      try {
+        const result = await listProjectKnowledge(activeProject.id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setProjectKnowledgeCatalog(result.items);
+        projectKnowledgeCatalogProjectIdRef.current = activeProject.id;
+        setProjectKnowledgeError(null);
+      } catch (currentError) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error(
+          '[ProjectLayout] 加载项目私有知识失败:',
+          currentError,
+        );
+        if (projectKnowledgeCatalogProjectIdRef.current !== activeProject.id) {
+          setProjectKnowledgeCatalog([]);
+        }
+        setProjectKnowledgeError(
+          extractApiErrorMessage(
+            currentError,
+            '加载项目私有知识失败，请稍后重试。',
+          ),
+        );
+      } finally {
+        if (isMounted) {
+          setProjectKnowledgeLoading(false);
+        }
+      }
+    };
+
+    void loadProjectKnowledge();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeProject, projectKnowledgeReloadToken]);
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      return;
+    }
+
+    if (!shouldPollProjectKnowledge) {
+      projectKnowledgePollingAttemptsRef.current[activeProjectId] = 0;
+      return;
+    }
+
+    if (projectKnowledgeLoading) {
+      return;
+    }
+
+    const attempts =
+      projectKnowledgePollingAttemptsRef.current[activeProjectId] ?? 0;
+
+    if (attempts >= PROJECT_KNOWLEDGE_POLLING_MAX_ATTEMPTS) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      projectKnowledgePollingAttemptsRef.current[activeProjectId] =
+        attempts + 1;
+      setProjectKnowledgeReloadToken((value) => value + 1);
+    }, PROJECT_KNOWLEDGE_POLLING_INTERVAL_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [activeProjectId, projectKnowledgeLoading, shouldPollProjectKnowledge]);
+
   if (!projectId) {
     return (
       <section className="h-full rounded-[24px] border border-slate-200 bg-white p-6">
@@ -204,6 +338,9 @@ export const ProjectLayout = () => {
   const workspaceSnapshot = getProjectWorkspaceSnapshot(
     activeProject,
     conversations.length,
+    {
+      projectKnowledgeCount: projectKnowledgeCatalog.length,
+    },
   );
 
   return (
@@ -235,6 +372,10 @@ export const ProjectLayout = () => {
             knowledgeCatalog,
             knowledgeCatalogLoading,
             knowledgeCatalogError,
+            projectKnowledgeCatalog,
+            projectKnowledgeLoading,
+            projectKnowledgeError,
+            refreshProjectKnowledge,
             agentsCatalog,
             agentsCatalogLoading,
             agentsCatalogError,

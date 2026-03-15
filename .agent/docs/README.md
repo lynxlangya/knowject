@@ -158,7 +158,8 @@
 
 - 当前仓库已经进入“前后端基础框架已接通、局部能力仍依赖 Mock”的阶段，而不是单纯“前端壳层 + 演示 API”。
 - 基础框架阶段已经完成；后端已具备 `auth`、`members`、最小项目 CRUD 与成员接口，前端项目列表、项目基础信息、成员 roster 与全局成员概览也已切到后端接口。
-- 当前剩余的主要 Mock 仍集中在项目概览补充层、对话消息演示数据、项目资源页 `agents` fallback 与协作快照。
+- 当前剩余的主要 Mock 仍集中在项目概览补充层、对话消息演示数据与协作快照补充层。
 - 全局 `/skills` 已从“只读目录”升级为正式 Skill 资产治理链路；后续若再变更 Skill 来源、生命周期或绑定规则，需要同步 `.agent/docs/current/architecture.md`、handoff 文档与 `.agent/gpt/*` 上传副本。
+- Week 5-6 当前已经收口到正式基线：`/knowledge` rebuild / diagnostics、项目资源页正式 `agents` 消费，以及项目私有 knowledge 的 create / upload / resources 最小闭环都已落地；继续迭代时应直接以 `.agent/docs/plans/tasks-index-ops-project-consumption.md` 的完成记录和顺延项为准。
 - 目标蓝图已经形成，但大量 AI、数据层和部署能力还未进入实现阶段。
 - 现在所有项目文档已统一收口到 `.agent/docs/`；后续若再新增项目级文档，应优先纳入这里的既有分类，而不是在仓库根部重新散落新入口。

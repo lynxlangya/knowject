@@ -193,14 +193,14 @@ scripts/
 - `apps/platform/src/app/layouts/components/AppSider.tsx`
   - 当前项目创建 / 编辑流程会把 `name / description / knowledgeBaseIds / skillIds / agentIds` 一并提交到后端项目模型。
 - `apps/platform/src/pages/project/ProjectLayout.tsx`
-  - 进入项目页时会并行拉取 `/api/projects/:projectId/conversations`、`/api/knowledge`、`/api/skills` 与 `/api/agents`，为概览 / 对话 / 资源三页提供正式只读数据。
+  - 进入项目页时会并行拉取 `/api/projects/:projectId/conversations`、`/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills` 与 `/api/agents`，为概览 / 对话 / 资源三页提供正式只读数据。
 - `apps/platform/src/pages/project/ProjectChatPage.tsx`
   - 对话详情通过 `/api/projects/:projectId/conversations/:conversationId` 读取；输入框当前保持禁用，消息写路径尚未落地。
 
 ### 5.5 全局资产与项目资源分层
 
 - 全局 `知识库 / 技能 / 智能体` 页面当前负责展示跨项目资产目录和治理入口；其中 `/knowledge`、`/skills` 与 `/agents` 已切正式接口。
-- 项目 `资源` 页当前只展示“该项目已绑定的资产”。
+- 项目 `资源` 页当前同时展示“该项目已绑定的全局资产”与“归属当前项目的私有知识”。
 - 项目资源的实际来源已经切到后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`。
 - 其中知识库、Skill 与 Agent 分组优先消费 `/api/knowledge`、`/api/skills`、`/api/agents` 的正式元数据；`/agents` 页面与项目资源页当前消费同一份正式 agent 目录。
 - 当项目或成员聚合里出现未知的 `skills / agents` 资源 ID 时，前端当前会渲染“未知资源（{id}）”占位项，而不是静默丢失。
@@ -210,7 +210,7 @@ scripts/
 - `apps/platform/src/pages/skills/SkillsManagementPage.tsx` 当前已作为 `/skills` 的正式管理页，支持 Skill 分组筛选、自建、GitHub/URL 导入、原生 `SKILL.md` 编辑与预览、草稿/发布，以及来源 provenance 展示。
 - `apps/platform/src/pages/agents/AgentsManagementPage.tsx` 当前已作为 `/agents` 的正式配置页，支持创建、编辑、删除，以及知识库 / Skill 绑定表单。
 - `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 当前保留为历史壳层组件，未接入实际路由。
-- 当前项目私有知识库的对外 create / detail / upload API 与索引写侧已经落地，但前端项目资源页尚未正式消费这条链路；项目知识目前仍主要作为后端与索引基座存在。
+- 项目资源页的知识分组当前会并行消费 `/api/knowledge` 与 `/api/projects/:projectId/knowledge`：前者负责解析 `knowledgeBaseIds` 对应的全局绑定知识，后者负责项目私有知识目录；页面支持最小 `create -> upload -> indexStatus 回显` 闭环，但 project knowledge 的 rebuild / diagnostics 运维入口仍待后续补齐。
 
 ### 5.6 成员数据分层
 
@@ -325,7 +325,7 @@ scripts/
 
 以下能力在认知总结或目标蓝图中出现过，但当前仓库未落地，不应视为现状：
 
-- 项目私有知识库在项目资源页中的正式消费、以及项目知识与全局绑定知识的前端分层展示。
+- 项目私有知识在项目资源页中的 diagnostics / rebuild 运维入口。
 - `global_code` 的真实 Git 导入、切分和索引写入。
 - 系统级索引运维链路、知识库级批量内部入口，以及 Python delete 控制面正式化。
 - 项目对话消息写入、SSE 流式输出与来源引用渲染。

@@ -12,9 +12,9 @@
   - 前端本地 Mock 的组织边界。
   - `apps/api` 的配置、MongoDB、健康检查基础骨架。
   - 用户注册 / 登录、`argon2id`、JWT 与前端 `/login` 双模式入口。
-- 与目标蓝图之间的最大断层不在 UI，而在项目对话写链路、项目资源正式消费收口、Skill / Agent 运行时，以及检索链路运维能力。
+- 与目标蓝图之间的最大断层不在 UI，而在项目对话写链路、项目级合并检索、Skill / Agent 运行时，以及更完整的索引运维与 CI 基线。
 - 当前 RAG 基线已不再停留在概念层：`/knowledge`、Node -> Python indexer、`global_docs` Chroma 写入，以及 `POST /api/knowledge/search` 已形成最小正式闭环。
-- 因此后续开发不应继续把“最小知识链路未落地”当作主要阻塞，而应把重点先落到 `global_docs` 运维闭环、项目资源页 `agents` fallback 收口、项目私有知识库 write-side，再进入消息写链路与 Skill / Agent 运行时。
+- 因此后续开发不应继续把“最小知识链路未落地”当作主要阻塞，而应直接基于已完成的 Week 5-6 基座，进入消息写链路、项目级合并检索与 Skill / Agent 运行时。
 
 ## 2. 关键演进脉络
 
@@ -66,8 +66,8 @@
 
 - 当前状态
   - 项目列表、项目基础信息、成员 roster、项目资源绑定，以及项目对话列表 / 详情已切到后端接口。
-  - 剩余仍依赖前端本地状态和 Mock 的，主要是项目概览补充文案、成员协作快照，以及 `agents` 目录 fallback。
-  - 前端已经形成“正式项目模型 + Skill 正式元数据 + `agents` 目录 fallback + 项目协作快照”的数据组织雏形。
+- 剩余仍依赖前端本地状态和 Mock 的，主要是项目概览补充文案、成员协作快照，以及部分最近资源文案补充层。
+- 前端已经形成“正式项目模型 + 全局资产正式目录 + 项目私有知识目录 + 项目协作快照补充层”的数据组织雏形。
 - 目标状态
   - 项目、资产、成员、对话应来自正式后端与持久化存储。
   - 前端只保留必要的本地 UI 状态，不再承担业务主数据源职责。
@@ -78,11 +78,11 @@
   - `apps/platform/src/pages/project/project.mock.ts`
   - `dd59806`
 - 风险
-  - 如果在剩余的协作快照、概览补充层和 `agents` fallback 上继续堆功能，后续迁到正式后端的成本会迅速升高。
+- 如果在剩余的协作快照和概览补充层继续堆功能，后续迁到正式后端的成本会迅速升高。
 - 建议优先级
   - P0，最值得尽早切换。
 - 下一步动作
-- 基于已完成的项目主数据、资源绑定和对话读链路，先收口项目资源页 `agents` fallback，再让项目私有 knowledge 进入正式 write-side；消息写路径放到下一阶段承接。
+- 基于已完成的项目主数据、资源绑定和项目私有 knowledge 闭环，下一步应把重心切到消息写路径、来源引用和项目级合并检索。
 
 ### 3.3 后端与数据层
 
@@ -90,7 +90,7 @@
   - `apps/api` 当前已暴露 `health / auth / members / projects / memberships / knowledge / skills / agents / memory` 九组接口。
   - 已经建立 `config / db / modules / middleware` 骨架，并接入 MongoDB、用户模型、`argon2id`、JWT 与统一响应 envelope。
   - 已有正式项目模型、项目内嵌成员结构、最小项目 CRUD、项目资源绑定字段、项目对话只读接口和成员管理接口；`knowledge` 已完成 Mongo 元数据、上传、Node -> Python 索引、`global_docs` Chroma 写入 / 删除和统一检索，`skills` 已完成正式资产治理、草稿/发布与绑定校验，`agents` 已完成正式 CRUD 与绑定校验。
-- 当前真正未落地的仍是项目对话消息写入 / 正式存储、项目资源页 `agents` 正式消费切换，以及知识链路的重建 / 重试 / 诊断完善。
+- 当前真正未落地的仍是项目对话消息写入 / 正式存储、项目级合并检索、`global_code` 真实导入，以及更完整的 CI / 观测基线。
 - 目标状态
   - 需要完整承载用户、项目、成员、对话、知识资产、Skill 配置、Agent 配置的正式后端。
   - 需要结构化数据存储和向量检索基础设施，并明确“Node 管业务主链路，Python 管索引处理链路”的运行时分层。
@@ -103,11 +103,11 @@
   - `.agent/docs/roadmap/target-architecture.md`
   - `36835ed`
 - 风险
-  - 如果后端继续扩项目与 AI 能力，而前端仍长期保留协作快照、概览补充层与 `agents` fallback，仓库会停留在“主链路已收口、补充层仍割裂”的中间态。
+- 如果后端继续扩项目与 AI 能力，而前端仍长期保留协作快照和概览补充层，仓库会停留在“主链路已收口、补充层仍割裂”的中间态。
 - 建议优先级
   - P0，与前端状态切换同级。
 - 下一步动作
-- 项目模型、资源绑定、会话读链路、成员接口、全局知识索引闭环，以及全局 `skills / agents` 正式管理页已经落地；下一步应先补 `retry / rebuild / diagnostics`、项目资源页 `agents` fallback 收口，以及项目私有 knowledge 的正式模型与写侧。
+- 项目模型、资源绑定、会话读链路、成员接口、全局知识索引运维基线、全局 `skills / agents` 正式管理页，以及项目私有 knowledge 最小闭环已经落地；下一步应把重点转到消息写路径、项目级检索收口和运行时编排。
 
 ### 3.4 AI / RAG / Skill / Agent
 
@@ -129,14 +129,14 @@
 - 建议优先级
   - P0，但应拆阶段推进。
 - 下一步动作
-- 建议按“补齐 `global_docs` 的 retry / rebuild / diagnostics -> 收口项目资源页 `agents` fallback -> 让项目私有 knowledge 进入正式 write-side -> 再推进消息写链路、合并检索与 Agent 编排”顺序推进，而不是一次性并发铺开所有目标态能力。
+- 建议按“消息写链路 -> 项目 + 全局知识合并检索 -> 来源引用与技能调用展示 -> Skill runtime / Agent 编排”顺序推进，而不是重新回到 Week 5-6 已完成的基础设施层。
 
 ### 3.5 部署与运维
 
 - 当前状态
   - 当前仓库可本地 `pnpm dev`、`pnpm test`、`pnpm check-types`、`pnpm build`，API 包级测试与 Python `uv run pytest` 也已可独立执行。
   - 根目录已经有 `/.env.example`，并交付 `compose.yml / compose.local.yml / compose.production.yml`、`scripts/knowject.sh`、`indexer-py + mongodb + chroma` 的本地 / 线上风格编排基线。
-- 当前仍缺少的是更细的运行监控、CI 持续化与回滚策略；`pnpm verify:global-assets-foundation` 已补上 Week 3-4 的最小统一验证入口，但还没有纳入持续集成。
+- 当前仍缺少的是更细的运行监控、CI 持续化与回滚策略；当前已经有 `pnpm verify:global-assets-foundation` 与 `pnpm verify:index-ops-project-consumption` 两条阶段性统一验证入口，但还没有纳入持续集成。
 - 目标状态
   - 具备可复现的本地 / 服务器部署方案，支持数据库、向量库和后端服务联动。
 - 证据来源
@@ -149,7 +149,7 @@
 - 建议优先级
   - P2，在项目级正式链路继续扩展前尽快补齐。
 - 下一步动作
-- 在继续扩项目资源、对话与 Agent 能力前，先把现有统一验证入口纳入 CI / automation，并补健康诊断和回滚说明，避免“功能前进了，运维基线没跟上”。
+- 在继续扩项目对话、检索与 Agent 能力前，先把现有统一验证入口纳入 CI / automation，并补健康诊断和回滚说明，避免“功能前进了，运维基线没跟上”。
 
 ### 3.6 文档治理
 
@@ -175,11 +175,10 @@
 ## 4. 推荐开发顺序
 
 1. 稳住当前信息架构，不再做大的页面和路由反复。
-2. 在 `global_docs` 已落地的基础上，先补齐 `retry / rebuild / diagnostics`，让索引链路进入可维护状态。
-3. 收口项目资源页 `agents` 正式消费，继续删除剩余前端 fallback 入口。
-4. 扩展项目私有 knowledge 的正式模型与 write-side，但先不把消息写入、SSE 和 runtime 混进来。
-5. 在项目级知识 write-side 稳定后，再推进消息写链路、合并检索、Skill 执行与 Agent 编排。
-6. 在项目级正式链路继续扩展前，补 smoke、观测和回滚说明，避免部署与验证能力滞后。
+2. 以当前已完成的索引运维和项目私有 knowledge 基线为前提，优先推进消息写链路。
+3. 在消息写链路稳定后，补项目 + 全局知识合并检索、来源引用与技能调用展示。
+4. 再推进 Skill 执行与 Agent 编排。
+5. 在运行时能力继续扩展前，把现有阶段性验证入口纳入 CI，并补 smoke、观测和回滚说明。
 
 ## 5. 当前最值得避免的误区
 

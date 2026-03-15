@@ -14,13 +14,14 @@ The repository is currently in an active foundation stage: the product shell, au
 - `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, global knowledge CRUD/upload/search endpoints, project-scoped knowledge `list/create/detail/upload` routes, formal skill asset CRUD/import/publish/binding-validation APIs, formal `agents` CRUD/binding APIs, and demo `memory` endpoints.
 - Project lists, project basics, member rosters, project resource bindings, project conversation summaries/details, and the global members overview already use `/api/projects*` and `/api/members`.
 - `knowject_project_resource_bindings` now remains only as a one-time migration source for historical local data; runtime resource bindings are persisted on project documents.
-- Project overview still uses local display supplements for member collaboration snapshots and some fallback copy, while project-bound resource metadata now comes from formal backend catalogs.
-- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; `/skills` already supports native `SKILL.md` authoring, GitHub/raw URL import, preview, and draft/publish lifecycle management, and project-side knowledge/skill/agent resource cards now consume the same formal catalogs.
+- Project overview still uses local display supplements for member collaboration snapshots and some fallback copy, while project-bound resource metadata now comes from formal backend catalogs and project-private knowledge summaries.
+- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; `/skills` already supports native `SKILL.md` authoring, GitHub/raw URL import, preview, and draft/publish lifecycle management, and project-side resource cards now consume the same formal catalogs while project-private knowledge is created/uploaded from `/project/:projectId/resources`.
 - `GET /api/projects/:projectId/conversations` and `GET /api/projects/:projectId/conversations/:conversationId` now provide the current project chat read-side; message creation is not implemented yet.
 - `GET /api/projects/:projectId/knowledge`, `GET /api/projects/:projectId/knowledge/:knowledgeId`, `POST /api/projects/:projectId/knowledge`, and `POST /api/projects/:projectId/knowledge/:knowledgeId/documents` now provide the Week 5-6 project-private knowledge write-side baseline without writing back into `projects.knowledgeBaseIds`.
 - `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`, `POST /api/knowledge/:knowledgeId/documents/:documentId/rebuild`, `POST /api/knowledge/:knowledgeId/rebuild`, `GET /api/knowledge/:knowledgeId/diagnostics`, `DELETE /api/knowledge/:knowledgeId/documents/:documentId`, and `POST /api/knowledge/search` are available end-to-end for the current GA-07 knowledge flow.
 - JSON API responses now share the same envelope contract: `code`, `message`, `data`, and `meta`; frontend API wrappers unwrap `data` before UI consumption.
 - `pnpm verify:global-assets-foundation` now bundles the Week 3-4 minimum automated validation across API tests, Python indexer tests, and platform type checks.
+- `pnpm verify:index-ops-project-consumption` now bundles the Week 5-6 minimum automated validation across project-knowledge API tests, Python indexer tests, and platform type checks.
 - Docker Compose baselines are available for both local and production-style environments with `platform + api + indexer-py + mongodb + chroma`.
 - MongoDB is the current primary datastore. Chroma now backs the GA-06 global document index layer for `global_docs`, while `global_code` is reserved as an empty namespace only.
 - `apps/indexer-py` now provides the Python indexing service used for `md / txt` parsing, cleaning, chunking, OpenAI-compatible embedding generation, and Chroma upsert/delete orchestration.
@@ -108,6 +109,7 @@ pnpm dev:api
 pnpm --filter indexer-py dev
 pnpm test
 pnpm verify:global-assets-foundation
+pnpm verify:index-ops-project-consumption
 pnpm check-types
 pnpm build
 pnpm host:up

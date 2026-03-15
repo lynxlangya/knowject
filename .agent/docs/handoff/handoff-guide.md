@@ -7,7 +7,7 @@
 ## 先记住 4 个判断
 
 1. 当前事实以 `.agent/docs/current/architecture.md` 和源码为准，不以蓝图文档为准。
-2. 当前产品主线已经进入“前后端基础框架已接通、项目资源绑定与对话读链路已正式化、局部展示层仍依赖 Mock”的阶段，而不是单纯“前端产品壳 + 演示 API”。
+2. 当前产品主线已经进入“前后端基础框架、索引运维基线与项目私有 knowledge 最小闭环都已接通，下一阶段应直接进入对话写链路与运行时能力”的阶段，而不是单纯“前端产品壳 + 演示 API”。
 3. 后端已经完成 auth、members、最小项目 CRUD 和成员接口，前端项目列表、项目基础信息、成员 roster 与全局成员概览也已切到数据库接口。
 4. canonical 路由已经稳定，兼容路由只做跳转，不应再回退成业务主入口。
 
@@ -16,10 +16,11 @@
 1. 先读 `.agent/docs/current/architecture.md`
 2. 再读 `.agent/docs/roadmap/gap-analysis.md`
 3. 涉及基础框架阶段范围与完成记录时读 `.agent/docs/plans/tasks-foundation-framework.md`
-4. 涉及登录、JWT、环境变量时读 `.agent/docs/contracts/auth-contract.md`
-5. 只有需要理解目标态时，再读 `.agent/docs/roadmap/target-architecture.md`
-6. 如果是要给 ChatGPT / 外部模型快速补上下文，可先喂 `.agent/docs/handoff/chatgpt-project-brief.md`
-7. 最后核对以下源码入口：
+4. 涉及 Week 5-6 收口结果与顺延项时读 `.agent/docs/plans/tasks-index-ops-project-consumption.md`
+5. 涉及登录、JWT、环境变量时读 `.agent/docs/contracts/auth-contract.md`
+6. 只有需要理解目标态时，再读 `.agent/docs/roadmap/target-architecture.md`
+7. 如果是要给 ChatGPT / 外部模型快速补上下文，可先喂 `.agent/docs/handoff/chatgpt-project-brief.md`
+8. 最后核对以下源码入口：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/navigation/routeRedirects.tsx`
    - `apps/platform/src/app/layouts/components/AppSider.tsx`
@@ -84,10 +85,10 @@
 - 项目页的正式读链路已经补到三块：
   - 项目对话列表 / 详情来自 `/api/projects/:projectId/conversations*`
   - 项目资源绑定来自 `/api/projects`
-  - 知识库分组元数据来自 `/api/knowledge`
-- 项目 `资源` 页只消费“当前项目已绑定的全局资产”，不是全局治理入口；其中 Skill 元数据优先来自 `/api/skills`。
-- `project.mock.ts` 当前主要保留项目概览补充文案、成员协作快照，以及 `agents` 目录 fallback。
-- 全局 `/knowledge`、`/skills`、`/agents` 页面已分别接入正式接口；其中 `/skills` 已支持原生 `SKILL.md` 自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已支持创建 / 编辑 / 删除与知识库 / Skill 绑定，项目内 `agents` 引入仍主要通过项目资源绑定与消费态 fallback。
+  - 资源页知识分组同时消费 `/api/knowledge` 与 `/api/projects/:projectId/knowledge`
+- 项目 `资源` 页当前同时展示“项目绑定的全局资产”和“项目私有知识”，不是全局治理入口；项目私有知识已支持最小 `create -> upload -> indexStatus 回显` 闭环。
+- `project.mock.ts` 当前主要保留项目概览补充文案、成员协作快照，以及项目资源展示映射补充层。
+- 全局 `/knowledge`、`/skills`、`/agents` 页面已分别接入正式接口；其中 `/skills` 已支持原生 `SKILL.md` 自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已支持创建 / 编辑 / 删除与知识库 / Skill 绑定。
 - 成员数据现在分两层：
   - 全局成员基础档案在 `project.catalog.ts`
   - 项目成员协作快照在 `project.mock.ts`
@@ -108,18 +109,19 @@
   - 已注册用户搜索 `GET /api/auth/users`
   - 全局 Skill 正式资产接口 `GET /api/skills*`、`POST /api/skills`、`POST /api/skills/import`、`PATCH /api/skills/:skillId`、`DELETE /api/skills/:skillId`
   - 全局 Agent 正式 CRUD 与绑定校验 `/api/agents*`
-  - 知识库 CRUD、文档上传、状态推进与统一检索
+  - 知识库 CRUD、文档上传、状态推进、rebuild / diagnostics 与统一检索
+  - 项目私有知识 `list / create / detail / upload`
   - `memory/overview` 与 `memory/query` 演示接口
-- 因此当前项目页内容应写成“项目主数据、资源绑定、对话读链路与成员关系已经切到后端，但消息写入、项目资源页 `agents` fallback 收口，以及 Skill / Agent 运行时仍未完成”；基础框架阶段本身已完成。
+- 因此当前项目页内容应写成“项目主数据、资源绑定、项目私有知识、对话读链路与成员关系已经切到后端，但消息写入、项目级合并检索与 Skill / Agent 运行时仍未完成”；基础框架阶段与 Week 5-6 基线本身已完成。
 
 ## 如果你要继续开发，先按这个顺序推进
 
 1. 保持当前 canonical 路由和信息架构稳定，不再做大幅重命名。
 2. 优先补项目对话消息写路径、来源引用与真正的上下文沉淀。
-3. 再推进项目资源页 `agents` fallback 清理，以及后续 Skill runtime / Agent 编排入口。
+3. 在消息写路径稳定后，再推进项目 + 全局知识合并检索，以及 Skill runtime / Agent 编排入口。
 4. 最后逐步替换概览补充文案和成员协作快照这些剩余展示 Mock。
 
-这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“消息写路径、项目资源页 `agents` fallback 收口，以及 AI 主链路仍未形成”。
+这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“消息写路径、合并检索与 AI 主链路仍未形成”。
 
 ## 这一轮文档迭代做了什么
 
@@ -164,6 +166,7 @@
 pnpm check-types
 pnpm lint
 pnpm test
+pnpm verify:index-ops-project-consumption
 ```
 
 如果你要接着改业务代码，建议再补：
@@ -174,4 +177,4 @@ pnpm build
 
 ## 一句话结论
 
-现在最重要的不是“继续美化壳层”，而是让接手者清楚：前端壳层已经稳定，auth、项目 CRUD、项目资源绑定、项目对话读链路、Skill 资产治理与成员接口已落地，剩余主要断层在消息写路径、项目资源页 `agents` fallback 和 AI 主链路。
+现在最重要的不是“继续美化壳层”，而是让接手者清楚：前端壳层、索引运维基线和项目私有知识最小闭环已经稳定，剩余主要断层在消息写路径、项目级合并检索与 AI 主链路。

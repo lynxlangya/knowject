@@ -5,6 +5,7 @@ import {
 import { client } from './client';
 
 export type KnowledgeSourceType = 'global_docs' | 'global_code';
+export type KnowledgeScope = 'global' | 'project';
 export type KnowledgeIndexStatus =
   | 'idle'
   | 'pending'
@@ -23,6 +24,8 @@ export interface KnowledgeSummaryResponse {
   id: string;
   name: string;
   description: string;
+  scope: KnowledgeScope;
+  projectId: string | null;
   sourceType: KnowledgeSourceType;
   indexStatus: KnowledgeIndexStatus;
   documentCount: number;
@@ -135,6 +138,16 @@ export const listKnowledge = async (): Promise<KnowledgeListResponse> => {
   return unwrapApiData(response.data);
 };
 
+export const listProjectKnowledge = async (
+  projectId: string,
+): Promise<KnowledgeListResponse> => {
+  const response = await client.get<ApiEnvelope<KnowledgeListResponse>>(
+    `/projects/${encodeURIComponent(projectId)}/knowledge`,
+  );
+
+  return unwrapApiData(response.data);
+};
+
 export const getKnowledgeDetail = async (
   knowledgeId: string,
 ): Promise<KnowledgeDetailEnvelope> => {
@@ -150,6 +163,18 @@ export const createKnowledge = async (
 ): Promise<KnowledgeMutationResponse> => {
   const response = await client.post<ApiEnvelope<KnowledgeMutationResponse>>(
     '/knowledge',
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const createProjectKnowledge = async (
+  projectId: string,
+  payload: CreateKnowledgeRequest,
+): Promise<KnowledgeMutationResponse> => {
+  const response = await client.post<ApiEnvelope<KnowledgeMutationResponse>>(
+    `/projects/${encodeURIComponent(projectId)}/knowledge`,
     payload,
   );
 
@@ -185,6 +210,28 @@ export const uploadKnowledgeDocument = async (
 
   const response = await client.post<ApiEnvelope<KnowledgeDocumentUploadResponse>>(
     `/knowledge/${encodeURIComponent(knowledgeId)}/documents`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    },
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const uploadProjectKnowledgeDocument = async (
+  projectId: string,
+  knowledgeId: string,
+  file: File,
+): Promise<KnowledgeDocumentUploadResponse> => {
+  const formData = new FormData();
+
+  formData.append('file', file);
+
+  const response = await client.post<ApiEnvelope<KnowledgeDocumentUploadResponse>>(
+    `/projects/${encodeURIComponent(projectId)}/knowledge/${encodeURIComponent(knowledgeId)}/documents`,
     formData,
     {
       headers: {

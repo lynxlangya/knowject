@@ -24,12 +24,14 @@ export const ProjectOverviewPage = () => {
     conversations,
     conversationsError,
     knowledgeCatalog,
+    projectKnowledgeCatalog,
     agentsCatalog,
     skillsCatalog,
   } = useProjectPageContext();
   const recentConversations = conversations.slice(0, 3);
   const recentResources = getRecentProjectResources(activeProject, {
     knowledgeCatalog,
+    projectKnowledgeCatalog,
     agentsCatalog,
     skillsCatalog,
   });
@@ -100,7 +102,7 @@ export const ProjectOverviewPage = () => {
                 最近接入资源
               </Typography.Title>
               <Typography.Text className="text-sm text-slate-500">
-                这些全局资产已被当前项目接入，可直接参与协作。
+                这里同时展示项目绑定的全局资产和项目私有知识，便于快速回到当前上下文。
               </Typography.Text>
             </div>
             <Button onClick={() => navigate(buildProjectResourcesPath(activeProject.id))}>进入资源页</Button>

@@ -16,6 +16,10 @@ export interface ProjectPageContextValue extends ProjectWorkspaceSnapshot {
   knowledgeCatalog: KnowledgeSummaryResponse[];
   knowledgeCatalogLoading: boolean;
   knowledgeCatalogError: string | null;
+  projectKnowledgeCatalog: KnowledgeSummaryResponse[];
+  projectKnowledgeLoading: boolean;
+  projectKnowledgeError: string | null;
+  refreshProjectKnowledge: () => void;
   agentsCatalog: AgentResponse[];
   agentsCatalogLoading: boolean;
   agentsCatalogError: string | null;

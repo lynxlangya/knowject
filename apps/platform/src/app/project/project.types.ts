@@ -1,3 +1,8 @@
+import type {
+  KnowledgeIndexStatus,
+  KnowledgeScope,
+} from '@api/knowledge';
+
 export interface ProjectSummary {
   id: string;
   name: string;
@@ -89,7 +94,9 @@ export interface GlobalAssetItem {
 }
 
 export interface ProjectResourceItem extends GlobalAssetItem {
-  source: "global";
+  source: KnowledgeScope;
+  documentCount?: number;
+  indexStatus?: KnowledgeIndexStatus;
 }
 
 export interface ProjectResourceGroup {

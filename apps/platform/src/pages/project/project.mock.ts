@@ -138,7 +138,7 @@ const RESOURCE_GROUP_COPY: Record<
 > = {
   knowledge: {
     title: '知识库',
-    description: '当前项目已启用的知识资源，可作为对话和协作的上下文基础，来源仍来自全局资产库。',
+    description: '当前项目既可以绑定全局知识库，也可以维护项目私有知识，二者都会作为项目协作上下文参与消费。',
   },
   skills: {
     title: '技能',
@@ -251,64 +251,90 @@ const buildMissingProjectResourceItem = (
   };
 };
 
+const mapBoundKnowledgeResources = (
+  project: Pick<ProjectSummary, 'knowledgeBaseIds'>,
+  knowledgeCatalog: KnowledgeSummaryResponse[],
+): ProjectResourceItem[] => {
+  const knowledgeById = new Map(
+    knowledgeCatalog.map((knowledge) => [knowledge.id, knowledge] as const),
+  );
+
+  return project.knowledgeBaseIds.map((resourceId) => {
+    const knowledge = knowledgeById.get(resourceId);
+
+    if (knowledge) {
+      return {
+        id: knowledge.id,
+        type: 'knowledge' as const,
+        name: knowledge.name,
+        description: knowledge.description,
+        updatedAt: compactDateFormatter.format(new Date(knowledge.updatedAt)),
+        owner: knowledge.maintainerName ?? knowledge.createdByName ?? '未指定',
+        usageCount: 0,
+        source: 'global' as const,
+        documentCount: knowledge.documentCount,
+        indexStatus: knowledge.indexStatus,
+      };
+    }
+
+    const legacyKnowledge = getGlobalAssetById('knowledge', resourceId);
+    if (legacyKnowledge) {
+      return {
+        ...legacyKnowledge,
+        source: 'global' as const,
+      };
+    }
+
+    return {
+      id: resourceId,
+      type: 'knowledge' as const,
+      name: `知识库 ${resourceId}`,
+      description: '该知识库已绑定到当前项目，但本地尚未拿到完整元数据。',
+      updatedAt: '未记录',
+      owner: '未指定',
+      usageCount: 0,
+      source: 'global' as const,
+    };
+  });
+};
+
+const mapProjectKnowledgeResources = (
+  projectKnowledgeCatalog: KnowledgeSummaryResponse[],
+): ProjectResourceItem[] => {
+  return projectKnowledgeCatalog.map((knowledge) => ({
+    id: knowledge.id,
+    type: 'knowledge' as const,
+    name: knowledge.name,
+    description: knowledge.description,
+    updatedAt: compactDateFormatter.format(new Date(knowledge.updatedAt)),
+    owner: knowledge.maintainerName ?? knowledge.createdByName ?? '未指定',
+    usageCount: 1,
+    source: 'project' as const,
+    documentCount: knowledge.documentCount,
+    indexStatus: knowledge.indexStatus,
+  }));
+};
+
 const mapProjectResources = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
   focus: ProjectResourceFocus,
   catalogs: {
     knowledgeCatalog?: KnowledgeSummaryResponse[];
+    projectKnowledgeCatalog?: KnowledgeSummaryResponse[];
     agentsCatalog?: AgentResponse[];
     skillsCatalog?: SkillSummaryResponse[];
   } = {},
 ): ProjectResourceItem[] => {
   const knowledgeCatalog = catalogs.knowledgeCatalog ?? [];
+  const projectKnowledgeCatalog = catalogs.projectKnowledgeCatalog ?? [];
   const agentsCatalog = catalogs.agentsCatalog ?? [];
   const skillsCatalog = catalogs.skillsCatalog ?? [];
 
   if (focus === 'knowledge') {
-    const knowledgeById = new Map(
-      knowledgeCatalog.map((knowledge) => [knowledge.id, knowledge] as const),
-    );
-
-    return getResourceIdsByFocus(project, focus)
-      .map((resourceId) => {
-        const knowledge = knowledgeById.get(resourceId);
-
-        if (knowledge) {
-          return {
-            id: knowledge.id,
-            type: 'knowledge' as const,
-            name: knowledge.name,
-            description: knowledge.description,
-            updatedAt: compactDateFormatter.format(new Date(knowledge.updatedAt)),
-            owner:
-              knowledge.maintainerName ??
-              knowledge.createdByName ??
-              '未指定',
-            usageCount: 0,
-            source: 'global' as const,
-          };
-        }
-
-        const legacyKnowledge = getGlobalAssetById('knowledge', resourceId);
-        if (legacyKnowledge) {
-          return {
-            ...legacyKnowledge,
-            source: 'global' as const,
-          };
-        }
-
-        return {
-          id: resourceId,
-          type: 'knowledge' as const,
-          name: `知识库 ${resourceId}`,
-          description: '该知识库已绑定到当前项目，但本地尚未拿到完整元数据。',
-          updatedAt: '未记录',
-          owner: '未指定',
-          usageCount: 0,
-          source: 'global' as const,
-        };
-      })
-      .filter(Boolean);
+    return [
+      ...mapProjectKnowledgeResources(projectKnowledgeCatalog),
+      ...mapBoundKnowledgeResources(project, knowledgeCatalog),
+    ];
   }
 
   if (focus === 'skills') {
@@ -408,6 +434,7 @@ export const getProjectResourceGroups = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
   catalogs: {
     knowledgeCatalog?: KnowledgeSummaryResponse[];
+    projectKnowledgeCatalog?: KnowledgeSummaryResponse[];
     agentsCatalog?: AgentResponse[];
     skillsCatalog?: SkillSummaryResponse[];
   } = {},
@@ -426,8 +453,12 @@ export const getProjectWorkspaceSnapshot = (
     'id' | 'description' | 'knowledgeBaseIds' | 'skillIds' | 'agentIds' | 'members'
   >,
   conversationCount: number,
+  options: {
+    projectKnowledgeCount?: number;
+  } = {},
 ): ProjectWorkspaceSnapshot => {
   const members = getProjectMembers(project);
+  const projectKnowledgeCount = options.projectKnowledgeCount ?? 0;
 
   return {
     members,
@@ -435,7 +466,7 @@ export const getProjectWorkspaceSnapshot = (
     stats: {
       activeMembers: members.filter((member) => member.isActive).length,
       conversationCount,
-      knowledgeCount: project.knowledgeBaseIds.length,
+      knowledgeCount: project.knowledgeBaseIds.length + projectKnowledgeCount,
       agentCount: project.agentIds.length,
       skillCount: project.skillIds.length,
     },
@@ -446,6 +477,7 @@ export const getRecentProjectResources = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
   catalogs: {
     knowledgeCatalog?: KnowledgeSummaryResponse[];
+    projectKnowledgeCatalog?: KnowledgeSummaryResponse[];
     agentsCatalog?: AgentResponse[];
     skillsCatalog?: SkillSummaryResponse[];
   } = {},
