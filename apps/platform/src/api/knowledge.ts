@@ -75,6 +75,50 @@ export interface KnowledgeDocumentUploadResponse {
   document: KnowledgeDocumentResponse;
 }
 
+export interface KnowledgeDiagnosticsDocumentResponse {
+  id: string;
+  status: KnowledgeDocumentStatus;
+  fileName: string;
+  retryCount: number;
+  lastIndexedAt: string | null;
+  errorMessage: string | null;
+  updatedAt: string;
+  missingStorage: boolean;
+  staleProcessing: boolean;
+}
+
+export interface KnowledgeDiagnosticsResponse {
+  knowledgeId: string;
+  sourceType: KnowledgeSourceType;
+  expectedCollectionName: string;
+  indexStatus: KnowledgeIndexStatus;
+  documentSummary: {
+    total: number;
+    pending: number;
+    processing: number;
+    completed: number;
+    failed: number;
+    missingStorage: number;
+    staleProcessing: number;
+  };
+  collection: {
+    name: string;
+    exists: boolean;
+    errorMessage: string | null;
+  };
+  indexer: {
+    status: 'ok' | 'degraded';
+    service: string | null;
+    supportedFormats: string[];
+    chunkSize: number | null;
+    chunkOverlap: number | null;
+    embeddingProvider: string | null;
+    chromaReachable: boolean | null;
+    errorMessage: string | null;
+  };
+  documents: KnowledgeDiagnosticsDocumentResponse[];
+}
+
 export interface CreateKnowledgeRequest {
   name: string;
   description?: string;
@@ -161,6 +205,35 @@ export const retryKnowledgeDocument = async (
   );
 
   unwrapApiData(response.data);
+};
+
+export const rebuildKnowledgeDocument = async (
+  knowledgeId: string,
+  documentId: string,
+): Promise<void> => {
+  const response = await client.post<ApiEnvelope<null>>(
+    `/knowledge/${encodeURIComponent(knowledgeId)}/documents/${encodeURIComponent(documentId)}/rebuild`,
+  );
+
+  unwrapApiData(response.data);
+};
+
+export const rebuildKnowledge = async (knowledgeId: string): Promise<void> => {
+  const response = await client.post<ApiEnvelope<null>>(
+    `/knowledge/${encodeURIComponent(knowledgeId)}/rebuild`,
+  );
+
+  unwrapApiData(response.data);
+};
+
+export const getKnowledgeDiagnostics = async (
+  knowledgeId: string,
+): Promise<KnowledgeDiagnosticsResponse> => {
+  const response = await client.get<ApiEnvelope<KnowledgeDiagnosticsResponse>>(
+    `/knowledge/${encodeURIComponent(knowledgeId)}/diagnostics`,
+  );
+
+  return unwrapApiData(response.data);
 };
 
 export const deleteKnowledgeDocument = async (

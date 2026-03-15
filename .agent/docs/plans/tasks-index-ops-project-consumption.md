@@ -1,6 +1,6 @@
 # 索引运维与项目层消费开发任务（Week 5-6，规划拆解）
 
-状态：截至 2026-03-15，Week 3-4 全局资产基础已完成；`IC-01`、`IC-02` 已完成，`IC-03 ~ IC-09` 待启动；本文件当前同时承担“Week 5-6 任务清单 + 执行记录”角色。
+状态：截至 2026-03-15，Week 3-4 全局资产基础已完成；`IC-01`、`IC-02`、`IC-03` 已完成，`IC-04 ~ IC-09` 待启动；本文件当前同时承担“Week 5-6 任务清单 + 执行记录”角色。
 
 本文件用于把 `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md` 中的 `Week 5-6 索引运维 + 项目层消费`，结合当前已落地的 `knowledge / skills / agents / projects` 主链路事实，收敛成可执行、可排期、可验收的任务清单。
 
@@ -47,7 +47,6 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
 
 ### 当前明确未完成
 
-- `/knowledge` 页面当前还没有 rebuild / diagnostics 的正式前端操作入口，运维能力暂时停留在 API 层。
 - 项目资源页中的 `agents` 仍依赖 `apps/platform/src/app/project/project.catalog.ts` 的本地目录 fallback。
 - 当前知识库模型只有 `global_docs / global_code` source type，没有项目级 scope / `projectId` 扩展位。
 - 当前不存在项目私有知识库的正式上传、索引写入与项目内展示链路。
@@ -285,7 +284,7 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
   - 单文档和整库都能触发稳定重建。
   - diagnostics 至少能回答“为什么这个知识库现在不可用”。
 
-### IC-03 · `/knowledge` 增加运维操作与状态可视化
+### IC-03 DONE（2026-03-15）· `/knowledge` 增加运维操作与状态可视化
 
 - 目标：让 rebuild / diagnostics 不只停留在 API 层。
 - 输出：
@@ -293,6 +292,11 @@ Week 5-6 不是“把完整 AI 对话做出来”，而是让 Week 3-4 的全局
   - 知识库级 rebuild 入口。
   - diagnostics 展示区或抽屉。
 - 依赖：`IC-02`。
+- 已完成记录：
+  - `apps/platform/src/api/knowledge.ts` 已补齐 document rebuild、knowledge rebuild 与 diagnostics 的正式前端 API 封装。
+  - `/knowledge` 详情页已补齐文档级 `重建索引`、知识库级 `重建全部文档` 与 diagnostics 运维面板，不重做既有页面结构。
+  - diagnostics 面板已展示 collection / indexer 运行态、待处理 / 失败 / 原文件缺失 / 处理卡住四类摘要，并在文档卡片上标识 `原文件缺失 / 处理卡住` 风险。
+  - 当前页面继续复用最小轮询策略；发起 retry / rebuild 后会回到现有 `pending / processing / completed|failed` 状态流，不额外引入新的前端状态管理层。
 - 建议子任务：
   - 在当前知识库详情视图内补操作入口，避免重做页面结构。
   - 明确 loading / success / error 反馈。

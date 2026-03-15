@@ -113,7 +113,7 @@ scripts/
 
 - `/login`：登录页。
 - `/home`：登录后默认首页，当前承载空态引导。
-- `/knowledge`：全局知识库正式管理页，已接入知识库 CRUD、文档上传与状态展示。
+- `/knowledge`：全局知识库正式管理页，已接入知识库 CRUD、文档上传、文档级 retry / rebuild、知识库级 rebuild、diagnostics 展示与状态轮询。
 - `/skills`：全局技能正式管理页，已接入 `/api/skills` 并支持自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除。
 - `/agents`：全局智能体正式配置页，已接入 `agents / knowledge / skills` 正式接口。
 - `/members`：全局成员协作总览页，聚合当前账号可见项目中的成员信息。
@@ -205,7 +205,7 @@ scripts/
 - 其中知识库与 Skill 分组优先消费 `/api/knowledge`、`/api/skills` 的正式元数据；`/agents` 页面消费 `/api/agents`、`/api/knowledge` 与 `/api/skills` 的正式数据，项目资源页中的 `agents` 仍回退到 `project.catalog.ts` 中的共享目录。
 - 当项目或成员聚合里出现未知的 `skills / agents` 资源 ID 时，前端当前会渲染“未知资源（{id}）”占位项，而不是静默丢失。
 - 兼容跳转会临时落到 `/project/:projectId/resources?focus=*`；页面完成滚动定位后会回写 canonical URL `/project/:projectId/resources`。
-- `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx` 已接正式后端知识库接口，支持知识库 CRUD、文档上传、状态展示和上传后的最小轮询。
+- `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx` 已接正式后端知识库接口，支持知识库 CRUD、文档上传、文档级 retry / rebuild、知识库级 rebuild、diagnostics 面板、状态展示和上传后的最小轮询。
 - 知识库上传链路现在会在上传入口对 multipart 文件名做 UTF-8 纠偏，避免中文文件名因浏览器 / multer 参数编码差异出现乱码。
 - `apps/platform/src/pages/skills/SkillsManagementPage.tsx` 当前已作为 `/skills` 的正式管理页，支持 Skill 分组筛选、自建、GitHub/URL 导入、原生 `SKILL.md` 编辑与预览、草稿/发布，以及来源 provenance 展示。
 - `apps/platform/src/pages/agents/AgentsManagementPage.tsx` 当前已作为 `/agents` 的正式配置页，支持创建、编辑、删除，以及知识库 / Skill 绑定表单。
