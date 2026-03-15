@@ -34,7 +34,7 @@
 - `/knowledge` 主要消费 `GET /api/knowledge`、`GET /api/knowledge/:knowledgeId`、`POST /api/knowledge`、`PATCH /api/knowledge/:knowledgeId`、`DELETE /api/knowledge/:knowledgeId`、`POST /api/knowledge/:knowledgeId/documents`、`POST /api/knowledge/:knowledgeId/documents/:documentId/retry`、`POST /api/knowledge/:knowledgeId/documents/:documentId/rebuild`、`POST /api/knowledge/:knowledgeId/rebuild` 与 `GET /api/knowledge/:knowledgeId/diagnostics`；页面当前支持文档级 retry / rebuild、知识库级 rebuild、diagnostics 面板与最小轮询状态刷新。当前正式上传链路支持 `md / markdown / txt`，界面文案统一推荐 `.md / .txt`。
 - `/skills` 主要消费 `GET /api/skills`、`GET /api/skills/:skillId`、`POST /api/skills`、`POST /api/skills/import`、`PATCH /api/skills/:skillId` 与 `DELETE /api/skills/:skillId`；页面支持原生 `SKILL.md` 自建、GitHub/URL 导入、预览、草稿/发布与删除，系统内置 Skill 保持只读查看。
 - `/project/:projectId/chat` 主要消费 `GET /api/projects/:projectId/conversations` 与 `GET /api/projects/:projectId/conversations/:conversationId`；当前输入框仍保持禁用，等待正式消息写路径。
-- `/project/:projectId/resources` 主要消费后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`，并补充 `/api/projects/:projectId/knowledge` 项目私有知识目录；页面当前支持在知识分组中区分“全局绑定 / 项目私有”，并提供项目知识最小创建与文档上传入口，未知资源会展示占位卡片。
+- `/project/:projectId/resources` 主要消费后端项目模型中的 `knowledgeBaseIds / skillIds / agentIds`，并补充 `/api/projects/:projectId/knowledge` 项目私有知识目录；页面当前支持在知识分组中区分“全局绑定 / 项目私有”，通过统一“接入知识库”弹层承接“引入全局知识库 / 新建项目私有知识库”，并通过知识库详情抽屉提供文档查看、项目私有知识编辑删除、文档上传与最小 diagnostics / rebuild 操作，未知资源会展示占位卡片。
 - `/members` 主要消费 `GET /api/members`；`/project/:projectId/members` 主要消费 `GET /api/auth/users` 与 `/api/projects/:projectId/members*`。
 
 ## 核心目录

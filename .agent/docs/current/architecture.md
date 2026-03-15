@@ -66,6 +66,15 @@ docker/
   scripts/          本地 secrets 生成脚本
 scripts/
   knowject.sh       常用命令统一入口
+files/
+  README.md         知识库模板总导航
+  00-全局文档/      导航、元数据规范、术语、决策、变更日志模板
+  01-产品规范库/    需求、PRD、交互、发布验收模板
+  02-用户研究库/    访谈、画像、洞察模板
+  03-市场与竞品库/  竞品、对标、市场机会模板
+  04-项目决策库/    立项、会议、里程碑、风险模板
+  05-技术协作库/    接口、数据字典、埋点、技术评审模板
+  06-发布运营库/    灰度发布、上线公告、问题复盘模板
 .agent/
   docs/
     current/architecture.md      当前事实源
@@ -210,7 +219,8 @@ scripts/
 - `apps/platform/src/pages/skills/SkillsManagementPage.tsx` 当前已作为 `/skills` 的正式管理页，支持 Skill 分组筛选、自建、GitHub/URL 导入、原生 `SKILL.md` 编辑与预览、草稿/发布，以及来源 provenance 展示。
 - `apps/platform/src/pages/agents/AgentsManagementPage.tsx` 当前已作为 `/agents` 的正式配置页，支持创建、编辑、删除，以及知识库 / Skill 绑定表单。
 - `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 当前保留为历史壳层组件，未接入实际路由。
-- 项目资源页的知识分组当前会并行消费 `/api/knowledge` 与 `/api/projects/:projectId/knowledge`：前者负责解析 `knowledgeBaseIds` 对应的全局绑定知识，后者负责项目私有知识目录；页面支持最小 `create -> upload -> indexStatus 回显` 闭环，但 project knowledge 的 rebuild / diagnostics 运维入口仍待后续补齐。
+- 项目资源页的知识分组当前会并行消费 `/api/knowledge` 与 `/api/projects/:projectId/knowledge`：前者负责解析 `knowledgeBaseIds` 对应的全局绑定知识，后者负责项目私有知识目录；页面已收口为统一“接入知识库”入口，支持在项目内直接选择“引入全局知识库”或“新建项目私有知识库”。
+- 项目资源页中的知识库卡片当前支持打开详情抽屉：全局绑定知识在项目中只读查看文档并允许解除绑定、跳转全局治理；项目私有知识则支持编辑、删除、上传文档、文档级 retry / rebuild / delete，以及 knowledge diagnostics / knowledge rebuild 的最小运维操作。
 
 ### 5.6 成员数据分层
 
@@ -325,7 +335,7 @@ scripts/
 
 以下能力在认知总结或目标蓝图中出现过，但当前仓库未落地，不应视为现状：
 
-- 项目私有知识在项目资源页中的 diagnostics / rebuild 运维入口。
+- 项目资源页内的知识原文预览 / 下载能力，以及全局绑定知识的项目内编辑能力。
 - `global_code` 的真实 Git 导入、切分和索引写入。
 - 系统级索引运维链路、知识库级批量内部入口，以及 Python delete 控制面正式化。
 - 项目对话消息写入、SSE 流式输出与来源引用渲染。
@@ -337,6 +347,7 @@ scripts/
 ## 9. 相关文档
 
 - `.agent/docs/README.md`：文档索引、分类导航与维护边界。
+- `../../../files/README.md`：知识库模板总导航与推荐使用顺序。
 - `.agent/docs/current/docker-usage.md`：Docker 当前拓扑、安全策略与部署边界。
 - `.agent/docs/handoff/chatgpt-project-brief.md`：给 ChatGPT / 外部大模型的最小项目说明。
 - `.agent/docs/contracts/chroma-decision.md`：Chroma 的角色定位、collection 命名与检索层边界说明。

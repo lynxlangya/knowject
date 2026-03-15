@@ -1,6 +1,6 @@
 import { ExportOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Empty, Tag, Tooltip, Typography } from 'antd';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import type {
   ProjectResourceGroup as ProjectResourceGroupType,
   ProjectResourceItem,
@@ -11,7 +11,10 @@ interface ProjectResourceGroupProps {
   highlighted?: boolean;
   onAddProjectResource: () => void;
   onOpenGlobal: () => void;
+  addButtonLabel?: string;
+  onItemClick?: (item: ProjectResourceItem) => void;
   renderItemActions?: (item: ProjectResourceItem) => ReactNode;
+  renderEmptyActions?: () => ReactNode;
 }
 
 const SOURCE_TAG_META = {
@@ -53,8 +56,27 @@ export const ProjectResourceGroup = ({
   highlighted = false,
   onAddProjectResource,
   onOpenGlobal,
+  addButtonLabel = '新增',
+  onItemClick,
   renderItemActions,
+  renderEmptyActions,
 }: ProjectResourceGroupProps) => {
+  const handleItemKeyDown = (
+    event: KeyboardEvent<HTMLElement>,
+    item: ProjectResourceItem,
+  ) => {
+    if (!onItemClick) {
+      return;
+    }
+
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    onItemClick(item);
+  };
+
   return (
     <section
       className={[
@@ -73,7 +95,7 @@ export const ProjectResourceGroup = ({
         </div>
         <div className="flex items-center gap-2">
           <Button icon={<PlusOutlined />} onClick={onAddProjectResource}>
-            新增
+            {addButtonLabel}
           </Button>
           <Tooltip title={`查看全局${group.title}`}>
             <Button
@@ -91,7 +113,20 @@ export const ProjectResourceGroup = ({
             {group.items.map((item) => (
               <article
                 key={item.id}
-                className="rounded-[20px] border border-slate-200 bg-slate-50/55 p-4 shadow-[0_4px_16px_rgba(15,23,42,0.02)]"
+                className={[
+                  'rounded-[20px] border border-slate-200 bg-slate-50/55 p-4 shadow-[0_4px_16px_rgba(15,23,42,0.02)] transition',
+                  onItemClick
+                    ? 'cursor-pointer hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_12px_24px_rgba(15,23,42,0.06)]'
+                    : '',
+                ].join(' ')}
+                role={onItemClick ? 'button' : undefined}
+                tabIndex={onItemClick ? 0 : undefined}
+                onClick={onItemClick ? () => onItemClick(item) : undefined}
+                onKeyDown={
+                  onItemClick
+                    ? (event) => handleItemKeyDown(event, item)
+                    : undefined
+                }
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -111,7 +146,15 @@ export const ProjectResourceGroup = ({
                   </div>
 
                   {renderItemActions ? (
-                    <div className="shrink-0">
+                    <div
+                      className="shrink-0"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                      }}
+                      onKeyDown={(event) => {
+                        event.stopPropagation();
+                      }}
+                    >
                       {renderItemActions(item)}
                     </div>
                   ) : null}
@@ -136,7 +179,9 @@ export const ProjectResourceGroup = ({
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={`当前项目尚未接入${group.title}`}
-            />
+            >
+              {renderEmptyActions ? renderEmptyActions() : null}
+            </Empty>
           </div>
         )}
       </div>

@@ -23,6 +23,7 @@ docker/
   mongo/     MongoDB 初始化脚本
   caddy/     线上 HTTPS 入口
 scripts/     常用命令统一入口
+files/       按知识库分类的 Markdown 文档模板库
 .agent/
   docs/
     current/        当前事实与架构文档
@@ -45,6 +46,7 @@ scripts/     常用命令统一入口
 - `apps/indexer-py`：承载内部 Python 索引控制面，当前采用 FastAPI + uv，已提供 `md / txt` 解析、清洗、分块、embedding 与 Chroma 写侧 HTTP 入口。
 - `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、`api / indexer-py / platform` 镜像构建、Mongo 初始化与 HTTPS 入口。
 - `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
+- `files`：承载按知识库分类的 Markdown 模板库，当前覆盖全局文档、产品规范、用户研究、市场竞品、项目决策、技术协作与发布运营七类文档。
 - `.agent/docs`：项目文档统一根目录；`.agent/docs/current/architecture.md` 是项目结构与路由事实的主文档。
 - `.agent/gpt`：给 ChatGPT Projects 使用的上传副本目录；内容来自 `.agent/docs` 与项目规则的派生同步，不作为新的事实源。
 
@@ -102,6 +104,7 @@ scripts/     常用命令统一入口
 ## 7. 文档与协作入口
 
 - `README.md`：面向仓库协作者的总入口，说明当前定位、启动方式、信息架构与文档索引。
+- `files/README.md`：知识库模板总导航，说明各知识库的用途、推荐使用顺序与通用元数据规则。
 - `.agent/docs/current/architecture.md`：项目结构、路由矩阵、数据来源、兼容策略的事实源。
 - `.agent/gpt/README.md`：ChatGPT Projects 上传包说明与推荐上传顺序。
 - `.agent/docs/design/*`：品牌与视觉设计资料。
