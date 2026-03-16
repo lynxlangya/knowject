@@ -1,6 +1,8 @@
 import {
   CloudUploadOutlined,
   DeleteOutlined,
+  DownloadOutlined,
+  EyeOutlined,
   FileTextOutlined,
   LinkOutlined,
   MoreOutlined,
@@ -12,7 +14,20 @@ import type {
   KnowledgeDiagnosticsResponse,
   KnowledgeDocumentResponse,
 } from '@api/knowledge';
-import { Alert, Button, Drawer, Dropdown, Empty, Skeleton, Spin, Tag, Tabs, Tooltip, Typography } from 'antd';
+import {
+  Alert,
+  App,
+  Button,
+  Drawer,
+  Dropdown,
+  Empty,
+  Skeleton,
+  Spin,
+  Tag,
+  Tabs,
+  Tooltip,
+  Typography,
+} from 'antd';
 import type { MenuProps } from 'antd';
 import { useEffect, useState } from 'react';
 import type { ProjectResourceItem } from '@app/project/project.types';
@@ -133,6 +148,7 @@ export const ProjectKnowledgeDetailDrawer = ({
   onRebuildDocument,
   onDeleteDocument,
 }: ProjectKnowledgeDetailDrawerProps) => {
+  const { message } = App.useApp();
   const [activeTabKey, setActiveTabKey] = useState('documents');
   const readOnlyGlobal = knowledgeItem?.source === 'global';
 
@@ -148,9 +164,25 @@ export const ProjectKnowledgeDetailDrawer = ({
     document: KnowledgeDocumentResponse,
   ): NonNullable<MenuProps['items']> => {
     const busy = isDocumentBusy(document.id);
+    const commonItems: NonNullable<MenuProps['items']> = [
+      {
+        key: 'preview',
+        icon: <EyeOutlined />,
+        label: '预览',
+      },
+      {
+        key: 'download',
+        icon: <DownloadOutlined />,
+        label: '下载',
+      },
+      {
+        type: 'divider',
+      },
+    ];
 
     if (document.status === 'pending' || document.status === 'processing') {
       return [
+        ...commonItems,
         {
           key: 'refresh',
           icon: <ReloadOutlined />,
@@ -171,6 +203,7 @@ export const ProjectKnowledgeDetailDrawer = ({
     }
 
     return [
+      ...commonItems,
       ...(document.status === 'failed'
         ? [
             {
@@ -204,6 +237,16 @@ export const ProjectKnowledgeDetailDrawer = ({
     document: KnowledgeDocumentResponse,
     key: string,
   ) => {
+    if (key === 'preview') {
+      message.info(`“${document.fileName}”预览原文即将开放`);
+      return;
+    }
+
+    if (key === 'download') {
+      message.info(`“${document.fileName}”下载原文即将开放`);
+      return;
+    }
+
     if (key === 'refresh') {
       onRefresh();
       return;
