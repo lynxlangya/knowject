@@ -1,4 +1,4 @@
-# Knowject 快速接手指南（2026-03-14）
+# Knowject 快速接手指南（2026-03-16）
 
 ## 目标
 
@@ -7,7 +7,7 @@
 ## 先记住 4 个判断
 
 1. 当前事实以 `.agent/docs/current/architecture.md` 和源码为准，不以蓝图文档为准。
-2. 当前产品主线已经进入“前后端基础框架、索引运维基线与项目私有 knowledge 最小闭环都已接通，下一阶段应直接进入对话写链路与运行时能力”的阶段，而不是单纯“前端产品壳 + 演示 API”。
+2. 当前产品主线已经进入“前后端基础框架、索引运维基线、项目私有 knowledge 最小闭环与工作区设置中心都已接通，下一阶段应直接进入对话写链路与运行时能力”的阶段，而不是单纯“前端产品壳 + 演示 API”。
 3. 后端已经完成 auth、members、最小项目 CRUD 和成员接口，前端项目列表、项目基础信息、成员 roster 与全局成员概览也已切到数据库接口。
 4. canonical 路由已经稳定，兼容路由只做跳转，不应再回退成业务主入口。
 
@@ -18,9 +18,10 @@
 3. 涉及基础框架阶段范围与完成记录时读 `.agent/docs/plans/tasks-foundation-framework.md`
 4. 涉及 Week 5-6 收口结果与顺延项时读 `.agent/docs/plans/tasks-index-ops-project-consumption.md`
 5. 涉及登录、JWT、环境变量时读 `.agent/docs/contracts/auth-contract.md`
-6. 只有需要理解目标态时，再读 `.agent/docs/roadmap/target-architecture.md`
-7. 如果是要给 ChatGPT / 外部模型快速补上下文，可先喂 `.agent/docs/handoff/chatgpt-project-brief.md`
-8. 最后核对以下源码入口：
+6. 涉及工作区设置中心、effective AI config 或 `/api/settings/*` 时读 `.agent/docs/plans/settings-page-task.md`
+7. 只有需要理解目标态时，再读 `.agent/docs/roadmap/target-architecture.md`
+8. 如果是要给 ChatGPT / 外部模型快速补上下文，可先喂 `.agent/docs/handoff/chatgpt-project-brief.md`
+9. 最后核对以下源码入口：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/navigation/routeRedirects.tsx`
    - `apps/platform/src/app/layouts/components/AppSider.tsx`
@@ -34,13 +35,18 @@
    - `apps/platform/src/pages/project/ProjectMembersPage.tsx`
    - `apps/platform/src/pages/skills/SkillsManagementPage.tsx`
    - `apps/platform/src/pages/agents/AgentsManagementPage.tsx`
+   - `apps/platform/src/pages/settings/SettingsPage.tsx`
+   - `apps/platform/src/api/settings.ts`
    - `apps/api/src/app/create-app.ts`
+   - `apps/api/src/config/ai-config.ts`
    - `apps/api/src/modules/auth/*`
    - `apps/api/src/modules/members/*`
    - `apps/api/src/modules/projects/*`
    - `apps/api/src/modules/memberships/*`
+   - `apps/api/src/modules/knowledge/*`
    - `apps/api/src/modules/skills/*`
    - `apps/api/src/modules/agents/*`
+   - `apps/api/src/modules/settings/*`
    - `apps/api/src/routes/memory.ts`
 
 ## 当前业务逻辑的最小事实包
@@ -53,7 +59,7 @@
   - `localStorage['knowject_token']`
   - `localStorage['knowject_auth_user']`
 - “记住用户名”会写入 `localStorage['knowject_remembered_username']`。
-- `/api/auth/*` 与 `/api/memory/*` 在生产环境要求 HTTPS，并附带 `Cache-Control: no-store`。
+- `/api/auth/*`、`/api/settings/*` 与 `/api/memory/*` 在生产环境要求 HTTPS，并附带 `Cache-Control: no-store`。
 
 ### 2. 信息架构与路由
 
@@ -91,6 +97,7 @@
 - 项目私有知识在项目内支持轻维护：创建、编辑、删除、上传文档、文档级 retry / rebuild / delete，以及最小 diagnostics / rebuild 操作。
 - `project.mock.ts` 当前主要保留项目概览补充文案、成员协作快照，以及项目资源展示映射补充层。
 - 全局 `/knowledge`、`/skills`、`/agents` 页面已分别接入正式接口；其中 `/skills` 已支持原生 `SKILL.md` 自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已支持创建 / 编辑 / 删除与知识库 / Skill 绑定。
+- 全局 `/settings` 页面已正式接入 `/api/settings/*`：embedding / LLM / indexing / workspace 配置都走数据库优先、环境变量回退的 effective config 逻辑；本期访问控制固定为“所有已登录用户可访问”。
 - 成员数据现在分两层：
   - 全局成员基础档案在 `project.catalog.ts`
   - 项目成员协作快照在 `project.mock.ts`
@@ -111,10 +118,12 @@
   - 已注册用户搜索 `GET /api/auth/users`
   - 全局 Skill 正式资产接口 `GET /api/skills*`、`POST /api/skills`、`POST /api/skills/import`、`PATCH /api/skills/:skillId`、`DELETE /api/skills/:skillId`
   - 全局 Agent 正式 CRUD 与绑定校验 `/api/agents*`
+  - 工作区设置中心 `/api/settings*`
   - 知识库 CRUD、文档上传、状态推进、rebuild / diagnostics 与统一检索
   - 项目私有知识 `list / create / detail / upload`
   - `memory/overview` 与 `memory/query` 演示接口
-- 因此当前项目页内容应写成“项目主数据、资源绑定、项目私有知识、对话读链路与成员关系已经切到后端，但消息写入、项目级合并检索与 Skill / Agent 运行时仍未完成”；基础框架阶段与 Week 5-6 基线本身已完成。
+- 当前知识索引不再使用“固定 collection 名”假设：namespace key 仍稳定，但物理 collection 已改为 versioned naming，并通过 Mongo 里的 active pointer 切换；模型切换后要做 namespace 级全量重建，而不是重启服务。
+- 因此当前项目页内容应写成“项目主数据、资源绑定、项目私有知识、对话读链路、成员关系与工作区设置中心已经切到后端，但消息写入、项目级合并检索与 Skill / Agent 运行时仍未完成”；基础框架阶段与 Week 5-6 基线本身已完成。
 
 ## 如果你要继续开发，先按这个顺序推进
 
@@ -179,4 +188,4 @@ pnpm build
 
 ## 一句话结论
 
-现在最重要的不是“继续美化壳层”，而是让接手者清楚：前端壳层、索引运维基线和项目私有知识最小闭环已经稳定，剩余主要断层在消息写路径、项目级合并检索与 AI 主链路。
+现在最重要的不是“继续美化壳层”，而是让接手者清楚：前端壳层、索引运维基线、工作区设置中心和项目私有知识最小闭环已经稳定，剩余主要断层在消息写路径、项目级合并检索与 AI 主链路。

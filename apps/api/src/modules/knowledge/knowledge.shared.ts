@@ -1,9 +1,13 @@
+import { createHash } from 'node:crypto';
 import type { WithId } from 'mongodb';
 import type { AuthUserProfile } from '@modules/auth/auth.types.js';
+import type { EffectiveEmbeddingConfig } from '@modules/settings/settings.types.js';
 import type {
   KnowledgeBaseDocument,
   KnowledgeDocumentRecord,
   KnowledgeDocumentResponse,
+  KnowledgeEmbeddingModel,
+  KnowledgeEmbeddingProvider,
   KnowledgeScope,
   KnowledgeSourceType,
   KnowledgeSummaryResponse,
@@ -11,6 +15,7 @@ import type {
 
 export const KNOWLEDGE_COLLECTION_NAME = 'knowledge_bases';
 export const KNOWLEDGE_DOCUMENT_COLLECTION_NAME = 'knowledge_documents';
+export const KNOWLEDGE_NAMESPACE_INDEX_STATE_COLLECTION_NAME = 'knowledge_index_namespaces';
 export const KNOWLEDGE_UPLOAD_FIELD_NAME = 'file';
 export const KNOWLEDGE_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 
@@ -192,6 +197,54 @@ export const resolveKnowledgeScope = (
   return {
     scope: 'global',
     projectId: null,
+  };
+};
+
+export const buildKnowledgeNamespaceKey = (
+  knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId' | 'sourceType'>,
+): string => {
+  const scope = resolveKnowledgeScope(knowledge);
+
+  if (scope.scope === 'project' && scope.projectId) {
+    return knowledge.sourceType === 'global_code'
+      ? `proj_${scope.projectId}_code`
+      : `proj_${scope.projectId}_docs`;
+  }
+
+  return knowledge.sourceType === 'global_code' ? 'global_code' : 'global_docs';
+};
+
+export const buildKnowledgeEmbeddingFingerprint = (
+  config: Pick<EffectiveEmbeddingConfig, 'provider' | 'baseUrl' | 'model'>,
+): string => {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        provider: config.provider.trim().toLowerCase(),
+        baseUrl: config.baseUrl.trim().replace(/\/+$/u, '').toLowerCase(),
+        model: config.model.trim(),
+      }),
+      'utf8',
+    )
+    .digest('hex');
+};
+
+export const buildVersionedKnowledgeCollectionName = (
+  namespaceKey: string,
+  fingerprint: string,
+): string => {
+  return `${namespaceKey}__emb_${fingerprint.slice(0, 12)}`;
+};
+
+export const toKnowledgeEmbeddingMetadata = (
+  config: Pick<EffectiveEmbeddingConfig, 'provider' | 'model'>,
+): {
+  embeddingProvider: KnowledgeEmbeddingProvider;
+  embeddingModel: KnowledgeEmbeddingModel;
+} => {
+  return {
+    embeddingProvider: config.provider,
+    embeddingModel: config.model,
   };
 };
 

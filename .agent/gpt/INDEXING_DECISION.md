@@ -1,6 +1,6 @@
 # Knowject 索引分层决策（ChatGPT Projects 上传版）
 
-状态：2026-03-14
+状态：2026-03-16
 来源：基于 `.agent/docs/contracts/chroma-decision.md` 精简同步。  
 定位：这是当前最重要的新决策文档副本，用于解释为什么采用“Node 管业务，Python 管索引”，以及当前已经落地到什么程度。
 
@@ -12,6 +12,7 @@
 - `apps/indexer-py` 已经作为 Python 独立 indexer 落地，并已切到 FastAPI + `uv` 内部控制面。
 - Knowject 不是“Node 直接全包 Chroma”。
 - Knowject 也不是“全仓切 Python”。
+- 自 2026-03-16 起，当前 runtime 契约已进一步升级为“namespace key + versioned collection + active pointer”；历史里提到的 OpenAI 固定基线，主要是 Week 3-4 的阶段冻结，不再等同于当前设置中心接管后的运行时配置来源。
 
 ## 2. 为什么推荐 Python 负责索引链路
 

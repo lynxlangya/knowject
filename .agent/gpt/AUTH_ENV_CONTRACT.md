@@ -1,6 +1,6 @@
 # Knowject 认证与环境契约（ChatGPT Projects 上传版）
 
-状态：2026-03-14
+状态：2026-03-16
 来源：基于 `.agent/docs/contracts/auth-contract.md` 精简同步。  
 定位：用于回答登录、JWT、环境变量与安全边界。
 
@@ -45,8 +45,9 @@
 - 哈希算法固定为 `argon2id`
 - 生产环境下：
   - `/api/auth/*` 必须走 HTTPS
+  - `/api/settings/*` 必须走 HTTPS
   - `/api/memory/*` 必须走 HTTPS
-- `/api/auth/*` 与 `/api/memory/*` 默认带 `Cache-Control: no-store`
+- `/api/auth/*`、`/api/settings/*` 与 `/api/memory/*` 默认带 `Cache-Control: no-store`
 
 ## 5. 环境变量规则
 
@@ -69,6 +70,7 @@
 - `JWT_EXPIRES_IN`
 - `JWT_ISSUER`
 - `JWT_AUDIENCE`
+- `SETTINGS_ENCRYPTION_KEY`
 - `ARGON2_MEMORY_COST`
 - `ARGON2_TIME_COST`
 - `ARGON2_PARALLELISM`
@@ -88,9 +90,10 @@
 
 说明：
 
-- `CHROMA_URL` 当前已经不仅用于健康诊断，也用于 `global_docs` 的正式写侧索引与统一检索。
+- `CHROMA_URL` 当前已经不仅用于健康诊断，也用于 versioned knowledge collection 的正式写侧索引与统一检索。
 - `KNOWLEDGE_INDEXER_URL` 默认回落到 `http://127.0.0.1:8001`，本地 `pnpm dev` 会一起带起 `apps/indexer-py`。
 - 在 `development` 环境下，若缺少 `OPENAI_API_KEY`，上传链路会退化到 deterministic 本地 embedding，用于保持文档上传与状态流可验证；正式检索与生产环境仍以真实 OpenAI-compatible embedding 为准。
+- 知识索引运行时当前固定按“数据库优先、缺失时 fallback 到环境变量”读取 effective config；但真正的搜索 / 重建必须读取 namespace 当前 active embedding config，而不是直接猜“最新 settings”。
 
 ## 8. ChatGPT 使用提醒
 

@@ -1,6 +1,6 @@
 # Knowject 项目简介（ChatGPT Projects 上传版）
 
-状态：2026-03-15
+状态：2026-03-16
 来源：基于 `AGENTS.md`、`.agent/docs/current/architecture.md`、`.agent/docs/contracts/chroma-decision.md`、`.agent/docs/plans/tasks-index-ops-project-consumption.md`、`.agent/docs/roadmap/gap-analysis.md` 汇总。
 定位：这是给 ChatGPT Projects 建立上下文的首份文档，不是主事实源。
 
@@ -15,6 +15,7 @@
   - 前后端基础框架已接通
   - 项目主数据与成员链路已落地
   - 索引运维基线与项目私有 knowledge 最小闭环已落地
+  - 工作区设置中心已落地
   - 全局 Skill / Agent 管理页已落地，运行时仍在推进
 
 ## 2. 当前已经落地的事实
@@ -29,6 +30,7 @@
   - 项目成员管理
   - 已注册用户搜索
   - 知识库 CRUD、文档上传、状态推进与统一检索
+  - 工作区设置中心 `GET/PATCH/TEST /api/settings/*`
   - Skill 正式资产 CRUD / 导入 / 草稿发布 / 绑定校验，以及 Agent 正式 CRUD / 绑定
   - `memory/overview` 与 `memory/query` 演示接口
 - 前端已经切到正式后端的数据包括：
@@ -39,7 +41,7 @@
   - 项目私有知识目录
   - 项目对话列表 / 详情
   - 全局成员页
-  - `/knowledge`、`/skills`、`/agents` 全局资产管理页
+  - `/knowledge`、`/skills`、`/agents`、`/settings` 全局页面
 - Python indexer 已落地：
   - FastAPI + `uv`
   - `GET /health`
@@ -89,6 +91,7 @@
 - 项目私有知识目录
 - 项目对话列表 / 详情读链路
 - 知识库 CRUD、上传、rebuild / diagnostics、状态推进与统一检索
+- 工作区设置中心与 effective AI config
 
 ### 仍主要依赖前端本地 / Mock
 
@@ -134,11 +137,12 @@
 - MongoDB 中的知识库 / 文档业务状态统一由 Node/Express 回写。
 - Python 只返回处理结果，不直接写业务主状态表。
 
-### 3. Embedding 基线
+### 3. Embedding 运行基线
 
-- provider：OpenAI
-- model：`text-embedding-3-small`
-- 开发环境缺少 `OPENAI_API_KEY` 时，允许用 deterministic 本地 embedding 保持上传状态流可联调。
+- provider / baseUrl / model 当前已可由 `/settings` 配置接管。
+- 运行时规则固定为：数据库优先，缺失时 fallback 到环境变量。
+- 搜索与重建不能直接读取“最新 settings”猜当前 collection，而必须读取 namespace 当前 active embedding config。
+- 开发环境缺少 `OPENAI_API_KEY` 时，仍允许用 deterministic 本地 embedding 保持上传状态流可联调。
 
 ### 4. 文件保留策略
 
@@ -174,6 +178,7 @@
 - 项目资源页 `agents` 正式消费切换
 - 项目私有知识的 `scope / projectId` 模型、`proj_{projectId}_docs` 写侧，以及资源页中的统一知识接入入口与详情抽屉
 - Week 5-6 统一验证入口 `pnpm verify:index-ops-project-consumption`
+- Week 7 的 `/settings` 设置中心、effective config 读取层，以及 provider 切换后的 API Key 重输与在线测试交互
 
 ### 顺延到下一阶段
 
@@ -202,4 +207,4 @@
 
 ## 12. 一句话总结
 
-当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路、`/knowledge` 的索引运维基线，以及项目私有 knowledge 最小闭环；当前最大的断层仍是项目对话消息写侧、项目级合并检索与 Skill / Agent 运行时。
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路、`/knowledge` 的索引运维基线、`/settings` 的工作区配置中心，以及项目私有 knowledge 最小闭环；当前最大的断层仍是项目对话消息写侧、项目级合并检索与 Skill / Agent 运行时。

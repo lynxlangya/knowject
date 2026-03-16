@@ -82,7 +82,7 @@
 
 | 变量                    | 必填 | 示例 / 默认值       | 说明                                    |
 | ----------------------- | ---- | ------------------- | --------------------------------------- |
-| `CHROMA_URL`            | 否   | `http://chroma:8000` | Chroma 服务地址；当前既用于健康诊断，也用于 `global_docs` 的正式写侧索引与统一检索 |
+| `CHROMA_URL`            | 否   | `http://chroma:8000` | Chroma 服务地址；当前既用于健康诊断，也用于 versioned knowledge collection 的正式写侧索引与统一检索 |
 | `CHROMA_HEARTBEAT_PATH` | 否   | `/api/v2/heartbeat` | Chroma 心跳路径，默认用于容器化部署诊断 |
 | `KNOWLEDGE_INDEXER_URL` | 否   | `http://127.0.0.1:8001` | Python indexer 服务地址；本地默认回落到宿主机 FastAPI 控制面 |
 | `KNOWLEDGE_INDEXER_TIMEOUT_MS` | 否   | `15000` | Node 调 Python indexer 的请求超时 |
@@ -97,6 +97,8 @@
 - `/api/settings` 返回的是当前生效配置，而不是简单的数据库原始值：`embedding / llm / indexing` 会标记 `source=database|environment`，前端必须据此提示当前是否仍在使用环境变量 fallback。
 - 工作区设置页中的 API Key 允许由浏览器以明文请求体提交到服务端，但服务端响应、日志、数据库、错误对象与 `GET /api/settings` 返回都不得回显明文；响应只允许暴露 `apiKeyHint` 与 `hasKey`。
 - 知识索引链路当前固定按“数据库优先、缺失时 fallback 到环境变量”读取 effective config；Node 每次触发 Python indexer 时都会透传 `embeddingConfig` 与 `indexingConfig`，Python 侧按请求级 override 优先、env 兜底执行。
+- `knowledge_index_namespaces` 当前会保存 namespace 级 active collection、active embedding config 与 fingerprint；搜索、重建与诊断必须读取这份 active 状态，而不是直接猜“最新 settings”。
+- 当当前 settings 的 embedding fingerprint 与 namespace active fingerprint 不一致时，单文档 retry / rebuild 必须返回 `409`，要求先执行 namespace 级全量重建；这属于当前知识索引链路的正式安全边界，而不是临时异常。
 
 ## 4. JWT 契约
 

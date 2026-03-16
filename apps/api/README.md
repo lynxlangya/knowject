@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-16，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由，把项目私有知识写入 `proj_{projectId}_docs`；`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验；新增的 `settings` 模块已经接管工作区级 AI / indexing / workspace 配置，并把 effective config 透传到知识检索和 Python indexer 链路。
+截至 2026-03-16，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，支持模型切换后的 namespace 级全量重建与 active collection 切换。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
 
 ## 当前接口
 
@@ -54,7 +54,7 @@
   - 当前项目私有知识只支持 `global_docs`，不开放 `global_code`。
 - `POST /api/projects/:projectId/knowledge/:knowledgeId/documents`
   - 需要 `Authorization: Bearer <token>`。
-  - 向当前项目私有知识库上传文档；写侧 collection 固定为 `proj_{projectId}_docs`。
+  - 向当前项目私有知识库上传文档；namespace key 固定为 `proj_{projectId}_docs`，实际写入的物理 collection 会带 embedding 指纹后缀。
   - 原始文件会按 `projects/{projectId}/knowledge/{knowledgeId}/{documentId}/{documentVersionHash}/{fileName}` 落到本地存储。
 - `POST /api/projects/:projectId/members`
   - 需要 `Authorization: Bearer <token>`。
@@ -84,7 +84,7 @@
   - 更新知识库的 `name` 与 `description`。
 - `DELETE /api/knowledge/:knowledgeId`
   - 需要 `Authorization: Bearer <token>`。
-  - 删除知识库、对应文档记录、当前知识库的本地原始文件目录，以及该知识库当前 scope 对应 collection 中的向量记录。
+  - 删除知识库、对应文档记录、当前知识库的本地原始文件目录，以及该知识库当前 active collection 中的向量记录。
   - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
 - `POST /api/knowledge/:knowledgeId/documents`
   - 需要 `Authorization: Bearer <token>`。
@@ -95,24 +95,27 @@
   - 若开发态 Python indexer 仍停在旧进程，Node 会自动回退兼容 `POST /internal/index-documents`，避免重启顺序造成 `txt/md` 上传直接 404。
   - 当前稳定链路会把 `md / markdown / txt` 推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再统一加回。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
-  - `md / markdown / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings 并写入 Chroma `global_docs` collection。
+  - `md / markdown / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings，并写入当前 namespace 的 active collection；全局 docs 的 namespace key 是 `global_docs`，实际物理 collection 形如 `global_docs__emb_<fingerprint>`。
   - 完整 Docker 编排会通过内部 `indexer-py` 服务和共享知识存储卷推进这条链路；默认 `pnpm dev` 也会一并启动本地 `indexer-py`，若单独运行 `pnpm --filter api dev`，仍需额外启动 `pnpm --filter indexer-py dev`。
   - 开发环境下若缺少 `OPENAI_API_KEY`，Node 会把文档记录标记为 `embeddingProvider=local_dev`、`embeddingModel=hash-1536-dev`，Python indexer 会使用 deterministic 本地 embedding 写入 Chroma；Node 侧统一检索也会使用同一套 deterministic 本地 query embedding，保证开发环境上传与检索闭环可用。生产与正式环境仍应使用真实 OpenAI-compatible embedding 配置。
 - `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`
   - 需要 `Authorization: Bearer <token>`。
   - 对 `failed / completed` 文档重新入队索引；若文档仍处于 `pending / processing`，返回冲突错误，避免并发重复触发。
+  - 若当前工作区 embedding provider / baseUrl / model 已与该 namespace 的 active collection 不一致，接口会返回 `409`，要求先执行知识库级全量重建。
   - 响应返回 `HTTP 200`，`data` 为 `null`；前端应继续通过详情刷新或轮询观察后续状态。
 - `POST /api/knowledge/:knowledgeId/documents/:documentId/rebuild`
   - 需要 `Authorization: Bearer <token>`。
   - 对单个已落库文档执行 rebuild；Node 会优先调用 Python 内部 `POST /internal/v1/index/documents/:documentId/rebuild`，若开发态 indexer 仍停留在旧版本，再回退兼容旧写入口。
   - 若文档当前仍处于 `pending / processing`，返回冲突错误，避免并发重复触发。
+  - 若当前 embedding 模型已经切换到新的 provider / model / baseUrl，接口会返回 `409`，要求先执行知识库级全量重建，避免把新维度向量写入旧 collection。
 - `POST /api/knowledge/:knowledgeId/rebuild`
   - 需要 `Authorization: Bearer <token>`。
-  - 对当前知识库下全部文档批量重新入队 rebuild。
+  - 当 active embedding fingerprint 未变化时，对当前知识库下全部文档批量重新入队 rebuild。
+  - 当 active embedding fingerprint 已变化时，会自动升级为当前 namespace 的全量重建：服务端会把同 namespace 下所有文档重建到新的 versioned collection，成功后再切换 active collection，并清理旧 collection。
   - 若知识库内没有文档，或仍有文档处于 `pending / processing`，会直接返回显式冲突 / 空重建错误，避免批量任务与现有索引状态互相覆盖。
 - `GET /api/knowledge/:knowledgeId/diagnostics`
   - 需要 `Authorization: Bearer <token>`。
-  - 返回知识库当前期望 collection、文档状态摘要、原始文件缺失情况、长时间 `processing` 卡住的文档，以及 Python indexer 运行态诊断。
+  - 返回知识库当前期望 collection、namespace active/target 状态、文档状态摘要、原始文件缺失情况、长时间 `processing` 卡住的文档，以及 Python indexer 运行态诊断。
   - 该接口按 best-effort 降级：即使 Chroma 或 Python indexer 不可达，仍返回 `collection / indexer` 的降级结果，而不是整体 500。
 - `DELETE /api/knowledge/:knowledgeId/documents/:documentId`
   - 需要 `Authorization: Bearer <token>`。
@@ -122,8 +125,8 @@
 - `POST /api/knowledge/search`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `query`、可选 `knowledgeId`、可选 `sourceType`、可选 `topK`。
-  - 当前默认搜索 `global_docs`，通过服务端统一知识检索 service 生成 query embedding 并查询 Chroma。
-  - 若 `knowledgeId` 指向 project scope knowledge，服务端会自动切到对应 `proj_{projectId}_docs` collection。
+  - 当前默认搜索 `global_docs` namespace；服务端会读取该 namespace 当前 active collection 与 active embedding config 生成 query embedding 并查询 Chroma，而不是直接猜测最新 settings。
+  - 若 `knowledgeId` 指向 project scope knowledge，服务端会自动切到对应 `proj_{projectId}_docs` namespace 的 active collection。
   - `global_code` 当前只有 collection 预留，没有真实数据导入；若切到 `global_code`，通常返回空结果。
 - `GET /api/skills`
   - 需要 `Authorization: Bearer <token>`。
@@ -217,14 +220,14 @@
 - 项目概览中的补充展示文案与成员协作快照仍主要由 `apps/platform` 本地 Mock 驱动；项目资源页的 `agents` 与项目私有 knowledge 已切正式消费。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
-- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写、knowledge diagnostics，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；同时已补齐 `scope=global|project` 与 `projectId` owner 模型，保证全局 `/api/knowledge` 列表不串 project scope，并已开放 `/api/projects/:projectId/knowledge*` 的项目私有知识 `list / create / detail / upload` 路由。项目知识写侧会把文档落盘到 `projects/{projectId}/knowledge/...`，并写入 `proj_{projectId}_docs` collection；删除项目会先级联清理 project scope knowledge。当前知识检索与索引触发链路已经改为读取 `settings` 模块提供的 effective embedding / indexing config；Node 每次调用 Python indexer 时都会附带 `embeddingConfig` 与 `indexingConfig` request override，Python 侧按请求级配置优先、env 兜底执行。前端 `/knowledge` 与项目资源页都已正式接线，分别承担全局治理与项目最小消费闭环。
+- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写、knowledge diagnostics，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；同时已补齐 `scope=global|project` 与 `projectId` owner 模型，保证全局 `/api/knowledge` 列表不串 project scope，并已开放 `/api/projects/:projectId/knowledge*` 的项目私有知识 `list / create / detail / upload` 路由。当前知识索引额外引入了 namespace 级状态表：namespace key 继续使用 `global_docs / global_code / proj_{projectId}_docs / proj_{projectId}_code`，但实际写侧 collection 改为 versioned collection，并记录当前 active embedding config；模型切换后，单文档 retry / rebuild 会被显式拦截，要求先执行 namespace 级全量重建。Node 每次调用 Python indexer 时都会附带 `embeddingConfig` 与 `indexingConfig` request override，Python 侧按请求级配置优先、env 兜底执行。前端 `/knowledge` 与项目资源页都已正式接线，分别承担全局治理与项目最小消费闭环。
 - `settings` 当前已完成 `workspace_settings` 单例集合、AES-256-GCM API Key 加密、`GET/PATCH/TEST /api/settings/*`、effective config 读取层，以及 `/settings` 页面正式前后端链路。本期访问控制固定为“所有已登录用户可访问”，后续若引入工作区管理员模型，再继续收紧。
 - `skills` 当前已完成正式 Skill 资产仓储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、详情读取、引用保护与绑定校验；`agents` 已完成 Mongo 正式模型、CRUD 和绑定校验。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路、知识库正式检索、项目私有知识最小 write-side、知识索引运维基础接口、项目资源页对项目私有知识的正式消费、Skill 资产管理与 Agent CRUD；仍未落地的是项目对话消息写入、`global_code` 真实导入，以及更深的 Skill / Agent 运行时编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
-- 当前 Chroma 已进入正式知识索引链路：`global_docs` 的 collection 生命周期与写侧索引由 `indexer-py` 负责，Node 保留统一检索 service 的读侧 query 例外；向量删除的正式内部接口仍待 `indexer-py` 补齐，当前代码保留了过渡期直连 delete TODO。`global_code` 只完成命名空间预留。
+- 当前 Chroma 已进入正式知识索引链路：`global_docs` 的写侧索引由 `indexer-py` 负责，Node 保留统一检索 service 的读侧 query 例外；collection 逻辑已从“固定 collection 名”升级为“namespace key + versioned collection + active pointer”模式，用于处理 embedding model 切换后的维度不兼容问题。向量删除与旧 collection 清理当前仍走 Node 侧过渡实现，后续再完全收口到 Python 内部控制面。`global_code` 只完成命名空间预留。
 - Week 3-4 的推荐演进路径是：`apps/api` 继续负责业务主链路与对外 API，Python 独立索引运行时负责解析、分块、向量写入、重建与诊断，具体边界以 [`.agent/docs/contracts/chroma-decision.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/chroma-decision.md) 为准。
 - Docker 公共基线中的 `app / data` 网络默认保持 `internal`；本地若要从宿主机直接访问 API，则通过 `compose.local.yml` 额外挂载 `publish` 网络完成端口发布。
 - Docker 当前使用方式与部署边界见 [`.agent/docs/current/docker-usage.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/current/docker-usage.md)。

@@ -1,6 +1,6 @@
 # Docker 操作清单
 
-状态：截至 2026-03-14，本清单用于指导 Knowject 当前仓库的本地登录、后端调用、Docker 操作、MongoDB 查看与 Chroma 查看；当前事实仍以源码、`compose.yml` 和相关 README 为准。
+状态：截至 2026-03-16，本清单用于指导 Knowject 当前仓库的本地登录、后端调用、Docker 操作、MongoDB 查看与 Chroma 查看；当前事实仍以源码、`compose.yml` 和相关 README 为准。
 
 ## 1. 一句话结论
 
@@ -42,7 +42,7 @@ pnpm dev:up
 说明：
 
 - `pnpm dev:up` 会先确保 `mongo + chroma` 在 Docker 中可用，再启动宿主机 `platform + api + indexer-py`
-- `pnpm dev:init` / `pnpm dev:up` 会先确保 `docker/secrets/` 与 `.env.docker.local` 已就绪，再把宿主机 `.env.local` 回写为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE` 和当前 `CHROMA_URL`，避免 Docker 本地依赖轮换后宿主机 API 继续使用旧直写值
+- `pnpm dev:init` / `pnpm dev:up` 会先确保 `docker/secrets/` 与 `.env.docker.local` 已就绪，再把宿主机 `.env.local` 回写为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE` 和当前 `CHROMA_URL`，避免 Docker 本地依赖轮换后宿主机 API 继续使用旧直写值
 - 若走宿主机开发流，请先安装 `uv`；`apps/indexer-py` 当前通过 `uv run` 启动 FastAPI 控制面
 - 若你只想单独管理依赖，可使用下一小节的 `dev:deps:*` 命令
 
@@ -279,6 +279,8 @@ docker exec -it knowject-local-platform-1 sh
 - `projects`
 - `knowledge_bases`
 - `knowledge_documents`
+- `knowledge_index_namespaces`
+- `workspace_settings`
 
 说明：
 
@@ -286,6 +288,8 @@ docker exec -it knowject-local-platform-1 sh
 - `projects`：创建项目后会出现数据
 - `knowledge_bases`：创建知识库后会出现数据
 - `knowledge_documents`：上传知识文档后会出现数据
+- `knowledge_index_namespaces`：首次索引某个 namespace 后会记录 active collection、embedding fingerprint 与 rebuild 状态
+- `workspace_settings`：保存工作区设置后会出现单例记录，API Key 只以密文形式存在
 - 当前成员关系放在 `projects.members` 中，不是单独的 `memberships` 集合
 
 ## 7. Chroma 查看清单
@@ -307,9 +311,10 @@ curl http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_datab
 ### 7.3 当前阶段怎么看结果
 
 - 当前 Chroma 已经进入容器基线，并纳入 API 健康检查。
-- 当前 `global_docs` 已进入正式最小写侧 / 检索闭环；`global_code` 仍只保留命名空间预留。
-- 在服务启动并完成集合初始化后，`collections` 通常至少会出现 `global_docs`、`global_code` 两个 collection。
-- 如果还没有上传过任何文档，`global_docs` 可能只有空集合；上传 `md / txt` 后应能看到实际向量数据。
+- 当前 `global_docs` 与项目私有 docs 已进入正式最小写侧 / 检索闭环；`global_code` 仍只保留命名空间预留。
+- 现在不要再期待看到固定的 `global_docs`、`proj_{projectId}_docs` 物理 collection 名；实际写入的 collection 采用 versioned naming，形如 `global_docs__emb_<fingerprint>`。
+- 某个 namespace 还没有成功索引过文档时，Chroma 里可能暂时没有对应 collection；是否已激活以及当前指向哪个 collection，应优先看 MongoDB 里的 `knowledge_index_namespaces`。
+- 上传或全量重建 `md / txt` 文档后，应能看到对应 namespace 的 versioned collection 和实际向量数据。
 
 ## 8. 本地开发建议
 

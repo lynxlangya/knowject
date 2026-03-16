@@ -3,12 +3,15 @@ import type { MongoDatabaseManager } from '@db/mongo.js';
 import {
   KNOWLEDGE_COLLECTION_NAME,
   KNOWLEDGE_DOCUMENT_COLLECTION_NAME,
+  KNOWLEDGE_NAMESPACE_INDEX_STATE_COLLECTION_NAME,
 } from './knowledge.shared.js';
 import type {
   KnowledgeBaseDocument,
   KnowledgeDocumentRecord,
   KnowledgeIndexStatus,
+  KnowledgeNamespaceIndexStateDocument,
   KnowledgeScope,
+  KnowledgeSourceType,
 } from './knowledge.types.js';
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
@@ -26,6 +29,8 @@ export class KnowledgeRepository {
   private ensureKnowledgeIndexesPromise: Promise<void> | null = null;
   private documentIndexesEnsured = false;
   private ensureDocumentIndexesPromise: Promise<void> | null = null;
+  private namespaceIndexesEnsured = false;
+  private ensureNamespaceIndexesPromise: Promise<void> | null = null;
 
   constructor(private readonly mongo: MongoDatabaseManager) {}
 
@@ -37,12 +42,14 @@ export class KnowledgeRepository {
     await Promise.all([
       this.getKnowledgeCollection(),
       this.getKnowledgeDocumentsCollection(),
+      this.getKnowledgeNamespaceStateCollection(),
     ]);
   }
 
   async listKnowledgeBases(options?: {
     scope?: KnowledgeScope;
     projectId?: string;
+    sourceType?: KnowledgeSourceType;
   }): Promise<WithId<KnowledgeBaseDocument>[]> {
     const collection = await this.getKnowledgeCollection();
 
@@ -53,6 +60,18 @@ export class KnowledgeRepository {
         createdAt: -1,
       })
       .toArray();
+  }
+
+  async listKnowledgeBasesByNamespace(options: {
+    scope: KnowledgeScope;
+    projectId?: string | null;
+    sourceType: KnowledgeSourceType;
+  }): Promise<WithId<KnowledgeBaseDocument>[]> {
+    return this.listKnowledgeBases({
+      scope: options.scope,
+      projectId: options.projectId ?? undefined,
+      sourceType: options.sourceType,
+    });
   }
 
   async findKnowledgeById(
@@ -74,6 +93,28 @@ export class KnowledgeRepository {
 
     return collection
       .find({ knowledgeId })
+      .sort({
+        uploadedAt: -1,
+        updatedAt: -1,
+      })
+      .toArray();
+  }
+
+  async listDocumentsByKnowledgeIds(
+    knowledgeIds: string[],
+  ): Promise<WithId<KnowledgeDocumentRecord>[]> {
+    if (knowledgeIds.length === 0) {
+      return [];
+    }
+
+    const collection = await this.getKnowledgeDocumentsCollection();
+
+    return collection
+      .find({
+        knowledgeId: {
+          $in: knowledgeIds,
+        },
+      })
       .sort({
         uploadedAt: -1,
         updatedAt: -1,
@@ -103,6 +144,43 @@ export class KnowledgeRepository {
       ...document,
       _id: result.insertedId,
     };
+  }
+
+  async findKnowledgeNamespaceIndexState(
+    namespaceKey: string,
+  ): Promise<WithId<KnowledgeNamespaceIndexStateDocument> | null> {
+    const collection = await this.getKnowledgeNamespaceStateCollection();
+    return collection.findOne({ namespaceKey });
+  }
+
+  async createKnowledgeNamespaceIndexState(
+    document: Omit<KnowledgeNamespaceIndexStateDocument, '_id'>,
+  ): Promise<WithId<KnowledgeNamespaceIndexStateDocument>> {
+    const collection = await this.getKnowledgeNamespaceStateCollection();
+    const result = await collection.insertOne(document);
+
+    return {
+      ...document,
+      _id: result.insertedId,
+    };
+  }
+
+  async updateKnowledgeNamespaceIndexState(
+    namespaceKey: string,
+    patch: Partial<
+      Omit<KnowledgeNamespaceIndexStateDocument, '_id' | 'namespaceKey' | 'scope' | 'projectId' | 'sourceType'>
+    >,
+  ): Promise<WithId<KnowledgeNamespaceIndexStateDocument> | null> {
+    const collection = await this.getKnowledgeNamespaceStateCollection();
+    return collection.findOneAndUpdate(
+      { namespaceKey },
+      {
+        $set: patch,
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
   }
 
   async updateKnowledgeBase(
@@ -174,6 +252,8 @@ export class KnowledgeRepository {
         KnowledgeDocumentRecord,
         | 'status'
         | 'chunkCount'
+        | 'embeddingProvider'
+        | 'embeddingModel'
         | 'lastIndexedAt'
         | 'errorMessage'
         | 'processedAt'
@@ -275,6 +355,17 @@ export class KnowledgeRepository {
     return collection;
   }
 
+  private async getKnowledgeNamespaceStateCollection(): Promise<
+    Collection<KnowledgeNamespaceIndexStateDocument>
+  > {
+    await this.mongo.connect();
+    const collection = this.mongo
+      .getDb()
+      .collection<KnowledgeNamespaceIndexStateDocument>(KNOWLEDGE_NAMESPACE_INDEX_STATE_COLLECTION_NAME);
+    await this.ensureNamespaceIndexes(collection);
+    return collection;
+  }
+
   private async ensureKnowledgeIndexes(
     collection: Collection<KnowledgeBaseDocument>,
   ): Promise<void> {
@@ -347,6 +438,36 @@ export class KnowledgeRepository {
 
     await this.ensureDocumentIndexesPromise;
   }
+
+  private async ensureNamespaceIndexes(
+    collection: Collection<KnowledgeNamespaceIndexStateDocument>,
+  ): Promise<void> {
+    if (this.namespaceIndexesEnsured) {
+      return;
+    }
+
+    if (!this.ensureNamespaceIndexesPromise) {
+      this.ensureNamespaceIndexesPromise = Promise.all([
+        collection.createIndex({ namespaceKey: 1 }, { name: 'knowledge_index_namespaces_key', unique: true }),
+        collection.createIndex(
+          { scope: 1, projectId: 1, sourceType: 1 },
+          { name: 'knowledge_index_namespaces_scope_project_source' },
+        ),
+        collection.createIndex(
+          { rebuildStatus: 1, updatedAt: -1 },
+          { name: 'knowledge_index_namespaces_rebuild_status_updated_at_desc' },
+        ),
+      ])
+        .then(() => {
+          this.namespaceIndexesEnsured = true;
+        })
+        .finally(() => {
+          this.ensureNamespaceIndexesPromise = null;
+        });
+    }
+
+    await this.ensureNamespaceIndexesPromise;
+  }
 }
 
 const resolveKnowledgeIndexStatus = (
@@ -378,10 +499,18 @@ const resolveKnowledgeIndexStatus = (
 const buildKnowledgeBaseFilter = (options?: {
   scope?: KnowledgeScope;
   projectId?: string;
+  sourceType?: KnowledgeSourceType;
 }): Filter<KnowledgeBaseDocument> => {
+  const sourceTypeFilter = options?.sourceType
+    ? {
+        sourceType: options.sourceType,
+      }
+    : {};
+
   if (options?.scope === 'project') {
     return {
       scope: 'project',
+      ...sourceTypeFilter,
       ...(options.projectId
         ? {
             projectId: options.projectId,
@@ -392,6 +521,7 @@ const buildKnowledgeBaseFilter = (options?: {
 
   if (options?.scope === 'global') {
     return {
+      ...sourceTypeFilter,
       $or: [
         { scope: 'global' },
         { scope: { $exists: false } },
@@ -399,7 +529,7 @@ const buildKnowledgeBaseFilter = (options?: {
     };
   }
 
-  return {};
+  return sourceTypeFilter;
 };
 
 export const createKnowledgeRepository = ({

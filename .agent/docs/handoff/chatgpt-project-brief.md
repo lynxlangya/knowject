@@ -26,6 +26,7 @@
   - 项目成员管理 `/api/projects/:projectId/members*`
   - 用户搜索 `GET /api/auth/users`
   - 知识库 CRUD、文档上传、状态推进与统一检索
+  - 工作区设置中心 `GET/PATCH/TEST /api/settings/*`
   - Skill 正式资产 CRUD / 导入 / 草稿发布 / 绑定校验，以及 Agent 正式 CRUD / 绑定
   - `memory/overview` 与 `memory/query` 演示接口
 - Python indexer 已落地：
@@ -36,6 +37,7 @@
   - `/docs`、`/redoc`、`/openapi.json`
 - 前端项目列表、项目基础信息、成员 roster、项目资源绑定、项目对话列表 / 详情与全局成员页已经切到正式后端接口。
 - `/knowledge`、`/skills`、`/agents` 已接正式后端接口；其中 `/skills` 已支持原生 `SKILL.md` 自建、GitHub/URL 导入、编辑、预览、草稿/发布与删除，`/agents` 已支持创建、编辑、删除与知识库 / Skill 绑定。
+- `/settings` 已接正式后端接口，支持 embedding / LLM / indexing / workspace 配置、在线测试与服务端加密存储 API Key；本期访问控制先按“登录即可访问”处理。
 
 ## 3. 当前信息架构
 
@@ -69,6 +71,7 @@
   - 项目资源绑定
   - 项目对话列表 / 详情读链路
   - 知识库 CRUD、上传、状态推进与统一检索
+  - 工作区设置中心与 effective AI config
 - 仍主要依赖前端本地 / Mock：
   - 项目概览页内容
   - 对话消息演示数据
@@ -93,13 +96,14 @@
   - `compose.production.yml`
   - `caddy` 负责 HTTPS 入口
 - 宿主机开发流若不走 Docker，请先安装 `uv`，因为 `apps/indexer-py` 当前通过 `uv run` 启动。
-- 当前 MongoDB 是正式主数据库；Chroma 已进入 `global_docs` 的正式最小索引 / 检索闭环，`global_code` 仍只保留命名空间预留。
+- 当前 MongoDB 是正式主数据库；Chroma 已进入正式知识索引链路，但物理 collection 已改为 versioned naming，并通过 namespace active pointer 切换，`global_code` 仍只保留命名空间预留。
 
 ## 6. 环境与配置要点
 
 - API 运行时按 `.env` → `.env.local` 顺序加载环境变量。
 - 所有字符串型变量支持 `<NAME>_FILE`，适合 Docker secrets。
 - 同一份 env 文件里不要同时定义 `NAME` 和 `NAME_FILE`。
+- `SETTINGS_ENCRYPTION_KEY`（或 `SETTINGS_ENCRYPTION_KEY_FILE`）现在是 API 启动必需项，用于工作区设置页 API Key 的服务端加密。
 - 本地 Docker 可改的是宿主机发布端口：
   - `WEB_PORT`
   - `API_PUBLISHED_PORT`
@@ -108,12 +112,14 @@
 - API 容器内部监听端口固定为 `3001`。
 - `KNOWLEDGE_INDEXER_URL` 默认回落到 `http://127.0.0.1:8001`。
 - Chroma 心跳路径默认为 `/api/v2/heartbeat`，可通过 `CHROMA_HEARTBEAT_PATH` 覆盖。
+- embedding 配置读取规则是“数据库优先，缺失时 fallback 到环境变量”；但知识搜索和重建必须读取 namespace 当前 active embedding config，而不是直接用“最新 settings”去猜。
 
 ## 7. 当前明确还没落地的能力
 
 - Skill / Agent 执行闭环
 - 项目级合并检索，以及项目知识原文的预览 / 下载能力
 - `global_code` 真实导入与项目级合并检索
+- LLM 配置对现有聊天页运行时仍未生效；当前只完成存储与在线测试能力
 - 对话消息写入、流式消息链路、来源引用渲染
 - refresh token、组织级 RBAC、邀请链接、密码找回
 
@@ -156,4 +162,4 @@
 
 ## 11. 一句话总结
 
-当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路、`/knowledge` 的索引运维基线，以及项目私有 knowledge 最小闭环；当前最大的断层仍是项目对话消息写侧、项目级合并检索与 Skill / Agent 运行时。
+当前 Knowject 最稳定的是信息架构、鉴权、项目主数据、成员链路、`/knowledge` 的索引运维基线、`/settings` 的工作区配置中心，以及项目私有 knowledge 最小闭环；当前最大的断层仍是项目对话消息写侧、项目级合并检索与 Skill / Agent 运行时。

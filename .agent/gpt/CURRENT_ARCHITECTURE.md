@@ -1,6 +1,6 @@
 # Knowject 当前架构事实（ChatGPT Projects 上传版）
 
-状态：2026-03-15
+状态：2026-03-16
 来源：基于 `.agent/docs/current/architecture.md` 精简同步。  
 定位：这是当前事实副本，只回答“现在是什么状态”。
 
@@ -13,6 +13,7 @@
   - 登录后产品壳
   - 项目态页面
   - 全局资产正式管理页
+  - 工作区设置中心
   - 基础框架 API 基线
 
 ## 2. 当前服务拓扑
@@ -34,7 +35,8 @@
 - `apps/indexer-py` 当前已切到 FastAPI + `uv` 基线，主内部写侧入口固定为 `POST /internal/v1/index/documents`，并开放 `/docs`、`/redoc`、`/openapi.json` 作为内部控制面文档入口；当前仍隐藏兼容旧路径 `POST /internal/index-documents`。
 - `/knowledge` 已接正式后端接口，支持知识库 CRUD、文档上传、状态展示和最小轮询。
 - `/knowledge` 已接正式后端接口，支持知识库 CRUD、文档上传、document / knowledge rebuild、diagnostics、状态展示和最小轮询。
-- `global_docs` 已打通最小文档索引闭环；`global_code` 仍只保留命名空间与检索契约。
+- 知识索引已经从“固定 collection 名”升级为“namespace key + versioned collection + active pointer”；`global_code` 仍只保留命名空间与检索契约。
+- `/settings` 已接正式后端接口，支持 embedding / LLM / indexing / workspace 配置、在线测试与服务端加密存储 API Key。
 - 项目资源页当前会同时展示“绑定的全局知识”和“项目私有知识”，并已补齐统一“接入知识库”入口与知识库详情抽屉；全局绑定知识在项目内只读查看文档，项目私有知识支持轻维护。
 
 ## 3. 当前目录结构重点
@@ -94,7 +96,7 @@
 - 项目私有知识目录
 - 项目对话列表 / 详情读链路
 - 全局成员概览
-- `/knowledge`、`/skills`、`/agents` 正式后端接口
+- `/knowledge`、`/skills`、`/agents`、`/settings` 正式后端接口
 
 ### 仍主要依赖前端 Mock / 本地状态
 
@@ -153,6 +155,13 @@
 - `POST /api/agents`
 - `PATCH /api/agents/:agentId`
 - `DELETE /api/agents/:agentId`
+- `GET /api/settings`
+- `PATCH /api/settings/embedding`
+- `PATCH /api/settings/llm`
+- `PATCH /api/settings/indexing`
+- `PATCH /api/settings/workspace`
+- `POST /api/settings/embedding/test`
+- `POST /api/settings/llm/test`
 - `GET /api/memory/overview`
 - `POST /api/memory/query`
 
@@ -165,6 +174,7 @@
 - `knowledge`：知识库 CRUD、文档上传、状态推进、统一知识检索 service
 - `skills`：系统内置 + 自建 + GitHub/URL 导入的正式 Skill 资产治理、草稿/发布与绑定校验
 - `agents`：正式 Agent CRUD、知识库 / Skill 绑定校验
+- `settings`：工作区 embedding / LLM / indexing / workspace 配置、effective config 读取层与在线测试
 - `memory/*`：演示接口，不是正式知识检索服务
 - Node 内部当前优先调用 Python `POST /internal/v1/index/documents`，开发态兼容回退旧路径 `POST /internal/index-documents`
 

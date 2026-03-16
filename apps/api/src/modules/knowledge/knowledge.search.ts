@@ -3,6 +3,7 @@ import { getEffectiveEmbeddingConfig, getEffectiveIndexingConfig } from "@config
 import type { AppEnv } from "@config/env.js";
 import { AppError } from "@lib/app-error.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
+import type { EffectiveEmbeddingConfig } from "@modules/settings/settings.types.js";
 import type {
   KnowledgeSearchHitResponse,
   KnowledgeSearchResponse,
@@ -26,6 +27,7 @@ interface SearchDocumentsInput {
   knowledgeId?: string;
   sourceType: KnowledgeSourceType;
   collectionName?: string;
+  embeddingConfig?: EffectiveEmbeddingConfig;
   topK: number;
 }
 
@@ -60,6 +62,7 @@ export interface KnowledgeSearchService {
     documentId: string,
     input: { collectionName: string },
   ): Promise<void>;
+  deleteCollection(collectionName: string): Promise<void>;
 }
 
 const createServiceUnavailableError = (
@@ -197,7 +200,7 @@ export const createKnowledgeSearchService = ({
     body,
   }: {
     path: string;
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "DELETE";
     body?: Record<string, unknown>;
   }): Promise<T> => {
     const baseUrl = requireChromaUrl();
@@ -331,11 +334,16 @@ export const createKnowledgeSearchService = ({
     }
   };
 
-  const createEmbeddings = async (texts: string[]): Promise<number[][]> => {
-    const embeddingConfig = await getEffectiveEmbeddingConfig({
-      env,
-      repository: settingsRepository,
-    });
+  const createEmbeddings = async (
+    texts: string[],
+    configOverride?: EffectiveEmbeddingConfig,
+  ): Promise<number[][]> => {
+    const embeddingConfig =
+      configOverride ??
+      (await getEffectiveEmbeddingConfig({
+        env,
+        repository: settingsRepository,
+      }));
 
     if (embeddingConfig.provider === "local_dev") {
       return texts.map((text) => createLocalDevelopmentEmbedding(text));
@@ -483,6 +491,21 @@ export const createKnowledgeSearchService = ({
     });
   };
 
+  const deleteCollectionByName = async (collectionName: string): Promise<void> => {
+    const collection = await getExistingCollection(collectionName, {
+      bypassCache: true,
+    });
+    if (!collection) {
+      return;
+    }
+
+    await requestChromaJson({
+      path: `/collections/${collection.id}`,
+      method: "DELETE",
+    });
+    collectionCache.delete(collectionName);
+  };
+
   return {
     ensureCollections: async () => {
       // Legacy bootstrap hook: collection 生命周期已下沉到 indexer-py，这里只做健康检查。
@@ -496,6 +519,7 @@ export const createKnowledgeSearchService = ({
       knowledgeId,
       sourceType,
       collectionName,
+      embeddingConfig,
       topK,
     }) => {
       const collection = await getExistingCollection(
@@ -509,7 +533,7 @@ export const createKnowledgeSearchService = ({
         });
       }
 
-      const [queryEmbedding] = await createEmbeddings([query]);
+      const [queryEmbedding] = await createEmbeddings([query], embeddingConfig);
 
       const response = await requestChromaJson<ChromaQueryResponse>({
         path: `/collections/${collection.id}/query`,
@@ -593,6 +617,14 @@ export const createKnowledgeSearchService = ({
           documentId,
         },
       });
+    },
+
+    deleteCollection: async (collectionName) => {
+      if (!env.chroma.url) {
+        return;
+      }
+
+      await deleteCollectionByName(collectionName);
     },
   };
 };

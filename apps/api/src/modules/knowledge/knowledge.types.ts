@@ -17,6 +17,9 @@ export const KNOWLEDGE_INDEX_STATUSES = [
 ] as const;
 export type KnowledgeIndexStatus = (typeof KNOWLEDGE_INDEX_STATUSES)[number];
 
+export const KNOWLEDGE_NAMESPACE_REBUILD_STATUSES = ['idle', 'rebuilding', 'failed'] as const;
+export type KnowledgeNamespaceRebuildStatus = (typeof KNOWLEDGE_NAMESPACE_REBUILD_STATUSES)[number];
+
 export const KNOWLEDGE_DOCUMENT_STATUSES = [
   'pending',
   'processing',
@@ -71,6 +74,29 @@ export interface KnowledgeBaseDocument {
   chunkCount: number;
   maintainerId: string;
   createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface KnowledgeNamespaceIndexStateDocument {
+  _id?: ObjectId;
+  namespaceKey: string;
+  scope: KnowledgeScope;
+  projectId: string | null;
+  sourceType: KnowledgeSourceType;
+  activeCollectionName: string;
+  activeEmbeddingProvider: KnowledgeEmbeddingProvider;
+  activeApiKeyEncrypted: string | null;
+  activeEmbeddingBaseUrl: string;
+  activeEmbeddingModel: KnowledgeEmbeddingModel;
+  activeEmbeddingFingerprint: string;
+  rebuildStatus: KnowledgeNamespaceRebuildStatus;
+  targetCollectionName: string | null;
+  targetEmbeddingProvider: KnowledgeEmbeddingProvider | null;
+  targetEmbeddingBaseUrl: string | null;
+  targetEmbeddingModel: KnowledgeEmbeddingModel | null;
+  targetEmbeddingFingerprint: string | null;
+  lastErrorMessage: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -171,6 +197,22 @@ export interface KnowledgeDiagnosticsResponse {
   sourceType: KnowledgeSourceType;
   expectedCollectionName: string;
   indexStatus: KnowledgeIndexStatus;
+  namespace: {
+    key: string;
+    mode: 'versioned' | 'legacy_untracked';
+    activeCollectionName: string;
+    activeEmbeddingProvider: string | null;
+    activeEmbeddingModel: string | null;
+    activeEmbeddingFingerprint: string | null;
+    rebuildStatus: KnowledgeNamespaceRebuildStatus | null;
+    targetCollectionName: string | null;
+    targetEmbeddingProvider: string | null;
+    targetEmbeddingModel: string | null;
+    lastErrorMessage: string | null;
+    currentEmbeddingProvider: string;
+    currentEmbeddingModel: string;
+    currentMatchesActive: boolean | null;
+  };
   documentSummary: {
     total: number;
     pending: number;

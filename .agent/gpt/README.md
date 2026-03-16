@@ -1,6 +1,6 @@
 # Knowject ChatGPT Projects 上传包
 
-状态：2026-03-15 同步。
+状态：2026-03-16 同步。
 定位：本目录是“给 ChatGPT Projects 上传用的派生文档包”，不是新的事实源。  
 事实、契约与任务的正式维护仍以仓库原文档为准：
 
@@ -72,7 +72,7 @@
 - 这里的文件是“上传副本 / 精简同步版”，不是主维护入口。
 - 当原文档发生变化时，应优先更新原文，再同步这里。
 - 若这里与原文冲突，以原文为准。
-- 本轮已同步 Week 5-6 的索引运维、项目私有 knowledge 最小闭环、`/project/:projectId/resources` 正式消费，以及统一验证入口 `pnpm verify:index-ops-project-consumption`。
+- 本轮已同步 Week 5-6 的索引运维、项目私有 knowledge 最小闭环、`/project/:projectId/resources` 正式消费、Week 7 的 `/settings` 设置中心，以及知识索引“namespace key + versioned collection + active pointer”契约。
 
 ## 5. 一句话建议
 

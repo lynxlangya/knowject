@@ -170,12 +170,20 @@
 
 固定命名约定：
 
-- 全局知识库：
+- namespace key：
+  - 全局知识库：
   - `global_docs`
   - `global_code`
-- 项目知识库：
+  - 项目知识库：
   - `proj_{projectId}_docs`
   - `proj_{projectId}_code`
+
+当前实现补充：
+
+- namespace key 表达的是“检索与治理边界”，不再等同于实际物理 collection 名。
+- 自 2026-03-16 起，实际物理 collection 采用 versioned naming，形如 `global_docs__emb_<fingerprint>`。
+- `fingerprint` 基于 `provider + baseUrl + model` 生成，用于隔离不同 embedding 向量空间。
+- MongoDB 需要保存 namespace 级 active pointer 与 active embedding config，Node 统一检索 service 必须读取这份 active config，而不是直接用“最新 settings”去猜当前 collection。
 
 固定隔离规则：
 
@@ -353,7 +361,9 @@
 - `rebuild document`
   - 用于手工重建单文档，不要求波及整个知识库。
 - `rebuild knowledge`
-  - 用于 embedding provider、model 或 chunk 策略变化后的知识库级全量重建。
+  - 当 active embedding 未变化时，可只重建当前知识库的文档。
+  - 当 embedding provider、model 或 chunk 策略变化导致 active fingerprint 失配时，必须升级为当前 namespace 的全量重建。
+  - namespace 全量重建必须先写入新的 versioned collection，成功后再切换 active pointer，不能继续往旧 collection 混写新向量。
 - `knowledge diagnostics`
   - 用于定位“为什么这个知识库当前不可用”。
 - 系统级批量重建
@@ -366,6 +376,7 @@
 - 同一文档内容更新后重建。
 - 处理中断后重试。
 - embedding provider 或 chunk 策略变化后的批量重建。
+- embedding 维度变化后的 collection 切换与旧 collection 清理。
 
 ## 15. 运行依赖与环境契约
 

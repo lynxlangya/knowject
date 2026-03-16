@@ -26,6 +26,7 @@
     tasks-foundation-framework.md
     tasks-global-assets-foundation.md
     tasks-index-ops-project-consumption.md
+    settings-page-task.md
   handoff/
     handoff-guide.md
     chatgpt-project-brief.md
@@ -48,15 +49,16 @@
 3. 涉及基础框架阶段范围与完成记录时，再读 `.agent/docs/plans/tasks-foundation-framework.md`
 4. 涉及 Week 3-4 全局资产阶段拆分时，再读 `.agent/docs/plans/tasks-global-assets-foundation.md`
 5. 涉及 Week 5-6 索引运维与项目层消费时，再读 `.agent/docs/plans/tasks-index-ops-project-consumption.md`
-6. 然后读 `.agent/docs/roadmap/gap-analysis.md`
-7. 涉及认证与环境时，再读 `.agent/docs/contracts/auth-contract.md`
-8. 涉及 Chroma、知识索引、collection 命名、metadata 或检索 service 边界时，再读 `.agent/docs/contracts/chroma-decision.md`
-9. 涉及 Docker、MongoDB 本地联调方式或部署现状时，再读 `.agent/docs/current/docker-usage.md`
-10. 需要直接执行本地登录、后端调用、Navicat 连接、Chroma 查看或开发 / 验收模式切换时，再读 `.agent/docs/current/docker-operation-checklist.md`
-11. 需要直接执行容器启动、TLS 入口或私有化部署命令时，再读 `docker/README.md`
-12. 需要给 ChatGPT / 外部大模型快速建立当前上下文时，先读 `.agent/docs/handoff/chatgpt-project-brief.md`
-13. 如果需要一组可直接上传到 ChatGPT Projects 的副本文件，读 `.agent/gpt/README.md`
-14. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
+6. 涉及工作区设置中心、effective AI config、安全边界或 `/api/settings/*` 时，再读 `.agent/docs/plans/settings-page-task.md`
+7. 然后读 `.agent/docs/roadmap/gap-analysis.md`
+8. 涉及认证与环境时，再读 `.agent/docs/contracts/auth-contract.md`
+9. 涉及 Chroma、知识索引、collection 命名、metadata 或检索 service 边界时，再读 `.agent/docs/contracts/chroma-decision.md`
+10. 涉及 Docker、MongoDB 本地联调方式或部署现状时，再读 `.agent/docs/current/docker-usage.md`
+11. 需要直接执行本地登录、后端调用、Navicat 连接、Chroma 查看或开发 / 验收模式切换时，再读 `.agent/docs/current/docker-operation-checklist.md`
+12. 需要直接执行容器启动、TLS 入口或私有化部署命令时，再读 `docker/README.md`
+13. 需要给 ChatGPT / 外部大模型快速建立当前上下文时，先读 `.agent/docs/handoff/chatgpt-project-brief.md`
+14. 如果需要一组可直接上传到 ChatGPT Projects 的副本文件，读 `.agent/gpt/README.md`
+15. 需要把任务交给下一位 AI 或人类时，使用 `.agent/docs/handoff/handoff-prompt.md`
 
 ### 理解产品现状与目标
 
@@ -73,7 +75,7 @@
 | 当前事实 | `.agent/docs/current`   | `architecture.md`、`docker-usage.md`、`docker-operation-checklist.md`                                | 现在的路由、数据来源、模块边界、API / Docker 边界，以及该怎么操作 |
 | 实施契约 | `.agent/docs/contracts` | `auth-contract.md`、`chroma-decision.md`                                                              | MongoDB、JWT、密码哈希、注册登录、Node / Python / Chroma 分层与检索约束怎么定 |
 | 路线蓝图 | `.agent/docs/roadmap`   | `target-architecture.md`、`gap-analysis.md`                                                           | 产品最终想做成什么、现在差多少、先补什么                          |
-| 阶段计划 | `.agent/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md`、`tasks-index-ops-project-consumption.md` | 当前阶段具体怎么拆、顺序如何、DoD 怎么定                          |
+| 阶段计划 | `.agent/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md`、`tasks-index-ops-project-consumption.md`、`settings-page-task.md` | 当前阶段具体怎么拆、顺序如何、DoD 怎么定                          |
 | 接手交接 | `.agent/docs/handoff`   | `handoff-guide.md`、`chatgpt-project-brief.md`、`handoff-prompt.md`                                  | 新协作者、ChatGPT 或外部模型如何快速建立事实并继续推进            |
 | 输入材料 | `.agent/docs/inputs`    | `知项Knowject-项目认知总结-v2.md`、`知项Knowject-项目认知总结-v3.md`                                  | 认知总结原文是什么，哪些内容需要吸收为正式文档                    |
 | 设计资料 | `.agent/docs/design`    | 品牌与视觉资料                                                                                        | 品牌表达、图标、字标、视觉方向是什么                              |
@@ -117,8 +119,12 @@
   - 阶段状态从“待启动”变为“进行中 / 已完成 / 延后”时，需同步更新。
 - 更新 `.agent/docs/plans/tasks-index-ops-project-consumption.md`
   - Week 5-6 索引运维与项目层消费阶段的范围、顺序、依赖关系或 DoD 发生变化。
-  - 项目私有知识库 scope、collection 命名、rebuild / diagnostics 边界发生变化。
+  - 项目私有知识库 scope、namespace key / versioned collection 契约、rebuild / diagnostics 边界发生变化。
   - 阶段状态从“待启动”变为“进行中 / 已完成 / 延后”时，需同步更新。
+- 更新 `.agent/docs/plans/settings-page-task.md`
+  - 工作区设置中心的访问阶段、字段契约、前后端交互或 effective config 规则发生变化。
+  - `/api/settings/*` 的安全边界、provider 支持范围、知识索引联动方式发生变化。
+  - 该文档已兼具“实施计划 + 当前契约”作用，变更时要避免继续保留待开发语态。
 - 更新 `.agent/docs/handoff/handoff-guide.md`
   - 当前最重要的接手路径、阅读顺序、继续开发建议发生变化。
   - 有新的业务事实容易被误读，需要显式提醒接手者。
@@ -161,5 +167,6 @@
 - 当前剩余的主要 Mock 仍集中在项目概览补充层、对话消息演示数据与协作快照补充层。
 - 全局 `/skills` 已从“只读目录”升级为正式 Skill 资产治理链路；后续若再变更 Skill 来源、生命周期或绑定规则，需要同步 `.agent/docs/current/architecture.md`、handoff 文档与 `.agent/gpt/*` 上传副本。
 - Week 5-6 当前已经收口到正式基线：`/knowledge` rebuild / diagnostics、项目资源页正式 `agents` 消费，以及项目知识的全局绑定 / 项目私有双层消费都已落地；项目资源页现已补齐统一“接入知识库”入口、知识库详情抽屉，以及项目私有知识的最小运维动作。继续迭代时应直接以 `.agent/docs/plans/tasks-index-ops-project-consumption.md` 的完成记录和顺延项为准。
+- Week 7 当前也已落地 `/settings` 工作区设置中心与 `/api/settings/*` 链路；后续若继续改 AI 配置来源、权限模型或索引重建语义，必须同时核对 `.agent/docs/plans/settings-page-task.md`、`.agent/docs/contracts/auth-contract.md` 与 `.agent/docs/contracts/chroma-decision.md`。
 - 目标蓝图已经形成，但大量 AI、数据层和部署能力还未进入实现阶段。
 - 现在所有项目文档已统一收口到 `.agent/docs/`；后续若再新增项目级文档，应优先纳入这里的既有分类，而不是在仓库根部重新散落新入口。

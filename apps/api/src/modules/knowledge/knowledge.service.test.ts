@@ -6,14 +6,22 @@ import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
-import { encryptApiKey } from '@lib/crypto.js';
+import { decryptApiKey, encryptApiKey } from '@lib/crypto.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { ProjectsRepository } from '@modules/projects/projects.repository.js';
 import type { SettingsRepository } from '@modules/settings/settings.repository.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
+import {
+  buildKnowledgeEmbeddingFingerprint,
+  buildVersionedKnowledgeCollectionName,
+} from './knowledge.shared.js';
 import { createKnowledgeService } from './knowledge.service.js';
-import type { KnowledgeBaseDocument, KnowledgeDocumentRecord } from './knowledge.types.js';
+import type {
+  KnowledgeBaseDocument,
+  KnowledgeDocumentRecord,
+  KnowledgeNamespaceIndexStateDocument,
+} from './knowledge.types.js';
 
 const createTestEnv = (storageRoot: string): AppEnv => {
   return {
@@ -92,8 +100,30 @@ const createSearchServiceStub = (
     }),
     deleteKnowledgeChunks: async () => undefined,
     deleteDocumentChunks: async () => undefined,
+    deleteCollection: async () => undefined,
     ...overrides,
   };
+};
+
+const buildExpectedCollectionName = (
+  namespaceKey: string,
+  config?: {
+    provider: string;
+    baseUrl: string;
+    model: string;
+  },
+): string => {
+  const fingerprint = buildKnowledgeEmbeddingFingerprint({
+    provider: config?.provider ?? 'openai',
+    baseUrl: config?.baseUrl ?? 'https://api.openai.com/v1',
+    model: config?.model ?? 'text-embedding-3-small',
+  } as {
+    provider: 'openai';
+    baseUrl: string;
+    model: string;
+  });
+
+  return buildVersionedKnowledgeCollectionName(namespaceKey, fingerprint);
 };
 
 const createProjectsRepositoryStub = (
@@ -714,7 +744,14 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
   );
   assert.equal(persistedDocument.embeddingProvider, 'custom');
   assert.equal(persistedDocument.embeddingModel, 'text-embedding-custom');
-  assert.equal(fetchPayloads[0]?.collectionName, `proj_${projectId}_docs`);
+  assert.equal(
+    fetchPayloads[0]?.collectionName,
+    buildExpectedCollectionName(`proj_${projectId}_docs`, {
+      provider: 'custom',
+      baseUrl: 'https://embedding.example.com/v1',
+      model: 'text-embedding-custom',
+    }),
+  );
   assert.deepEqual(fetchPayloads[0]?.embeddingConfig, {
     provider: 'custom',
     apiKey: 'db-embedding-key',
@@ -814,7 +851,15 @@ test('searchDocuments normalizes query filters and delegates to the shared searc
       query: 'project knowledge',
       knowledgeId,
       sourceType: 'global_docs',
-      collectionName: 'global_docs',
+      collectionName: buildExpectedCollectionName('global_docs'),
+      embeddingConfig: {
+        source: 'environment',
+        provider: 'openai',
+        apiKey: null,
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'text-embedding-3-small',
+        requestTimeoutMs: 1000,
+      },
       topK: 3,
     },
   ]);
@@ -914,7 +959,15 @@ test('searchDocuments resolves project scope knowledge to project collection for
       query: 'project knowledge',
       knowledgeId,
       sourceType: 'global_docs',
-      collectionName: `proj_${projectId}_docs`,
+      collectionName: buildExpectedCollectionName(`proj_${projectId}_docs`),
+      embeddingConfig: {
+        source: 'environment',
+        provider: 'openai',
+        apiKey: null,
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'text-embedding-3-small',
+        requestTimeoutMs: 1000,
+      },
       topK: 2,
     },
   ]);
@@ -1002,7 +1055,7 @@ test('deleteKnowledge uses project collection name during Chroma cleanup', async
     knowledgeId,
   );
 
-  assert.equal(cleanupCollectionName, `proj_${projectId}_docs`);
+  assert.equal(cleanupCollectionName, buildExpectedCollectionName(`proj_${projectId}_docs`));
   await assert.rejects(access(knowledgeDir));
 });
 
@@ -1547,6 +1600,1047 @@ test('rebuildDocument uses the document-scoped rebuild endpoint and refreshes do
   ]);
 });
 
+test('rebuildDocument rejects when the active namespace embedding fingerprint no longer matches settings', async () => {
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  const knowledgeId = '507f1f77bcf86cd799439201';
+  const documentId = '507f1f77bcf86cd799439202';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证模型切换后的重建拦截',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 4,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const document = {
+    _id: new ObjectId(documentId),
+    knowledgeId,
+    fileName: 'README.md',
+    mimeType: 'text/markdown',
+    storagePath: `${knowledgeId}/${documentId}/hash-1/README.md`,
+    status: 'completed' as const,
+    chunkCount: 4,
+    documentVersionHash: 'hash-1',
+    embeddingProvider: 'openai' as const,
+    embeddingModel: 'text-embedding-3-small' as const,
+    lastIndexedAt: new Date('2026-03-14T00:00:10.000Z'),
+    retryCount: 0,
+    errorMessage: null,
+    uploadedBy: '507f1f77bcf86cd799439012',
+    uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+    processedAt: new Date('2026-03-14T00:00:10.000Z'),
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:10.000Z'),
+  };
+  const activeCollectionName = buildExpectedCollectionName('global_docs');
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeDocumentById: async (id: string) => (id === documentId ? document : null),
+    findKnowledgeNamespaceIndexState: async () => ({
+      _id: new ObjectId('507f1f77bcf86cd799439203'),
+      namespaceKey: 'global_docs',
+      scope: 'global' as const,
+      projectId: null,
+      sourceType: 'global_docs' as const,
+      activeCollectionName,
+      activeEmbeddingProvider: 'openai' as const,
+      activeApiKeyEncrypted: encryptApiKey('sk-old-openai'),
+      activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+      activeEmbeddingModel: 'text-embedding-3-small',
+      activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+        provider: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'text-embedding-3-small',
+      } as never),
+      rebuildStatus: 'idle' as const,
+      targetCollectionName: null,
+      targetEmbeddingProvider: null,
+      targetEmbeddingBaseUrl: null,
+      targetEmbeddingModel: null,
+      targetEmbeddingFingerprint: null,
+      lastErrorMessage: null,
+      createdAt: new Date('2026-03-14T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+    }),
+    listKnowledgeBases: async () => [knowledge],
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-knowledge-rebuild-document-mismatch'),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    settingsRepository: {
+      getSettings: async () => ({
+        embedding: {
+          provider: 'custom',
+          baseUrl: 'https://embedding.example.com/v1',
+          model: 'text-embedding-custom',
+          apiKeyEncrypted: encryptApiKey('db-embedding-key'),
+          apiKeyHint: 'db-e...-key',
+          testedAt: null,
+          testStatus: null,
+        },
+      }),
+    } as unknown as SettingsRepository,
+  });
+
+  try {
+    await assert.rejects(
+      () =>
+        service.rebuildDocument(
+          {
+            actor: {
+              id: '507f1f77bcf86cd799439012',
+              username: 'langya',
+            },
+          },
+          knowledgeId,
+          documentId,
+        ),
+      (error) => error instanceof Error && error.message === '当前向量模型已变更，请先执行知识库全量重建',
+    );
+  } finally {
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
+  }
+});
+
+test('searchDocuments uses the namespace active embedding config instead of current settings during a model transition', async () => {
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  const knowledgeId = '507f1f77bcf86cd799439211';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证搜索读侧绑定 active embedding config',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const capturedInputs: Array<Parameters<KnowledgeSearchService['searchDocuments']>[0]> = [];
+  const activeCollectionName = buildExpectedCollectionName('global_docs');
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeNamespaceIndexState: async () => ({
+      _id: new ObjectId('507f1f77bcf86cd799439212'),
+      namespaceKey: 'global_docs',
+      scope: 'global' as const,
+      projectId: null,
+      sourceType: 'global_docs' as const,
+      activeCollectionName,
+      activeEmbeddingProvider: 'openai' as const,
+      activeApiKeyEncrypted: encryptApiKey('sk-active-openai'),
+      activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+      activeEmbeddingModel: 'text-embedding-3-small',
+      activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+        provider: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'text-embedding-3-small',
+      } as never),
+      rebuildStatus: 'idle' as const,
+      targetCollectionName: null,
+      targetEmbeddingProvider: null,
+      targetEmbeddingBaseUrl: null,
+      targetEmbeddingModel: null,
+      targetEmbeddingFingerprint: null,
+      lastErrorMessage: null,
+      createdAt: new Date('2026-03-14T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+    }),
+    listKnowledgeBases: async () => [knowledge],
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-knowledge-search-active-config'),
+    repository,
+    searchService: createSearchServiceStub({
+      searchDocuments: async (input) => {
+        capturedInputs.push(input);
+        return {
+          query: input.query,
+          sourceType: input.sourceType,
+          total: 0,
+          items: [],
+        };
+      },
+    }),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    settingsRepository: {
+      getSettings: async () => ({
+        embedding: {
+          provider: 'custom',
+          baseUrl: 'https://embedding.example.com/v1',
+          model: 'text-embedding-custom',
+          apiKeyEncrypted: encryptApiKey('db-embedding-key'),
+          apiKeyHint: 'db-e...-key',
+          testedAt: null,
+          testStatus: null,
+        },
+      }),
+    } as unknown as SettingsRepository,
+  });
+
+  try {
+    await service.searchDocuments(
+      {
+        actor: {
+          id: '507f1f77bcf86cd799439012',
+          username: 'langya',
+        },
+      },
+      {
+        query: 'knowledge query',
+        knowledgeId,
+        topK: 2,
+      },
+    );
+
+    assert.deepEqual(capturedInputs, [
+      {
+        query: 'knowledge query',
+        knowledgeId,
+        sourceType: 'global_docs',
+        collectionName: activeCollectionName,
+        embeddingConfig: {
+          source: 'database',
+          provider: 'openai',
+          apiKey: 'sk-active-openai',
+          baseUrl: 'https://api.openai.com/v1',
+          model: 'text-embedding-3-small',
+          requestTimeoutMs: 1000,
+        },
+        topK: 2,
+      },
+    ]);
+  } finally {
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
+  }
+});
+
+test('searchDocuments refreshes the namespace active api key when the fingerprint still matches', async () => {
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  const knowledgeId = '507f1f77bcf86cd799439213';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证同 fingerprint 下 API Key 轮换',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const capturedInputs: Array<Parameters<KnowledgeSearchService['searchDocuments']>[0]> = [];
+  const activeCollectionName = buildExpectedCollectionName('global_docs');
+  let namespaceState = {
+    _id: new ObjectId('507f1f77bcf86cd799439214'),
+    namespaceKey: 'global_docs',
+    scope: 'global' as const,
+    projectId: null,
+    sourceType: 'global_docs' as const,
+    activeCollectionName,
+    activeEmbeddingProvider: 'openai' as const,
+    activeApiKeyEncrypted: encryptApiKey('sk-stale-openai'),
+    activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+    activeEmbeddingModel: 'text-embedding-3-small',
+    activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'text-embedding-3-small',
+    } as never),
+    rebuildStatus: 'idle' as const,
+    targetCollectionName: null,
+    targetEmbeddingProvider: null,
+    targetEmbeddingBaseUrl: null,
+    targetEmbeddingModel: null,
+    targetEmbeddingFingerprint: null,
+    lastErrorMessage: null,
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeNamespaceIndexState: async () => namespaceState,
+    updateKnowledgeNamespaceIndexState: async (_namespaceKey: string, patch: Record<string, unknown>) => {
+      namespaceState = {
+        ...namespaceState,
+        ...patch,
+      };
+      return namespaceState;
+    },
+    listKnowledgeBases: async () => [knowledge],
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-knowledge-search-active-key-refresh'),
+    repository,
+    searchService: createSearchServiceStub({
+      searchDocuments: async (input) => {
+        capturedInputs.push(input);
+        return {
+          query: input.query,
+          sourceType: input.sourceType,
+          total: 0,
+          items: [],
+        };
+      },
+    }),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    settingsRepository: {
+      getSettings: async () => ({
+        embedding: {
+          provider: 'openai',
+          baseUrl: 'https://api.openai.com/v1',
+          model: 'text-embedding-3-small',
+          apiKeyEncrypted: encryptApiKey('sk-current-openai'),
+          apiKeyHint: 'db-e...-key',
+          testedAt: null,
+          testStatus: null,
+        },
+      }),
+    } as unknown as SettingsRepository,
+  });
+
+  try {
+    await service.searchDocuments(
+      {
+        actor: {
+          id: '507f1f77bcf86cd799439012',
+          username: 'langya',
+        },
+      },
+      {
+        query: 'knowledge query',
+        knowledgeId,
+        topK: 2,
+      },
+    );
+
+    assert.deepEqual(capturedInputs, [
+      {
+        query: 'knowledge query',
+        knowledgeId,
+        sourceType: 'global_docs',
+        collectionName: activeCollectionName,
+        embeddingConfig: {
+          source: 'database',
+          provider: 'openai',
+          apiKey: 'sk-current-openai',
+          baseUrl: 'https://api.openai.com/v1',
+          model: 'text-embedding-3-small',
+          requestTimeoutMs: 1000,
+        },
+        topK: 2,
+      },
+    ]);
+    assert.equal(
+      decryptApiKey(namespaceState.activeApiKeyEncrypted ?? ''),
+      'sk-current-openai',
+    );
+  } finally {
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
+  }
+});
+
+test('uploadDocument reinitializes an empty namespace state before indexing with a new embedding fingerprint', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-upload-empty-namespace-'));
+  const env = createTestEnv(storageRoot);
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY = env.settings.encryptionKey;
+  const knowledgeId = '507f1f77bcf86cd799439215';
+  const actorId = '507f1f77bcf86cd799439012';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '空知识库',
+    description: '用于验证空 namespace state 自愈',
+    sourceType: 'global_docs',
+    indexStatus: 'idle',
+    documentCount: 0,
+    chunkCount: 0,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-15T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-15T00:00:00.000Z'),
+  };
+  const updatedKnowledge = {
+    ...knowledge,
+    documentCount: 1,
+    updatedAt: new Date('2026-03-15T00:00:01.000Z'),
+  };
+  const targetCollectionName = buildExpectedCollectionName('global_docs', {
+    provider: 'custom',
+    baseUrl: 'https://embedding.example.com/v1',
+    model: 'text-embedding-custom',
+  });
+  let namespaceState = {
+    _id: new ObjectId('507f1f77bcf86cd799439216'),
+    namespaceKey: 'global_docs',
+    scope: 'global' as const,
+    projectId: null,
+    sourceType: 'global_docs' as const,
+    activeCollectionName: buildExpectedCollectionName('global_docs'),
+    activeEmbeddingProvider: 'openai' as const,
+    activeApiKeyEncrypted: encryptApiKey('sk-old-openai'),
+    activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+    activeEmbeddingModel: 'text-embedding-3-small',
+    activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'text-embedding-3-small',
+    } as never),
+    rebuildStatus: 'failed' as const,
+    targetCollectionName: 'global_docs__emb_stale',
+    targetEmbeddingProvider: 'custom' as const,
+    targetEmbeddingBaseUrl: 'https://embedding.old.example.com/v1',
+    targetEmbeddingModel: 'text-embedding-custom',
+    targetEmbeddingFingerprint: 'stale-fingerprint',
+    lastErrorMessage: '旧状态残留',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  let createdDocument: (KnowledgeDocumentRecord & {
+    _id: NonNullable<KnowledgeDocumentRecord['_id']>;
+  }) | null = null;
+  let resolveCompleted: (() => void) | null = null;
+  const processingCompleted = new Promise<void>((resolve) => {
+    resolveCompleted = resolve;
+  });
+  const fetchPayloads: Array<Record<string, unknown>> = [];
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeNamespaceIndexState: async () => namespaceState,
+    updateKnowledgeNamespaceIndexState: async (_namespaceKey: string, patch: Record<string, unknown>) => {
+      namespaceState = {
+        ...namespaceState,
+        ...patch,
+      };
+      return namespaceState;
+    },
+    listKnowledgeBases: async () => [knowledge],
+    createKnowledgeDocument: async (
+      document: KnowledgeDocumentRecord & {
+        _id: NonNullable<KnowledgeDocumentRecord['_id']>;
+      },
+    ) => {
+      createdDocument = document;
+      return document;
+    },
+    updateKnowledgeSummaryAfterDocumentUpload: async () => updatedKnowledge,
+    updateKnowledgeDocument: async (
+      documentId: string,
+      patch: Partial<
+        Pick<
+          KnowledgeDocumentRecord,
+          'status' | 'chunkCount' | 'lastIndexedAt' | 'errorMessage' | 'processedAt' | 'updatedAt'
+        >
+      >,
+    ) => {
+      if (patch.status === 'completed') {
+        resolveCompleted?.();
+      }
+
+      return {
+        _id: new ObjectId(documentId),
+        knowledgeId,
+        fileName: createdDocument?.fileName ?? 'README.md',
+        mimeType: createdDocument?.mimeType ?? 'text/markdown',
+        storagePath: createdDocument?.storagePath ?? '',
+        status: patch.status ?? 'pending',
+        chunkCount: patch.chunkCount ?? 0,
+        documentVersionHash: createdDocument?.documentVersionHash ?? 'hash-1',
+        embeddingProvider: createdDocument?.embeddingProvider ?? 'custom',
+        embeddingModel: createdDocument?.embeddingModel ?? 'text-embedding-custom',
+        lastIndexedAt: patch.lastIndexedAt ?? null,
+        retryCount: 0,
+        errorMessage: patch.errorMessage ?? null,
+        uploadedBy: actorId,
+        uploadedAt: new Date('2026-03-15T00:00:00.000Z'),
+        processedAt: patch.processedAt ?? null,
+        createdAt: new Date('2026-03-15T00:00:00.000Z'),
+        updatedAt: patch.updatedAt ?? new Date('2026-03-15T00:00:00.000Z'),
+      };
+    },
+    syncKnowledgeSummaryFromDocuments: async () => undefined,
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env,
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    settingsRepository: {
+      getSettings: async () => ({
+        embedding: {
+          provider: 'custom',
+          baseUrl: 'https://embedding.example.com/v1',
+          model: 'text-embedding-custom',
+          apiKeyEncrypted: encryptApiKey('db-embedding-key'),
+          apiKeyHint: 'db-e...-key',
+          testedAt: null,
+          testStatus: null,
+        },
+      }),
+    } as unknown as SettingsRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    fetchPayloads.push(JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>);
+    return new Response(
+      JSON.stringify({
+        status: 'completed',
+        knowledgeId,
+        documentId: createdDocument?._id.toHexString() ?? 'document-1',
+        chunkCount: 4,
+        characterCount: 64,
+        parser: 'markdown',
+        collectionName: targetCollectionName,
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    const uploadResponse = await service.uploadDocument(
+      {
+        actor: {
+          id: actorId,
+          username: 'langya',
+        },
+      },
+      knowledgeId,
+      {
+        originalName: 'README.md',
+        mimeType: 'text/markdown',
+        size: 20,
+        buffer: Buffer.from('# hello namespace\n', 'utf-8'),
+      },
+    );
+
+    assert.equal(uploadResponse.document.status, 'pending');
+
+    await Promise.race([
+      processingCompleted,
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for empty namespace upload processing');
+      }),
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
+  }
+
+  assert.equal(namespaceState.activeCollectionName, targetCollectionName);
+  assert.equal(namespaceState.activeEmbeddingProvider, 'custom');
+  assert.equal(namespaceState.activeEmbeddingModel, 'text-embedding-custom');
+  assert.equal(namespaceState.rebuildStatus, 'idle');
+  assert.equal(namespaceState.targetCollectionName, null);
+  assert.equal(namespaceState.lastErrorMessage, null);
+  assert.equal(fetchPayloads[0]?.collectionName, targetCollectionName);
+});
+
+test('rebuildKnowledge rebuilds the whole namespace into a new collection when the embedding model changes', async () => {
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  const knowledgeId = '507f1f77bcf86cd799439221';
+  const siblingKnowledgeId = '507f1f77bcf86cd799439222';
+  const actorId = '507f1f77bcf86cd799439012';
+  const knowledge = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证命名空间级重建',
+    sourceType: 'global_docs',
+    indexStatus: 'completed' as const,
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const siblingKnowledge = {
+    _id: new ObjectId(siblingKnowledgeId),
+    name: '知识库 B',
+    description: '同 namespace 的另一个知识库',
+    sourceType: 'global_docs' as const,
+    indexStatus: 'completed' as const,
+    documentCount: 1,
+    chunkCount: 2,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const documents: Array<KnowledgeDocumentRecord & { _id: ObjectId }> = [
+    {
+      _id: new ObjectId('507f1f77bcf86cd799439223'),
+      knowledgeId,
+      fileName: 'README-A.md',
+      mimeType: 'text/markdown',
+      storagePath: `${knowledgeId}/507f1f77bcf86cd799439223/hash-a/README-A.md`,
+      status: 'completed',
+      chunkCount: 3,
+      documentVersionHash: 'hash-a',
+      embeddingProvider: 'openai',
+      embeddingModel: 'text-embedding-3-small',
+      lastIndexedAt: new Date('2026-03-14T00:00:10.000Z'),
+      retryCount: 0,
+      errorMessage: null,
+      uploadedBy: actorId,
+      uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+      processedAt: new Date('2026-03-14T00:00:10.000Z'),
+      createdAt: new Date('2026-03-14T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-14T00:00:10.000Z'),
+    },
+    {
+      _id: new ObjectId('507f1f77bcf86cd799439224'),
+      knowledgeId: siblingKnowledgeId,
+      fileName: 'README-B.md',
+      mimeType: 'text/markdown',
+      storagePath: `${siblingKnowledgeId}/507f1f77bcf86cd799439224/hash-b/README-B.md`,
+      status: 'completed',
+      chunkCount: 2,
+      documentVersionHash: 'hash-b',
+      embeddingProvider: 'openai',
+      embeddingModel: 'text-embedding-3-small',
+      lastIndexedAt: new Date('2026-03-14T00:00:10.000Z'),
+      retryCount: 0,
+      errorMessage: null,
+      uploadedBy: actorId,
+      uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+      processedAt: new Date('2026-03-14T00:00:10.000Z'),
+      createdAt: new Date('2026-03-14T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-14T00:00:10.000Z'),
+    },
+  ];
+  const oldCollectionName = buildExpectedCollectionName('global_docs');
+  const targetCollectionName = buildExpectedCollectionName('global_docs', {
+    provider: 'custom',
+    baseUrl: 'https://embedding.example.com/v1',
+    model: 'text-embedding-custom',
+  });
+  let namespaceState = {
+    _id: new ObjectId('507f1f77bcf86cd799439225'),
+    namespaceKey: 'global_docs',
+    scope: 'global' as const,
+    projectId: null,
+    sourceType: 'global_docs' as const,
+    activeCollectionName: oldCollectionName,
+    activeEmbeddingProvider: 'openai' as const,
+    activeApiKeyEncrypted: encryptApiKey('sk-old-openai'),
+    activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+    activeEmbeddingModel: 'text-embedding-3-small',
+    activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'text-embedding-3-small',
+    } as never),
+    rebuildStatus: 'idle' as const,
+    targetCollectionName: null,
+    targetEmbeddingProvider: null,
+    targetEmbeddingBaseUrl: null,
+    targetEmbeddingModel: null,
+    targetEmbeddingFingerprint: null,
+    lastErrorMessage: null,
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const fetchPayloads: Array<Record<string, unknown>> = [];
+  let deletedCollectionName = '';
+  let resolveCompleted: (() => void) | null = null;
+  const rebuildCompleted = new Promise<void>((resolve) => {
+    resolveCompleted = resolve;
+  });
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => {
+      if (id === knowledgeId) {
+        return knowledge;
+      }
+
+      if (id === siblingKnowledgeId) {
+        return siblingKnowledge;
+      }
+
+      return null;
+    },
+    listDocumentsByKnowledgeId: async (id: string) => documents.filter((document) => document.knowledgeId === id),
+    listKnowledgeBasesByNamespace: async () => [knowledge, siblingKnowledge],
+    listDocumentsByKnowledgeIds: async (ids: string[]) =>
+      documents.filter((document) => ids.includes(document.knowledgeId)),
+    findKnowledgeNamespaceIndexState: async () => namespaceState,
+    updateKnowledgeNamespaceIndexState: async (_namespaceKey: string, patch: Record<string, unknown>) => {
+      namespaceState = {
+        ...namespaceState,
+        ...patch,
+      };
+
+      if (
+        namespaceState.rebuildStatus === 'idle' &&
+        namespaceState.activeCollectionName === targetCollectionName
+      ) {
+        resolveCompleted?.();
+      }
+
+      return namespaceState;
+    },
+    updateKnowledgeDocument: async (documentId: string, patch: Record<string, unknown>) => {
+      const current = documents.find((document) => document._id.toHexString() === documentId) ?? null;
+      if (!current) {
+        return null;
+      }
+
+      Object.assign(current, patch);
+      return current;
+    },
+    syncKnowledgeSummaryFromDocuments: async () => undefined,
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-knowledge-namespace-rebuild'),
+    repository,
+    searchService: createSearchServiceStub({
+      deleteCollection: async (collectionName) => {
+        deletedCollectionName = collectionName;
+      },
+    }),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    settingsRepository: {
+      getSettings: async () => ({
+        embedding: {
+          provider: 'custom',
+          baseUrl: 'https://embedding.example.com/v1',
+          model: 'text-embedding-custom',
+          apiKeyEncrypted: encryptApiKey('db-embedding-key'),
+          apiKeyHint: 'db-e...-key',
+          testedAt: null,
+          testStatus: null,
+        },
+      }),
+    } as unknown as SettingsRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    const payload = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+    fetchPayloads.push(payload);
+
+    return new Response(
+      JSON.stringify({
+        status: 'completed',
+        knowledgeId: payload.knowledgeId,
+        documentId: payload.documentId,
+        chunkCount: 5,
+        characterCount: 120,
+        parser: 'markdown',
+        collectionName: targetCollectionName,
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    await service.rebuildKnowledge(
+      {
+        actor: {
+          id: actorId,
+          username: 'langya',
+        },
+      },
+      knowledgeId,
+    );
+
+    await Promise.race([
+      rebuildCompleted,
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for namespace rebuild completion');
+      }),
+    ]);
+    await delay(0);
+
+    assert.equal(fetchPayloads.length, 2);
+    assert.equal(fetchPayloads.every((payload) => payload.collectionName === targetCollectionName), true);
+    assert.deepEqual(
+      new Set(fetchPayloads.map((payload) => String(payload.knowledgeId))),
+      new Set([knowledgeId, siblingKnowledgeId]),
+    );
+    assert.equal(namespaceState.activeCollectionName, targetCollectionName);
+    assert.equal(namespaceState.rebuildStatus, 'idle');
+    assert.equal(deletedCollectionName, oldCollectionName);
+    assert.equal(
+      documents.every((document) => document.embeddingModel === 'text-embedding-custom'),
+      true,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
+  }
+});
+
+test('rebuildKnowledge marks a legacy namespace as rebuilding before concurrent deletes can proceed', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-legacy-rebuild-'));
+  const knowledgeId = '507f1f77bcf86cd799439226';
+  const documentId = '507f1f77bcf86cd799439227';
+  const actorId = '507f1f77bcf86cd799439012';
+  const knowledge = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证 legacy namespace rebuild 锁定',
+    sourceType: 'global_docs' as const,
+    indexStatus: 'completed' as const,
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const document: KnowledgeDocumentRecord & { _id: ObjectId } = {
+    _id: new ObjectId(documentId),
+    knowledgeId,
+    fileName: 'README.md',
+    mimeType: 'text/markdown',
+    storagePath: `${knowledgeId}/${documentId}/hash-1/README.md`,
+    status: 'completed',
+    chunkCount: 3,
+    documentVersionHash: 'hash-1',
+    embeddingProvider: 'openai',
+    embeddingModel: 'text-embedding-3-small',
+    lastIndexedAt: new Date('2026-03-14T00:00:10.000Z'),
+    retryCount: 0,
+    errorMessage: null,
+    uploadedBy: actorId,
+    uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+    processedAt: new Date('2026-03-14T00:00:10.000Z'),
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:10.000Z'),
+  };
+  let namespaceState: (KnowledgeNamespaceIndexStateDocument & { _id: ObjectId }) | null = null;
+  let deleteDocumentChunksCalled = false;
+  let deleteKnowledgeDocumentCalled = false;
+  let resolveFetch!: () => void;
+  let resolveCompleted!: () => void;
+  const fetchReleased = new Promise<void>((resolve) => {
+    resolveFetch = resolve;
+  });
+  const rebuildCompleted = new Promise<void>((resolve) => {
+    resolveCompleted = resolve;
+  });
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeNamespaceIndexState: async () => namespaceState,
+    createKnowledgeNamespaceIndexState: async (
+      state: Omit<KnowledgeNamespaceIndexStateDocument, '_id'>,
+    ) => {
+      namespaceState = {
+        _id: new ObjectId('507f1f77bcf86cd799439228'),
+        ...state,
+      };
+      return namespaceState;
+    },
+    updateKnowledgeNamespaceIndexState: async (
+      _namespaceKey: string,
+      patch: Partial<
+        Omit<
+          KnowledgeNamespaceIndexStateDocument,
+          '_id' | 'namespaceKey' | 'scope' | 'projectId' | 'sourceType'
+        >
+      >,
+    ) => {
+      if (!namespaceState) {
+        return null;
+      }
+
+      namespaceState = {
+        ...namespaceState,
+        ...patch,
+      };
+
+      if (namespaceState.rebuildStatus === 'idle') {
+        resolveCompleted?.();
+      }
+
+      return namespaceState;
+    },
+    listDocumentsByKnowledgeId: async () => [document],
+    listKnowledgeBasesByNamespace: async () => [knowledge],
+    listDocumentsByKnowledgeIds: async () => [document],
+    findKnowledgeDocumentById: async (id: string) => (id === documentId ? document : null),
+    updateKnowledgeDocument: async (_documentId: string, patch: Record<string, unknown>) => {
+      Object.assign(document, patch);
+      return document;
+    },
+    syncKnowledgeSummaryFromDocuments: async () => undefined,
+    deleteKnowledgeDocumentById: async () => {
+      deleteKnowledgeDocumentCalled = true;
+      return true;
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub({
+      deleteDocumentChunks: async () => {
+        deleteDocumentChunksCalled = true;
+      },
+    }),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_input, init) => {
+    await fetchReleased;
+
+    const payload = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+    return new Response(
+      JSON.stringify({
+        status: 'completed',
+        knowledgeId: payload.knowledgeId,
+        documentId: payload.documentId,
+        chunkCount: 3,
+        characterCount: 64,
+        parser: 'markdown',
+        collectionName: buildExpectedCollectionName('global_docs'),
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    await service.rebuildKnowledge(
+      {
+        actor: {
+          id: actorId,
+          username: 'langya',
+        },
+      },
+      knowledgeId,
+    );
+
+    assert.notEqual(namespaceState, null);
+    if (!namespaceState) {
+      throw new Error('namespaceState should be created before deleteDocument');
+    }
+    const rebuildingNamespaceState = namespaceState as KnowledgeNamespaceIndexStateDocument & {
+      _id: ObjectId;
+    };
+
+    assert.equal(rebuildingNamespaceState.rebuildStatus, 'rebuilding');
+    assert.equal(rebuildingNamespaceState.activeCollectionName, 'global_docs');
+    assert.equal(
+      rebuildingNamespaceState.targetCollectionName,
+      buildExpectedCollectionName('global_docs'),
+    );
+
+    await assert.rejects(
+      () =>
+        service.deleteDocument(
+          {
+            actor: {
+              id: actorId,
+              username: 'langya',
+            },
+          },
+          knowledgeId,
+          documentId,
+        ),
+      (error) => error instanceof Error && error.message === '当前命名空间正在重建，请稍后再试',
+    );
+
+    assert.equal(deleteDocumentChunksCalled, false);
+    assert.equal(deleteKnowledgeDocumentCalled, false);
+
+    resolveFetch();
+    await Promise.race([
+      rebuildCompleted,
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for legacy namespace rebuild completion');
+      }),
+    ]);
+  } finally {
+    resolveFetch();
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.notEqual(namespaceState, null);
+  if (!namespaceState) {
+    throw new Error('namespaceState should remain available after rebuild');
+  }
+  const completedNamespaceState = namespaceState as KnowledgeNamespaceIndexStateDocument & {
+    _id: ObjectId;
+  };
+
+  assert.equal(completedNamespaceState.rebuildStatus, 'idle');
+  assert.equal(
+    completedNamespaceState.activeCollectionName,
+    buildExpectedCollectionName('global_docs'),
+  );
+});
+
 test('rebuildKnowledge rejects when there are documents still indexing', async () => {
   const knowledgeId = '507f1f77bcf86cd799439011';
   const knowledge: KnowledgeBaseDocument & {
@@ -1736,7 +2830,7 @@ test('getKnowledgeDiagnostics degrades gracefully when collection or indexer che
       knowledgeId,
     );
 
-    assert.equal(response.expectedCollectionName, 'global_docs');
+    assert.equal(response.expectedCollectionName, buildExpectedCollectionName('global_docs'));
     assert.deepEqual(response.documentSummary, {
       total: 2,
       pending: 0,
@@ -1747,7 +2841,7 @@ test('getKnowledgeDiagnostics degrades gracefully when collection or indexer che
       staleProcessing: 1,
     });
     assert.deepEqual(response.collection, {
-      name: 'global_docs',
+      name: buildExpectedCollectionName('global_docs'),
       exists: false,
       errorMessage: 'Chroma 请求失败',
     });

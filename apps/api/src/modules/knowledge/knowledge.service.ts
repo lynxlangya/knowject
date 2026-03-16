@@ -8,6 +8,7 @@ import {
 } from '@config/ai-config.js';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import { decryptApiKey, encryptApiKey } from '@lib/crypto.js';
 import {
   createRequiredFieldError,
   createValidationAppError,
@@ -18,12 +19,17 @@ import type { AuthUserProfile } from '@modules/auth/auth.types.js';
 import type { ProjectsRepository } from '@modules/projects/projects.repository.js';
 import { getProjectMember, requireVisibleProject } from '@modules/projects/projects.shared.js';
 import type { SettingsRepository } from '@modules/settings/settings.repository.js';
+import type { EffectiveEmbeddingConfig, EffectiveIndexingConfig } from '@modules/settings/settings.types.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
 import {
   SUPPORTED_KNOWLEDGE_UPLOAD_TYPES,
+  buildKnowledgeEmbeddingFingerprint,
+  buildKnowledgeNamespaceKey,
+  buildVersionedKnowledgeCollectionName,
   resolveKnowledgeScope,
   sanitizeFileName,
+  toKnowledgeEmbeddingMetadata,
   toKnowledgeDocumentResponse,
   toKnowledgeSummaryResponse,
 } from './knowledge.shared.js';
@@ -35,6 +41,7 @@ import type {
   KnowledgeDetailEnvelope,
   KnowledgeDocumentRecord,
   KnowledgeDocumentUploadResponse,
+  KnowledgeNamespaceIndexStateDocument,
   KnowledgeIndexerDiagnosticsResponse,
   KnowledgeIndexerDocumentRequest,
   KnowledgeIndexerResponse,
@@ -178,6 +185,30 @@ const createKnowledgeRebuildEmptyError = (): AppError => {
     statusCode: 409,
     code: 'KNOWLEDGE_REBUILD_EMPTY',
     message: '知识库当前没有可重建的文档',
+  });
+};
+
+const createNamespaceRebuildingConflictError = (): AppError => {
+  return new AppError({
+    statusCode: 409,
+    code: 'KNOWLEDGE_NAMESPACE_REBUILDING',
+    message: '当前命名空间正在重建，请稍后再试',
+  });
+};
+
+const createNamespaceRebuildRequiredError = (): AppError => {
+  return new AppError({
+    statusCode: 409,
+    code: 'KNOWLEDGE_NAMESPACE_REBUILD_REQUIRED',
+    message: '当前向量模型已变更，请先执行知识库全量重建',
+  });
+};
+
+const createLegacyNamespaceRebuildRequiredError = (): AppError => {
+  return new AppError({
+    statusCode: 409,
+    code: 'KNOWLEDGE_NAMESPACE_LEGACY_REBUILD_REQUIRED',
+    message: '当前索引缺少模型版本元数据，请先执行一次知识库全量重建',
   });
 };
 
@@ -445,18 +476,458 @@ const buildKnowledgeIndexerDiagnosticsUrls = (baseUrl: string): string[] => {
   );
 };
 
-const buildKnowledgeCollectionName = (
+interface KnowledgeNamespaceDescriptor {
+  namespaceKey: string;
+  scope: 'global' | 'project';
+  projectId: string | null;
+  sourceType: KnowledgeSourceType;
+}
+
+type ResolvedNamespaceIndexContext =
+  | {
+      mode: 'versioned';
+      namespace: KnowledgeNamespaceDescriptor;
+      currentEmbeddingConfig: EffectiveEmbeddingConfig;
+      currentEmbeddingFingerprint: string;
+      namespaceDocumentCount: number;
+      state: WithId<KnowledgeNamespaceIndexStateDocument>;
+    }
+  | {
+      mode: 'legacy_untracked';
+      namespace: KnowledgeNamespaceDescriptor;
+      currentEmbeddingConfig: EffectiveEmbeddingConfig;
+      currentEmbeddingFingerprint: string;
+      namespaceDocumentCount: number;
+    };
+
+const buildKnowledgeNamespaceDescriptor = (
   knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId' | 'sourceType'>,
-): string => {
+): KnowledgeNamespaceDescriptor => {
   const scope = resolveKnowledgeScope(knowledge);
 
-  if (scope.scope === 'project' && scope.projectId) {
-    return knowledge.sourceType === 'global_code'
-      ? `proj_${scope.projectId}_code`
-      : `proj_${scope.projectId}_docs`;
+  return {
+    namespaceKey: buildKnowledgeNamespaceKey(knowledge),
+    scope: scope.scope,
+    projectId: scope.projectId,
+    sourceType: knowledge.sourceType,
+  };
+};
+
+const createNamespaceStateDocument = ({
+  namespace,
+  embeddingConfig,
+  embeddingFingerprint,
+  now,
+}: {
+  namespace: KnowledgeNamespaceDescriptor;
+  embeddingConfig: EffectiveEmbeddingConfig;
+  embeddingFingerprint: string;
+  now: Date;
+}): Omit<KnowledgeNamespaceIndexStateDocument, '_id'> => {
+  return {
+    namespaceKey: namespace.namespaceKey,
+    scope: namespace.scope,
+    projectId: namespace.projectId,
+    sourceType: namespace.sourceType,
+    activeCollectionName: buildVersionedKnowledgeCollectionName(
+      namespace.namespaceKey,
+      embeddingFingerprint,
+    ),
+    activeEmbeddingProvider: embeddingConfig.provider,
+    activeApiKeyEncrypted: embeddingConfig.apiKey ? encryptApiKey(embeddingConfig.apiKey) : null,
+    activeEmbeddingBaseUrl: embeddingConfig.baseUrl,
+    activeEmbeddingModel: embeddingConfig.model,
+    activeEmbeddingFingerprint: embeddingFingerprint,
+    rebuildStatus: 'idle',
+    targetCollectionName: null,
+    targetEmbeddingProvider: null,
+    targetEmbeddingBaseUrl: null,
+    targetEmbeddingModel: null,
+    targetEmbeddingFingerprint: null,
+    lastErrorMessage: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+};
+
+const createNamespaceRebuildStateDocument = ({
+  namespace,
+  activeCollectionName,
+  embeddingConfig,
+  embeddingFingerprint,
+  now,
+}: {
+  namespace: KnowledgeNamespaceDescriptor;
+  activeCollectionName: string;
+  embeddingConfig: EffectiveEmbeddingConfig;
+  embeddingFingerprint: string;
+  now: Date;
+}): Omit<KnowledgeNamespaceIndexStateDocument, '_id'> => {
+  const document = createNamespaceStateDocument({
+    namespace,
+    embeddingConfig,
+    embeddingFingerprint,
+    now,
+  });
+
+  return {
+    ...document,
+    activeCollectionName,
+    rebuildStatus: 'rebuilding',
+    targetCollectionName: buildVersionedKnowledgeCollectionName(
+      namespace.namespaceKey,
+      embeddingFingerprint,
+    ),
+    targetEmbeddingProvider: embeddingConfig.provider,
+    targetEmbeddingBaseUrl: embeddingConfig.baseUrl,
+    targetEmbeddingModel: embeddingConfig.model,
+    targetEmbeddingFingerprint: embeddingFingerprint,
+  };
+};
+
+const buildNamespaceStateResetPatch = ({
+  namespace,
+  embeddingConfig,
+  embeddingFingerprint,
+  now,
+}: {
+  namespace: KnowledgeNamespaceDescriptor;
+  embeddingConfig: EffectiveEmbeddingConfig;
+  embeddingFingerprint: string;
+  now: Date;
+}): Partial<
+  Omit<KnowledgeNamespaceIndexStateDocument, '_id' | 'namespaceKey' | 'scope' | 'projectId' | 'sourceType'>
+> => {
+  const document = createNamespaceStateDocument({
+    namespace,
+    embeddingConfig,
+    embeddingFingerprint,
+    now,
+  });
+  const {
+    namespaceKey: _namespaceKey,
+    scope: _scope,
+    projectId: _projectId,
+    sourceType: _sourceType,
+    createdAt: _createdAt,
+    ...patch
+  } = document;
+
+  return patch;
+};
+
+const doesEncryptedApiKeyMatch = (
+  encryptedApiKey: string | null,
+  plaintextApiKey: string,
+): boolean => {
+  if (!encryptedApiKey) {
+    return false;
   }
 
-  return knowledge.sourceType === 'global_code' ? 'global_code' : 'global_docs';
+  try {
+    return decryptApiKey(encryptedApiKey) === plaintextApiKey;
+  } catch {
+    return false;
+  }
+};
+
+const resolveActiveEmbeddingConfig = (
+  context: ResolvedNamespaceIndexContext,
+): EffectiveEmbeddingConfig => {
+  if (context.mode !== 'versioned') {
+    return context.currentEmbeddingConfig;
+  }
+
+  if (context.state.activeEmbeddingFingerprint === context.currentEmbeddingFingerprint) {
+    return context.currentEmbeddingConfig;
+  }
+
+  return {
+    source: context.currentEmbeddingConfig.source,
+    provider: context.state.activeEmbeddingProvider,
+    apiKey: context.state.activeApiKeyEncrypted
+      ? decryptApiKey(context.state.activeApiKeyEncrypted)
+      : null,
+    baseUrl: context.state.activeEmbeddingBaseUrl,
+    model: context.state.activeEmbeddingModel,
+    requestTimeoutMs: context.currentEmbeddingConfig.requestTimeoutMs,
+  };
+};
+
+const findNamespaceIndexStateOrNull = async (
+  repository: KnowledgeRepository,
+  namespaceKey: string,
+): Promise<WithId<KnowledgeNamespaceIndexStateDocument> | null> => {
+  const repositoryWithState = repository as KnowledgeRepository & {
+    findKnowledgeNamespaceIndexState?: KnowledgeRepository['findKnowledgeNamespaceIndexState'];
+  };
+
+  if (typeof repositoryWithState.findKnowledgeNamespaceIndexState !== 'function') {
+    return null;
+  }
+
+  return repositoryWithState.findKnowledgeNamespaceIndexState(namespaceKey);
+};
+
+const createNamespaceIndexState = async (
+  repository: KnowledgeRepository,
+  document: Omit<KnowledgeNamespaceIndexStateDocument, '_id'>,
+): Promise<WithId<KnowledgeNamespaceIndexStateDocument>> => {
+  const repositoryWithState = repository as KnowledgeRepository & {
+    createKnowledgeNamespaceIndexState?: KnowledgeRepository['createKnowledgeNamespaceIndexState'];
+  };
+
+  if (typeof repositoryWithState.createKnowledgeNamespaceIndexState !== 'function') {
+    return {
+      ...document,
+      _id: new ObjectId(),
+    };
+  }
+
+  return repositoryWithState.createKnowledgeNamespaceIndexState(document);
+};
+
+const updateNamespaceIndexState = async (
+  repository: KnowledgeRepository,
+  namespaceKey: string,
+  patch: Partial<
+    Omit<KnowledgeNamespaceIndexStateDocument, '_id' | 'namespaceKey' | 'scope' | 'projectId' | 'sourceType'>
+  >,
+): Promise<WithId<KnowledgeNamespaceIndexStateDocument> | null> => {
+  const repositoryWithState = repository as KnowledgeRepository & {
+    updateKnowledgeNamespaceIndexState?: KnowledgeRepository['updateKnowledgeNamespaceIndexState'];
+  };
+
+  if (typeof repositoryWithState.updateKnowledgeNamespaceIndexState !== 'function') {
+    return null;
+  }
+
+  return repositoryWithState.updateKnowledgeNamespaceIndexState(namespaceKey, patch);
+};
+
+const listKnowledgeBasesForNamespace = async ({
+  repository,
+  namespace,
+}: {
+  repository: KnowledgeRepository;
+  namespace: KnowledgeNamespaceDescriptor;
+}): Promise<WithId<KnowledgeBaseDocument>[]> => {
+  const repositoryWithNamespace = repository as KnowledgeRepository & {
+    listKnowledgeBasesByNamespace?: KnowledgeRepository['listKnowledgeBasesByNamespace'];
+  };
+
+  if (typeof repositoryWithNamespace.listKnowledgeBasesByNamespace === 'function') {
+    return repositoryWithNamespace.listKnowledgeBasesByNamespace({
+      scope: namespace.scope,
+      projectId: namespace.projectId,
+      sourceType: namespace.sourceType,
+    });
+  }
+
+  if (typeof repository.listKnowledgeBases !== 'function') {
+    return [];
+  }
+
+  return repository.listKnowledgeBases({
+    scope: namespace.scope,
+    projectId: namespace.projectId ?? undefined,
+    sourceType: namespace.sourceType,
+  });
+};
+
+const listDocumentsForKnowledgeIds = async ({
+  repository,
+  knowledgeIds,
+}: {
+  repository: KnowledgeRepository;
+  knowledgeIds: string[];
+}): Promise<WithId<KnowledgeDocumentRecord>[]> => {
+  const repositoryWithNamespace = repository as KnowledgeRepository & {
+    listDocumentsByKnowledgeIds?: KnowledgeRepository['listDocumentsByKnowledgeIds'];
+  };
+
+  if (typeof repositoryWithNamespace.listDocumentsByKnowledgeIds === 'function') {
+    return repositoryWithNamespace.listDocumentsByKnowledgeIds(knowledgeIds);
+  }
+
+  if (typeof repository.listDocumentsByKnowledgeId !== 'function') {
+    return [];
+  }
+
+  const groups = await Promise.all(
+    knowledgeIds.map((knowledgeId) => repository.listDocumentsByKnowledgeId(knowledgeId)),
+  );
+  return groups.flat();
+};
+
+const resolveNamespaceIndexContext = async ({
+  env,
+  repository,
+  settingsRepository,
+  knowledge,
+}: {
+  env: AppEnv;
+  repository: KnowledgeRepository;
+  settingsRepository: SettingsRepository;
+  knowledge: Pick<KnowledgeBaseDocument, 'scope' | 'projectId' | 'sourceType'>;
+}): Promise<ResolvedNamespaceIndexContext> => {
+  const namespace = buildKnowledgeNamespaceDescriptor(knowledge);
+  const [currentEmbeddingConfig, existingState, namespaceKnowledgeBases] = await Promise.all([
+    getEffectiveEmbeddingConfig({
+      env,
+      repository: settingsRepository,
+    }),
+    findNamespaceIndexStateOrNull(repository, namespace.namespaceKey),
+    listKnowledgeBasesForNamespace({
+      repository,
+      namespace,
+    }),
+  ]);
+  const currentEmbeddingFingerprint = buildKnowledgeEmbeddingFingerprint(currentEmbeddingConfig);
+  const namespaceDocumentCount = namespaceKnowledgeBases.reduce(
+    (total, item) => total + item.documentCount,
+    0,
+  );
+
+  if (existingState) {
+    let resolvedState = existingState;
+    const now = new Date();
+    const shouldReinitializeEmptyNamespace =
+      namespaceDocumentCount === 0 &&
+      (existingState.activeEmbeddingFingerprint !== currentEmbeddingFingerprint ||
+        existingState.rebuildStatus !== 'idle' ||
+        existingState.targetCollectionName !== null ||
+        existingState.targetEmbeddingProvider !== null ||
+        existingState.targetEmbeddingBaseUrl !== null ||
+        existingState.targetEmbeddingModel !== null ||
+        existingState.targetEmbeddingFingerprint !== null ||
+        existingState.lastErrorMessage !== null);
+
+    if (shouldReinitializeEmptyNamespace) {
+      const patch = buildNamespaceStateResetPatch({
+        namespace,
+        embeddingConfig: currentEmbeddingConfig,
+        embeddingFingerprint: currentEmbeddingFingerprint,
+        now,
+      });
+      const updatedState = await updateNamespaceIndexState(
+        repository,
+        namespace.namespaceKey,
+        patch,
+      );
+
+      resolvedState = updatedState ?? {
+        ...existingState,
+        ...patch,
+      };
+    } else if (
+      existingState.activeEmbeddingFingerprint === currentEmbeddingFingerprint &&
+      currentEmbeddingConfig.apiKey &&
+      !doesEncryptedApiKeyMatch(existingState.activeApiKeyEncrypted, currentEmbeddingConfig.apiKey)
+    ) {
+      const patch = {
+        activeApiKeyEncrypted: encryptApiKey(currentEmbeddingConfig.apiKey),
+        updatedAt: now,
+      };
+      const updatedState = await updateNamespaceIndexState(
+        repository,
+        namespace.namespaceKey,
+        patch,
+      );
+
+      resolvedState = updatedState ?? {
+        ...existingState,
+        ...patch,
+      };
+    }
+
+    return {
+      mode: 'versioned',
+      namespace,
+      currentEmbeddingConfig,
+      currentEmbeddingFingerprint,
+      namespaceDocumentCount,
+      state: resolvedState,
+    };
+  }
+
+  if (namespaceDocumentCount > 0) {
+    return {
+      mode: 'legacy_untracked',
+      namespace,
+      currentEmbeddingConfig,
+      currentEmbeddingFingerprint,
+      namespaceDocumentCount,
+    };
+  }
+
+  const now = new Date();
+  const createdDocument = createNamespaceStateDocument({
+    namespace,
+    embeddingConfig: currentEmbeddingConfig,
+    embeddingFingerprint: currentEmbeddingFingerprint,
+    now,
+  });
+
+  try {
+    const createdState = await createNamespaceIndexState(repository, createdDocument);
+    return {
+      mode: 'versioned',
+      namespace,
+      currentEmbeddingConfig,
+      currentEmbeddingFingerprint,
+      namespaceDocumentCount,
+      state: createdState,
+    };
+  } catch (error) {
+    const recoveredState = await findNamespaceIndexStateOrNull(repository, namespace.namespaceKey);
+    if (!recoveredState) {
+      throw error;
+    }
+
+    return {
+      mode: 'versioned',
+      namespace,
+      currentEmbeddingConfig,
+      currentEmbeddingFingerprint,
+      namespaceDocumentCount,
+      state: recoveredState,
+    };
+  }
+};
+
+const assertNamespaceReadyForMutation = (
+  context: ResolvedNamespaceIndexContext,
+): WithId<KnowledgeNamespaceIndexStateDocument> => {
+  if (context.mode === 'legacy_untracked') {
+    throw createLegacyNamespaceRebuildRequiredError();
+  }
+
+  if (context.state.rebuildStatus === 'rebuilding') {
+    throw createNamespaceRebuildingConflictError();
+  }
+
+  if (context.state.activeEmbeddingFingerprint !== context.currentEmbeddingFingerprint) {
+    throw createNamespaceRebuildRequiredError();
+  }
+
+  return context.state;
+};
+
+const listNamespaceDocuments = async (
+  repository: KnowledgeRepository,
+  namespace: KnowledgeNamespaceDescriptor,
+): Promise<WithId<KnowledgeDocumentRecord>[]> => {
+  const knowledgeItems = await listKnowledgeBasesForNamespace({
+    repository,
+    namespace,
+  });
+  const knowledgeIds = knowledgeItems.map((item) => item._id.toHexString());
+
+  return listDocumentsForKnowledgeIds({
+    repository,
+    knowledgeIds,
+  });
 };
 
 const requireVisibleKnowledge = async ({
@@ -546,22 +1017,23 @@ const normalizeIndexerErrorMessage = (
 const resolveEmbeddingMetadata = async ({
   env,
   settingsRepository,
+  embeddingConfig,
 }: {
   env: AppEnv;
   settingsRepository: SettingsRepository;
+  embeddingConfig?: EffectiveEmbeddingConfig;
 }): Promise<{
   embeddingProvider: KnowledgeDocumentRecord['embeddingProvider'];
   embeddingModel: KnowledgeDocumentRecord['embeddingModel'];
 }> => {
-  const embeddingConfig = await getEffectiveEmbeddingConfig({
-    env,
-    repository: settingsRepository,
-  });
+  const resolvedEmbeddingConfig =
+    embeddingConfig ??
+    (await getEffectiveEmbeddingConfig({
+      env,
+      repository: settingsRepository,
+    }));
 
-  return {
-    embeddingProvider: embeddingConfig.provider,
-    embeddingModel: embeddingConfig.model,
-  };
+  return toKnowledgeEmbeddingMetadata(resolvedEmbeddingConfig);
 };
 
 const buildKnowledgeActorProfileMap = async (
@@ -620,6 +1092,8 @@ const callKnowledgeIndexer = async (
   payload: KnowledgeIndexerDocumentRequest,
   options?: {
     mode?: 'index' | 'rebuild';
+    embeddingConfig?: EffectiveEmbeddingConfig;
+    indexingConfig?: EffectiveIndexingConfig;
   },
 ): Promise<KnowledgeIndexerResponse> => {
   const mode = options?.mode ?? 'index';
@@ -628,14 +1102,18 @@ const callKnowledgeIndexer = async (
       ? buildKnowledgeIndexerRebuildUrls(env.knowledge.indexerUrl, payload.documentId)
       : buildKnowledgeIndexerUrls(env.knowledge.indexerUrl);
   const [embeddingConfig, indexingConfig] = await Promise.all([
-    getEffectiveEmbeddingConfig({
-      env,
-      repository: settingsRepository,
-    }),
-    getEffectiveIndexingConfig({
-      env,
-      repository: settingsRepository,
-    }),
+    options?.embeddingConfig
+      ? Promise.resolve(options.embeddingConfig)
+      : getEffectiveEmbeddingConfig({
+          env,
+          repository: settingsRepository,
+        }),
+    options?.indexingConfig
+      ? Promise.resolve(options.indexingConfig)
+      : getEffectiveIndexingConfig({
+          env,
+          repository: settingsRepository,
+        }),
   ]);
   const requestPayload: KnowledgeIndexerDocumentRequest = {
     ...payload,
@@ -891,6 +1369,9 @@ const processUploadedDocument = async ({
   sourceType,
   collectionName,
   documentVersionHash,
+  embeddingConfig,
+  indexingConfig,
+  embeddingMetadata,
   mode = 'index',
 }: {
   env: AppEnv;
@@ -905,6 +1386,12 @@ const processUploadedDocument = async ({
   sourceType: KnowledgeSourceType;
   collectionName: string;
   documentVersionHash: string;
+  embeddingConfig: EffectiveEmbeddingConfig;
+  indexingConfig: EffectiveIndexingConfig;
+  embeddingMetadata: {
+    embeddingProvider: KnowledgeDocumentRecord['embeddingProvider'];
+    embeddingModel: KnowledgeDocumentRecord['embeddingModel'];
+  };
   mode?: 'index' | 'rebuild';
 }): Promise<void> => {
   try {
@@ -937,6 +1424,8 @@ const processUploadedDocument = async ({
       },
       {
         mode,
+        embeddingConfig,
+        indexingConfig,
       },
     );
 
@@ -948,6 +1437,8 @@ const processUploadedDocument = async ({
     const completedDocument = await repository.updateKnowledgeDocument(documentId, {
       status: 'completed',
       chunkCount: result.chunkCount,
+      embeddingProvider: embeddingMetadata.embeddingProvider,
+      embeddingModel: embeddingMetadata.embeddingModel,
       lastIndexedAt: completedAt,
       errorMessage: null,
       processedAt: completedAt,
@@ -988,6 +1479,9 @@ const queueDocumentProcessing = ({
   sourceType,
   collectionName,
   documentVersionHash,
+  embeddingConfig,
+  indexingConfig,
+  embeddingMetadata,
   mode = 'index',
 }: {
   env: AppEnv;
@@ -1002,6 +1496,12 @@ const queueDocumentProcessing = ({
   sourceType: KnowledgeSourceType;
   collectionName: string;
   documentVersionHash: string;
+  embeddingConfig: EffectiveEmbeddingConfig;
+  indexingConfig: EffectiveIndexingConfig;
+  embeddingMetadata: {
+    embeddingProvider: KnowledgeDocumentRecord['embeddingProvider'];
+    embeddingModel: KnowledgeDocumentRecord['embeddingModel'];
+  };
   mode?: 'index' | 'rebuild';
 }): void => {
   setImmediate(() => {
@@ -1018,6 +1518,9 @@ const queueDocumentProcessing = ({
       sourceType,
       collectionName,
       documentVersionHash,
+      embeddingConfig,
+      indexingConfig,
+      embeddingMetadata,
       mode,
     }).catch((error) => {
       console.error(
@@ -1038,6 +1541,9 @@ const queueExistingKnowledgeDocument = async ({
   document,
   sourceType,
   collectionName,
+  embeddingConfig,
+  indexingConfig,
+  embeddingMetadata,
   mode,
 }: {
   env: AppEnv;
@@ -1048,6 +1554,12 @@ const queueExistingKnowledgeDocument = async ({
   document: WithId<KnowledgeDocumentRecord>;
   sourceType: KnowledgeSourceType;
   collectionName: string;
+  embeddingConfig: EffectiveEmbeddingConfig;
+  indexingConfig: EffectiveIndexingConfig;
+  embeddingMetadata: {
+    embeddingProvider: KnowledgeDocumentRecord['embeddingProvider'];
+    embeddingModel: KnowledgeDocumentRecord['embeddingModel'];
+  };
   mode: 'index' | 'rebuild';
 }): Promise<void> => {
   const queuedAt = new Date();
@@ -1077,7 +1589,187 @@ const queueExistingKnowledgeDocument = async ({
     sourceType,
     collectionName,
     documentVersionHash: document.documentVersionHash,
+    embeddingConfig,
+    indexingConfig,
+    embeddingMetadata,
     mode,
+  });
+};
+
+const markNamespaceDocumentsPending = async ({
+  repository,
+  documents,
+}: {
+  repository: KnowledgeRepository;
+  documents: WithId<KnowledgeDocumentRecord>[];
+}): Promise<void> => {
+  const queuedAt = new Date();
+
+  await Promise.all(
+    documents.map((document) =>
+      repository.updateKnowledgeDocument(document._id.toHexString(), {
+        status: 'pending',
+        errorMessage: null,
+        processedAt: null,
+        updatedAt: queuedAt,
+      }),
+    ),
+  );
+
+  await Promise.all(
+    Array.from(new Set(documents.map((document) => document.knowledgeId))).map((knowledgeId) =>
+      repository.syncKnowledgeSummaryFromDocuments(knowledgeId, queuedAt),
+    ),
+  );
+};
+
+const runNamespaceRebuild = async ({
+  env,
+  repository,
+  searchService,
+  settingsRepository,
+  namespaceContext,
+  documents,
+}: {
+  env: AppEnv;
+  repository: KnowledgeRepository;
+  searchService: KnowledgeSearchService;
+  settingsRepository: SettingsRepository;
+  namespaceContext: ResolvedNamespaceIndexContext;
+  documents: WithId<KnowledgeDocumentRecord>[];
+}): Promise<void> => {
+  const targetCollectionName = buildVersionedKnowledgeCollectionName(
+    namespaceContext.namespace.namespaceKey,
+    namespaceContext.currentEmbeddingFingerprint,
+  );
+  const previousCollectionName =
+    namespaceContext.mode === 'versioned'
+      ? namespaceContext.state.activeCollectionName
+      : namespaceContext.namespace.namespaceKey;
+  const embeddingMetadata = toKnowledgeEmbeddingMetadata(namespaceContext.currentEmbeddingConfig);
+  const indexingConfig = await getEffectiveIndexingConfig({
+    env,
+    repository: settingsRepository,
+  });
+
+  for (const document of documents) {
+    await processUploadedDocument({
+      env,
+      repository,
+      searchService,
+      settingsRepository,
+      knowledgeId: document.knowledgeId,
+      documentId: document._id.toHexString(),
+      storagePath: join(env.knowledge.storageRoot, document.storagePath),
+      fileName: document.fileName,
+      mimeType: document.mimeType,
+      sourceType: namespaceContext.namespace.sourceType,
+      collectionName: targetCollectionName,
+      documentVersionHash: document.documentVersionHash,
+      embeddingConfig: namespaceContext.currentEmbeddingConfig,
+      indexingConfig,
+      embeddingMetadata,
+      mode: 'rebuild',
+    });
+  }
+
+  const refreshedDocuments = await listDocumentsForKnowledgeIds({
+    repository,
+    knowledgeIds: documents.map((document) => document.knowledgeId),
+  });
+  const rebuildDocuments = refreshedDocuments.filter((document) =>
+    documents.some((item) => item._id.equals(document._id)),
+  );
+  const failedDocument = rebuildDocuments.find((document) => document.status !== 'completed');
+
+  if (failedDocument) {
+    if (namespaceContext.mode === 'versioned') {
+      await updateNamespaceIndexState(repository, namespaceContext.namespace.namespaceKey, {
+        rebuildStatus: 'failed',
+        lastErrorMessage: failedDocument.errorMessage ?? '命名空间重建失败',
+        updatedAt: new Date(),
+      });
+    }
+    return;
+  }
+
+  const updatedAt = new Date();
+
+  if (namespaceContext.mode === 'versioned') {
+    await updateNamespaceIndexState(repository, namespaceContext.namespace.namespaceKey, {
+      activeCollectionName: targetCollectionName,
+      activeEmbeddingProvider: namespaceContext.currentEmbeddingConfig.provider,
+      activeApiKeyEncrypted: namespaceContext.currentEmbeddingConfig.apiKey
+        ? encryptApiKey(namespaceContext.currentEmbeddingConfig.apiKey)
+        : null,
+      activeEmbeddingBaseUrl: namespaceContext.currentEmbeddingConfig.baseUrl,
+      activeEmbeddingModel: namespaceContext.currentEmbeddingConfig.model,
+      activeEmbeddingFingerprint: namespaceContext.currentEmbeddingFingerprint,
+      rebuildStatus: 'idle',
+      targetCollectionName: null,
+      targetEmbeddingProvider: null,
+      targetEmbeddingBaseUrl: null,
+      targetEmbeddingModel: null,
+      targetEmbeddingFingerprint: null,
+      lastErrorMessage: null,
+      updatedAt,
+    });
+  } else {
+    await createNamespaceIndexState(
+      repository,
+      createNamespaceStateDocument({
+        namespace: namespaceContext.namespace,
+        embeddingConfig: namespaceContext.currentEmbeddingConfig,
+        embeddingFingerprint: namespaceContext.currentEmbeddingFingerprint,
+        now: updatedAt,
+      }),
+    );
+  }
+
+  if (previousCollectionName !== targetCollectionName) {
+    try {
+      await searchService.deleteCollection(previousCollectionName);
+    } catch (error) {
+      console.warn(
+        `[knowledge-search] failed to cleanup stale collection ${previousCollectionName}: ${normalizeIndexerErrorMessage(
+          error,
+          'Chroma collection 清理失败',
+        )}`,
+      );
+    }
+  }
+};
+
+const queueNamespaceRebuild = ({
+  env,
+  repository,
+  searchService,
+  settingsRepository,
+  namespaceContext,
+  documents,
+}: {
+  env: AppEnv;
+  repository: KnowledgeRepository;
+  searchService: KnowledgeSearchService;
+  settingsRepository: SettingsRepository;
+  namespaceContext: ResolvedNamespaceIndexContext;
+  documents: WithId<KnowledgeDocumentRecord>[];
+}): void => {
+  setImmediate(() => {
+    void runNamespaceRebuild({
+      env,
+      repository,
+      searchService,
+      settingsRepository,
+      namespaceContext,
+      documents,
+    }).catch((error) => {
+      console.error(
+        `[knowledge-indexer] detached namespace rebuild crashed for ${namespaceContext.namespace.namespaceKey}: ${normalizeIndexerErrorMessage(
+          error,
+        )}`,
+      );
+    });
   });
 };
 
@@ -1124,15 +1816,28 @@ const uploadKnowledgeDocument = async ({
   knowledge: WithId<KnowledgeBaseDocument>;
   file: UploadedKnowledgeFile;
 }): Promise<KnowledgeDocumentUploadResponse> => {
-  const collectionName = buildKnowledgeCollectionName(knowledge);
-
   validateUploadFile(knowledge.sourceType, file);
 
   const documentId = new ObjectId();
   const documentVersionHash = buildDocumentVersionHash(file);
+  const [namespaceContext, indexingConfig] = await Promise.all([
+    resolveNamespaceIndexContext({
+      env,
+      repository,
+      settingsRepository,
+      knowledge,
+    }),
+    getEffectiveIndexingConfig({
+      env,
+      repository: settingsRepository,
+    }),
+  ]);
+  const activeState = assertNamespaceReadyForMutation(namespaceContext);
+  const collectionName = activeState.activeCollectionName;
   const embeddingMetadata = await resolveEmbeddingMetadata({
     env,
     settingsRepository,
+    embeddingConfig: namespaceContext.currentEmbeddingConfig,
   });
   const documentRootPath = buildStorageDocumentRootPath(
     knowledge,
@@ -1214,6 +1919,9 @@ const uploadKnowledgeDocument = async ({
       sourceType: knowledge.sourceType,
       collectionName,
       documentVersionHash,
+      embeddingConfig: namespaceContext.currentEmbeddingConfig,
+      indexingConfig,
+      embeddingMetadata,
     });
 
     return {
@@ -1376,7 +2084,21 @@ export const createKnowledgeService = ({
         actorId: actor.id,
         knowledgeId,
       });
-      const collectionName = buildKnowledgeCollectionName(knowledge);
+      const namespaceContext = await resolveNamespaceIndexContext({
+        env,
+        repository,
+        settingsRepository,
+        knowledge,
+      });
+
+      if (namespaceContext.mode === 'versioned' && namespaceContext.state.rebuildStatus === 'rebuilding') {
+        throw createNamespaceRebuildingConflictError();
+      }
+
+      const collectionName =
+        namespaceContext.mode === 'versioned'
+          ? namespaceContext.state.activeCollectionName
+          : namespaceContext.namespace.namespaceKey;
 
       try {
         await searchService.deleteKnowledgeChunks(knowledgeId, {
@@ -1410,7 +2132,21 @@ export const createKnowledgeService = ({
         actorId: actor.id,
         knowledgeId,
       });
-      const collectionName = buildKnowledgeCollectionName(knowledge);
+      const namespaceContext = await resolveNamespaceIndexContext({
+        env,
+        repository,
+        settingsRepository,
+        knowledge,
+      });
+
+      if (namespaceContext.mode === 'versioned' && namespaceContext.state.rebuildStatus === 'rebuilding') {
+        throw createNamespaceRebuildingConflictError();
+      }
+
+      const collectionName =
+        namespaceContext.mode === 'versioned'
+          ? namespaceContext.state.activeCollectionName
+          : namespaceContext.namespace.namespaceKey;
 
       const document = await repository.findKnowledgeDocumentById(documentId);
 
@@ -1497,7 +2233,24 @@ export const createKnowledgeService = ({
         actorId: actor.id,
         knowledgeId,
       });
-      const collectionName = buildKnowledgeCollectionName(knowledge);
+      const namespaceContext = await resolveNamespaceIndexContext({
+        env,
+        repository,
+        settingsRepository,
+        knowledge,
+      });
+      const activeState = assertNamespaceReadyForMutation(namespaceContext);
+      const [indexingConfig, embeddingMetadata] = await Promise.all([
+        getEffectiveIndexingConfig({
+          env,
+          repository: settingsRepository,
+        }),
+        resolveEmbeddingMetadata({
+          env,
+          settingsRepository,
+          embeddingConfig: namespaceContext.currentEmbeddingConfig,
+        }),
+      ]);
 
       const document = await repository.findKnowledgeDocumentById(documentId);
 
@@ -1517,7 +2270,10 @@ export const createKnowledgeService = ({
         knowledgeId,
         document,
         sourceType: knowledge.sourceType,
-        collectionName,
+        collectionName: activeState.activeCollectionName,
+        embeddingConfig: namespaceContext.currentEmbeddingConfig,
+        indexingConfig,
+        embeddingMetadata,
         mode: 'index',
       });
     },
@@ -1530,7 +2286,24 @@ export const createKnowledgeService = ({
         actorId: actor.id,
         knowledgeId,
       });
-      const collectionName = buildKnowledgeCollectionName(knowledge);
+      const namespaceContext = await resolveNamespaceIndexContext({
+        env,
+        repository,
+        settingsRepository,
+        knowledge,
+      });
+      const activeState = assertNamespaceReadyForMutation(namespaceContext);
+      const [indexingConfig, embeddingMetadata] = await Promise.all([
+        getEffectiveIndexingConfig({
+          env,
+          repository: settingsRepository,
+        }),
+        resolveEmbeddingMetadata({
+          env,
+          settingsRepository,
+          embeddingConfig: namespaceContext.currentEmbeddingConfig,
+        }),
+      ]);
 
       const document = await repository.findKnowledgeDocumentById(documentId);
 
@@ -1550,7 +2323,10 @@ export const createKnowledgeService = ({
         knowledgeId,
         document,
         sourceType: knowledge.sourceType,
-        collectionName,
+        collectionName: activeState.activeCollectionName,
+        embeddingConfig: namespaceContext.currentEmbeddingConfig,
+        indexingConfig,
+        embeddingMetadata,
         mode: 'rebuild',
       });
     },
@@ -1563,7 +2339,12 @@ export const createKnowledgeService = ({
         actorId: actor.id,
         knowledgeId,
       });
-      const collectionName = buildKnowledgeCollectionName(knowledge);
+      const namespaceContext = await resolveNamespaceIndexContext({
+        env,
+        repository,
+        settingsRepository,
+        knowledge,
+      });
 
       const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
 
@@ -1575,21 +2356,121 @@ export const createKnowledgeService = ({
         throw createKnowledgeRebuildConflictError();
       }
 
-      await Promise.all(
-        documents.map((document) =>
-          queueExistingKnowledgeDocument({
+      if (
+        namespaceContext.mode === 'versioned' &&
+        namespaceContext.state.rebuildStatus === 'rebuilding'
+      ) {
+        throw createNamespaceRebuildingConflictError();
+      }
+
+      if (
+        namespaceContext.mode === 'versioned' &&
+        namespaceContext.state.activeEmbeddingFingerprint === namespaceContext.currentEmbeddingFingerprint
+      ) {
+        const [indexingConfig, embeddingMetadata] = await Promise.all([
+          getEffectiveIndexingConfig({
             env,
-            repository,
-            searchService,
-            settingsRepository,
-            knowledgeId,
-            document,
-            sourceType: knowledge.sourceType,
-            collectionName,
-            mode: 'rebuild',
+            repository: settingsRepository,
           }),
-        ),
-      );
+          resolveEmbeddingMetadata({
+            env,
+            settingsRepository,
+            embeddingConfig: namespaceContext.currentEmbeddingConfig,
+          }),
+        ]);
+
+        await Promise.all(
+          documents.map((document) =>
+            queueExistingKnowledgeDocument({
+              env,
+              repository,
+              searchService,
+              settingsRepository,
+              knowledgeId,
+              document,
+              sourceType: knowledge.sourceType,
+              collectionName: namespaceContext.state.activeCollectionName,
+              embeddingConfig: namespaceContext.currentEmbeddingConfig,
+              indexingConfig,
+              embeddingMetadata,
+              mode: 'rebuild',
+            }),
+          ),
+        );
+        return;
+      }
+
+      const namespaceDocuments = await listNamespaceDocuments(repository, namespaceContext.namespace);
+
+      if (
+        namespaceDocuments.some(
+          (document) => document.status === 'pending' || document.status === 'processing',
+        )
+      ) {
+        throw createKnowledgeRebuildConflictError();
+      }
+
+      let rebuildContext: Extract<ResolvedNamespaceIndexContext, { mode: 'versioned' }>;
+
+      if (namespaceContext.mode === 'versioned') {
+        const patch = {
+          rebuildStatus: 'rebuilding' as const,
+          targetCollectionName: buildVersionedKnowledgeCollectionName(
+            namespaceContext.namespace.namespaceKey,
+            namespaceContext.currentEmbeddingFingerprint,
+          ),
+          targetEmbeddingProvider: namespaceContext.currentEmbeddingConfig.provider,
+          targetEmbeddingBaseUrl: namespaceContext.currentEmbeddingConfig.baseUrl,
+          targetEmbeddingModel: namespaceContext.currentEmbeddingConfig.model,
+          targetEmbeddingFingerprint: namespaceContext.currentEmbeddingFingerprint,
+          lastErrorMessage: null,
+          updatedAt: new Date(),
+        };
+        const updatedState = await updateNamespaceIndexState(
+          repository,
+          namespaceContext.namespace.namespaceKey,
+          patch,
+        );
+
+        rebuildContext = {
+          ...namespaceContext,
+          mode: 'versioned',
+          state: updatedState ?? {
+            ...namespaceContext.state,
+            ...patch,
+          },
+        };
+      } else {
+        const now = new Date();
+        const stateDocument = createNamespaceRebuildStateDocument({
+          namespace: namespaceContext.namespace,
+          activeCollectionName: namespaceContext.namespace.namespaceKey,
+          embeddingConfig: namespaceContext.currentEmbeddingConfig,
+          embeddingFingerprint: namespaceContext.currentEmbeddingFingerprint,
+          now,
+        });
+
+        const createdState = await createNamespaceIndexState(repository, stateDocument);
+        rebuildContext = {
+          ...namespaceContext,
+          mode: 'versioned',
+          state: createdState,
+        };
+      }
+
+      await markNamespaceDocumentsPending({
+        repository,
+        documents: namespaceDocuments,
+      });
+
+      queueNamespaceRebuild({
+        env,
+        repository,
+        searchService,
+        settingsRepository,
+        namespaceContext: rebuildContext,
+        documents: namespaceDocuments,
+      });
     },
 
     getKnowledgeDiagnostics: async ({ actor }, knowledgeId) => {
@@ -1599,6 +2480,12 @@ export const createKnowledgeService = ({
         projectsRepository,
         actorId: actor.id,
         knowledgeId,
+      });
+      const namespaceContext = await resolveNamespaceIndexContext({
+        env,
+        repository,
+        settingsRepository,
+        knowledge,
       });
 
       const documents = await repository.listDocumentsByKnowledgeId(knowledgeId);
@@ -1617,18 +2504,16 @@ export const createKnowledgeService = ({
       );
 
       const collectionDiagnostics = await searchService.getDiagnostics({
-        collectionName: buildKnowledgeCollectionName(knowledge),
+        collectionName:
+          namespaceContext.mode === 'versioned'
+            ? namespaceContext.state.activeCollectionName
+            : namespaceContext.namespace.namespaceKey,
       });
-      const [effectiveEmbeddingConfig, effectiveIndexingConfig] = await Promise.all([
-        getEffectiveEmbeddingConfig({
-          env,
-          repository: settingsRepository,
-        }),
-        getEffectiveIndexingConfig({
-          env,
-          repository: settingsRepository,
-        }),
-      ]);
+      const effectiveEmbeddingConfig = namespaceContext.currentEmbeddingConfig;
+      const effectiveIndexingConfig = await getEffectiveIndexingConfig({
+        env,
+        repository: settingsRepository,
+      });
       let indexerDiagnostics: KnowledgeDiagnosticsResponse['indexer'];
 
       try {
@@ -1656,11 +2541,47 @@ export const createKnowledgeService = ({
         };
       }
 
+      const activeEmbeddingProvider =
+        namespaceContext.mode === 'versioned' ? namespaceContext.state.activeEmbeddingProvider : null;
+      const activeEmbeddingModel =
+        namespaceContext.mode === 'versioned' ? namespaceContext.state.activeEmbeddingModel : null;
+      const activeEmbeddingFingerprint =
+        namespaceContext.mode === 'versioned' ? namespaceContext.state.activeEmbeddingFingerprint : null;
+      const targetCollectionName =
+        namespaceContext.mode === 'versioned' ? namespaceContext.state.targetCollectionName : null;
+      const targetEmbeddingProvider =
+        namespaceContext.mode === 'versioned' ? namespaceContext.state.targetEmbeddingProvider : null;
+      const targetEmbeddingModel =
+        namespaceContext.mode === 'versioned' ? namespaceContext.state.targetEmbeddingModel : null;
+      const namespaceRebuildStatus =
+        namespaceContext.mode === 'versioned' ? namespaceContext.state.rebuildStatus : null;
+      const namespaceLastErrorMessage =
+        namespaceContext.mode === 'versioned' ? namespaceContext.state.lastErrorMessage : null;
+
       return {
         knowledgeId,
         sourceType: knowledge.sourceType,
         expectedCollectionName: collectionDiagnostics.collection.name,
         indexStatus: knowledge.indexStatus,
+        namespace: {
+          key: namespaceContext.namespace.namespaceKey,
+          mode: namespaceContext.mode,
+          activeCollectionName: collectionDiagnostics.collection.name,
+          activeEmbeddingProvider,
+          activeEmbeddingModel,
+          activeEmbeddingFingerprint,
+          rebuildStatus: namespaceRebuildStatus,
+          targetCollectionName,
+          targetEmbeddingProvider,
+          targetEmbeddingModel,
+          lastErrorMessage: namespaceLastErrorMessage,
+          currentEmbeddingProvider: effectiveEmbeddingConfig.provider,
+          currentEmbeddingModel: effectiveEmbeddingConfig.model,
+          currentMatchesActive:
+            activeEmbeddingFingerprint === null
+              ? null
+              : activeEmbeddingFingerprint === namespaceContext.currentEmbeddingFingerprint,
+        },
         documentSummary: {
           total: documents.length,
           pending: documents.filter((document) => document.status === 'pending').length,
@@ -1690,7 +2611,25 @@ export const createKnowledgeService = ({
       const validatedInput = validateSearchDocumentsInput(input);
 
       if (!validatedInput.knowledgeId) {
-        return searchService.searchDocuments(validatedInput);
+        await repository.ensureMetadataModel();
+        const namespaceContext = await resolveNamespaceIndexContext({
+          env,
+          repository,
+          settingsRepository,
+          knowledge: {
+            scope: 'global',
+            projectId: null,
+            sourceType: validatedInput.sourceType,
+          },
+        });
+        return searchService.searchDocuments({
+          ...validatedInput,
+          collectionName:
+            namespaceContext.mode === 'versioned'
+              ? namespaceContext.state.activeCollectionName
+              : namespaceContext.namespace.namespaceKey,
+          embeddingConfig: resolveActiveEmbeddingConfig(namespaceContext),
+        });
       }
 
       await repository.ensureMetadataModel();
@@ -1700,11 +2639,21 @@ export const createKnowledgeService = ({
         actorId: actor.id,
         knowledgeId: validatedInput.knowledgeId,
       });
+      const namespaceContext = await resolveNamespaceIndexContext({
+        env,
+        repository,
+        settingsRepository,
+        knowledge,
+      });
 
       return searchService.searchDocuments({
         ...validatedInput,
         sourceType: knowledge.sourceType,
-        collectionName: buildKnowledgeCollectionName(knowledge),
+        collectionName:
+          namespaceContext.mode === 'versioned'
+            ? namespaceContext.state.activeCollectionName
+            : namespaceContext.namespace.namespaceKey,
+        embeddingConfig: resolveActiveEmbeddingConfig(namespaceContext),
       });
     },
   };

@@ -1,24 +1,25 @@
 # Knowject 设置页开发任务文档
 
-状态：待开发（已完成可行性梳理，具备开发前置条件）  
+状态：已实现（2026-03-16 首版落地，本文已按当前代码更新为“实施记录 + 当前契约”）  
 优先级：P1  
 阶段：Week 7+  
 关联模块：`apps/api` / `apps/platform` / `apps/indexer-py` / MongoDB
 
 当前结论：
 
-- 基于当前仓库结构与已确认决策，本任务已具备开发前置条件。
-- 本文档已按现有代码事实修订；后续实现以本文为直接契约，不再额外引入未确认的权限模型或运行时假设。
+- `/settings` 页面与 `/api/settings/*` 已完成首版端到端实现，并先对所有已登录用户开放。
+- 服务端响应、日志、数据库和错误对象都不会回显明文 API Key；浏览器本机请求体可见属于正常边界。
+- 知识索引链路已升级为“namespace key + versioned collection + active pointer”模式；模型切换后的最终生效依赖 namespace 级全量重建，不再依赖服务重启。
 
 ---
 
 ## 一、任务目标
 
-在现有占位页 `/settings` 的基础上，开发完整的工作区设置模块。
+将原 `/settings` 占位页替换为正式的工作区设置中心，并打通对应的前后端与索引链路契约。
 
 核心目标：
 
-- 让已登录用户在产品内完成 AI 模型配置（embedding / LLM），无需修改 `.env` 或重启服务
+- 让已登录用户在产品内完成 AI 模型配置（embedding / LLM），无需修改 `.env`
 - API Key 加密存储到 MongoDB，不允许明文落库
 - 配置运行时热生效，`apps/api` 和 `apps/indexer-py` 优先读取数据库配置，fallback 到环境变量
 - 修改 embedding 配置后，联动提示用户重建知识库索引
@@ -49,7 +50,7 @@ interface WorkspaceSettings {
   singleton: 'default'; // 固定值，确保唯一性，建唯一索引
 
   embedding: {
-    provider: 'openai' | 'aliyun' | 'voyage' | 'custom';
+    provider: 'openai' | 'aliyun' | 'zhipu' | 'voyage' | 'custom';
     baseUrl: string; // 明文存储，不敏感
     model: string; // 明文存储
     apiKeyEncrypted: string; // 加密后的 API Key
@@ -368,7 +369,7 @@ export async function getEffectiveEmbeddingConfig(): Promise<EmbeddingConfig> {
   "knowledgeId": "knowledge_123",
   "documentId": "document_123",
   "sourceType": "global_docs",
-  "collectionName": "global_docs",
+  "collectionName": "global_docs__emb_a1b2c3d4e5f6",
   "fileName": "README.md",
   "mimeType": "text/markdown",
   "storagePath": "/abs/path/to/file.md",
@@ -393,6 +394,7 @@ Python indexer 侧约定：
 - 请求级 `embeddingConfig` 优先于本地 env
 - 请求级 `indexingConfig` 优先于本地 env
 - 本期热生效通过 Node 每次请求透传 effective config 实现，不要求 Python 直连 MongoDB
+- `collectionName` 不再等于固定 namespace key；它表示当前 namespace 的 active 或 target versioned collection，namespace 本身继续由 Node + Mongo 的 `knowledge_index_namespaces` 维护
 - `.markdown` 继续作为 `.md` 的解析别名，不单独出现在设置项里
 - `indexerTimeoutMs` 表示 indexer 相关超时配置，不表述为 Chroma / embedding / LLM 全链路统一全局超时开关
 
@@ -408,7 +410,7 @@ Python indexer 侧约定：
 
 ### 6.1 页面结构
 
-路由：`/settings`（现有占位页，直接替换内容）
+路由：`/settings`（已替换为正式设置中心）
 
 整体布局：左侧竖向 Tab 导航 + 右侧内容区（和全局 `/knowledge` 的左右分栏风格保持一致）。
 
@@ -430,14 +432,23 @@ Python indexer 侧约定：
 Provider 下拉选择：
   - OpenAI
   - 阿里云百炼
+  - 智谱
   - Voyage AI
   - 自定义
 
 选择后自动填入对应的默认 Base URL 和模型名称（可覆盖编辑）：
   - OpenAI       → https://api.openai.com/v1          / text-embedding-3-small
   - 阿里云百炼   → https://dashscope.aliyuncs.com/compatible-mode/v1 / text-embedding-v3
+  - 智谱         → https://open.bigmodel.cn/api/paas/v4 / embedding-3
   - Voyage AI    → https://api.voyageai.com/v1         / voyage-3-large
   - 自定义       → 空，用户自行填写
+
+当前实现补充：
+
+- Provider、Base URL、模型名称位于同一行，`API Key` 单独一行
+- 如果用户切换了 Provider 或 Base URL，前端不会继续沿用之前已保存的 Key 提示，必须重新输入新的 API Key
+- 当草稿切换到新的模型服务后，推荐交互是“先输入新 Key -> 测试连接 -> 再保存”，避免把未验证的配置直接写入数据库
+- 当 provider / model 草稿变化且测试通过时，会先提示“保存后已有知识库需要重建索引”；真正保存成功后，再展示持续性的重建提示
 
 API Key 输入框：
   - 已有 Key 时：显示 placeholder "已配置（...ab3f）"，输入框为空
@@ -451,7 +462,7 @@ API Key 输入框：
 
 保存按钮：点击后调用 PATCH /api/settings/embedding
 
-⚠️ 变更提示（仅当 provider 或 model 发生变化时出现）：
+⚠️ 变更提示（当前已落地为“草稿测试通过前提示 + 保存成功后持续提示”两段式交互）：
   "向量模型已变更，已有知识库需重建索引才能正常检索。
    前往知识库管理 →"
 ```
@@ -563,7 +574,7 @@ SETTINGS_ENCRYPTION_KEY=
 ## 九、验收检查项
 
 - [ ] GET /api/settings 返回正确的脱敏结构，并为 `embedding / llm / indexing` 正确标记 `source`
-- [ ] 保存 embedding 配置后，无需重启 API 服务，`getEffectiveEmbeddingConfig()` 返回数据库中的值
+- [ ] 保存 embedding 配置后，无需重启 API / Python 服务，`getEffectiveEmbeddingConfig()` 返回数据库中的值
 - [ ] 删除 .env.local 中的 OPENAI_API_KEY，系统仍可通过数据库配置正常执行 embedding
 - [ ] 将 .env.local 中的 OPENAI_API_KEY 留空且数据库无配置，系统报错明确
 - [ ] 更换 Provider 后，前端展示 ⚠️ 重建提示
@@ -571,12 +582,13 @@ SETTINGS_ENCRYPTION_KEY=
 - [ ] `POST /api/settings/llm/test` 对 OpenAI-compatible provider 可用；对 `anthropic` 返回"当前 provider 暂不支持在线测试"
 - [ ] 触发 Python indexer 时，请求体包含 `embeddingConfig` 与 `indexingConfig`
 - [ ] 索引参数修改后，新触发的索引任务使用新的 chunkSize
+- [ ] 变更 embedding provider / model 后，已有 namespace 通过知识库全量重建切换到新的 versioned collection，不依赖重启服务
 - [ ] 所有 `/api/settings/*` 路由均需 JWT 鉴权，未登录访问返回 401
 - [ ] 生产环境下，对 `/api/settings/*` 的非 HTTPS 请求会被敏感路由保护拒绝
 
 ---
 
-## 十、实现顺序建议
+## 十、实现落地顺序（2026-03-16 已完成）
 
 1. `SETTINGS_ENCRYPTION_KEY` 加入 `.env.example` 和必需变量校验
 2. 在 `lib` 或 `settings` 模块共享层新增 API Key 加密工具

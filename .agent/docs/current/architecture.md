@@ -1,4 +1,4 @@
-# Knowject 架构事实（2026-03-15）
+# Knowject 架构事实（2026-03-16）
 
 本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `.agent/docs/roadmap/target-architecture.md` 与 `.agent/docs/roadmap/gap-analysis.md`。
 截至 2026-03-11，`.agent/docs/plans/tasks-foundation-framework.md` 中定义的基础框架阶段（`BF-01` ~ `BF-10`）已经完成。
@@ -17,7 +17,7 @@
 - 共享包：
   - `packages/request`：Axios 请求封装。
   - `packages/ui`：通用 UI 组件，当前已包含 `SearchPanel` 及其 helper 分层。
-- 当前产品主线：登录后产品壳、项目态页面、全局资产正式管理页、基础框架 API 基线。
+- 当前产品主线：登录后产品壳、项目态页面、全局资产正式管理页、工作区设置中心、基础框架 API 基线。
 - 当前项目态主数据流：项目列表、项目基础信息、成员 roster、项目资源绑定与项目对话读链路来自后端 `/api/projects*`；概览补充文案与成员协作快照仍依赖前端 Mock，项目资源与概览中的知识库 / Skill / Agent 元数据已切正式 `/api/knowledge`、`/api/skills`、`/api/agents`。
 - 当前默认宿主机开发拓扑：`platform + api + indexer-py`；依赖服务推荐由 Docker 提供 `mongodb + chroma`。
 - 当前容器化部署拓扑：
@@ -39,14 +39,14 @@
 apps/
   platform/
     src/app/        鉴权、布局、导航、项目上下文
-    src/api/        auth / projects / members / knowledge 前端请求封装
+    src/api/        auth / projects / members / knowledge / settings 前端请求封装
     src/pages/      登录页、主页、成员页、项目页、全局资产页
   api/
     src/app/        Express 应用组装
     src/config/     环境变量加载与校验
     src/db/         MongoDB 连接与健康快照
-    src/lib/        请求上下文与校验 helper
-    src/modules/    auth / members / projects / memberships / knowledge / skills / agents 模块边界
+    src/lib/        请求上下文、加密与校验 helper
+    src/modules/    auth / members / projects / memberships / knowledge / skills / agents / settings 模块边界
     src/routes/     health / memory 当前接口
     src/middleware/ 请求上下文、404、统一错误处理
     src/server.ts   启动入口
@@ -127,7 +127,7 @@ files/
 - `/agents`：全局智能体正式配置页，已接入 `agents / knowledge / skills` 正式接口。
 - `/members`：全局成员协作总览页，聚合当前账号可见项目中的成员信息。
 - `/analytics`：全局分析页占位。
-- `/settings`：全局设置页占位。
+- `/settings`：工作区设置中心，已接入 embedding / LLM / indexing / workspace 配置与在线测试。
 - `/project/:projectId/overview`：项目概览页。
 - `/project/:projectId/chat`：项目对话页。
 - `/project/:projectId/chat/:chatId`：项目对话详情页。
@@ -180,11 +180,12 @@ files/
 - `apps/api` 还会读取可选 `SKILLS_STORAGE_ROOT`；未配置时默认落到 `<workspace>/.knowject-storage/skills`，用于持久化自建 / 导入 Skill 的 bundle 文件。
 - 宿主机默认开发流已把 `apps/indexer-py` 纳入 workspace `pnpm dev`，因此本地 `platform + api + indexer-py` 会一并启动；若单独跑 `api`，仍需额外启动 Python indexer 才能验证知识上传闭环。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
-- `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘、Node 后台触发 Python indexer、`global_docs` Chroma 写入，以及统一知识检索 service；其中 `knowledge_bases` 当前已补齐 `scope=global|project` 与 `projectId` 作用域字段，全局列表默认只返回 global scope，项目级 `/api/projects/:projectId/knowledge*` 已开放私有知识的 `list / create / detail / upload` 路由，project scope 文档会写入 `proj_{projectId}_docs`，并按 `projects/{projectId}/knowledge/...` 落盘。
+- `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases`、`knowledge_documents` 与 namespace 级 `knowledge_index_namespaces` 三组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘、Node 后台触发 Python indexer、`global_docs` Chroma 写入，以及统一知识检索 service；其中 `knowledge_bases` 当前已补齐 `scope=global|project` 与 `projectId` 作用域字段，全局列表默认只返回 global scope，项目级 `/api/projects/:projectId/knowledge*` 已开放私有知识的 `list / create / detail / upload` 路由，project scope 文档的 namespace key 仍是 `proj_{projectId}_docs`，并按 `projects/{projectId}/knowledge/...` 落盘。
+- `settings` 模块当前已在 MongoDB 中落地 `workspace_settings` 单例集合，并通过 `SETTINGS_ENCRYPTION_KEY` 对 API Key 做 AES-256-GCM 加密存储；`GET /api/settings` 返回的是当前 effective config，而不是数据库原始值，`embedding / llm / indexing` 会标记 `source=database|environment`。
 - `apps/indexer-py` 当前已切到 FastAPI + uv 基线，已提供 `POST /internal/v1/index/documents`、`POST /internal/v1/index/documents/{documentId}/rebuild` 与 `GET /internal/v1/index/diagnostics` 三个内部控制面入口，并开放 `/docs`、`/redoc`、`/openapi.json` 作为内部文档入口；当前仍隐藏兼容旧路径 `POST /internal/index-documents`，用于开发态 / 滚动重启期间的平滑过渡。
 - 开发环境下若缺少 `OPENAI_API_KEY`，知识库上传链路会退化到 deterministic 本地 embedding，并把文档元数据标记为 `local_dev / hash-1536-dev`；Node 侧统一知识检索也会复用同一套 deterministic 本地 query embedding，保证开发环境上传 / 检索闭环可用。生产与正式环境仍以真实 OpenAI-compatible embedding 为基线。
 - `GET /api/health` 会联动返回数据库状态与可选的 Chroma 心跳状态，因此服务可在依赖不可达时以 `degraded` 状态启动并提供诊断。
-- 当前 Chroma 已进入正式知识索引链路：`global_docs` 的 collection 生命周期与写侧索引由 `indexer-py` 负责，Node 侧统一知识检索 service 保留读侧 query 的架构例外；向量删除的正式 Python 内部接口仍待补齐，当前 Node 代码保留了过渡期直连 delete TODO。`global_code` 当前只有 collection 预留，没有真实数据导入。
+- 当前 Chroma 已进入正式知识索引链路：`global_docs` 与项目私有 docs 的写侧索引由 `indexer-py` 负责，Node 侧统一知识检索 service 保留读侧 query 的架构例外；collection 逻辑已经从“固定 collection 名”升级为“namespace key + versioned collection + active pointer”模式，用于处理 embedding model 切换后的维度不兼容问题。Node 会把当前 effective embedding / indexing config 透传给 Python，模型切换后不要求重启服务，而是要求先执行 namespace 级全量重建。向量删除与旧 collection 清理当前仍保留 Node 侧过渡实现，后续再完全收口到 Python 内部控制面。`global_code` 当前只有 collection 预留，没有真实数据导入。
 - 根 `scripts/knowject.sh` 已收口三类常用命令包装：`dev:*`（宿主机开发 + Docker 依赖）、`host:*`（兼容宿主机命令）和 `docker:*`（本地 / 线上部署与验收）。
 
 ### 5.4 项目状态与 Mock 资产
@@ -218,6 +219,7 @@ files/
 - 知识库上传链路现在会在上传入口对 multipart 文件名做 UTF-8 纠偏，避免中文文件名因浏览器 / multer 参数编码差异出现乱码。
 - `apps/platform/src/pages/skills/SkillsManagementPage.tsx` 当前已作为 `/skills` 的正式管理页，支持 Skill 分组筛选、自建、GitHub/URL 导入、原生 `SKILL.md` 编辑与预览、草稿/发布，以及来源 provenance 展示。
 - `apps/platform/src/pages/agents/AgentsManagementPage.tsx` 当前已作为 `/agents` 的正式配置页，支持创建、编辑、删除，以及知识库 / Skill 绑定表单。
+- `apps/platform/src/pages/settings/SettingsPage.tsx` 当前已作为 `/settings` 的正式设置中心，支持 embedding / LLM / indexing / workspace 四块配置，以及 Provider 切换后的 API Key 重输与在线测试交互。
 - `apps/platform/src/pages/assets/GlobalAssetManagementPage.tsx` 当前保留为历史壳层组件，未接入实际路由。
 - 项目资源页的知识分组当前会并行消费 `/api/knowledge` 与 `/api/projects/:projectId/knowledge`：前者负责解析 `knowledgeBaseIds` 对应的全局绑定知识，后者负责项目私有知识目录；页面已收口为统一“接入知识库”入口，支持在项目内直接选择“引入全局知识库”或“新建项目私有知识库”。
 - 项目资源页中的知识库卡片当前支持打开详情抽屉：全局绑定知识在项目中只读查看文档并允许解除绑定、跳转全局治理；项目私有知识则支持编辑、删除、上传文档、文档级 retry / rebuild / delete，以及 knowledge diagnostics / knowledge rebuild 的最小运维操作。
@@ -276,6 +278,13 @@ files/
 - `POST /api/agents`
 - `PATCH /api/agents/:agentId`
 - `DELETE /api/agents/:agentId`
+- `GET /api/settings`
+- `PATCH /api/settings/embedding`
+- `PATCH /api/settings/llm`
+- `PATCH /api/settings/indexing`
+- `PATCH /api/settings/workspace`
+- `POST /api/settings/embedding/test`
+- `POST /api/settings/llm/test`
 - `GET /api/memory/overview`
 - `POST /api/memory/query`
 
@@ -288,15 +297,16 @@ files/
 - `members`：聚合当前用户可见项目中的成员基础信息、项目参与关系和最小权限摘要。
 - `projects`：提供最小正式项目 CRUD，写入 MongoDB，并内嵌项目成员与 `admin / member` 角色、项目资源绑定字段，以及项目对话只读列表 / 详情接口。
 - `memberships`：提供项目成员管理闭环，支持按用户名添加已有用户、修改项目级角色和移除成员。
-- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、`GET /api/knowledge/:knowledgeId/diagnostics` 诊断接口，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入 Chroma `global_docs`。上传单文件上限默认 `50 MB`，当前支持 `md / markdown / txt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再恢复。`knowledge_bases` 现在已支持 `scope=global|project` 与 `projectId` owner 字段，全局 `/api/knowledge` 列表会显式过滤掉 project scope，`/api/projects/:projectId/knowledge*` 则承载项目私有知识的 `list / create / detail / upload`；project scope 文档会写入 `proj_{projectId}_docs`，并按 `projects/{projectId}/knowledge/{knowledgeId}/{documentId}/{documentVersionHash}/{fileName}` 落盘。删除项目时，服务端会先级联清理该项目的 project scope knowledge、原文件目录与 Chroma 向量，避免孤儿资产；统一检索接口在 `knowledgeId` 指向 project scope knowledge 时也会自动切到对应 project collection。Node 统一知识检索 service 当前保留读侧直连 Chroma query 的架构例外；collection init 已下沉到 Python 写侧保证，向量 delete 的正式 Python 内部接口仍待补齐，因此代码里暂保留过渡期直连 delete TODO。单文档删除会尽量联动清理原始文件与 Chroma chunk；diagnostics 会按 best-effort 返回 collection / indexer 降级结果，不因下游不可达而整体失败。
+- `knowledge`：当前已提供知识库列表 / 详情 / 创建 / 编辑 / 删除接口、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、`GET /api/knowledge/:knowledgeId/diagnostics` 诊断接口，以及 `POST /api/knowledge/search` 统一知识检索接口；后端已冻结知识库 / 文档元数据模型与索引，并在上传时写入文档记录、初始化 `pending` 状态、落盘原始文件，再由 Node 在后台切到 `processing` 并触发 Python indexer，最终回写 `completed / failed`，同时把成功分块写入当前 namespace 的 active Chroma collection。上传单文件上限默认 `50 MB`，当前支持 `md / markdown / txt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再恢复。`knowledge_bases` 现在已支持 `scope=global|project` 与 `projectId` owner 字段，全局 `/api/knowledge` 列表会显式过滤掉 project scope，`/api/projects/:projectId/knowledge*` 则承载项目私有知识的 `list / create / detail / upload`；project scope 文档的 namespace key 仍为 `proj_{projectId}_docs`，物理 collection 则会带 embedding fingerprint 后缀，并按 `projects/{projectId}/knowledge/{knowledgeId}/{documentId}/{documentVersionHash}/{fileName}` 落盘。删除项目时，服务端会先级联清理该项目的 project scope knowledge、原文件目录与当前 active collection 中的 Chroma 向量，避免孤儿资产；统一检索接口在 `knowledgeId` 指向 project scope knowledge 时也会自动切到对应 namespace 的 active collection，并使用 namespace 记录的 active embedding config 生成 query embedding。若 settings 中的 embedding provider / model / baseUrl 已变化，单文档 retry / rebuild 会被显式拦截，要求先执行知识库级全量重建；知识库级 rebuild 会在指纹失配时升级为 namespace 级全量重建，写入新的 versioned collection 成功后再切换 active pointer。Node 统一知识检索 service 当前保留读侧直连 Chroma query 的架构例外；collection init 已下沉到 Python 写侧保证，向量 delete 的正式 Python 内部接口仍待补齐，因此代码里暂保留过渡期直连 delete TODO。单文档删除会尽量联动清理原始文件与 Chroma chunk；diagnostics 会按 best-effort 返回 collection / indexer 降级结果，不因下游不可达而整体失败。
 - `skills`：当前已提供系统内置 Skill registry、Mongo 元数据仓储、bundle 文件存储、`SKILL.md` 解析、GitHub/URL 导入、列表 / 详情 / 创建 / 编辑 / 删除接口，以及 `draft / published` 生命周期、引用保护与 bindable 校验；项目与 Agent 当前只允许绑定系统内置或已发布的正式 Skill。其中 `search_documents` 的 handler 对齐服务端统一知识检索契约，`search_codebase / check_git_log` 当前仍是 contract-only 定义。
 - `agents`：当前已提供 Agent 列表 / 详情 / 创建 / 编辑 / 删除接口，后端会校验 `boundKnowledgeIds` 与 `boundSkillIds` 的存在性，并只允许绑定系统内置或已发布的正式 Skill；`model` 当前固定由服务端写入 `server-default`。
+- `settings`：当前已提供 `GET/PATCH/TEST /api/settings/*`，支持工作区 embedding / LLM / indexing / workspace 配置、服务端加密存储 API Key、effective config 读取层，以及对知识检索 / 索引链路的热生效配置透传。本期访问控制固定为“所有已登录用户可访问”。
 - `memory/overview`：返回 Knowject 项目级记忆概览的演示数据。
 - `memory/query`：基于本地 `DEMO_ITEMS` 做简单关键词匹配，返回演示检索结果。
 
 ### 6.3 当前鉴权约定
 
-- `auth/users`、`projects`、`memberships`、`knowledge`、`skills`、`agents` 与 `memory` 路由要求 `Authorization: Bearer <token>`。
+- `auth/users`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`settings` 与 `memory` 路由要求 `Authorization: Bearer <token>`。
 - 服务端当前通过 JWT 中间件校验 `iss / aud / exp / sub / username`。
 - 当前所有 JSON API 响应统一为 `code / message / data / meta`。
 - 成功响应中，`HTTP 200` 默认映射为 `SUCCESS / 请求成功`，`HTTP 201` 默认映射为 `CREATED / 创建成功`。
@@ -304,23 +314,24 @@ files/
 - `DELETE /api/projects/:projectId` 与 `DELETE /api/knowledge/:knowledgeId` 当前已从 `204 No Content` 调整为 `HTTP 200 + data:null`，以保持 envelope 一致性。
 - 前端通过 `apps/platform/src/api/*` 在 API 层统一解包 `data`，页面层继续消费业务数据，不直接感知 envelope。
 - 当前已具备正式用户体系、`argon2id` 密码哈希、JWT、最小项目权限模型和成员管理接口。
-- 生产环境下，`/api/auth/*` 与 `/api/memory/*` 会拒绝非 HTTPS 请求，并返回 `SECURE_TRANSPORT_REQUIRED`。
-- `auth` 与 `memory` 响应默认附带 `Cache-Control: no-store`，避免敏感响应被缓存。
+- 生产环境下，`/api/auth/*`、`/api/settings/*` 与 `/api/memory/*` 会拒绝非 HTTPS 请求，并返回 `SECURE_TRANSPORT_REQUIRED`。
+- `auth`、`settings` 与 `memory` 响应默认附带 `Cache-Control: no-store`，避免敏感响应被缓存。
 - 当前前端项目列表、项目基础信息、成员 roster、项目资源绑定与项目对话列表 / 详情已切到 `/api/projects*`；会话消息写入、来源引用与检索融合仍未落地。
 
 ## 7. 模块职责
 
 - `apps/platform`
-  - 登录页、产品壳、路由、项目态页面，以及已正式接线的 `/knowledge`、`/skills`、`/agents` 页面。
+  - 登录页、产品壳、路由、项目态页面，以及已正式接线的 `/knowledge`、`/skills`、`/agents`、`/settings` 页面。
 - `apps/api`
   - 本地联调与基础框架接口，当前已承担项目列表、项目基础信息与成员 roster 的正式主数据源。
   - 已具备 `config / db / middleware / modules` 基础骨架。
-  - `src/lib` 当前承载 `request-auth` 与 `validation` 等跨模块复用 helper。
+  - `src/lib` 当前承载 `request-auth`、`crypto` 与 `validation` 等跨模块复用 helper。
   - `modules/auth` 当前已承载用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
   - `modules/members` 当前已承载全局成员聚合只读接口。
   - `modules/projects` 当前已承载项目模型、MongoDB 仓储、资源绑定字段、项目对话只读接口、权限校验与 CRUD 接口。
   - `modules/memberships` 当前已承载项目成员增删改接口与最小角色规则。
-- `modules/knowledge` 已落地 GA-06 元数据模型、集合索引、CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node -> Python 的解析 / 分块 / embedding / Chroma 写入闭环、knowledge diagnostics，以及 Node 侧统一知识检索逻辑；当前也已补齐 `scope / projectId` 的 owner 模型与项目成员可见性基线。
+- `modules/knowledge` 已落地 GA-06 元数据模型、集合索引、CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node -> Python 的解析 / 分块 / embedding / Chroma 写入闭环、knowledge diagnostics，以及 Node 侧统一知识检索逻辑；当前也已补齐 `scope / projectId` 的 owner 模型、namespace 级 active collection 状态与项目成员可见性基线。
+  - `modules/settings` 已完成 `workspace_settings` 单例仓储、`/api/settings/*` 路由、AI API Key 加密存储、effective config 读取层与在线测试逻辑。
   - `modules/skills` 已完成 GA-09 Skill 资产治理闭环：系统内置 registry、Mongo 元数据、bundle 存储、GitHub/URL 导入、草稿/发布与正式 CRUD；`modules/agents` 已完成 GA-10 Mongo 正式模型、CRUD 与绑定校验。
   - 当前统一知识检索 service 已落地在 `knowledge` 模块，供后续 Skill / 对话链路复用。
 - `apps/indexer-py`
