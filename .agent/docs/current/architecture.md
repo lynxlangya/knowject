@@ -176,7 +176,7 @@ files/
 
 ### 5.3 API 环境与数据库基线
 
-- `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`；Docker 编排会额外注入 `KNOWLEDGE_STORAGE_ROOT=/var/lib/knowject/knowledge` 与 `KNOWLEDGE_INDEXER_URL=http://indexer-py:8001`，知识库上传单文件上限当前固定为 `50 MB`；当前正式上传链路支持 `md / markdown / txt`，界面文案统一推荐 `.md / .txt`。
+- `apps/api` 读取仓库根 `.env.local` / `.env`，模板文件为根目录 `/.env.example`；Docker 编排会额外注入 `KNOWLEDGE_STORAGE_ROOT=/var/lib/knowject/knowledge` 与 `KNOWLEDGE_INDEXER_URL=http://indexer-py:8001`，知识库上传单文件上限当前固定为 `50 MB`；当前正式上传链路支持 `md / markdown / txt`，界面文案统一推荐 `.md / .txt`。宿主机推荐开发流会把 `MONGODB_URI_FILE`、`JWT_SECRET_FILE` 与 `SETTINGS_ENCRYPTION_KEY_FILE` 回写到 `.env.local`，以复用 `docker/secrets/` 中的本地密钥文件。
 - `apps/api` 还会读取可选 `SKILLS_STORAGE_ROOT`；未配置时默认落到 `<workspace>/.knowject-storage/skills`，用于持久化自建 / 导入 Skill 的 bundle 文件。
 - 宿主机默认开发流已把 `apps/indexer-py` 纳入 workspace `pnpm dev`，因此本地 `platform + api + indexer-py` 会一并启动；若单独跑 `api`，仍需额外启动 Python indexer 才能验证知识上传闭环。
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。

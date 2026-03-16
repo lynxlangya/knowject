@@ -9,6 +9,20 @@ class CamelCaseModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class EmbeddingConfigOverridePayload(CamelCaseModel):
+    provider: str | None = None
+    api_key: str | None = Field(default=None, alias="apiKey")
+    base_url: str | None = Field(default=None, alias="baseUrl")
+    model: str | None = None
+
+
+class IndexingConfigOverridePayload(CamelCaseModel):
+    chunk_size: int | None = Field(default=None, alias="chunkSize")
+    chunk_overlap: int | None = Field(default=None, alias="chunkOverlap")
+    supported_types: list[str] | None = Field(default=None, alias="supportedTypes")
+    indexer_timeout_ms: int | None = Field(default=None, alias="indexerTimeoutMs")
+
+
 class IndexDocumentRequestPayload(CamelCaseModel):
     knowledge_id: str = Field(alias="knowledgeId")
     document_id: str = Field(alias="documentId")
@@ -18,6 +32,14 @@ class IndexDocumentRequestPayload(CamelCaseModel):
     mime_type: str = Field(alias="mimeType")
     storage_path: str = Field(alias="storagePath")
     document_version_hash: str = Field(alias="documentVersionHash")
+    embedding_config: EmbeddingConfigOverridePayload | None = Field(
+        default=None,
+        alias="embeddingConfig",
+    )
+    indexing_config: IndexingConfigOverridePayload | None = Field(
+        default=None,
+        alias="indexingConfig",
+    )
 
 
 class IndexDocumentSuccessResponse(CamelCaseModel):

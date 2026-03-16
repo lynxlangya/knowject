@@ -53,7 +53,7 @@ docker/
 ## 2. 安全约定
 
 - 实际 secrets 放在 `docker/secrets/`，目录已被 `.gitignore` 忽略。
-- API 支持 `JWT_SECRET_FILE`、`MONGODB_URI_FILE` 等 `*_FILE` 读取方式。
+- API 支持 `JWT_SECRET_FILE`、`MONGODB_URI_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE` 等 `*_FILE` 读取方式。
 - MongoDB root 与应用账号密码通过 Docker secrets 文件注入。
 - 默认不对外暴露 `api`、`mongo`、`chroma`；仅本地 override 才映射到宿主机。
 - 公共基线中的 `app`、`data` 网络保持 `internal`；本地若要直接把 `api / mongo / chroma` 发布给宿主机，需要额外挂载 `publish` 网络，否则会出现“端口声明存在但未真正绑定”的状态。
@@ -129,6 +129,7 @@ mkdir -p docker/secrets
 printf '%s' 'replace-with-a-strong-jwt-secret' > docker/secrets/jwt_secret.txt
 printf '%s' 'replace-with-a-strong-mongo-root-password' > docker/secrets/mongo_root_password.txt
 printf '%s' 'replace-with-a-strong-mongo-app-password' > docker/secrets/mongo_app_password.txt
+printf '%s' 'replace-with-a-64-char-hex-settings-key' > docker/secrets/settings_encryption_key.txt
 chmod 600 docker/secrets/*.txt
 ```
 

@@ -12,6 +12,7 @@ SECRETS_DIR="$ROOT_DIR/docker/secrets"
 JWT_SECRET_FILE="$SECRETS_DIR/jwt_secret.txt"
 MONGO_ROOT_PASSWORD_FILE="$SECRETS_DIR/mongo_root_password.txt"
 MONGO_APP_PASSWORD_FILE="$SECRETS_DIR/mongo_app_password.txt"
+SETTINGS_ENCRYPTION_KEY_FILE="$SECRETS_DIR/settings_encryption_key.txt"
 HOST_MONGO_URI_FILE="$SECRETS_DIR/mongodb_uri.local.txt"
 
 cd "$ROOT_DIR"
@@ -165,7 +166,7 @@ ensure_production_docker_env() {
 }
 
 ensure_local_secrets() {
-  if [[ -s "$JWT_SECRET_FILE" && -s "$MONGO_ROOT_PASSWORD_FILE" && -s "$MONGO_APP_PASSWORD_FILE" ]]; then
+  if [[ -s "$JWT_SECRET_FILE" && -s "$MONGO_ROOT_PASSWORD_FILE" && -s "$MONGO_APP_PASSWORD_FILE" && -s "$SETTINGS_ENCRYPTION_KEY_FILE" ]]; then
     return
   fi
 
@@ -182,10 +183,11 @@ require_secret_files() {
   require_file "$JWT_SECRET_FILE"
   require_file "$MONGO_ROOT_PASSWORD_FILE"
   require_file "$MONGO_APP_PASSWORD_FILE"
+  require_file "$SETTINGS_ENCRYPTION_KEY_FILE"
 }
 
 sync_host_env_with_local_docker() {
-  local api_port mongo_port chroma_port mongo_db mongo_auth_source mongo_user mongo_password jwt_secret mongo_uri
+  local api_port mongo_port chroma_port mongo_db mongo_auth_source mongo_user mongo_password jwt_secret mongo_uri settings_encryption_key
 
   ensure_host_env
   ensure_local_docker_env
@@ -199,6 +201,7 @@ sync_host_env_with_local_docker() {
   mongo_user="$(read_env_value_from_file "$LOCAL_ENV_FILE" "MONGO_APP_USERNAME" "knowject_app")"
   mongo_password="$(tr -d '\r' <"$MONGO_APP_PASSWORD_FILE" | sed -e 's/[[:space:]]*$//')"
   jwt_secret="$(tr -d '\r' <"$JWT_SECRET_FILE" | sed -e 's/[[:space:]]*$//')"
+  settings_encryption_key="$(tr -d '\r' <"$SETTINGS_ENCRYPTION_KEY_FILE" | sed -e 's/[[:space:]]*$//')"
   mongo_uri="mongodb://$(urlencode "$mongo_user"):$(urlencode "$mongo_password")@127.0.0.1:${mongo_port}/${mongo_db}?authSource=$(urlencode "$mongo_auth_source")"
 
   printf '%s\n' "$mongo_uri" >"$HOST_MONGO_URI_FILE"
@@ -206,13 +209,15 @@ sync_host_env_with_local_docker() {
 
   remove_env_key "$HOST_ENV_FILE" "MONGODB_URI"
   remove_env_key "$HOST_ENV_FILE" "JWT_SECRET"
+  remove_env_key "$HOST_ENV_FILE" "SETTINGS_ENCRYPTION_KEY"
   upsert_env_key "$HOST_ENV_FILE" "PORT" "$api_port"
   upsert_env_key "$HOST_ENV_FILE" "MONGODB_URI_FILE" "$HOST_MONGO_URI_FILE"
   upsert_env_key "$HOST_ENV_FILE" "MONGODB_DB_NAME" "$mongo_db"
   upsert_env_key "$HOST_ENV_FILE" "JWT_SECRET_FILE" "$JWT_SECRET_FILE"
+  upsert_env_key "$HOST_ENV_FILE" "SETTINGS_ENCRYPTION_KEY_FILE" "$SETTINGS_ENCRYPTION_KEY_FILE"
   upsert_env_key "$HOST_ENV_FILE" "CHROMA_URL" "http://127.0.0.1:${chroma_port}"
 
-  if [[ -n "$jwt_secret" ]]; then
+  if [[ -n "$jwt_secret" && -n "$settings_encryption_key" ]]; then
     info "已同步宿主机开发环境到 Docker 本地 secrets"
   fi
 }
@@ -412,12 +417,14 @@ case "$command_name" in
     ;;
   host:init)
     ensure_local_dev_prerequisites
+    sync_host_env_with_local_docker
     run pnpm install
     ;;
   host:up)
     ensure_command pnpm
     ensure_command python3
     ensure_command uv
+    sync_host_env_with_local_docker
     run pnpm dev
     ;;
   host:web)
@@ -426,6 +433,7 @@ case "$command_name" in
     ;;
   host:api)
     ensure_command pnpm
+    sync_host_env_with_local_docker
     run pnpm dev:api
     ;;
   host:check)

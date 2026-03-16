@@ -26,6 +26,9 @@ import { createMembershipsService } from '@modules/memberships/memberships.servi
 import { createProjectsRepository } from '@modules/projects/projects.repository.js';
 import { createProjectsRouter } from '@modules/projects/projects.router.js';
 import { createProjectsService } from '@modules/projects/projects.service.js';
+import { createSettingsRepository } from '@modules/settings/settings.repository.js';
+import { createSettingsRouter } from '@modules/settings/settings.router.js';
+import { createSettingsService } from '@modules/settings/settings.service.js';
 import { createSkillsRepository } from '@modules/skills/skills.repository.js';
 import { createSkillsRouter } from '@modules/skills/skills.router.js';
 import { createSkillsService } from '@modules/skills/skills.service.js';
@@ -43,18 +46,23 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   const authRepository = createAuthRepository({ mongo });
   const authService = createAuthService({ env, repository: authRepository });
   const projectsRepository = createProjectsRepository({ mongo });
+  const settingsRepository = createSettingsRepository({ mongo });
   const skillsRepository = createSkillsRepository({ mongo });
   const skillBindingValidator = createSkillBindingValidator({
     repository: skillsRepository,
   });
   const knowledgeRepository = createKnowledgeRepository({ mongo });
-  const knowledgeSearchService = createKnowledgeSearchService({ env });
+  const knowledgeSearchService = createKnowledgeSearchService({
+    env,
+    settingsRepository,
+  });
   const knowledgeService = createKnowledgeService({
     env,
     repository: knowledgeRepository,
     searchService: knowledgeSearchService,
     authRepository,
     projectsRepository,
+    settingsRepository,
   });
   const projectsService = createProjectsService({
     repository: projectsRepository,
@@ -100,6 +108,10 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
     projectsRepository,
     authRepository,
   });
+  const settingsService = createSettingsService({
+    env,
+    repository: settingsRepository,
+  });
   const membersService = createMembersService({
     projectsRepository,
     authRepository,
@@ -126,6 +138,11 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   app.use('/api/knowledge', createKnowledgeRouter(knowledgeService, requireAuth));
   app.use('/api/skills', createSkillsRouter(skillsService, requireAuth));
   app.use('/api/agents', createAgentsRouter(agentsService, requireAuth));
+  app.use(
+    '/api/settings',
+    sensitiveRouteTransportGuard,
+    createSettingsRouter(settingsService, requireAuth),
+  );
   app.use('/api/memory', sensitiveRouteTransportGuard, createMemoryRouter(requireAuth));
 
   app.get('/', (_req, res) => {
@@ -153,6 +170,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/skills/import',
         '/api/agents',
         '/api/agents/:agentId',
+        '/api/settings',
         '/api/memory/overview',
         '/api/memory/query',
       ],

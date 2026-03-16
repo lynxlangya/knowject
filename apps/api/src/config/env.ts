@@ -40,6 +40,9 @@ export interface AppEnv {
     embeddingModel: string;
     requestTimeoutMs: number;
   };
+  settings: {
+    encryptionKey: string;
+  };
   jwt: {
     secret: string;
     expiresIn: string;
@@ -59,6 +62,7 @@ export interface AppEnv {
 
 let cachedEnv: AppEnv | null = null;
 const ENV_FILE_SUFFIX = '_FILE';
+const HEXADECIMAL_PATTERN = /^[\da-f]+$/i;
 
 const currentFilePath = fileURLToPath(import.meta.url);
 const packageRoot = resolve(dirname(currentFilePath), '../..');
@@ -135,7 +139,7 @@ const loadEnvironmentFiles = (): void => {
   }
 };
 
-const readConfiguredString = (name: string): string | null => {
+export const readConfiguredString = (name: string): string | null => {
   const directValue = process.env[name]?.trim();
   const filePath = process.env[`${name}_FILE`]?.trim();
 
@@ -164,7 +168,7 @@ const readOptionalString = (name: string): string | null => {
   return readConfiguredString(name);
 };
 
-const readRequiredString = (name: string): string => {
+export const readRequiredString = (name: string): string => {
   const value = readConfiguredString(name);
 
   if (!value) {
@@ -199,6 +203,19 @@ const readOptionalPositiveInteger = (name: string, fallback: number): number => 
   }
 
   return parsed;
+};
+
+export const readRequiredHexString = (name: string, bytes: number): string => {
+  const value = readRequiredString(name);
+  const expectedLength = bytes * 2;
+
+  if (value.length !== expectedLength || !HEXADECIMAL_PATTERN.test(value)) {
+    throw new Error(
+      `Environment variable ${name} must be a ${expectedLength}-character hexadecimal string`,
+    );
+  }
+
+  return value;
 };
 
 const readBoolean = (name: string): boolean => {
@@ -286,6 +303,9 @@ export const getEnv = (): AppEnv => {
       embeddingModel:
         readOptionalString('OPENAI_EMBEDDING_MODEL') ?? 'text-embedding-3-small',
       requestTimeoutMs: readOptionalPositiveInteger('OPENAI_TIMEOUT_MS', 15000),
+    },
+    settings: {
+      encryptionKey: readRequiredHexString('SETTINGS_ENCRYPTION_KEY', 32),
     },
     jwt: {
       secret: readRequiredString('JWT_SECRET'),

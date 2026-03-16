@@ -1,5 +1,6 @@
 import type { ObjectId } from 'mongodb';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
+import type { RuntimeEmbeddingProvider } from '@modules/settings/settings.types.js';
 
 export const KNOWLEDGE_SOURCE_TYPES = ['global_docs', 'global_code'] as const;
 export type KnowledgeSourceType = (typeof KNOWLEDGE_SOURCE_TYPES)[number];
@@ -24,11 +25,17 @@ export const KNOWLEDGE_DOCUMENT_STATUSES = [
 ] as const;
 export type KnowledgeDocumentStatus = (typeof KNOWLEDGE_DOCUMENT_STATUSES)[number];
 
-export const KNOWLEDGE_EMBEDDING_PROVIDERS = ['openai', 'local_dev'] as const;
-export type KnowledgeEmbeddingProvider = (typeof KNOWLEDGE_EMBEDDING_PROVIDERS)[number];
+export const KNOWLEDGE_EMBEDDING_PROVIDERS = [
+  'openai',
+  'aliyun',
+  'zhipu',
+  'voyage',
+  'custom',
+  'local_dev',
+] as const;
+export type KnowledgeEmbeddingProvider = RuntimeEmbeddingProvider;
 
-export const KNOWLEDGE_EMBEDDING_MODELS = ['text-embedding-3-small', 'hash-1536-dev'] as const;
-export type KnowledgeEmbeddingModel = (typeof KNOWLEDGE_EMBEDDING_MODELS)[number];
+export type KnowledgeEmbeddingModel = string;
 
 export interface KnowledgeCommandContext {
   actor: AuthenticatedRequestUser;
@@ -200,6 +207,18 @@ export interface KnowledgeIndexerDocumentRequest {
   mimeType: string;
   storagePath: string;
   documentVersionHash: string;
+  embeddingConfig?: {
+    provider: RuntimeEmbeddingProvider;
+    apiKey: string | null;
+    baseUrl: string;
+    model: string;
+  };
+  indexingConfig?: {
+    chunkSize: number;
+    chunkOverlap: number;
+    supportedTypes: string[];
+    indexerTimeoutMs: number;
+  };
 }
 
 export interface KnowledgeIndexerSuccessResponse {

@@ -24,7 +24,7 @@
   - `pnpm dev:up`：宿主机前后端开发
   - `pnpm dev:deps:*`：仅管理 Docker 依赖 `mongo + chroma`
   - `pnpm docker:local:up`：完整 Docker 联调 / 验收
-- 其中 `pnpm dev:init` / `pnpm dev:up` 会先确保 `docker/secrets/` 与 `.env.docker.local` 已就绪，再把宿主机 `.env.local` 回写为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE` 与当前 `CHROMA_URL`，避免 Docker secrets 轮换后宿主机 API 仍使用旧直写值。
+- 其中 `pnpm dev:init` / `pnpm dev:up` 会先确保 `docker/secrets/` 与 `.env.docker.local` 已就绪，再把宿主机 `.env.local` 回写为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE` 与当前 `CHROMA_URL`，避免 Docker secrets 轮换后宿主机 API 仍使用旧直写值。
 - 当前 Docker 固定镜像版本：
   - MongoDB：`mongo:8.2.5`
   - Chroma：`chromadb/chroma:1.5.5`
@@ -79,6 +79,7 @@
 - 这意味着 Docker secrets 可直接用于：
   - `JWT_SECRET_FILE`
   - `MONGODB_URI_FILE`
+  - `SETTINGS_ENCRYPTION_KEY_FILE`
   - 以及其他字符串型环境变量
 - 同一份 env 文件不应同时出现 `NAME` 和 `NAME_FILE`；若最终生效环境仍同时出现两者，服务会直接报错。
 

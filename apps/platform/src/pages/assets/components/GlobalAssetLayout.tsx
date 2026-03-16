@@ -1,9 +1,10 @@
 import { Card, Typography } from 'antd';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 export interface GlobalAssetSummaryItem {
   label: string;
   value: ReactNode;
+  hint?: ReactNode;
 }
 
 interface GlobalAssetPageHeaderProps {
@@ -42,11 +43,31 @@ export const GLOBAL_ASSET_PAGE_CLASS_NAME =
 export const GLOBAL_ASSET_CONTENT_GRID_CLASS_NAME =
   'grid min-h-0 flex-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]';
 export const GLOBAL_ASSET_HEADER_CARD_CLASS_NAME =
-  'rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!';
+  'shrink-0 overflow-hidden rounded-[28px]';
 export const GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME =
   'rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!';
 export const GLOBAL_ASSET_SUMMARY_CARD_CLASS_NAME =
-  'min-w-[160px] rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4';
+  'min-w-[180px] flex-1 rounded-[20px] border px-4 py-4';
+
+const GLOBAL_ASSET_HEADER_CARD_STYLE: CSSProperties = {
+  borderRadius: 28,
+  border: '1px solid rgba(190, 205, 226, 0.72)',
+  background: [
+    'radial-gradient(circle at 0% 0%, rgba(244, 246, 234, 0.96) 0%, rgba(244, 246, 234, 0) 34%)',
+    'radial-gradient(circle at 100% 0%, rgba(230, 241, 252, 0.92) 0%, rgba(230, 241, 252, 0) 38%)',
+    'linear-gradient(135deg, rgba(247, 247, 240, 0.98), rgba(255, 255, 255, 0.98) 54%, rgba(237, 245, 251, 0.98))',
+  ].join(', '),
+  boxShadow: '0 18px 42px rgba(15, 23, 42, 0.06)',
+  overflow: 'hidden',
+};
+
+const GLOBAL_ASSET_SUMMARY_CARD_STYLE: CSSProperties = {
+  minHeight: 112,
+  borderColor: 'rgba(195, 209, 227, 0.84)',
+  background:
+    'linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.64))',
+  boxShadow: '0 10px 24px rgba(15, 23, 42, 0.04)',
+};
 
 export const GlobalAssetPageHeader = ({
   title,
@@ -57,14 +78,15 @@ export const GlobalAssetPageHeader = ({
   return (
     <Card
       className={GLOBAL_ASSET_HEADER_CARD_CLASS_NAME}
-      styles={{ body: { padding: '22px 22px 20px' } }}
+      style={GLOBAL_ASSET_HEADER_CARD_STYLE}
+      styles={{ body: { padding: '24px 24px 22px' } }}
     >
       <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-3xl">
-          <Typography.Title level={3} className="mb-0! text-slate-800!">
+          <Typography.Title level={3} className="mb-0! text-slate-900!">
             {title}
           </Typography.Title>
-          <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
+          <Typography.Paragraph className="mb-0! mt-2.5 text-sm! leading-6! text-slate-600!">
             {subtitle}
           </Typography.Paragraph>
         </div>
@@ -73,21 +95,27 @@ export const GlobalAssetPageHeader = ({
       </div>
 
       {summaryItems.length > 0 ? (
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap gap-3">
           {summaryItems.map((item) => (
             <div
               key={item.label}
               className={GLOBAL_ASSET_SUMMARY_CARD_CLASS_NAME}
+              style={GLOBAL_ASSET_SUMMARY_CARD_STYLE}
             >
-              <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+              <Typography.Text className="text-[13px] font-medium text-slate-500!">
                 {item.label}
               </Typography.Text>
               <Typography.Title
                 level={4}
-                className="mb-0! mt-2 text-slate-800!"
+                className="mb-0! mt-2.5 text-slate-900!"
               >
                 {item.value}
               </Typography.Title>
+              {item.hint ? (
+                <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                  {item.hint}
+                </Typography.Paragraph>
+              ) : null}
             </div>
           ))}
         </div>

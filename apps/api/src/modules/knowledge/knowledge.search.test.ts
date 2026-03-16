@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AppEnv } from "@config/env.js";
+import { encryptApiKey } from "@lib/crypto.js";
 import { createKnowledgeSearchService } from "./knowledge.search.js";
 
 const createTestEnv = (): AppEnv => {
@@ -38,6 +39,10 @@ const createTestEnv = (): AppEnv => {
       baseUrl: "https://api.openai.com/v1",
       embeddingModel: "text-embedding-3-small",
       requestTimeoutMs: 1000,
+    },
+    settings: {
+      encryptionKey:
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     },
     jwt: {
       secret: "test-secret",
@@ -233,6 +238,132 @@ test("searchDocuments uses explicit collection name override when provided", asy
     ]);
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("searchDocuments prefers database embedding settings when configured", async () => {
+  const env = createTestEnv();
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY = env.settings.encryptionKey;
+
+  const service = createKnowledgeSearchService({
+    env,
+    settingsRepository: {
+      getSettings: async () => ({
+        singleton: "default",
+        embedding: {
+          provider: "custom",
+          baseUrl: "https://embedding.example.com/v1",
+          model: "text-embedding-custom",
+          apiKeyEncrypted: encryptApiKey("db-embedding-key"),
+          apiKeyHint: "...-key",
+          testedAt: null,
+          testStatus: null,
+        },
+        updatedAt: new Date("2026-03-16T00:00:00.000Z"),
+        updatedBy: "user-1",
+      }),
+    } as never,
+  });
+  const fetchCalls: string[] = [];
+  let embeddingRequestBody: { model?: unknown } | null = null;
+  let embeddingAuthorization = "";
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    fetchCalls.push(url);
+
+    if (url.endsWith("/collections") && init?.method === "GET") {
+      return new Response(
+        JSON.stringify([{ id: "collection-1", name: "global_docs" }]),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (
+      url === "https://embedding.example.com/v1/embeddings" &&
+      init?.method === "POST"
+    ) {
+      embeddingRequestBody =
+        typeof init.body === "string"
+          ? (JSON.parse(init.body) as { model?: unknown })
+          : null;
+      embeddingAuthorization =
+        typeof init.headers === "object" &&
+        init.headers !== null &&
+        "authorization" in init.headers
+          ? String(init.headers.authorization)
+          : "";
+
+      return new Response(
+        JSON.stringify({
+          data: [
+            {
+              embedding: [0.1, 0.2, 0.3],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (url.endsWith("/collections/collection-1/query") && init?.method === "POST") {
+      return new Response(
+        JSON.stringify({
+          ids: [[]],
+          documents: [[]],
+          metadatas: [[]],
+          distances: [[]],
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
+  };
+
+  try {
+    const response = await service.searchDocuments({
+      query: "database embedding",
+      sourceType: "global_docs",
+      topK: 3,
+    });
+
+    assert.equal(response.total, 0);
+    assert.equal(
+      (embeddingRequestBody as { model?: unknown } | null)?.model,
+      "text-embedding-custom",
+    );
+    assert.equal(embeddingAuthorization, "Bearer db-embedding-key");
+    assert.deepEqual(fetchCalls, [
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections",
+      "https://embedding.example.com/v1/embeddings",
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-1/query",
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
   }
 });
 

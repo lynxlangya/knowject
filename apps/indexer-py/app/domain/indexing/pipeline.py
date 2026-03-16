@@ -6,6 +6,7 @@ import math
 import os
 import unicodedata
 from dataclasses import dataclass
+from http.client import IncompleteRead
 from pathlib import Path
 from typing import Any
 from urllib import error as urllib_error
@@ -25,6 +26,8 @@ DEFAULT_OPENAI_TIMEOUT_MS = read_optional_positive_integer("OPENAI_TIMEOUT_MS", 
 DEFAULT_OPENAI_EMBEDDING_BATCH_SIZE = 64
 DEFAULT_LOCAL_EMBEDDING_DIMENSION = 1536
 DEFAULT_CHROMA_TIMEOUT_MS = read_optional_positive_integer("CHROMA_TIMEOUT_MS", 15000)
+DEFAULT_INDEXER_REQUEST_TIMEOUT_MS = 30000
+DEFAULT_HTTP_READ_RETRY_ATTEMPTS = 3
 DEFAULT_CHROMA_TENANT = read_optional_string("CHROMA_TENANT") or "default_tenant"
 DEFAULT_CHROMA_DATABASE = read_optional_string("CHROMA_DATABASE") or "default_database"
 SUPPORTED_EXTENSIONS = {".md", ".markdown", ".txt"}
@@ -39,6 +42,30 @@ class IndexerError(Exception):
     pass
 
 
+class ResponseReadInterruptedError(Exception):
+    def __init__(self, *, partial_body: str, bytes_read: int, bytes_remaining: int | None):
+        super().__init__("response read interrupted")
+        self.partial_body = partial_body
+        self.bytes_read = bytes_read
+        self.bytes_remaining = bytes_remaining
+
+
+@dataclass(frozen=True)
+class EmbeddingRuntimeConfig:
+    provider: str
+    api_key: str | None
+    base_url: str
+    model: str
+
+
+@dataclass(frozen=True)
+class IndexingRuntimeConfig:
+    chunk_size: int
+    chunk_overlap: int
+    supported_types: tuple[str, ...]
+    indexer_timeout_ms: int
+
+
 @dataclass(frozen=True)
 class IndexDocumentRequest:
     knowledge_id: str
@@ -49,6 +76,8 @@ class IndexDocumentRequest:
     mime_type: str
     storage_path: str
     document_version_hash: str
+    embedding_config: EmbeddingRuntimeConfig
+    indexing_config: IndexingRuntimeConfig
 
 
 @dataclass(frozen=True)
@@ -77,8 +106,8 @@ def process_document(payload: dict[str, Any]) -> dict[str, Any]:
 
     chunk_texts = build_chunks(
         cleaned_text,
-        chunk_size=DEFAULT_CHUNK_SIZE,
-        overlap=DEFAULT_CHUNK_OVERLAP,
+        chunk_size=request.indexing_config.chunk_size,
+        overlap=request.indexing_config.chunk_overlap,
     )
 
     if not chunk_texts:
@@ -86,7 +115,10 @@ def process_document(payload: dict[str, Any]) -> dict[str, Any]:
 
     chunk_records = build_chunk_records(request, chunk_texts)
     collection = ensure_collection(request.collection_name)
-    embeddings = create_embeddings([chunk.text for chunk in chunk_records])
+    embeddings = create_embeddings(
+        [chunk.text for chunk in chunk_records],
+        request.embedding_config,
+    )
     delete_document_chunks(collection["id"], request.document_id)
     upsert_chunk_records(collection["id"], chunk_records, embeddings)
 
@@ -112,7 +144,7 @@ def parse_request(payload: dict[str, Any]) -> IndexDocumentRequest:
         "documentVersionHash": "document_version_hash",
     }
 
-    values: dict[str, str] = {}
+    values: dict[str, Any] = {}
     for raw_key, target_key in required_fields.items():
         raw_value = payload.get(raw_key)
         if not isinstance(raw_value, str) or not raw_value.strip():
@@ -127,6 +159,9 @@ def parse_request(payload: dict[str, Any]) -> IndexDocumentRequest:
     else:
         raise IndexerError("collectionName 缺失或格式不合法")
 
+    values["embedding_config"] = parse_embedding_config(payload.get("embeddingConfig"))
+    values["indexing_config"] = parse_indexing_config(payload.get("indexingConfig"))
+
     return IndexDocumentRequest(**values)
 
 
@@ -140,7 +175,7 @@ def parse_document_text(request: IndexDocumentRequest) -> str:
     if extension == ".pdf":
         raise IndexerError("当前 Python indexer 仅稳定支持 md/txt，pdf 解析稍后补充")
 
-    if extension not in SUPPORTED_EXTENSIONS:
+    if extension not in resolve_supported_extensions(request.indexing_config.supported_types):
         raise IndexerError(f"当前暂不支持 {extension or '未知类型'} 文档解析")
 
     for encoding in ("utf-8", "utf-8-sig"):
@@ -295,6 +330,136 @@ def resolve_collection_name(source_type: str) -> str:
     return collection_name
 
 
+def parse_embedding_config(raw_value: Any) -> EmbeddingRuntimeConfig:
+    if raw_value is None:
+        raw_value = {}
+    elif not isinstance(raw_value, dict):
+        raise IndexerError("embeddingConfig 缺失或格式不合法")
+
+    provider = read_optional_config_string(raw_value.get("provider"), "embeddingConfig.provider")
+    api_key = read_optional_nullable_string(raw_value.get("apiKey"), "embeddingConfig.apiKey")
+    base_url = read_optional_config_string(raw_value.get("baseUrl"), "embeddingConfig.baseUrl")
+    model = read_optional_config_string(raw_value.get("model"), "embeddingConfig.model")
+    default_provider, _default_error = resolve_embedding_provider()
+
+    return EmbeddingRuntimeConfig(
+        provider=provider or default_provider,
+        api_key=api_key if api_key is not None else read_optional_string("OPENAI_API_KEY"),
+        base_url=base_url or DEFAULT_OPENAI_BASE_URL,
+        model=model or DEFAULT_OPENAI_EMBEDDING_MODEL,
+    )
+
+
+def parse_indexing_config(raw_value: Any) -> IndexingRuntimeConfig:
+    if raw_value is None:
+        raw_value = {}
+    elif not isinstance(raw_value, dict):
+        raise IndexerError("indexingConfig 缺失或格式不合法")
+
+    chunk_size = (
+        read_optional_positive_integer_field(
+            raw_value.get("chunkSize"),
+            "indexingConfig.chunkSize",
+        )
+        or DEFAULT_CHUNK_SIZE
+    )
+    chunk_overlap = (
+        read_optional_non_negative_integer_field(
+            raw_value.get("chunkOverlap"),
+            "indexingConfig.chunkOverlap",
+        )
+        or DEFAULT_CHUNK_OVERLAP
+    )
+
+    if chunk_overlap >= chunk_size:
+        raise IndexerError("indexingConfig.chunkOverlap 必须小于 chunkSize")
+
+    return IndexingRuntimeConfig(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        supported_types=tuple(parse_supported_types(raw_value.get("supportedTypes"))),
+        indexer_timeout_ms=(
+            read_optional_positive_integer_field(
+                raw_value.get("indexerTimeoutMs"),
+                "indexingConfig.indexerTimeoutMs",
+            )
+            or DEFAULT_INDEXER_REQUEST_TIMEOUT_MS
+        ),
+    )
+
+
+def parse_supported_types(raw_value: Any) -> list[str]:
+    if raw_value is None:
+        return list(SUPPORTED_FORMAT_LABELS)
+
+    if not isinstance(raw_value, list):
+        raise IndexerError("indexingConfig.supportedTypes 缺失或格式不合法")
+
+    normalized_values: list[str] = []
+    for item in raw_value:
+        if not isinstance(item, str) or not item.strip():
+            raise IndexerError("indexingConfig.supportedTypes 缺失或格式不合法")
+        normalized = item.strip().lower().removeprefix(".")
+        if normalized == "markdown":
+            normalized = "md"
+        if normalized not in {"md", "txt"}:
+            raise IndexerError("indexingConfig.supportedTypes 仅支持 md、txt")
+        normalized_values.append(normalized)
+
+    return list(dict.fromkeys(normalized_values))
+
+
+def resolve_supported_extensions(supported_types: tuple[str, ...]) -> set[str]:
+    extensions: set[str] = set()
+    for supported_type in supported_types:
+        if supported_type == "md":
+            extensions.update({".md", ".markdown"})
+        elif supported_type == "txt":
+            extensions.add(".txt")
+    return extensions or set(SUPPORTED_EXTENSIONS)
+
+
+def read_optional_config_string(value: Any, field_name: str) -> str | None:
+    if value is None:
+        return None
+
+    if not isinstance(value, str) or not value.strip():
+        raise IndexerError(f"{field_name} 缺失或格式不合法")
+
+    return value.strip()
+
+
+def read_optional_nullable_string(value: Any, field_name: str) -> str | None:
+    if value is None:
+        return None
+
+    if not isinstance(value, str):
+        raise IndexerError(f"{field_name} 缺失或格式不合法")
+
+    normalized = value.strip()
+    return normalized or None
+
+
+def read_optional_positive_integer_field(value: Any, field_name: str) -> int | None:
+    if value is None:
+        return None
+
+    if not isinstance(value, int) or value <= 0:
+        raise IndexerError(f"{field_name} 缺失或格式不合法")
+
+    return value
+
+
+def read_optional_non_negative_integer_field(value: Any, field_name: str) -> int | None:
+    if value is None:
+        return None
+
+    if not isinstance(value, int) or value < 0:
+        raise IndexerError(f"{field_name} 缺失或格式不合法")
+
+    return value
+
+
 def resolve_embedding_provider() -> tuple[str, str | None]:
     api_key = read_optional_string("OPENAI_API_KEY")
     if api_key:
@@ -352,27 +517,35 @@ def collect_diagnostics() -> dict[str, Any]:
     }
 
 
-def create_embeddings(texts: list[str]) -> list[list[float]]:
+def create_embeddings(
+    texts: list[str],
+    embedding_config: EmbeddingRuntimeConfig | None = None,
+) -> list[list[float]]:
     if not texts:
         return []
 
-    api_key = read_optional_string("OPENAI_API_KEY")
+    resolved_config = embedding_config or parse_embedding_config(None)
+
+    if resolved_config.provider == "local_dev":
+        return [create_local_development_embedding(text) for text in texts]
+
+    api_key = resolved_config.api_key
     if not api_key:
         if (read_optional_string("NODE_ENV") or "development") == "development":
             return [create_local_development_embedding(text) for text in texts]
-        raise IndexerError("OPENAI_API_KEY 未配置，无法生成 embedding")
+        raise IndexerError("embedding apiKey 未配置，无法生成 embedding")
 
     embeddings: list[list[float]] = []
     for batch in iter_embedding_batches(texts, DEFAULT_OPENAI_EMBEDDING_BATCH_SIZE):
         response = request_json(
-            build_api_url(DEFAULT_OPENAI_BASE_URL, "/embeddings"),
+            build_api_url(resolved_config.base_url, "/embeddings"),
             method="POST",
             timeout_ms=DEFAULT_OPENAI_TIMEOUT_MS,
             headers={
                 "Authorization": f"Bearer {api_key}",
             },
             payload={
-                "model": DEFAULT_OPENAI_EMBEDDING_MODEL,
+                "model": resolved_config.model,
                 "input": batch,
             },
             error_prefix="OpenAI embedding 请求失败",
@@ -564,36 +737,90 @@ def request_json(
         request_headers["Content-Type"] = "application/json"
         data = json.dumps(payload).encode("utf-8")
 
-    request = urllib_request.Request(
-        url,
-        data=data,
-        headers=request_headers,
-        method=method,
-    )
+    def format_interrupted_read_message(error: ResponseReadInterruptedError) -> str:
+        if error.bytes_remaining is None:
+            return f"{error_prefix}: 上游响应读取中断（已读 {error.bytes_read} bytes）"
 
-    try:
-        with urllib_request.urlopen(request, timeout=timeout_ms / 1000) as response:
-            body = response.read().decode("utf-8")
-            if not body:
-                return None
+        return (
+            f"{error_prefix}: 上游响应读取中断（已读 {error.bytes_read} bytes，"
+            f"仍缺 {error.bytes_remaining} bytes）"
+        )
+
+    def parse_json_body(body: str) -> Any:
+        if not body:
+            return None
+
+        try:
             return json.loads(body)
-    except urllib_error.HTTPError as error:
-        body = error.read().decode("utf-8")
-        message = f"{error_prefix}（HTTP {error.code}）"
+        except json.JSONDecodeError as error:
+            raise IndexerError(f"{error_prefix}: 上游响应不是合法 JSON") from error
 
-        if body:
+    def read_response_body(response: Any) -> str:
+        try:
+            return response.read().decode("utf-8")
+        except IncompleteRead as error:
+            partial = error.partial.decode("utf-8", errors="replace")
+            raise ResponseReadInterruptedError(
+                partial_body=partial,
+                bytes_read=len(error.partial),
+                bytes_remaining=error.expected,
+            ) from error
+
+    for attempt in range(DEFAULT_HTTP_READ_RETRY_ATTEMPTS):
+        request = urllib_request.Request(
+            url,
+            data=data,
+            headers=request_headers,
+            method=method,
+        )
+
+        try:
+            with urllib_request.urlopen(request, timeout=timeout_ms / 1000) as response:
+                try:
+                    body = read_response_body(response)
+                except ResponseReadInterruptedError as error:
+                    if error.partial_body:
+                        try:
+                            return parse_json_body(error.partial_body)
+                        except IndexerError:
+                            pass
+
+                    if attempt < DEFAULT_HTTP_READ_RETRY_ATTEMPTS - 1:
+                        continue
+
+                    raise IndexerError(format_interrupted_read_message(error)) from error
+
+                return parse_json_body(body)
+        except urllib_error.HTTPError as error:
             try:
-                payload = json.loads(body)
-                if isinstance(payload, dict):
-                    detail = payload.get("errorMessage") or payload.get("message")
-                    if isinstance(detail, str) and detail.strip():
-                        message = f"{message}: {detail.strip()}"
-            except json.JSONDecodeError:
-                message = f"{message}: {body.strip()}"
+                body = read_response_body(error)
+            except ResponseReadInterruptedError as read_error:
+                if attempt < DEFAULT_HTTP_READ_RETRY_ATTEMPTS - 1:
+                    continue
 
-        raise IndexerError(message) from error
-    except (urllib_error.URLError, TimeoutError) as error:
-        raise IndexerError(f"{error_prefix}: {error}") from error
+                message = f"{error_prefix}（HTTP {error.code}）"
+                raise IndexerError(
+                    f"{message}: 上游响应读取中断（已读 {read_error.bytes_read} bytes，"
+                    f"仍缺 {read_error.bytes_remaining} bytes）"
+                ) from read_error
+
+            message = f"{error_prefix}（HTTP {error.code}）"
+
+            if body:
+                try:
+                    response_payload = json.loads(body)
+                    if isinstance(response_payload, dict):
+                        detail = response_payload.get("errorMessage") or response_payload.get("message")
+                        if isinstance(detail, str) and detail.strip():
+                            message = f"{message}: {detail.strip()}"
+                except json.JSONDecodeError:
+                    message = f"{message}: {body.strip()}"
+
+            raise IndexerError(message) from error
+        except (urllib_error.URLError, TimeoutError) as error:
+            raise IndexerError(f"{error_prefix}: {error}") from error
+
+    raise IndexerError(f"{error_prefix}: 未知响应读取失败")
 
 
 def detect_parser_name(file_name: str) -> str:

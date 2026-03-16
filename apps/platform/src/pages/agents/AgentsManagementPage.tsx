@@ -42,6 +42,7 @@ import {
   GlobalAssetSidebar,
   GlobalAssetSidebarItem,
   GlobalAssetSidebarSection,
+  type GlobalAssetSummaryItem,
 } from '@pages/assets/components/GlobalAssetLayout';
 
 type ModalMode = 'create' | 'edit' | null;
@@ -160,7 +161,7 @@ const filterAgents = (
 export const AgentsManagementPage = () => {
   const { message, modal } = App.useApp();
   const [form] = Form.useForm<AgentFormValues>();
-  const selectedSkillIds = Form.useWatch('boundSkillIds', form) ?? [];
+  const watchedSkillIds = Form.useWatch('boundSkillIds', form);
   const agentCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const [items, setItems] = useState<AgentResponse[]>([]);
   const [knowledgeItems, setKnowledgeItems] = useState<
@@ -240,6 +241,7 @@ export const AgentsManagementPage = () => {
   }, [knowledgeItems]);
 
   const skillOptions = useMemo(() => {
+    const selectedSkillIds = watchedSkillIds ?? [];
     const baseOptions = skillItems.map((item) => ({
       value: item.id,
       label:
@@ -249,21 +251,57 @@ export const AgentsManagementPage = () => {
     }));
 
     return resolveSelectableOptions(selectedSkillIds, baseOptions);
-  }, [selectedSkillIds, skillItems]);
+  }, [skillItems, watchedSkillIds]);
 
   const summaryItems = useMemo(() => {
     const activeCount = items.filter((item) => item.status === 'active').length;
+    const disabledCount = items.length - activeCount;
+    const knowledgeBoundCount = items.filter(
+      (item) => item.boundKnowledgeIds.length > 0,
+    ).length;
+    const skillBoundCount = items.filter(
+      (item) => item.boundSkillIds.length > 0,
+    ).length;
+    const knowledgeBindingTotal = items.reduce(
+      (sum, item) => sum + item.boundKnowledgeIds.length,
+      0,
+    );
+    const skillBindingTotal = items.reduce(
+      (sum, item) => sum + item.boundSkillIds.length,
+      0,
+    );
 
     return [
       {
         label: '智能体总数',
         value: `${items.length} 个`,
+        hint: '当前目录中的全局智能体配置数量。',
       },
       {
         label: '启用中',
         value: `${activeCount} 个`,
+        hint:
+          disabledCount === 0
+            ? '当前没有停用中的智能体。'
+            : `${disabledCount} 个当前处于停用状态。`,
       },
-    ];
+      {
+        label: '已绑知识库',
+        value: `${knowledgeBoundCount} 个`,
+        hint:
+          knowledgeBindingTotal === 0
+            ? '当前还没有智能体接入知识库。'
+            : `累计 ${knowledgeBindingTotal} 条知识库绑定。`,
+      },
+      {
+        label: '已绑 Skill',
+        value: `${skillBoundCount} 个`,
+        hint:
+          skillBindingTotal === 0
+            ? '当前还没有智能体接入 Skill。'
+            : `累计 ${skillBindingTotal} 条 Skill 绑定。`,
+      },
+    ] satisfies GlobalAssetSummaryItem[];
   }, [items]);
   const filteredAgents = filterAgents(items, selectedFilter);
   const agentFilters = [

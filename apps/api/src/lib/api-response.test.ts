@@ -46,6 +46,9 @@ const createTestEnv = (exposeDetails: boolean): AppEnv => {
       embeddingModel: 'text-embedding-3-small',
       requestTimeoutMs: 1000,
     },
+    settings: {
+      encryptionKey: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    },
     jwt: {
       secret: 'test-secret',
       expiresIn: '1h',

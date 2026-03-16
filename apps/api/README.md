@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-15，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由，把项目私有知识写入 `proj_{projectId}_docs`；`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
+截至 2026-03-16，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由，把项目私有知识写入 `proj_{projectId}_docs`；`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验；新增的 `settings` 模块已经接管工作区级 AI / indexing / workspace 配置，并把 effective config 透传到知识检索和 Python indexer 链路。
 
 ## 当前接口
 
@@ -165,6 +165,29 @@
 - `DELETE /api/agents/:agentId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
+- `GET /api/settings`
+  - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
+  - 返回当前工作区设置的脱敏 effective config；`embedding / llm / indexing` 会带 `source=database|environment`，供前端判断当前是否仍在使用环境变量 fallback。
+  - 响应绝不返回 `apiKeyEncrypted` 或明文 Key，只返回 `apiKeyHint` 与 `hasKey`。
+- `PATCH /api/settings/embedding`
+  - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
+  - 接收 `provider / baseUrl / model / apiKey`，其中 `apiKey` 只允许明文提交到服务端后立即加密入库；不传时保留已存 Key。
+  - 若当前还没有已存 Key，则必须重新提交新的明文 Key 才能把配置正式保存为工作区设置。
+- `PATCH /api/settings/llm`
+  - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
+  - 接收 `provider / baseUrl / model / apiKey`，保存逻辑与 embedding 相同；本期配置先落库，后续再接入正式对话链路。
+- `PATCH /api/settings/indexing`
+  - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
+  - 接收 `chunkSize / chunkOverlap / supportedTypes / indexerTimeoutMs`，保存后会直接影响后续 Node -> Python 的索引请求级 override。
+- `PATCH /api/settings/workspace`
+  - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
+  - 更新工作区名称与描述。
+- `POST /api/settings/embedding/test`
+  - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
+  - 使用请求体内临时值或已保存配置做一次最小 OpenAI-compatible embeddings 请求，返回 `success / latencyMs / error`。
+- `POST /api/settings/llm/test`
+  - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
+  - 本期只对 OpenAI-compatible provider 提供在线测试；`anthropic` 可保存，但会明确返回“当前 provider 暂不支持在线测试”。
 - `GET /api/memory/overview`
   - 需要 `Authorization: Bearer <token>`。
   - 返回项目简介与统计信息。
@@ -185,8 +208,8 @@
 - `meta` 当前固定包含 `requestId` 与 `timestamp`；仅在 `API_ERROR_EXPOSE_DETAILS=true` 时才会额外返回 `meta.details`。
 - 前端当前通过 `apps/platform/src/api/*` 在 API 层统一解包 `data`，页面层不直接消费 envelope。
 - `projects`、`memberships` 与 `memory` 路由当前都已切到正式 JWT 鉴权中间件。
-- 生产环境下，`/api/auth/*` 与 `/api/memory/*` 必须通过 HTTPS 访问；不安全传输会被拒绝。
-- `auth` 与 `memory` 响应默认携带 `Cache-Control: no-store`，避免敏感响应被中间层缓存。
+- 生产环境下，`/api/auth/*`、`/api/memory/*` 与 `/api/settings/*` 必须通过 HTTPS 访问；不安全传输会被拒绝。
+- `auth`、`memory` 与 `settings` 响应默认携带 `Cache-Control: no-store`，避免敏感响应被中间层缓存。
 
 ## 当前边界
 
@@ -194,7 +217,8 @@
 - 项目概览中的补充展示文案与成员协作快照仍主要由 `apps/platform` 本地 Mock 驱动；项目资源页的 `agents` 与项目私有 knowledge 已切正式消费。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
-- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写、knowledge diagnostics，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；同时已补齐 `scope=global|project` 与 `projectId` owner 模型，保证全局 `/api/knowledge` 列表不串 project scope，并已开放 `/api/projects/:projectId/knowledge*` 的项目私有知识 `list / create / detail / upload` 路由。项目知识写侧会把文档落盘到 `projects/{projectId}/knowledge/...`，并写入 `proj_{projectId}_docs` collection；删除项目会先级联清理 project scope knowledge。前端 `/knowledge` 与项目资源页都已正式接线，分别承担全局治理与项目最小消费闭环。
+- `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写、knowledge diagnostics，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；同时已补齐 `scope=global|project` 与 `projectId` owner 模型，保证全局 `/api/knowledge` 列表不串 project scope，并已开放 `/api/projects/:projectId/knowledge*` 的项目私有知识 `list / create / detail / upload` 路由。项目知识写侧会把文档落盘到 `projects/{projectId}/knowledge/...`，并写入 `proj_{projectId}_docs` collection；删除项目会先级联清理 project scope knowledge。当前知识检索与索引触发链路已经改为读取 `settings` 模块提供的 effective embedding / indexing config；Node 每次调用 Python indexer 时都会附带 `embeddingConfig` 与 `indexingConfig` request override，Python 侧按请求级配置优先、env 兜底执行。前端 `/knowledge` 与项目资源页都已正式接线，分别承担全局治理与项目最小消费闭环。
+- `settings` 当前已完成 `workspace_settings` 单例集合、AES-256-GCM API Key 加密、`GET/PATCH/TEST /api/settings/*`、effective config 读取层，以及 `/settings` 页面正式前后端链路。本期访问控制固定为“所有已登录用户可访问”，后续若引入工作区管理员模型，再继续收紧。
 - `skills` 当前已完成正式 Skill 资产仓储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、详情读取、引用保护与绑定校验；`agents` 已完成 Mongo 正式模型、CRUD 和绑定校验。
 - 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路、知识库正式检索、项目私有知识最小 write-side、知识索引运维基础接口、项目资源页对项目私有知识的正式消费、Skill 资产管理与 Agent CRUD；仍未落地的是项目对话消息写入、`global_code` 真实导入，以及更深的 Skill / Agent 运行时编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
@@ -222,12 +246,13 @@
   - `JWT_EXPIRES_IN`
   - `JWT_ISSUER`
   - `JWT_AUDIENCE`
+  - `SETTINGS_ENCRYPTION_KEY`
   - `ARGON2_MEMORY_COST`
   - `ARGON2_TIME_COST`
   - `ARGON2_PARALLELISM`
   - `API_ERROR_EXPOSE_DETAILS`
   - `API_ERROR_INCLUDE_STACK`
-- 所有字符串型变量都支持 `<NAME>_FILE` 形式，适用于 Docker secrets。
+- 所有字符串型变量都支持 `<NAME>_FILE` 形式，适用于 Docker secrets；本地推荐工作流会自动把 `JWT_SECRET_FILE`、`MONGODB_URI_FILE` 与 `SETTINGS_ENCRYPTION_KEY_FILE` 回写到宿主机 `.env.local`。
 - 若最终生效环境里同时出现 `NAME` 和 `NAME_FILE`，服务会直接启动失败；推荐只保留高优先级来源中的一个。
 - 容器化部署里，API 容器内部监听端口固定为 `3001`；宿主机发布端口由 `compose.local.yml` 中的 `API_PUBLISHED_PORT` 控制。
 - Docker 基线默认会把 `KNOWLEDGE_STORAGE_ROOT` 固定到共享卷路径 `/var/lib/knowject/knowledge`，并把 `KNOWLEDGE_INDEXER_URL` 指向内部服务 `http://indexer-py:8001`。
@@ -248,6 +273,7 @@
   - `OPENAI_BASE_URL`
   - `OPENAI_EMBEDDING_MODEL`
   - `OPENAI_TIMEOUT_MS`
+- `SETTINGS_ENCRYPTION_KEY` 必须是 64 位十六进制字符串，推荐用 `openssl rand -hex 32` 生成；服务端仅通过它加密 / 解密数据库中的 AI API Key，不会把明文 Key 回显到响应、日志和错误对象。
 - 当前 embedding provider、本地文件存储、Node / Python 触发、Chroma namespace 与统一检索环境契约已经进入代码基线；生产环境仍需要真实 OpenAI 凭证才能完成正式向量化。
 - 认证和环境的详细实施合同见 [.agent/docs/contracts/auth-contract.md](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/auth-contract.md)。
 

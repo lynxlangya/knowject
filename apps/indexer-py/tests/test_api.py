@@ -260,6 +260,72 @@ def test_index_documents_maps_unexpected_error_to_failed_response():
     }
 
 
+def test_index_documents_accepts_override_payload_fields():
+    captured: dict[str, object] = {}
+
+    def index_behavior(payload):
+        captured["embedding_provider"] = (
+            payload.embedding_config.provider if payload.embedding_config else None
+        )
+        captured["embedding_model"] = (
+            payload.embedding_config.model if payload.embedding_config else None
+        )
+        captured["chunk_size"] = (
+            payload.indexing_config.chunk_size if payload.indexing_config else None
+        )
+        captured["chunk_overlap"] = (
+            payload.indexing_config.chunk_overlap if payload.indexing_config else None
+        )
+
+        return IndexDocumentSuccessResponse(
+            status="completed",
+            knowledge_id=payload.knowledge_id,
+            document_id=payload.document_id,
+            chunk_count=1,
+            character_count=12,
+            parser="markdown",
+            collection_name=payload.collection_name or "global_docs",
+        )
+
+    override_indexing_service(index_behavior=index_behavior)
+
+    try:
+        response = client.post(
+            "/internal/v1/index/documents",
+            json={
+                "knowledgeId": "knowledge-1",
+                "documentId": "document-1",
+                "sourceType": "global_docs",
+                "fileName": "demo.md",
+                "mimeType": "text/markdown",
+                "storagePath": "/tmp/demo.md",
+                "documentVersionHash": "hash-1",
+                "embeddingConfig": {
+                    "provider": "custom",
+                    "apiKey": "db-key",
+                    "baseUrl": "https://embedding.example.com/v1",
+                    "model": "text-embedding-custom",
+                },
+                "indexingConfig": {
+                    "chunkSize": 860,
+                    "chunkOverlap": 120,
+                    "supportedTypes": ["md"],
+                    "indexerTimeoutMs": 45000,
+                },
+            },
+        )
+    finally:
+        clear_overrides()
+
+    assert response.status_code == 200
+    assert captured == {
+        "embedding_provider": "custom",
+        "embedding_model": "text-embedding-custom",
+        "chunk_size": 860,
+        "chunk_overlap": 120,
+    }
+
+
 def test_rebuild_document_uses_document_scoped_internal_route():
     override_indexing_service(
         rebuild_behavior=lambda document_id, payload: IndexDocumentSuccessResponse(

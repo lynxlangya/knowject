@@ -6,8 +6,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
+import { encryptApiKey } from '@lib/crypto.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { ProjectsRepository } from '@modules/projects/projects.repository.js';
+import type { SettingsRepository } from '@modules/settings/settings.repository.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
 import { createKnowledgeService } from './knowledge.service.js';
@@ -48,6 +50,9 @@ const createTestEnv = (storageRoot: string): AppEnv => {
       baseUrl: 'https://api.openai.com/v1',
       embeddingModel: 'text-embedding-3-small',
       requestTimeoutMs: 1000,
+    },
+    settings: {
+      encryptionKey: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
     },
     jwt: {
       secret: 'test-secret',
@@ -98,6 +103,15 @@ const createProjectsRepositoryStub = (
     findById: async () => null,
     ...overrides,
   } as unknown as ProjectsRepository;
+};
+
+const createSettingsRepositoryStub = (
+  overrides: Partial<SettingsRepository> = {},
+): SettingsRepository => {
+  return {
+    getSettings: async () => null,
+    ...overrides,
+  } as unknown as SettingsRepository;
 };
 
 test('listKnowledge only returns global scope knowledge and hydrates actor names', async () => {
@@ -488,6 +502,9 @@ test('createProjectKnowledge persists project scope metadata and rejects global_
 
 test('uploadProjectKnowledgeDocument writes project storage path and project collection name', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-project-knowledge-upload-'));
+  const env = createTestEnv(storageRoot);
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY = env.settings.encryptionKey;
   const knowledgeId = '507f1f77bcf86cd799439122';
   const projectId = '507f1f77bcf86cd799439132';
   const actorId = '507f1f77bcf86cd799439142';
@@ -523,6 +540,29 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
     resolveCompleted = resolve;
   });
   const fetchPayloads: Array<Record<string, unknown>> = [];
+  const settingsRepository = createSettingsRepositoryStub({
+    getSettings: async () => ({
+      _id: new ObjectId('507f1f77bcf86cd799439501'),
+      singleton: 'default',
+      embedding: {
+        provider: 'custom',
+        baseUrl: 'https://embedding.example.com/v1',
+        model: 'text-embedding-custom',
+        apiKeyEncrypted: encryptApiKey('db-embedding-key'),
+        apiKeyHint: '...-key',
+        testedAt: null,
+        testStatus: null,
+      },
+      indexing: {
+        chunkSize: 860,
+        chunkOverlap: 120,
+        supportedTypes: ['md', 'txt'],
+        indexerTimeoutMs: 45000,
+      },
+      updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+      updatedBy: actorId,
+    }),
+  });
 
   const repository = {
     ensureMetadataModel: async () => undefined,
@@ -575,7 +615,7 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
   } as unknown as KnowledgeRepository;
 
   const service = createKnowledgeService({
-    env: createTestEnv(storageRoot),
+    env,
     repository,
     searchService: createSearchServiceStub(),
     authRepository: {
@@ -605,6 +645,7 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
             })
           : null,
     }),
+    settingsRepository,
   });
 
   const originalFetch = globalThis.fetch;
@@ -655,6 +696,7 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
     ]);
   } finally {
     globalThis.fetch = originalFetch;
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
   }
 
   assert.notEqual(createdDocument, null);
@@ -670,7 +712,21 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
     persistedDocument.storagePath.startsWith(`projects/${projectId}/knowledge/${knowledgeId}/`),
     true,
   );
+  assert.equal(persistedDocument.embeddingProvider, 'custom');
+  assert.equal(persistedDocument.embeddingModel, 'text-embedding-custom');
   assert.equal(fetchPayloads[0]?.collectionName, `proj_${projectId}_docs`);
+  assert.deepEqual(fetchPayloads[0]?.embeddingConfig, {
+    provider: 'custom',
+    apiKey: 'db-embedding-key',
+    baseUrl: 'https://embedding.example.com/v1',
+    model: 'text-embedding-custom',
+  });
+  assert.deepEqual(fetchPayloads[0]?.indexingConfig, {
+    chunkSize: 860,
+    chunkOverlap: 120,
+    supportedTypes: ['md', 'txt'],
+    indexerTimeoutMs: 45000,
+  });
   assert.equal(completedChunkCount, 4);
 });
 
@@ -1710,6 +1766,9 @@ test('getKnowledgeDiagnostics degrades gracefully when collection or indexer che
 
 test('getKnowledgeDiagnostics accepts legacy /health fallback when versioned diagnostics is unavailable', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-diagnostics-health-'));
+  const env = createTestEnv(storageRoot);
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY = env.settings.encryptionKey;
   const knowledgeId = '507f1f77bcf86cd799439011';
   const knowledge: KnowledgeBaseDocument & {
     _id: NonNullable<KnowledgeBaseDocument['_id']>;
@@ -1737,12 +1796,36 @@ test('getKnowledgeDiagnostics accepts legacy /health fallback when versioned dia
   const authRepository = {
     findProfilesByIds: async () => [],
   } as unknown as AuthRepository;
+  const settingsRepository = createSettingsRepositoryStub({
+    getSettings: async () => ({
+      _id: new ObjectId('507f1f77bcf86cd799439601'),
+      singleton: 'default',
+      embedding: {
+        provider: 'voyage',
+        baseUrl: 'https://embedding.example.com/v1',
+        model: 'voyage-3-large',
+        apiKeyEncrypted: encryptApiKey('db-embedding-key'),
+        apiKeyHint: '...-key',
+        testedAt: null,
+        testStatus: null,
+      },
+      indexing: {
+        chunkSize: 860,
+        chunkOverlap: 120,
+        supportedTypes: ['md'],
+        indexerTimeoutMs: 45000,
+      },
+      updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+      updatedBy: 'user-1',
+    }),
+  });
 
   const service = createKnowledgeService({
-    env: createTestEnv(storageRoot),
+    env,
     repository,
     searchService: createSearchServiceStub(),
     authRepository,
+    settingsRepository,
   });
 
   const originalFetch = globalThis.fetch;
@@ -1803,14 +1886,15 @@ test('getKnowledgeDiagnostics accepts legacy /health fallback when versioned dia
     ]);
     assert.equal(response.indexer.status, 'ok');
     assert.equal(response.indexer.service, 'knowject-indexer-py');
-    assert.equal(response.indexer.chunkSize, 1000);
-    assert.equal(response.indexer.chunkOverlap, 200);
-    assert.deepEqual(response.indexer.supportedFormats, ['md', 'txt']);
-    assert.equal(response.indexer.embeddingProvider, null);
+    assert.equal(response.indexer.chunkSize, 860);
+    assert.equal(response.indexer.chunkOverlap, 120);
+    assert.deepEqual(response.indexer.supportedFormats, ['md']);
+    assert.equal(response.indexer.embeddingProvider, 'voyage');
     assert.equal(response.indexer.chromaReachable, null);
     assert.equal(response.indexer.errorMessage, null);
   } finally {
     globalThis.fetch = originalFetch;
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
   }
 });
 

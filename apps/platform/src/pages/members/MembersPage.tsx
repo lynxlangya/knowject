@@ -5,7 +5,10 @@ import { getMembersOverview, type MemberOverviewResponseItem } from '@api/member
 import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import { getAuthUser } from '@app/auth/user';
 import { useProjectContext } from '@app/project/useProjectContext';
-import { GLOBAL_ASSET_PAGE_CLASS_NAME } from '@pages/assets/components/GlobalAssetLayout';
+import {
+  GLOBAL_ASSET_PAGE_CLASS_NAME,
+  GlobalAssetPageHeader,
+} from '@pages/assets/components/GlobalAssetLayout';
 import { MemberDetailPanel } from './components/MemberDetailPanel';
 import { MemberDirectoryList } from './components/MemberDirectoryList';
 import { MemberFiltersBar } from './components/MemberFiltersBar';
@@ -243,24 +246,11 @@ export const MembersPage = () => {
 
   return (
     <section ref={sectionRef} className={GLOBAL_ASSET_PAGE_CLASS_NAME}>
-      <Card
-        className="shrink-0 rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
-        styles={{ body: { padding: '22px 22px 20px' } }}
-      >
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              协作成员
-            </Typography.Text>
-            <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
-              当前账号可见的成员协作总览
-            </Typography.Title>
-            <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-              这里按你当前可见的项目关系聚合成员基础信息、参与项目、协作快照与权限摘要。
-              当前阶段优先回答“谁在参与、参与了哪些项目、当前状态如何”，组织级邀请与权限矩阵后续接入。
-            </Typography.Paragraph>
-          </div>
-
+      <GlobalAssetPageHeader
+        title="成员"
+        subtitle="这里按你当前可见的项目关系聚合成员基础信息、参与项目、协作快照与权限摘要。当前阶段优先回答“谁在参与、参与了哪些项目、当前状态如何”，组织级邀请与权限矩阵后续接入。"
+        summaryItems={summaryItems}
+        actions={
           <div className="flex flex-wrap gap-2">
             <Button
               type="primary"
@@ -280,27 +270,8 @@ export const MembersPage = () => {
               角色与权限
             </Button>
           </div>
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {summaryItems.map((item) => (
-            <div
-              key={item.label}
-              className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
-            >
-              <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-                {item.label}
-              </Typography.Text>
-              <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
-                {item.value}
-              </Typography.Title>
-              <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                {item.hint}
-              </Typography.Paragraph>
-            </div>
-          ))}
-        </div>
-      </Card>
+        }
+      />
 
       <div
         ref={filtersRef}

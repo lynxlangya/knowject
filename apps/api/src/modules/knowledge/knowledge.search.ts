@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
+import { getEffectiveEmbeddingConfig, getEffectiveIndexingConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
 import { AppError } from "@lib/app-error.js";
+import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type {
   KnowledgeSearchHitResponse,
   KnowledgeSearchResponse,
@@ -10,6 +12,9 @@ import type {
 const GLOBAL_DOCS_COLLECTION_NAME = "global_docs";
 const GLOBAL_CODE_COLLECTION_NAME = "global_code";
 const LOCAL_DEVELOPMENT_EMBEDDING_DIMENSION = 1536;
+const NOOP_SETTINGS_REPOSITORY = {
+  getSettings: async () => null,
+} as unknown as SettingsRepository;
 
 interface ChromaCollectionSummary {
   id: string;
@@ -121,8 +126,10 @@ const resolveDiagnosticsErrorMessage = (error: unknown): string => {
 
 export const createKnowledgeSearchService = ({
   env,
+  settingsRepository = NOOP_SETTINGS_REPOSITORY,
 }: {
   env: AppEnv;
+  settingsRepository?: SettingsRepository;
 }): KnowledgeSearchService => {
   const collectionCache = new Map<string, ChromaCollectionSummary>();
 
@@ -135,17 +142,6 @@ export const createKnowledgeSearchService = ({
     }
 
     return env.chroma.url;
-  };
-
-  const requireOpenAiApiKey = (): string => {
-    if (!env.openai.apiKey) {
-      throw createServiceUnavailableError(
-        "KNOWLEDGE_SEARCH_EMBEDDING_UNAVAILABLE",
-        "OpenAI embedding 未配置，当前无法执行知识索引和检索",
-      );
-    }
-
-    return env.openai.apiKey;
   };
 
   const createLocalDevelopmentEmbedding = (text: string): number[] => {
@@ -293,6 +289,10 @@ export const createKnowledgeSearchService = ({
 
   const requestIndexerHealth = async (): Promise<void> => {
     let responseBody: unknown = null;
+    const indexingConfig = await getEffectiveIndexingConfig({
+      env,
+      repository: settingsRepository,
+    });
 
     try {
       const response = await fetch(
@@ -302,7 +302,7 @@ export const createKnowledgeSearchService = ({
           headers: {
             accept: "application/json",
           },
-          signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
+          signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
         },
       );
 
@@ -332,28 +332,39 @@ export const createKnowledgeSearchService = ({
   };
 
   const createEmbeddings = async (texts: string[]): Promise<number[][]> => {
-    if (env.nodeEnv === "development" && !env.openai.apiKey) {
+    const embeddingConfig = await getEffectiveEmbeddingConfig({
+      env,
+      repository: settingsRepository,
+    });
+
+    if (embeddingConfig.provider === "local_dev") {
       return texts.map((text) => createLocalDevelopmentEmbedding(text));
     }
 
-    const apiKey = requireOpenAiApiKey();
+    if (!embeddingConfig.apiKey) {
+      throw createServiceUnavailableError(
+        "KNOWLEDGE_SEARCH_EMBEDDING_UNAVAILABLE",
+        "Embedding API Key 未配置，当前无法执行知识索引和检索",
+      );
+    }
+
     let responseBody: unknown = null;
 
     try {
       const response = await fetch(
-        buildApiUrl(env.openai.baseUrl, "/embeddings"),
+        buildApiUrl(embeddingConfig.baseUrl, "/embeddings"),
         {
           method: "POST",
           headers: {
             accept: "application/json",
-            authorization: `Bearer ${apiKey}`,
+            authorization: `Bearer ${embeddingConfig.apiKey}`,
             "content-type": "application/json",
           },
           body: JSON.stringify({
-            model: env.openai.embeddingModel,
+            model: embeddingConfig.model,
             input: texts,
           }),
-          signal: AbortSignal.timeout(env.openai.requestTimeoutMs),
+          signal: AbortSignal.timeout(embeddingConfig.requestTimeoutMs),
         },
       );
 

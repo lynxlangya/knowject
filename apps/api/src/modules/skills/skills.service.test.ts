@@ -222,6 +222,9 @@ const createEnv = async (): Promise<AppEnv & { skillsRoot: string }> => {
       embeddingModel: 'text-embedding-3-small',
       requestTimeoutMs: 15000,
     },
+    settings: {
+      encryptionKey: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    },
     jwt: {
       secret: 'secret',
       expiresIn: '1h',

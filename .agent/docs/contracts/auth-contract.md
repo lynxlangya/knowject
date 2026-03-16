@@ -59,6 +59,7 @@
 | `JWT_EXPIRES_IN`           | 是   | `12h`                                                                     | access token 有效期                            |
 | `JWT_ISSUER`               | 是   | `knowject-api`                                                            | JWT `iss`                                      |
 | `JWT_AUDIENCE`             | 是   | `knowject-platform`                                                       | JWT `aud`                                      |
+| `SETTINGS_ENCRYPTION_KEY`  | 是   | `openssl rand -hex 32` 生成的 64 位十六进制字符串                         | 工作区设置页 API Key 的服务端加密密钥          |
 | `ARGON2_MEMORY_COST`       | 是   | `65536`                                                                   | `argon2id` 内存成本                            |
 | `ARGON2_TIME_COST`         | 是   | `3`                                                                       | `argon2id` 迭代次数                            |
 | `ARGON2_PARALLELISM`       | 是   | `1`                                                                       | `argon2id` 并行度                              |
@@ -68,13 +69,14 @@
 安全约束：
 
 - `JWT_SECRET` 必须通过随机生成获得，例如：`openssl rand -base64 48`
+- `SETTINGS_ENCRYPTION_KEY` 必须通过安全随机源生成，例如：`openssl rand -hex 32`
 - `MONGODB_URI` 只能使用应用用户，不允许 API 直接使用 root 凭据
-- 容器化部署中推荐使用 `JWT_SECRET_FILE` 与 `MONGODB_URI_FILE`，或用应用账号 + secrets 文件在启动脚本里组装 `MONGODB_URI`
+- 容器化部署中推荐使用 `JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE` 与 `MONGODB_URI_FILE`，或用应用账号 + secrets 文件在启动脚本里组装 `MONGODB_URI`
 - `CORS_ORIGIN` 在本地开发固定指向当前前端 dev server；部署时按环境显式注入
 - `API_ERROR_INCLUDE_STACK` 只影响服务端错误日志，不进入客户端错误响应
 - `API_ERROR_INCLUDE_STACK` 在所有环境默认关闭
-- 生产环境中的认证与鉴权请求必须通过 HTTPS 发送；服务端会拒绝不安全传输的 `/api/auth/*` 与 `/api/memory/*` 请求
-- `/api/auth/*` 与 `/api/memory/*` 响应必须带 `Cache-Control: no-store`
+- 生产环境中的认证与敏感请求必须通过 HTTPS 发送；服务端会拒绝不安全传输的 `/api/auth/*`、`/api/memory/*` 与 `/api/settings/*` 请求
+- `/api/auth/*`、`/api/memory/*` 与 `/api/settings/*` 响应必须带 `Cache-Control: no-store`
 
 可选扩展变量：
 
@@ -92,6 +94,9 @@
 补充说明：
 
 - 当前知识上传契约只支持 `md / markdown / txt`；`pdf` 已从前后端上传入口中移除，待 `indexer-py` 正式覆盖后再统一加回。
+- `/api/settings` 返回的是当前生效配置，而不是简单的数据库原始值：`embedding / llm / indexing` 会标记 `source=database|environment`，前端必须据此提示当前是否仍在使用环境变量 fallback。
+- 工作区设置页中的 API Key 允许由浏览器以明文请求体提交到服务端，但服务端响应、日志、数据库、错误对象与 `GET /api/settings` 返回都不得回显明文；响应只允许暴露 `apiKeyHint` 与 `hasKey`。
+- 知识索引链路当前固定按“数据库优先、缺失时 fallback 到环境变量”读取 effective config；Node 每次触发 Python indexer 时都会透传 `embeddingConfig` 与 `indexingConfig`，Python 侧按请求级 override 优先、env 兜底执行。
 
 ## 4. JWT 契约
 

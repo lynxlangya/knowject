@@ -162,18 +162,42 @@ const filterSkills = (
 const buildSkillSummaryItems = (
   items: SkillSummaryResponse[],
 ): GlobalAssetSummaryItem[] => {
+  const publishedCount = items.filter(
+    (item) => item.lifecycleStatus === 'published',
+  ).length;
+  const draftCount = items.length - publishedCount;
   const availableCount = items.filter(
     (item) => item.runtimeStatus === 'available',
   ).length;
+  const contractOnlyCount = items.length - availableCount;
+  const importedCount = items.filter((item) => item.source === 'imported').length;
 
   return [
     {
       label: '技能总数',
       value: `${items.length} 个`,
+      hint: '当前纳入目录治理的 Skill 资产。',
+    },
+    {
+      label: '已发布',
+      value: `${publishedCount} 个`,
+      hint:
+        draftCount === 0
+          ? '当前没有待整理的草稿。'
+          : `${draftCount} 个仍处于草稿阶段。`,
     },
     {
       label: '已接服务',
       value: `${availableCount} 个`,
+      hint:
+        contractOnlyCount === 0
+          ? '当前全部 Skill 都已接入运行时。'
+          : `${contractOnlyCount} 个仍是契约预留。`,
+    },
+    {
+      label: '公网导入',
+      value: `${importedCount} 个`,
+      hint: '来自 GitHub 或 URL 的外部 Skill。',
     },
   ];
 };

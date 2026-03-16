@@ -101,6 +101,8 @@ pnpm dev:init
 pnpm dev:up
 ```
 
+`pnpm dev:init` / `pnpm dev:up` now also sync `SETTINGS_ENCRYPTION_KEY_FILE` into `.env.local` together with the existing MongoDB / JWT file-based secrets, so old local checkouts do not need a manual settings-key repair step before the API boots.
+
 ### Useful commands
 
 ```bash

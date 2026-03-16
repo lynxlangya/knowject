@@ -2,6 +2,10 @@ import { createHash } from 'node:crypto';
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { ObjectId, type WithId } from 'mongodb';
+import {
+  getEffectiveEmbeddingConfig,
+  getEffectiveIndexingConfig,
+} from '@config/ai-config.js';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
 import {
@@ -13,6 +17,7 @@ import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { AuthUserProfile } from '@modules/auth/auth.types.js';
 import type { ProjectsRepository } from '@modules/projects/projects.repository.js';
 import { getProjectMember, requireVisibleProject } from '@modules/projects/projects.shared.js';
+import type { SettingsRepository } from '@modules/settings/settings.repository.js';
 import type { KnowledgeRepository } from './knowledge.repository.js';
 import type { KnowledgeSearchService } from './knowledge.search.js';
 import {
@@ -179,6 +184,9 @@ const createKnowledgeRebuildEmptyError = (): AppError => {
 const NOOP_PROJECTS_REPOSITORY = {
   findById: async () => null,
 } as unknown as ProjectsRepository;
+const NOOP_SETTINGS_REPOSITORY = {
+  getSettings: async () => null,
+} as unknown as SettingsRepository;
 
 const readOptionalSourceType = (value: unknown): KnowledgeSourceType | undefined => {
   if (value === undefined) {
@@ -535,22 +543,24 @@ const normalizeIndexerErrorMessage = (
   return fallback;
 };
 
-const resolveEmbeddingMetadata = (
-  env: AppEnv,
-): {
-  embeddingProvider: 'openai' | 'local_dev';
-  embeddingModel: 'text-embedding-3-small' | 'hash-1536-dev';
-} => {
-  if (env.nodeEnv === 'development' && !env.openai.apiKey) {
-    return {
-      embeddingProvider: 'local_dev',
-      embeddingModel: 'hash-1536-dev',
-    };
-  }
+const resolveEmbeddingMetadata = async ({
+  env,
+  settingsRepository,
+}: {
+  env: AppEnv;
+  settingsRepository: SettingsRepository;
+}): Promise<{
+  embeddingProvider: KnowledgeDocumentRecord['embeddingProvider'];
+  embeddingModel: KnowledgeDocumentRecord['embeddingModel'];
+}> => {
+  const embeddingConfig = await getEffectiveEmbeddingConfig({
+    env,
+    repository: settingsRepository,
+  });
 
   return {
-    embeddingProvider: 'openai',
-    embeddingModel: 'text-embedding-3-small',
+    embeddingProvider: embeddingConfig.provider,
+    embeddingModel: embeddingConfig.model,
   };
 };
 
@@ -606,6 +616,7 @@ const resolveDiagnosticsErrorMessage = (error: unknown): string => {
 
 const callKnowledgeIndexer = async (
   env: AppEnv,
+  settingsRepository: SettingsRepository,
   payload: KnowledgeIndexerDocumentRequest,
   options?: {
     mode?: 'index' | 'rebuild';
@@ -616,6 +627,31 @@ const callKnowledgeIndexer = async (
     mode === 'rebuild'
       ? buildKnowledgeIndexerRebuildUrls(env.knowledge.indexerUrl, payload.documentId)
       : buildKnowledgeIndexerUrls(env.knowledge.indexerUrl);
+  const [embeddingConfig, indexingConfig] = await Promise.all([
+    getEffectiveEmbeddingConfig({
+      env,
+      repository: settingsRepository,
+    }),
+    getEffectiveIndexingConfig({
+      env,
+      repository: settingsRepository,
+    }),
+  ]);
+  const requestPayload: KnowledgeIndexerDocumentRequest = {
+    ...payload,
+    embeddingConfig: {
+      provider: embeddingConfig.provider,
+      apiKey: embeddingConfig.apiKey,
+      baseUrl: embeddingConfig.baseUrl,
+      model: embeddingConfig.model,
+    },
+    indexingConfig: {
+      chunkSize: indexingConfig.chunkSize,
+      chunkOverlap: indexingConfig.chunkOverlap,
+      supportedTypes: [...indexingConfig.supportedTypes],
+      indexerTimeoutMs: indexingConfig.indexerTimeoutMs,
+    },
+  };
 
   for (let index = 0; index < indexerUrls.length; index += 1) {
     const indexerUrl = indexerUrls[index];
@@ -631,8 +667,8 @@ const callKnowledgeIndexer = async (
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
+        body: JSON.stringify(requestPayload),
+        signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown fetch error';
@@ -766,8 +802,13 @@ const readDocumentStoragePresence = async (
 
 const readKnowledgeIndexerDiagnostics = async (
   env: AppEnv,
+  settingsRepository: SettingsRepository,
 ): Promise<KnowledgeIndexerDiagnosticsResponse> => {
   const diagnosticsUrls = buildKnowledgeIndexerDiagnosticsUrls(env.knowledge.indexerUrl);
+  const indexingConfig = await getEffectiveIndexingConfig({
+    env,
+    repository: settingsRepository,
+  });
 
   for (let index = 0; index < diagnosticsUrls.length; index += 1) {
     const diagnosticsUrl = diagnosticsUrls[index];
@@ -783,7 +824,7 @@ const readKnowledgeIndexerDiagnostics = async (
         headers: {
           accept: 'application/json',
         },
-        signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
+        signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
       });
     } catch (error) {
       if (index < diagnosticsUrls.length - 1) {
@@ -841,6 +882,7 @@ const processUploadedDocument = async ({
   env,
   repository,
   searchService,
+  settingsRepository,
   knowledgeId,
   documentId,
   storagePath,
@@ -854,6 +896,7 @@ const processUploadedDocument = async ({
   env: AppEnv;
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
+  settingsRepository: SettingsRepository;
   knowledgeId: string;
   documentId: string;
   storagePath: string;
@@ -879,18 +922,23 @@ const processUploadedDocument = async ({
 
     await repository.syncKnowledgeSummaryFromDocuments(knowledgeId, processingAt);
 
-    const result = await callKnowledgeIndexer(env, {
-      knowledgeId,
-      documentId,
-      sourceType,
-      collectionName,
-      fileName,
-      mimeType,
-      storagePath,
-      documentVersionHash,
-    }, {
-      mode,
-    });
+    const result = await callKnowledgeIndexer(
+      env,
+      settingsRepository,
+      {
+        knowledgeId,
+        documentId,
+        sourceType,
+        collectionName,
+        fileName,
+        mimeType,
+        storagePath,
+        documentVersionHash,
+      },
+      {
+        mode,
+      },
+    );
 
     if (result.status === 'failed') {
       throw new Error(result.errorMessage);
@@ -931,6 +979,7 @@ const queueDocumentProcessing = ({
   env,
   repository,
   searchService,
+  settingsRepository,
   knowledgeId,
   documentId,
   storagePath,
@@ -944,6 +993,7 @@ const queueDocumentProcessing = ({
   env: AppEnv;
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
+  settingsRepository: SettingsRepository;
   knowledgeId: string;
   documentId: string;
   storagePath: string;
@@ -959,6 +1009,7 @@ const queueDocumentProcessing = ({
       env,
       repository,
       searchService,
+      settingsRepository,
       knowledgeId,
       documentId,
       storagePath,
@@ -982,6 +1033,7 @@ const queueExistingKnowledgeDocument = async ({
   env,
   repository,
   searchService,
+  settingsRepository,
   knowledgeId,
   document,
   sourceType,
@@ -991,6 +1043,7 @@ const queueExistingKnowledgeDocument = async ({
   env: AppEnv;
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
+  settingsRepository: SettingsRepository;
   knowledgeId: string;
   document: WithId<KnowledgeDocumentRecord>;
   sourceType: KnowledgeSourceType;
@@ -1015,6 +1068,7 @@ const queueExistingKnowledgeDocument = async ({
     env,
     repository,
     searchService,
+    settingsRepository,
     knowledgeId,
     documentId: document._id.toHexString(),
     storagePath: join(env.knowledge.storageRoot, document.storagePath),
@@ -1054,6 +1108,7 @@ const uploadKnowledgeDocument = async ({
   repository,
   searchService,
   authRepository,
+  settingsRepository,
   actor,
   knowledgeId,
   knowledge,
@@ -1063,6 +1118,7 @@ const uploadKnowledgeDocument = async ({
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
   authRepository: AuthRepository;
+  settingsRepository: SettingsRepository;
   actor: KnowledgeCommandContext['actor'];
   knowledgeId: string;
   knowledge: WithId<KnowledgeBaseDocument>;
@@ -1074,7 +1130,10 @@ const uploadKnowledgeDocument = async ({
 
   const documentId = new ObjectId();
   const documentVersionHash = buildDocumentVersionHash(file);
-  const embeddingMetadata = resolveEmbeddingMetadata(env);
+  const embeddingMetadata = await resolveEmbeddingMetadata({
+    env,
+    settingsRepository,
+  });
   const documentRootPath = buildStorageDocumentRootPath(
     knowledge,
     knowledgeId,
@@ -1146,6 +1205,7 @@ const uploadKnowledgeDocument = async ({
       env,
       repository,
       searchService,
+      settingsRepository,
       knowledgeId,
       documentId: documentId.toHexString(),
       storagePath: absoluteStoragePath,
@@ -1179,12 +1239,14 @@ export const createKnowledgeService = ({
   searchService,
   authRepository,
   projectsRepository = NOOP_PROJECTS_REPOSITORY,
+  settingsRepository = NOOP_SETTINGS_REPOSITORY,
 }: {
   env: AppEnv;
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
   authRepository: AuthRepository;
   projectsRepository?: ProjectsRepository;
+  settingsRepository?: SettingsRepository;
 }): KnowledgeService => {
   return {
     initializeSearchInfrastructure: async () => {
@@ -1396,6 +1458,7 @@ export const createKnowledgeService = ({
         repository,
         searchService,
         authRepository,
+        settingsRepository,
         actor,
         knowledgeId,
         knowledge,
@@ -1418,6 +1481,7 @@ export const createKnowledgeService = ({
         repository,
         searchService,
         authRepository,
+        settingsRepository,
         actor,
         knowledgeId,
         knowledge,
@@ -1449,6 +1513,7 @@ export const createKnowledgeService = ({
         env,
         repository,
         searchService,
+        settingsRepository,
         knowledgeId,
         document,
         sourceType: knowledge.sourceType,
@@ -1481,6 +1546,7 @@ export const createKnowledgeService = ({
         env,
         repository,
         searchService,
+        settingsRepository,
         knowledgeId,
         document,
         sourceType: knowledge.sourceType,
@@ -1515,6 +1581,7 @@ export const createKnowledgeService = ({
             env,
             repository,
             searchService,
+            settingsRepository,
             knowledgeId,
             document,
             sourceType: knowledge.sourceType,
@@ -1552,17 +1619,27 @@ export const createKnowledgeService = ({
       const collectionDiagnostics = await searchService.getDiagnostics({
         collectionName: buildKnowledgeCollectionName(knowledge),
       });
+      const [effectiveEmbeddingConfig, effectiveIndexingConfig] = await Promise.all([
+        getEffectiveEmbeddingConfig({
+          env,
+          repository: settingsRepository,
+        }),
+        getEffectiveIndexingConfig({
+          env,
+          repository: settingsRepository,
+        }),
+      ]);
       let indexerDiagnostics: KnowledgeDiagnosticsResponse['indexer'];
 
       try {
-        const diagnostics = await readKnowledgeIndexerDiagnostics(env);
+        const diagnostics = await readKnowledgeIndexerDiagnostics(env, settingsRepository);
         indexerDiagnostics = {
           status: diagnostics.status,
           service: diagnostics.service,
-          supportedFormats: diagnostics.supportedFormats,
-          chunkSize: diagnostics.chunkSize,
-          chunkOverlap: diagnostics.chunkOverlap,
-          embeddingProvider: diagnostics.embeddingProvider,
+          supportedFormats: [...effectiveIndexingConfig.supportedTypes],
+          chunkSize: effectiveIndexingConfig.chunkSize,
+          chunkOverlap: effectiveIndexingConfig.chunkOverlap,
+          embeddingProvider: effectiveEmbeddingConfig.provider,
           chromaReachable: diagnostics.chromaReachable,
           errorMessage: diagnostics.errorMessage,
         };
@@ -1570,10 +1647,10 @@ export const createKnowledgeService = ({
         indexerDiagnostics = {
           status: 'degraded',
           service: null,
-          supportedFormats: [],
-          chunkSize: null,
-          chunkOverlap: null,
-          embeddingProvider: null,
+          supportedFormats: [...effectiveIndexingConfig.supportedTypes],
+          chunkSize: effectiveIndexingConfig.chunkSize,
+          chunkOverlap: effectiveIndexingConfig.chunkOverlap,
+          embeddingProvider: effectiveEmbeddingConfig.provider,
           chromaReachable: null,
           errorMessage: resolveDiagnosticsErrorMessage(error),
         };
