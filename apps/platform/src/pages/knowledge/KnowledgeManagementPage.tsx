@@ -11,7 +11,7 @@ import {
   ReloadOutlined,
   ToolOutlined,
   WarningOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 import {
   Alert,
   App,
@@ -27,12 +27,13 @@ import {
   Select,
   Spin,
   Tag,
+  Tabs,
   Tooltip,
   Typography,
-} from 'antd';
-import type { ChangeEvent } from 'react';
-import { useEffect, useRef, useState } from 'react';
-import { extractApiErrorMessage } from '@api/error';
+} from "antd";
+import type { ChangeEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { extractApiErrorMessage } from "@api/error";
 import {
   createKnowledge,
   deleteKnowledge,
@@ -54,12 +55,13 @@ import {
   type KnowledgeSourceType,
   type KnowledgeSummaryResponse,
   type UpdateKnowledgeRequest,
-} from '@api/knowledge';
-import { KnowledgeSourcePickerModal } from './components/KnowledgeSourcePickerModal';
+} from "@api/knowledge";
+import { KnowledgeSourcePickerModal } from "./components/KnowledgeSourcePickerModal";
+import { KnowledgeSearchTab } from "./components/KnowledgeSearchTab";
 import {
   KnowledgeTextInputModal,
   type KnowledgeTextInputValues,
-} from './components/KnowledgeTextInputModal';
+} from "./components/KnowledgeTextInputModal";
 import {
   createTextSourceFile,
   DOCUMENT_UPLOAD_ACCEPT,
@@ -70,8 +72,8 @@ import {
   prepareKnowledgeSourceFiles,
   shouldWarnLargeKnowledgeSourceFile,
   validateKnowledgeSourceFile,
-} from './knowledgeUpload.shared';
-import type { MenuProps } from 'antd';
+} from "./knowledgeUpload.shared";
+import type { MenuProps } from "antd";
 import {
   GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME,
   GlobalAssetPageHeader,
@@ -79,7 +81,7 @@ import {
   GlobalAssetSidebar,
   GlobalAssetSidebarItem,
   GlobalAssetSidebarSection,
-} from '@pages/assets/components/GlobalAssetLayout';
+} from "@pages/assets/components/GlobalAssetLayout";
 
 interface KnowledgeFormValues {
   name: string;
@@ -92,7 +94,7 @@ interface KnowledgeSourceMeta {
   color: string;
 }
 
-type UploadFlowStep = 'picker' | 'text';
+type UploadFlowStep = "picker" | "text";
 
 interface UploadKnowledgeSourceOptions {
   manageLoading?: boolean;
@@ -107,7 +109,7 @@ interface UploadKnowledgeSourceResult {
   reason?: string;
 }
 
-const KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY = 'knowledge-batch-upload';
+const KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY = "knowledge-batch-upload";
 
 const formatKnowledgeBatchUploadProgress = (
   current: number,
@@ -127,69 +129,69 @@ const formatKnowledgeBatchUploadSuccessMessage = (
   return `已上传 ${successCount}/${totalCount} 个文件，正在进入索引队列`;
 };
 
-const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
+const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
+  dateStyle: "medium",
+  timeStyle: "short",
 });
 
-const compactDateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  month: 'numeric',
-  day: 'numeric',
+const compactDateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  month: "numeric",
+  day: "numeric",
 });
 
 const INDEX_STATUS_META: Record<
   KnowledgeIndexStatus,
   { label: string; color: string }
 > = {
-  idle: { label: '待索引', color: 'default' },
-  pending: { label: '排队中', color: 'gold' },
-  processing: { label: '处理中', color: 'processing' },
-  completed: { label: '已完成', color: 'success' },
-  failed: { label: '失败', color: 'error' },
+  idle: { label: "待索引", color: "default" },
+  pending: { label: "排队中", color: "gold" },
+  processing: { label: "处理中", color: "processing" },
+  completed: { label: "已完成", color: "success" },
+  failed: { label: "失败", color: "error" },
 };
 
 const KNOWLEDGE_INDEX_STATUS_CLASS: Record<KnowledgeIndexStatus, string> = {
-  idle: 'border-slate-200 bg-slate-100 text-slate-600',
-  pending: 'border-amber-200 bg-amber-50 text-amber-700',
-  processing: 'border-sky-200 bg-sky-50 text-sky-700',
-  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  failed: 'border-rose-200 bg-rose-50 text-rose-700',
+  idle: "border-slate-200 bg-slate-100 text-slate-600",
+  pending: "border-amber-200 bg-amber-50 text-amber-700",
+  processing: "border-sky-200 bg-sky-50 text-sky-700",
+  completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  failed: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
 const DOCUMENT_STATUS_META: Record<
   KnowledgeDocumentStatus,
   { label: string; color: string }
 > = {
-  pending: { label: '待处理', color: 'gold' },
-  processing: { label: '处理中', color: 'processing' },
-  completed: { label: '已完成', color: 'success' },
-  failed: { label: '失败', color: 'error' },
+  pending: { label: "待处理", color: "gold" },
+  processing: { label: "处理中", color: "processing" },
+  completed: { label: "已完成", color: "success" },
+  failed: { label: "失败", color: "error" },
 };
 
 const SOURCE_TYPE_META: Record<KnowledgeSourceType, KnowledgeSourceMeta> = {
   global_docs: {
-    label: '全局文档',
-    color: 'blue',
+    label: "全局文档",
+    color: "blue",
   },
   global_code: {
-    label: '全局代码',
-    color: 'purple',
+    label: "全局代码",
+    color: "purple",
   },
 };
 
 const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {
-  global_docs: 'border-slate-200 bg-white text-slate-500',
-  global_code: 'border-violet-200 bg-violet-50 text-violet-700',
+  global_docs: "border-slate-200 bg-white text-slate-500",
+  global_code: "border-violet-200 bg-violet-50 text-violet-700",
 };
 
 const MAX_POLLING_ATTEMPTS = 20;
 const POLLING_INTERVAL_MS = 1500;
-const KNOWLEDGE_PAGE_SUBTITLE = '统一索引全局文档，供技能与智能体复用';
-const KNOWLEDGE_REBUILD_TOOLTIP = '重新清理并构建当前知识库下的全部文档向量。';
+const KNOWLEDGE_PAGE_SUBTITLE = "统一索引全局文档，供技能与智能体复用";
+const KNOWLEDGE_REBUILD_TOOLTIP = "重新清理并构建当前知识库下的全部文档向量。";
 
 const formatDateTime = (value: string | null | undefined): string => {
   if (!value) {
-    return '未记录';
+    return "未记录";
   }
 
   return dateTimeFormatter.format(new Date(value));
@@ -197,7 +199,7 @@ const formatDateTime = (value: string | null | undefined): string => {
 
 const formatCompactDate = (value: string | null | undefined): string => {
   if (!value) {
-    return '未记录';
+    return "未记录";
   }
 
   return compactDateFormatter.format(new Date(value));
@@ -207,14 +209,14 @@ const getKnowledgeInitials = (name: string): string => {
   const trimmed = name.trim();
 
   if (!trimmed) {
-    return '知';
+    return "知";
   }
 
   if (/^[a-z0-9]/i.test(trimmed)) {
     return trimmed.slice(0, 2).toUpperCase();
   }
 
-  return trimmed[0] ?? '知';
+  return trimmed[0] ?? "知";
 };
 
 const pickNextActiveKnowledgeId = (
@@ -239,35 +241,35 @@ const hasProcessingDocuments = (
   return (
     knowledge?.documents.some(
       (document) =>
-        document.status === 'pending' || document.status === 'processing',
+        document.status === "pending" || document.status === "processing",
     ) ?? false
   );
 };
 
 const resolveKnowledgeIndexStatus = (
-  documents: Array<Pick<KnowledgeDocumentResponse, 'status'>>,
+  documents: Array<Pick<KnowledgeDocumentResponse, "status">>,
 ): KnowledgeIndexStatus => {
   if (documents.length === 0) {
-    return 'idle';
+    return "idle";
   }
 
-  if (documents.some((document) => document.status === 'processing')) {
-    return 'processing';
+  if (documents.some((document) => document.status === "processing")) {
+    return "processing";
   }
 
-  if (documents.some((document) => document.status === 'pending')) {
-    return 'pending';
+  if (documents.some((document) => document.status === "pending")) {
+    return "pending";
   }
 
-  if (documents.some((document) => document.status === 'failed')) {
-    return 'failed';
+  if (documents.some((document) => document.status === "failed")) {
+    return "failed";
   }
 
-  if (documents.every((document) => document.status === 'completed')) {
-    return 'completed';
+  if (documents.every((document) => document.status === "completed")) {
+    return "completed";
   }
 
-  return 'idle';
+  return "idle";
 };
 
 const patchDocumentInKnowledgeDetail = (
@@ -321,14 +323,14 @@ const removeDocumentFromKnowledgeDetail = (
 
 const toKnowledgePayload = (
   values: KnowledgeFormValues,
-  mode: 'create' | 'edit',
+  mode: "create" | "edit",
 ): CreateKnowledgeRequest | UpdateKnowledgeRequest => {
   const payload = {
     name: values.name.trim(),
-    description: values.description?.trim() ?? '',
+    description: values.description?.trim() ?? "",
   };
 
-  if (mode === 'create') {
+  if (mode === "create") {
     return {
       ...payload,
       sourceType: values.sourceType,
@@ -346,11 +348,11 @@ const buildKnowledgeStats = (items: KnowledgeSummaryResponse[]) => {
 
   return [
     {
-      label: '知识库总数',
+      label: "知识库总数",
       value: `${items.length} 个`,
     },
     {
-      label: '文档总数',
+      label: "文档总数",
       value: `${totalDocuments} 份`,
     },
   ];
@@ -361,14 +363,14 @@ const buildKnowledgeDetailOverviewStats = (
 ) => {
   return [
     {
-      label: '文档数量',
+      label: "文档数量",
       value: `${knowledge.documentCount}`,
-      emphasis: 'number' as const,
+      emphasis: "number" as const,
     },
     {
-      label: '最近更新',
+      label: "最近更新",
       value: formatDateTime(knowledge.updatedAt),
-      emphasis: 'time' as const,
+      emphasis: "time" as const,
     },
   ];
 };
@@ -378,7 +380,7 @@ const queueDocumentForPending = (
 ): KnowledgeDocumentResponse => {
   return {
     ...document,
-    status: 'pending',
+    status: "pending",
     errorMessage: null,
     processedAt: null,
     updatedAt: new Date().toISOString(),
@@ -402,20 +404,20 @@ const buildKnowledgeRebuildBlockedReason = (
   knowledge: KnowledgeDetailResponse | null,
 ): string | null => {
   if (!knowledge) {
-    return '请先选择一个知识库';
+    return "请先选择一个知识库";
   }
 
   if (knowledge.documents.length === 0) {
-    return '当前知识库没有可重建文档';
+    return "当前知识库没有可重建文档";
   }
 
   if (
     knowledge.documents.some(
       (document) =>
-        document.status === 'pending' || document.status === 'processing',
+        document.status === "pending" || document.status === "processing",
     )
   ) {
-    return '当前仍有文档在排队或处理中，暂不允许整库重建';
+    return "当前仍有文档在排队或处理中，暂不允许整库重建";
   }
 
   return null;
@@ -435,6 +437,7 @@ export const KnowledgeManagementPage = () => {
   const [activeKnowledgeId, setActiveKnowledgeId] = useState<string | null>(
     null,
   );
+  const [activeTabKey, setActiveTabKey] = useState("documents");
   const [activeKnowledge, setActiveKnowledge] =
     useState<KnowledgeDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -446,7 +449,7 @@ export const KnowledgeManagementPage = () => {
   const [listReloadToken, setListReloadToken] = useState(0);
   const [detailReloadToken, setDetailReloadToken] = useState(0);
   const [diagnosticsReloadToken, setDiagnosticsReloadToken] = useState(0);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadFlowStep, setUploadFlowStep] = useState<UploadFlowStep | null>(
@@ -526,13 +529,13 @@ export const KnowledgeManagementPage = () => {
         }
 
         console.error(
-          '[KnowledgeManagement] 加载知识库列表失败:',
+          "[KnowledgeManagement] 加载知识库列表失败:",
           currentError,
         );
         setError(
           extractApiErrorMessage(
             currentError,
-            '加载知识库列表失败，请稍后重试',
+            "加载知识库列表失败，请稍后重试",
           ),
         );
       } finally {
@@ -550,6 +553,10 @@ export const KnowledgeManagementPage = () => {
       isMounted = false;
     };
   }, [listReloadToken]);
+
+  useEffect(() => {
+    setActiveTabKey("documents");
+  }, [activeKnowledgeId]);
 
   useEffect(() => {
     if (!activeKnowledgeId) {
@@ -578,14 +585,14 @@ export const KnowledgeManagementPage = () => {
         }
 
         console.error(
-          '[KnowledgeManagement] 加载知识库详情失败:',
+          "[KnowledgeManagement] 加载知识库详情失败:",
           currentError,
         );
         setActiveKnowledge(null);
         setDetailError(
           extractApiErrorMessage(
             currentError,
-            '加载知识库详情失败，请稍后重试',
+            "加载知识库详情失败，请稍后重试",
           ),
         );
       } finally {
@@ -630,14 +637,14 @@ export const KnowledgeManagementPage = () => {
         }
 
         console.error(
-          '[KnowledgeManagement] 加载知识库诊断失败:',
+          "[KnowledgeManagement] 加载知识库诊断失败:",
           currentError,
         );
         setActiveDiagnostics(null);
         setDiagnosticsError(
           extractApiErrorMessage(
             currentError,
-            '加载知识库诊断失败，请稍后重试',
+            "加载知识库诊断失败，请稍后重试",
           ),
         );
       } finally {
@@ -709,16 +716,16 @@ export const KnowledgeManagementPage = () => {
 
   const openCreateModal = () => {
     form.setFieldsValue({
-      name: '',
-      description: '',
-      sourceType: 'global_docs',
+      name: "",
+      description: "",
+      sourceType: "global_docs",
     });
-    setModalMode('create');
+    setModalMode("create");
   };
 
   const openEditModal = () => {
     if (!activeKnowledge) {
-      message.info('请先选择一个知识库');
+      message.info("请先选择一个知识库");
       return;
     }
 
@@ -727,7 +734,7 @@ export const KnowledgeManagementPage = () => {
       description: activeKnowledge.description,
       sourceType: activeKnowledge.sourceType,
     });
-    setModalMode('edit');
+    setModalMode("edit");
   };
 
   const closeModal = () => {
@@ -743,43 +750,43 @@ export const KnowledgeManagementPage = () => {
     setModalSubmitting(true);
 
     try {
-      if (modalMode === 'create') {
+      if (modalMode === "create") {
         const result = await createKnowledge(
-          toKnowledgePayload(values, 'create') as CreateKnowledgeRequest,
+          toKnowledgePayload(values, "create") as CreateKnowledgeRequest,
         );
 
         pollingAttemptsRef.current[result.knowledge.id] = 0;
-        message.success('知识库已创建');
+        message.success("知识库已创建");
         closeModal();
         reloadKnowledgeList(result.knowledge.id);
         return;
       }
 
       if (!activeKnowledgeId) {
-        message.warning('当前没有可编辑的知识库');
+        message.warning("当前没有可编辑的知识库");
         return;
       }
 
       const result = await updateKnowledge(
         activeKnowledgeId,
-        toKnowledgePayload(values, 'edit') as UpdateKnowledgeRequest,
+        toKnowledgePayload(values, "edit") as UpdateKnowledgeRequest,
       );
 
-      message.success('知识库信息已更新');
+      message.success("知识库信息已更新");
       closeModal();
       reloadKnowledgeList(result.knowledge.id);
       reloadKnowledgeDetail();
     } catch (currentError) {
       console.error(
-        '[KnowledgeManagement] 创建或更新知识库失败:',
+        "[KnowledgeManagement] 创建或更新知识库失败:",
         currentError,
       );
       message.error(
         extractApiErrorMessage(
           currentError,
-          modalMode === 'create'
-            ? '创建知识库失败，请稍后重试'
-            : '更新知识库失败，请稍后重试',
+          modalMode === "create"
+            ? "创建知识库失败，请稍后重试"
+            : "更新知识库失败，请稍后重试",
         ),
       );
     } finally {
@@ -789,7 +796,7 @@ export const KnowledgeManagementPage = () => {
 
   const handleDeleteKnowledge = async () => {
     if (!activeKnowledgeId) {
-      message.warning('当前没有可删除的知识库');
+      message.warning("当前没有可删除的知识库");
       return;
     }
 
@@ -805,12 +812,12 @@ export const KnowledgeManagementPage = () => {
       delete pollingAttemptsRef.current[activeKnowledgeId];
       setActiveKnowledge(null);
       setDetailError(null);
-      message.success('知识库已删除');
+      message.success("知识库已删除");
       reloadKnowledgeList(nextCandidateId);
     } catch (currentError) {
-      console.error('[KnowledgeManagement] 删除知识库失败:', currentError);
+      console.error("[KnowledgeManagement] 删除知识库失败:", currentError);
       message.error(
-        extractApiErrorMessage(currentError, '删除知识库失败，请稍后重试'),
+        extractApiErrorMessage(currentError, "删除知识库失败，请稍后重试"),
       );
     } finally {
       setDeletingKnowledgeId(null);
@@ -819,16 +826,16 @@ export const KnowledgeManagementPage = () => {
 
   const openUploadFlow = () => {
     if (!activeKnowledge) {
-      message.info('请先选择一个知识库');
+      message.info("请先选择一个知识库");
       return;
     }
 
-    if (activeKnowledge.sourceType !== 'global_docs') {
-      message.info('global_code 目前只冻结命名空间，暂不支持真实导入');
+    if (activeKnowledge.sourceType !== "global_docs") {
+      message.info("global_code 目前只冻结命名空间，暂不支持真实导入");
       return;
     }
 
-    setUploadFlowStep('picker');
+    setUploadFlowStep("picker");
   };
 
   const uploadKnowledgeSource = async (
@@ -838,7 +845,7 @@ export const KnowledgeManagementPage = () => {
     const notifyError = options?.notifyError !== false;
 
     if (!activeKnowledgeId || !activeKnowledge) {
-      const reason = '请先选择一个知识库';
+      const reason = "请先选择一个知识库";
 
       if (notifyError) {
         message.info(reason);
@@ -850,8 +857,8 @@ export const KnowledgeManagementPage = () => {
       };
     }
 
-    if (activeKnowledge.sourceType !== 'global_docs') {
-      const reason = 'global_code 目前只冻结命名空间，暂不支持真实导入';
+    if (activeKnowledge.sourceType !== "global_docs") {
+      const reason = "global_code 目前只冻结命名空间，暂不支持真实导入";
 
       if (notifyError) {
         message.info(reason);
@@ -880,7 +887,7 @@ export const KnowledgeManagementPage = () => {
       options?.showLargeFileWarning !== false &&
       shouldWarnLargeKnowledgeSourceFile(file)
     ) {
-      message.warning('文件超过 20 MB，建议按主题拆分上传，索引更快也更稳');
+      message.warning("文件超过 20 MB，建议按主题拆分上传，索引更快也更稳");
     }
 
     const manageLoading = options?.manageLoading !== false;
@@ -893,7 +900,7 @@ export const KnowledgeManagementPage = () => {
       await uploadKnowledgeDocument(activeKnowledgeId, file);
 
       if (options?.notifySuccess !== false) {
-        message.success('文档已上传，正在进入索引队列');
+        message.success("文档已上传，正在进入索引队列");
       }
 
       if (options?.refreshAfterUpload !== false) {
@@ -908,10 +915,10 @@ export const KnowledgeManagementPage = () => {
     } catch (currentError) {
       const errorMessage = extractApiErrorMessage(
         currentError,
-        '上传文档失败，请稍后重试',
+        "上传文档失败，请稍后重试",
       );
 
-      console.error('[KnowledgeManagement] 上传文档失败:', currentError);
+      console.error("[KnowledgeManagement] 上传文档失败:", currentError);
 
       if (notifyError) {
         message.error(errorMessage);
@@ -937,19 +944,17 @@ export const KnowledgeManagementPage = () => {
       return;
     }
 
-    const {
-      acceptedFiles,
-      fileIssues,
-      overflowCount,
-      largeFileCount,
-    } = prepareKnowledgeSourceFiles(files);
+    const { acceptedFiles, fileIssues, overflowCount, largeFileCount } =
+      prepareKnowledgeSourceFiles(files);
 
     if (overflowCount > 0) {
       message.warning(formatKnowledgeSourceOverflowMessage(overflowCount));
     }
 
     if (fileIssues.length > 0) {
-      message.warning(`已跳过 ${fileIssues.length} 个文件：${formatKnowledgeSourceFileIssues(fileIssues)}`);
+      message.warning(
+        `已跳过 ${fileIssues.length} 个文件：${formatKnowledgeSourceFileIssues(fileIssues)}`,
+      );
     }
 
     if (acceptedFiles.length === 0) {
@@ -978,7 +983,7 @@ export const KnowledgeManagementPage = () => {
       for (const [index, file] of acceptedFiles.entries()) {
         message.open({
           key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
-          type: 'loading',
+          type: "loading",
           content: formatKnowledgeBatchUploadProgress(
             index + 1,
             acceptedFiles.length,
@@ -1001,7 +1006,7 @@ export const KnowledgeManagementPage = () => {
 
         failedFiles.push({
           fileName: file.name,
-          reason: result.reason ?? '上传失败，请稍后重试',
+          reason: result.reason ?? "上传失败，请稍后重试",
         });
       }
     } finally {
@@ -1017,7 +1022,7 @@ export const KnowledgeManagementPage = () => {
     if (successCount > 0) {
       message.open({
         key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
-        type: failedFiles.length === 0 ? 'success' : 'warning',
+        type: failedFiles.length === 0 ? "success" : "warning",
         content: formatKnowledgeBatchUploadSuccessMessage(
           successCount,
           acceptedFiles.length,
@@ -1027,20 +1032,22 @@ export const KnowledgeManagementPage = () => {
     } else {
       message.open({
         key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
-        type: 'error',
-        content: '所选文件上传失败，请稍后重试',
+        type: "error",
+        content: "所选文件上传失败，请稍后重试",
         duration: 4,
       });
     }
 
     if (failedFiles.length > 0) {
-      message.error(`上传失败的文件：${formatKnowledgeSourceFileIssues(failedFiles)}`);
+      message.error(
+        `上传失败的文件：${formatKnowledgeSourceFileIssues(failedFiles)}`,
+      );
     }
   };
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
-    event.target.value = '';
+    event.target.value = "";
 
     if (files.length === 0) {
       return;
@@ -1050,11 +1057,11 @@ export const KnowledgeManagementPage = () => {
   };
 
   const handleOpenTextInput = () => {
-    setUploadFlowStep('text');
+    setUploadFlowStep("text");
   };
 
   const handleBackToSourcePicker = () => {
-    setUploadFlowStep('picker');
+    setUploadFlowStep("picker");
   };
 
   const handleSubmitTextSource = async (values: KnowledgeTextInputValues) => {
@@ -1126,7 +1133,7 @@ export const KnowledgeManagementPage = () => {
 
   const handleRetryDocument = async (document: KnowledgeDocumentResponse) => {
     if (!activeKnowledgeId) {
-      message.info('请先选择一个知识库');
+      message.info("请先选择一个知识库");
       return;
     }
 
@@ -1136,32 +1143,32 @@ export const KnowledgeManagementPage = () => {
       await retryKnowledgeDocument(activeKnowledgeId, document.id);
 
       patchActiveKnowledgeDocument(document.id, {
-        status: 'pending',
+        status: "pending",
         errorMessage: null,
         processedAt: null,
         updatedAt: new Date().toISOString(),
       });
       patchKnowledgeSummary(activeKnowledgeId, {
-        indexStatus: 'pending',
+        indexStatus: "pending",
         updatedAt: new Date().toISOString(),
       });
       resetPollingAttempts(activeKnowledgeId);
       message.success(
-        document.status === 'completed'
-          ? '文档已进入重新索引队列'
-          : '文档已重新进入索引队列',
+        document.status === "completed"
+          ? "文档已进入重新索引队列"
+          : "文档已重新进入索引队列",
       );
       refreshDocumentStatus(activeKnowledgeId, {
         reloadDiagnostics: true,
       });
     } catch (currentError) {
-      console.error('[KnowledgeManagement] 重试文档索引失败:', currentError);
+      console.error("[KnowledgeManagement] 重试文档索引失败:", currentError);
       message.error(
         extractApiErrorMessage(
           currentError,
-          document.status === 'completed'
-            ? '重新索引失败，请稍后重试'
-            : '重试索引失败，请稍后重试',
+          document.status === "completed"
+            ? "重新索引失败，请稍后重试"
+            : "重试索引失败，请稍后重试",
         ),
       );
     } finally {
@@ -1169,11 +1176,9 @@ export const KnowledgeManagementPage = () => {
     }
   };
 
-  const handleRebuildDocument = async (
-    document: KnowledgeDocumentResponse,
-  ) => {
+  const handleRebuildDocument = async (document: KnowledgeDocumentResponse) => {
     if (!activeKnowledgeId) {
-      message.info('请先选择一个知识库');
+      message.info("请先选择一个知识库");
       return;
     }
 
@@ -1182,20 +1187,23 @@ export const KnowledgeManagementPage = () => {
     try {
       await rebuildKnowledgeDocument(activeKnowledgeId, document.id);
 
-      patchActiveKnowledgeDocument(document.id, queueDocumentForPending(document));
+      patchActiveKnowledgeDocument(
+        document.id,
+        queueDocumentForPending(document),
+      );
       patchKnowledgeSummary(activeKnowledgeId, {
-        indexStatus: 'pending',
+        indexStatus: "pending",
         updatedAt: new Date().toISOString(),
       });
       resetPollingAttempts(activeKnowledgeId);
-      message.success('文档已进入重建队列');
+      message.success("文档已进入重建队列");
       refreshDocumentStatus(activeKnowledgeId, {
         reloadDiagnostics: true,
       });
     } catch (currentError) {
-      console.error('[KnowledgeManagement] 重建文档索引失败:', currentError);
+      console.error("[KnowledgeManagement] 重建文档索引失败:", currentError);
       message.error(
-        extractApiErrorMessage(currentError, '重建文档索引失败，请稍后重试'),
+        extractApiErrorMessage(currentError, "重建文档索引失败，请稍后重试"),
       );
     } finally {
       setRebuildingDocumentId(null);
@@ -1204,7 +1212,7 @@ export const KnowledgeManagementPage = () => {
 
   const handleRebuildKnowledge = async () => {
     if (!activeKnowledgeId || !activeKnowledge) {
-      message.info('请先选择一个知识库');
+      message.info("请先选择一个知识库");
       return;
     }
 
@@ -1226,18 +1234,18 @@ export const KnowledgeManagementPage = () => {
         return queueKnowledgeForPending(current);
       });
       patchKnowledgeSummary(activeKnowledgeId, {
-        indexStatus: 'pending',
+        indexStatus: "pending",
         updatedAt: new Date().toISOString(),
       });
       resetPollingAttempts(activeKnowledgeId);
-      message.success('知识库已进入重建队列');
+      message.success("知识库已进入重建队列");
       refreshDocumentStatus(activeKnowledgeId, {
         reloadDiagnostics: true,
       });
     } catch (currentError) {
-      console.error('[KnowledgeManagement] 重建知识库失败:', currentError);
+      console.error("[KnowledgeManagement] 重建知识库失败:", currentError);
       message.error(
-        extractApiErrorMessage(currentError, '重建知识库失败，请稍后重试'),
+        extractApiErrorMessage(currentError, "重建知识库失败，请稍后重试"),
       );
     } finally {
       setRebuildingKnowledgeId(null);
@@ -1246,7 +1254,7 @@ export const KnowledgeManagementPage = () => {
 
   const handleDeleteDocument = async (document: KnowledgeDocumentResponse) => {
     if (!activeKnowledgeId) {
-      message.info('请先选择一个知识库');
+      message.info("请先选择一个知识库");
       return;
     }
 
@@ -1264,14 +1272,14 @@ export const KnowledgeManagementPage = () => {
         ),
         updatedAt: new Date().toISOString(),
       });
-      message.success('文档已删除');
+      message.success("文档已删除");
       refreshDocumentStatus(activeKnowledgeId, {
         reloadDiagnostics: true,
       });
     } catch (currentError) {
-      console.error('[KnowledgeManagement] 删除文档失败:', currentError);
+      console.error("[KnowledgeManagement] 删除文档失败:", currentError);
       message.error(
-        extractApiErrorMessage(currentError, '删除文档失败，请稍后重试'),
+        extractApiErrorMessage(currentError, "删除文档失败，请稍后重试"),
       );
     } finally {
       setDeletingDocumentId(null);
@@ -1280,13 +1288,13 @@ export const KnowledgeManagementPage = () => {
 
   const confirmDeleteDocument = (document: KnowledgeDocumentResponse) => {
     modal.confirm({
-      title: '删除文档',
+      title: "删除文档",
       content:
-        document.status === 'pending' || document.status === 'processing'
-          ? '会删除文档记录与原始文件；若后台索引任务刚好完成，系统会继续尝试清理对应向量。'
-          : '会删除文档记录、原始文件，并清理对应向量记录。',
-      okText: '删除',
-      cancelText: '取消',
+        document.status === "pending" || document.status === "processing"
+          ? "会删除文档记录与原始文件；若后台索引任务刚好完成，系统会继续尝试清理对应向量。"
+          : "会删除文档记录、原始文件，并清理对应向量记录。",
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: {
         danger: true,
       },
@@ -1299,41 +1307,41 @@ export const KnowledgeManagementPage = () => {
 
   const buildDocumentActionMenuItems = (
     document: KnowledgeDocumentResponse,
-  ): NonNullable<MenuProps['items']> => {
+  ): NonNullable<MenuProps["items"]> => {
     const busy = isDocumentBusy(document.id);
 
-    const commonItems: NonNullable<MenuProps['items']> = [
+    const commonItems: NonNullable<MenuProps["items"]> = [
       {
-        key: 'preview',
+        key: "preview",
         icon: <EyeOutlined />,
-        label: '预览',
+        label: "预览",
       },
       {
-        key: 'download',
+        key: "download",
         icon: <DownloadOutlined />,
-        label: '下载',
+        label: "下载",
       },
       {
-        type: 'divider',
+        type: "divider",
       },
     ];
 
-    if (document.status === 'pending' || document.status === 'processing') {
+    if (document.status === "pending" || document.status === "processing") {
       return [
         ...commonItems,
         {
-          key: 'refresh',
+          key: "refresh",
           icon: <ReloadOutlined />,
-          label: '刷新状态',
+          label: "刷新状态",
           disabled: busy,
         },
         {
-          type: 'divider',
+          type: "divider",
         },
         {
-          key: 'delete',
+          key: "delete",
           icon: <DeleteOutlined />,
-          label: '删除文档',
+          label: "删除文档",
           danger: true,
           disabled: busy,
         },
@@ -1342,29 +1350,29 @@ export const KnowledgeManagementPage = () => {
 
     return [
       ...commonItems,
-      ...(document.status === 'failed'
+      ...(document.status === "failed"
         ? [
             {
-              key: 'retry',
+              key: "retry",
               icon: <ReloadOutlined />,
-              label: '重试索引',
+              label: "重试索引",
               disabled: busy,
             },
           ]
         : []),
       {
-        key: 'rebuild',
+        key: "rebuild",
         icon: <ToolOutlined />,
-        label: '重建索引',
+        label: "重建索引",
         disabled: busy,
       },
       {
-        type: 'divider',
+        type: "divider",
       },
       {
-        key: 'delete',
+        key: "delete",
         icon: <DeleteOutlined />,
-        label: '删除文档',
+        label: "删除文档",
         danger: true,
         disabled: busy,
       },
@@ -1375,32 +1383,32 @@ export const KnowledgeManagementPage = () => {
     document: KnowledgeDocumentResponse,
     key: string,
   ) => {
-    if (key === 'preview') {
+    if (key === "preview") {
       message.info(`“${document.fileName}”预览原文即将开放`);
       return;
     }
 
-    if (key === 'download') {
+    if (key === "download") {
       message.info(`“${document.fileName}”下载原文即将开放`);
       return;
     }
 
-    if (key === 'refresh') {
+    if (key === "refresh") {
       refreshDocumentStatus(document.knowledgeId);
       return;
     }
 
-    if (key === 'retry') {
+    if (key === "retry") {
       void handleRetryDocument(document);
       return;
     }
 
-    if (key === 'rebuild') {
+    if (key === "rebuild") {
       void handleRebuildDocument(document);
       return;
     }
 
-    if (key === 'delete') {
+    if (key === "delete") {
       confirmDeleteDocument(document);
     }
   };
@@ -1444,7 +1452,7 @@ export const KnowledgeManagementPage = () => {
           </Tooltip>
 
           <Dropdown
-            trigger={['click']}
+            trigger={["click"]}
             placement="bottomRight"
             menu={{
               items: buildDocumentActionMenuItems(document),
@@ -1462,7 +1470,7 @@ export const KnowledgeManagementPage = () => {
         </div>
 
         <Typography.Text className="mt-3 block text-xs text-slate-500">
-          上传于 {formatDateTime(document.uploadedAt)} · 最近索引{' '}
+          上传于 {formatDateTime(document.uploadedAt)} · 最近索引{" "}
           {formatDateTime(indexedAt)}
         </Typography.Text>
 
@@ -1602,7 +1610,7 @@ export const KnowledgeManagementPage = () => {
                         <div className="flex flex-wrap items-center gap-2">
                           <Typography.Text
                             className={`truncate text-[13px] font-semibold ${
-                              isActive ? 'text-slate-900!' : 'text-slate-800!'
+                              isActive ? "text-slate-900!" : "text-slate-800!"
                             }`}
                           >
                             {knowledge.name}
@@ -1634,7 +1642,7 @@ export const KnowledgeManagementPage = () => {
     >
       <Card
         className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
-        styles={{ body: { padding: '20px' } }}
+        styles={{ body: { padding: "20px" } }}
       >
         {!activeKnowledgeId ? (
           <Empty
@@ -1670,23 +1678,23 @@ export const KnowledgeManagementPage = () => {
                   </Tag>
                 </div>
                 <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-                  {activeKnowledge.description || '当前未填写描述。'}
+                  {activeKnowledge.description || "当前未填写描述。"}
                 </Typography.Paragraph>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <Tooltip
                   title={
-                    activeKnowledge.sourceType === 'global_docs'
+                    activeKnowledge.sourceType === "global_docs"
                       ? KNOWLEDGE_UPLOAD_TOOLTIP
-                      : 'global_code 当前不支持上传文档。'
+                      : "global_code 当前不支持上传文档。"
                   }
                 >
                   <span>
                     <Button
                       icon={<CloudUploadOutlined />}
                       loading={uploading}
-                      disabled={activeKnowledge.sourceType !== 'global_docs'}
+                      disabled={activeKnowledge.sourceType !== "global_docs"}
                       onClick={openUploadFlow}
                     >
                       上传文档
@@ -1727,9 +1735,9 @@ export const KnowledgeManagementPage = () => {
                     </Typography.Text>
                     <Typography.Text
                       className={`mt-3 block text-slate-800 ${
-                        item.emphasis === 'number'
-                          ? 'text-[30px] font-semibold leading-none tracking-tight'
-                          : 'text-lg font-semibold leading-7'
+                        item.emphasis === "number"
+                          ? "text-[30px] font-semibold leading-none tracking-tight"
+                          : "text-lg font-semibold leading-7"
                       }`}
                     >
                       {item.value}
@@ -1739,243 +1747,292 @@ export const KnowledgeManagementPage = () => {
               </div>
             </div>
 
-            <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white/90 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
-              <div className="flex flex-col gap-4 border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(241,245,249,0.88))] px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <ToolOutlined className="text-slate-400" />
-                    <Typography.Title level={5} className="mb-0! text-slate-800!">
-                      索引运维
-                    </Typography.Title>
-                  </div>
-                  <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
-                    查看当前 collection、indexer 与文档健康快照，并在这里发起最小 rebuild。
-                  </Typography.Paragraph>
-                </div>
+            <Tabs
+              activeKey={activeTabKey}
+              onChange={setActiveTabKey}
+              items={[
+                {
+                  key: "documents",
+                  label: "文档",
+                  children: (
+                    <div className="space-y-4">
+                      <div className="space-y-4">
+                        {shouldPoll ? (
+                          <Alert
+                            type={pollingStopped ? "warning" : "info"}
+                            showIcon
+                            title={
+                              pollingStopped
+                                ? "自动刷新已达到本轮上限，请手动刷新继续观察。"
+                                : "检测到待处理文档，页面会做最小轮询以更新索引状态。"
+                            }
+                          />
+                        ) : null}
+                      </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Tooltip
-                    title={
-                      knowledgeRebuildBlockedReason ?? KNOWLEDGE_REBUILD_TOOLTIP
-                    }
-                  >
-                    <span>
-                      <Button
-                        icon={<ToolOutlined />}
-                        loading={rebuildingKnowledgeId === activeKnowledge.id}
-                        disabled={Boolean(knowledgeRebuildBlockedReason)}
-                        onClick={() => {
-                          void handleRebuildKnowledge();
-                        }}
-                      >
-                        重建全部文档
-                      </Button>
-                    </span>
-                  </Tooltip>
-                  <Button
-                    icon={<ReloadOutlined />}
-                    loading={diagnosticsLoading}
-                    onClick={reloadKnowledgeDiagnostics}
-                  >
-                    刷新诊断
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-4 px-5 py-5">
-                {diagnosticsError ? (
-                  <Alert
-                    type="warning"
-                    showIcon
-                    title="诊断信息暂时不可用"
-                    description={diagnosticsError}
-                  />
-                ) : activeDiagnostics ? (
-                  <>
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                      {[
-                        {
-                          label: '待处理文档',
-                          value: `${activeDiagnostics.documentSummary.pending + activeDiagnostics.documentSummary.processing}`,
-                          accent: 'text-sky-700',
-                        },
-                        {
-                          label: '失败文档',
-                          value: `${activeDiagnostics.documentSummary.failed}`,
-                          accent:
-                            activeDiagnostics.documentSummary.failed > 0
-                              ? 'text-rose-700'
-                              : 'text-slate-700',
-                        },
-                        {
-                          label: '原文件缺失',
-                          value: `${activeDiagnostics.documentSummary.missingStorage}`,
-                          accent:
-                            activeDiagnostics.documentSummary.missingStorage > 0
-                              ? 'text-amber-700'
-                              : 'text-slate-700',
-                        },
-                        {
-                          label: '处理卡住',
-                          value: `${activeDiagnostics.documentSummary.staleProcessing}`,
-                          accent:
-                            activeDiagnostics.documentSummary.staleProcessing > 0
-                              ? 'text-amber-700'
-                              : 'text-slate-700',
-                        },
-                      ].map((item) => (
-                        <div
-                          key={item.label}
-                          className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-4"
-                        >
-                          <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-                            {item.label}
-                          </Typography.Text>
-                          <Typography.Text
-                            className={`mt-3 block text-[28px] font-semibold leading-none tracking-tight ${item.accent}`}
-                          >
-                            {item.value}
+                      <div>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <FileTextOutlined className="text-slate-400" />
+                            <Typography.Title
+                              level={5}
+                              className="mb-0! text-slate-800!"
+                            >
+                              文档列表
+                            </Typography.Title>
+                          </div>
+                          <Typography.Text className="text-xs text-slate-400">
+                            共 {activeKnowledge.documents.length} 份
                           </Typography.Text>
                         </div>
-                      ))}
+
+                        {activeKnowledge.documents.length === 0 ? (
+                          <Empty
+                            className="my-12"
+                            description={
+                              activeKnowledge.sourceType === "global_docs"
+                                ? "当前知识库还没有文档，上传一份 .md 或 .txt 开始索引。"
+                                : "global_code 当前还没有真实代码导入入口。"
+                            }
+                          >
+                            {activeKnowledge.sourceType === "global_docs" ? (
+                              <Button
+                                type="primary"
+                                icon={<CloudUploadOutlined />}
+                                loading={uploading}
+                                onClick={openUploadFlow}
+                              >
+                                上传第一份文档
+                              </Button>
+                            ) : null}
+                          </Empty>
+                        ) : (
+                          <div className="mt-4 space-y-3">
+                            {activeKnowledge.documents.map(renderDocumentCard)}
+                          </div>
+                        )}
+                      </div>
                     </div>
+                  ),
+                },
+                {
+                  key: "ops",
+                  label: "运维",
+                  children: (
+                    <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white/90 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
+                      <div className="flex flex-col gap-4 border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(241,245,249,0.88))] px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <ToolOutlined className="text-slate-400" />
+                            <Typography.Title
+                              level={5}
+                              className="mb-0! text-slate-800!"
+                            >
+                              索引运维
+                            </Typography.Title>
+                          </div>
+                          <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
+                            查看当前 collection、indexer
+                            与文档健康快照，并在这里发起最小 rebuild。
+                          </Typography.Paragraph>
+                        </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <Tag color={activeDiagnostics.collection.exists ? 'success' : 'error'}>
-                        Collection · {activeDiagnostics.collection.name}
-                      </Tag>
-                      <Tag
-                        color={
-                          activeDiagnostics.indexer.status === 'ok'
-                            ? 'success'
-                            : 'warning'
-                        }
-                      >
-                        Indexer ·{' '}
-                        {activeDiagnostics.indexer.status === 'ok'
-                          ? '运行正常'
-                          : '降级'}
-                      </Tag>
-                      {activeDiagnostics.indexer.embeddingProvider ? (
-                        <Tag color="blue">
-                          Embedding · {activeDiagnostics.indexer.embeddingProvider}
-                        </Tag>
-                      ) : null}
-                      {activeDiagnostics.indexer.chunkSize !== null &&
-                      activeDiagnostics.indexer.chunkOverlap !== null ? (
-                        <Tag color="default">
-                          Chunk · {activeDiagnostics.indexer.chunkSize} /{' '}
-                          {activeDiagnostics.indexer.chunkOverlap}
-                        </Tag>
-                      ) : null}
-                    </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Tooltip
+                            title={
+                              knowledgeRebuildBlockedReason ??
+                              KNOWLEDGE_REBUILD_TOOLTIP
+                            }
+                          >
+                            <span>
+                              <Button
+                                icon={<ToolOutlined />}
+                                loading={
+                                  rebuildingKnowledgeId === activeKnowledge.id
+                                }
+                                disabled={Boolean(
+                                  knowledgeRebuildBlockedReason,
+                                )}
+                                onClick={() => {
+                                  void handleRebuildKnowledge();
+                                }}
+                              >
+                                重建全部文档
+                              </Button>
+                            </span>
+                          </Tooltip>
+                          <Button
+                            icon={<ReloadOutlined />}
+                            loading={diagnosticsLoading}
+                            onClick={reloadKnowledgeDiagnostics}
+                          >
+                            刷新诊断
+                          </Button>
+                        </div>
+                      </div>
 
-                    {activeDiagnostics.collection.errorMessage ? (
-                      <Alert
-                        type="warning"
-                        showIcon
-                        icon={<DatabaseOutlined />}
-                        title="Collection 检查已降级"
-                        description={activeDiagnostics.collection.errorMessage}
-                      />
-                    ) : null}
+                      <div className="space-y-4 px-5 py-5">
+                        {diagnosticsError ? (
+                          <Alert
+                            type="warning"
+                            showIcon
+                            title="诊断信息暂时不可用"
+                            description={diagnosticsError}
+                          />
+                        ) : activeDiagnostics ? (
+                          <>
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                              {[
+                                {
+                                  label: "待处理文档",
+                                  value: `${activeDiagnostics.documentSummary.pending + activeDiagnostics.documentSummary.processing}`,
+                                  accent: "text-sky-700",
+                                },
+                                {
+                                  label: "失败文档",
+                                  value: `${activeDiagnostics.documentSummary.failed}`,
+                                  accent:
+                                    activeDiagnostics.documentSummary.failed > 0
+                                      ? "text-rose-700"
+                                      : "text-slate-700",
+                                },
+                                {
+                                  label: "原文件缺失",
+                                  value: `${activeDiagnostics.documentSummary.missingStorage}`,
+                                  accent:
+                                    activeDiagnostics.documentSummary
+                                      .missingStorage > 0
+                                      ? "text-amber-700"
+                                      : "text-slate-700",
+                                },
+                                {
+                                  label: "处理卡住",
+                                  value: `${activeDiagnostics.documentSummary.staleProcessing}`,
+                                  accent:
+                                    activeDiagnostics.documentSummary
+                                      .staleProcessing > 0
+                                      ? "text-amber-700"
+                                      : "text-slate-700",
+                                },
+                              ].map((item) => (
+                                <div
+                                  key={item.label}
+                                  className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-4"
+                                >
+                                  <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                                    {item.label}
+                                  </Typography.Text>
+                                  <Typography.Text
+                                    className={`mt-3 block text-[28px] font-semibold leading-none tracking-tight ${item.accent}`}
+                                  >
+                                    {item.value}
+                                  </Typography.Text>
+                                </div>
+                              ))}
+                            </div>
 
-                    {activeDiagnostics.indexer.errorMessage ? (
-                      <Alert
-                        type="warning"
-                        showIcon
-                        title="Indexer 运行态已降级"
-                        description={activeDiagnostics.indexer.errorMessage}
-                      />
-                    ) : null}
+                            <div className="flex flex-wrap gap-2">
+                              <Tag
+                                color={
+                                  activeDiagnostics.collection.exists
+                                    ? "success"
+                                    : "error"
+                                }
+                              >
+                                Collection · {activeDiagnostics.collection.name}
+                              </Tag>
+                              <Tag
+                                color={
+                                  activeDiagnostics.indexer.status === "ok"
+                                    ? "success"
+                                    : "warning"
+                                }
+                              >
+                                Indexer ·{" "}
+                                {activeDiagnostics.indexer.status === "ok"
+                                  ? "运行正常"
+                                  : "降级"}
+                              </Tag>
+                              {activeDiagnostics.indexer.embeddingProvider ? (
+                                <Tag color="blue">
+                                  Embedding ·{" "}
+                                  {activeDiagnostics.indexer.embeddingProvider}
+                                </Tag>
+                              ) : null}
+                              {activeDiagnostics.indexer.chunkSize !== null &&
+                              activeDiagnostics.indexer.chunkOverlap !==
+                                null ? (
+                                <Tag color="default">
+                                  Chunk · {activeDiagnostics.indexer.chunkSize}{" "}
+                                  / {activeDiagnostics.indexer.chunkOverlap}
+                                </Tag>
+                              ) : null}
+                            </div>
 
-                    {activeDiagnostics.documentSummary.failed > 0 ||
-                    activeDiagnostics.documentSummary.missingStorage > 0 ||
-                    activeDiagnostics.documentSummary.staleProcessing > 0 ? (
-                      <Alert
-                        type="warning"
-                        showIcon
-                        icon={<WarningOutlined />}
-                        title="检测到需要人工处理的文档"
-                        description={`失败 ${activeDiagnostics.documentSummary.failed} 份，原文件缺失 ${activeDiagnostics.documentSummary.missingStorage} 份，处理卡住 ${activeDiagnostics.documentSummary.staleProcessing} 份。`}
-                      />
-                    ) : (
-                      <Alert
-                        type="success"
-                        showIcon
-                        title="当前未发现阻塞性风险"
-                        description={`Indexer ${
-                          activeDiagnostics.indexer.service ?? 'unknown'
-                        } 已返回最新诊断，当前 collection 目标为 ${activeDiagnostics.expectedCollectionName}。`}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <div className="flex min-h-30 items-center justify-center">
-                    <Spin size="large" />
-                  </div>
-                )}
-              </div>
-            </section>
+                            {activeDiagnostics.collection.errorMessage ? (
+                              <Alert
+                                type="warning"
+                                showIcon
+                                icon={<DatabaseOutlined />}
+                                title="Collection 检查已降级"
+                                description={
+                                  activeDiagnostics.collection.errorMessage
+                                }
+                              />
+                            ) : null}
 
-            <div className="space-y-4">
-              <div className="space-y-4">
-                {shouldPoll ? (
-                  <Alert
-                    type={pollingStopped ? 'warning' : 'info'}
-                    showIcon
-                    title={
-                      pollingStopped
-                        ? '自动刷新已达到本轮上限，请手动刷新继续观察。'
-                        : '检测到待处理文档，页面会做最小轮询以更新索引状态。'
-                    }
-                  />
-                ) : null}
-              </div>
+                            {activeDiagnostics.indexer.errorMessage ? (
+                              <Alert
+                                type="warning"
+                                showIcon
+                                title="Indexer 运行态已降级"
+                                description={
+                                  activeDiagnostics.indexer.errorMessage
+                                }
+                              />
+                            ) : null}
 
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <FileTextOutlined className="text-slate-400" />
-                    <Typography.Title
-                      level={5}
-                      className="mb-0! text-slate-800!"
-                    >
-                      文档列表
-                    </Typography.Title>
-                  </div>
-                  <Typography.Text className="text-xs text-slate-400">
-                    共 {activeKnowledge.documents.length} 份
-                  </Typography.Text>
-                </div>
-
-                {activeKnowledge.documents.length === 0 ? (
-                  <Empty
-                    className="my-12"
-                    description={
-                      activeKnowledge.sourceType === 'global_docs'
-                        ? '当前知识库还没有文档，上传一份 .md 或 .txt 开始索引。'
-                        : 'global_code 当前还没有真实代码导入入口。'
-                    }
-                  >
-                    {activeKnowledge.sourceType === 'global_docs' ? (
-                      <Button
-                        type="primary"
-                        icon={<CloudUploadOutlined />}
-                        loading={uploading}
-                        onClick={openUploadFlow}
-                      >
-                        上传第一份文档
-                      </Button>
-                    ) : null}
-                  </Empty>
-                ) : (
-                  <div className="mt-4 space-y-3">
-                    {activeKnowledge.documents.map(renderDocumentCard)}
-                  </div>
-                )}
-              </div>
-            </div>
+                            {activeDiagnostics.documentSummary.failed > 0 ||
+                            activeDiagnostics.documentSummary.missingStorage >
+                              0 ||
+                            activeDiagnostics.documentSummary.staleProcessing >
+                              0 ? (
+                              <Alert
+                                type="warning"
+                                showIcon
+                                icon={<WarningOutlined />}
+                                title="检测到需要人工处理的文档"
+                                description={`失败 ${activeDiagnostics.documentSummary.failed} 份，原文件缺失 ${activeDiagnostics.documentSummary.missingStorage} 份，处理卡住 ${activeDiagnostics.documentSummary.staleProcessing} 份。`}
+                              />
+                            ) : (
+                              <Alert
+                                type="success"
+                                showIcon
+                                title="当前未发现阻塞性风险"
+                                description={`Indexer ${
+                                  activeDiagnostics.indexer.service ?? "unknown"
+                                } 已返回最新诊断，当前 collection 目标为 ${activeDiagnostics.expectedCollectionName}。`}
+                              />
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex min-h-30 items-center justify-center">
+                            <Spin size="large" />
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  ),
+                },
+                {
+                  key: "search",
+                  label: "检索",
+                  children: (
+                    <KnowledgeSearchTab knowledgeId={activeKnowledge.id} />
+                  ),
+                },
+              ]}
+            />
           </div>
         ) : (
           <Empty
@@ -1983,7 +2040,7 @@ export const KnowledgeManagementPage = () => {
             description={
               activeSummary
                 ? `知识库“${activeSummary.name}”详情暂不可用，请稍后重试。`
-                : '请选择左侧知识库查看详情。'
+                : "请选择左侧知识库查看详情。"
             }
           />
         )}
@@ -1999,7 +2056,7 @@ export const KnowledgeManagementPage = () => {
       />
 
       <KnowledgeSourcePickerModal
-        open={uploadFlowStep === 'picker'}
+        open={uploadFlowStep === "picker"}
         onCancel={closeUploadFlow}
         onUploadClick={triggerDocumentUpload}
         onTextInputClick={handleOpenTextInput}
@@ -2009,7 +2066,7 @@ export const KnowledgeManagementPage = () => {
       />
 
       <KnowledgeTextInputModal
-        open={uploadFlowStep === 'text'}
+        open={uploadFlowStep === "text"}
         submitting={uploading}
         onBack={handleBackToSourcePicker}
         onCancel={closeUploadFlow}
@@ -2019,7 +2076,7 @@ export const KnowledgeManagementPage = () => {
       />
 
       <Modal
-        title={modalMode === 'create' ? '新建知识库' : '编辑知识库'}
+        title={modalMode === "create" ? "新建知识库" : "编辑知识库"}
         open={modalMode !== null}
         onCancel={closeModal}
         onOk={() => form.submit()}
@@ -2031,9 +2088,9 @@ export const KnowledgeManagementPage = () => {
           layout="vertical"
           onFinish={(values) => void handleSubmitKnowledge(values)}
           initialValues={{
-            name: '',
-            description: '',
-            sourceType: 'global_docs',
+            name: "",
+            description: "",
+            sourceType: "global_docs",
           }}
         >
           <Form.Item
@@ -2042,21 +2099,21 @@ export const KnowledgeManagementPage = () => {
             rules={[
               {
                 required: true,
-                message: '请输入知识库名称',
+                message: "请输入知识库名称",
               },
             ]}
           >
             <Input maxLength={80} placeholder="例如：产品规范库" />
           </Form.Item>
 
-          {modalMode === 'create' ? (
+          {modalMode === "create" ? (
             <Form.Item name="sourceType" label="来源类型">
               <Select
                 options={[
-                  { value: 'global_docs', label: 'global_docs · 全局文档' },
+                  { value: "global_docs", label: "global_docs · 全局文档" },
                   {
-                    value: 'global_code',
-                    label: 'global_code · 全局代码（预留）',
+                    value: "global_code",
+                    label: "global_code · 全局代码（预留）",
                   },
                 ]}
               />

@@ -97,7 +97,7 @@
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
   - `md / markdown / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings 并写入 Chroma `global_docs` collection。
   - 完整 Docker 编排会通过内部 `indexer-py` 服务和共享知识存储卷推进这条链路；默认 `pnpm dev` 也会一并启动本地 `indexer-py`，若单独运行 `pnpm --filter api dev`，仍需额外启动 `pnpm --filter indexer-py dev`。
-  - 开发环境下若缺少 `OPENAI_API_KEY`，Node 会把文档记录标记为 `embeddingProvider=local_dev`、`embeddingModel=hash-1536-dev`，Python indexer 会使用 deterministic 本地 embedding 写入 Chroma，保证上传状态流可用；正式检索与生产环境仍应使用真实 OpenAI-compatible embedding 配置。
+  - 开发环境下若缺少 `OPENAI_API_KEY`，Node 会把文档记录标记为 `embeddingProvider=local_dev`、`embeddingModel=hash-1536-dev`，Python indexer 会使用 deterministic 本地 embedding 写入 Chroma；Node 侧统一检索也会使用同一套 deterministic 本地 query embedding，保证开发环境上传与检索闭环可用。生产与正式环境仍应使用真实 OpenAI-compatible embedding 配置。
 - `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`
   - 需要 `Authorization: Bearer <token>`。
   - 对 `failed / completed` 文档重新入队索引；若文档仍处于 `pending / processing`，返回冲突错误，避免并发重复触发。

@@ -1,13 +1,15 @@
-import type { AppEnv } from '@config/env.js';
-import { AppError } from '@lib/app-error.js';
+import { createHash } from "node:crypto";
+import type { AppEnv } from "@config/env.js";
+import { AppError } from "@lib/app-error.js";
 import type {
   KnowledgeSearchHitResponse,
   KnowledgeSearchResponse,
   KnowledgeSourceType,
-} from './knowledge.types.js';
+} from "./knowledge.types.js";
 
-const GLOBAL_DOCS_COLLECTION_NAME = 'global_docs';
-const GLOBAL_CODE_COLLECTION_NAME = 'global_code';
+const GLOBAL_DOCS_COLLECTION_NAME = "global_docs";
+const GLOBAL_CODE_COLLECTION_NAME = "global_code";
+const LOCAL_DEVELOPMENT_EMBEDDING_DIMENSION = 1536;
 
 interface ChromaCollectionSummary {
   id: string;
@@ -35,7 +37,9 @@ interface ChromaQueryResponse {
 
 export interface KnowledgeSearchService {
   ensureCollections(): Promise<void>;
-  searchDocuments(input: SearchDocumentsInput): Promise<KnowledgeSearchResponse>;
+  searchDocuments(
+    input: SearchDocumentsInput,
+  ): Promise<KnowledgeSearchResponse>;
   getDiagnostics(input: SearchDiagnosticsInput): Promise<{
     collection: {
       name: string;
@@ -43,11 +47,20 @@ export interface KnowledgeSearchService {
       errorMessage: string | null;
     };
   }>;
-  deleteKnowledgeChunks(knowledgeId: string, input: { collectionName: string }): Promise<void>;
-  deleteDocumentChunks(documentId: string, input: { collectionName: string }): Promise<void>;
+  deleteKnowledgeChunks(
+    knowledgeId: string,
+    input: { collectionName: string },
+  ): Promise<void>;
+  deleteDocumentChunks(
+    documentId: string,
+    input: { collectionName: string },
+  ): Promise<void>;
 }
 
-const createServiceUnavailableError = (code: string, message: string): AppError => {
+const createServiceUnavailableError = (
+  code: string,
+  message: string,
+): AppError => {
   return new AppError({
     statusCode: 503,
     code,
@@ -58,21 +71,24 @@ const createServiceUnavailableError = (code: string, message: string): AppError 
 const createGatewayError = (message: string, cause?: unknown): AppError => {
   return new AppError({
     statusCode: 502,
-    code: 'KNOWLEDGE_SEARCH_UPSTREAM_ERROR',
+    code: "KNOWLEDGE_SEARCH_UPSTREAM_ERROR",
     message,
     cause,
   });
 };
 
-const normalizeOpenAiErrorMessage = (body: unknown, fallback: string): string => {
+const normalizeOpenAiErrorMessage = (
+  body: unknown,
+  fallback: string,
+): string => {
   if (
     body &&
-    typeof body === 'object' &&
-    'error' in body &&
+    typeof body === "object" &&
+    "error" in body &&
     body.error &&
-    typeof body.error === 'object' &&
-    'message' in body.error &&
-    typeof body.error.message === 'string'
+    typeof body.error === "object" &&
+    "message" in body.error &&
+    typeof body.error.message === "string"
   ) {
     return body.error.message;
   }
@@ -81,12 +97,12 @@ const normalizeOpenAiErrorMessage = (body: unknown, fallback: string): string =>
 };
 
 const buildApiUrl = (baseUrl: string, path: string): string => {
-  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return new URL(path.replace(/^\//, ''), normalizedBase).toString();
+  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  return new URL(path.replace(/^\//, ""), normalizedBase).toString();
 };
 
 const getCollectionName = (sourceType: KnowledgeSourceType): string => {
-  return sourceType === 'global_code'
+  return sourceType === "global_code"
     ? GLOBAL_CODE_COLLECTION_NAME
     : GLOBAL_DOCS_COLLECTION_NAME;
 };
@@ -100,7 +116,7 @@ const resolveDiagnosticsErrorMessage = (error: unknown): string => {
     return error.message.trim();
   }
 
-  return 'Chroma 诊断失败';
+  return "Chroma 诊断失败";
 };
 
 export const createKnowledgeSearchService = ({
@@ -113,8 +129,8 @@ export const createKnowledgeSearchService = ({
   const requireChromaUrl = (): string => {
     if (!env.chroma.url) {
       throw createServiceUnavailableError(
-        'KNOWLEDGE_SEARCH_CHROMA_UNAVAILABLE',
-        'Chroma 未配置，当前无法执行知识索引和检索',
+        "KNOWLEDGE_SEARCH_CHROMA_UNAVAILABLE",
+        "Chroma 未配置，当前无法执行知识索引和检索",
       );
     }
 
@@ -124,21 +140,68 @@ export const createKnowledgeSearchService = ({
   const requireOpenAiApiKey = (): string => {
     if (!env.openai.apiKey) {
       throw createServiceUnavailableError(
-        'KNOWLEDGE_SEARCH_EMBEDDING_UNAVAILABLE',
-        'OpenAI embedding 未配置，当前无法执行知识索引和检索',
+        "KNOWLEDGE_SEARCH_EMBEDDING_UNAVAILABLE",
+        "OpenAI embedding 未配置，当前无法执行知识索引和检索",
       );
     }
 
     return env.openai.apiKey;
   };
 
+  const createLocalDevelopmentEmbedding = (text: string): number[] => {
+    const normalized = text.normalize("NFKC").toLowerCase();
+    const units = Array.from(normalized).filter((char) => !/\s/u.test(char));
+    const vector = new Array<number>(
+      LOCAL_DEVELOPMENT_EMBEDDING_DIMENSION,
+    ).fill(0);
+
+    if (units.length === 0) {
+      vector[0] = 1;
+      return vector;
+    }
+
+    for (const [size, weight] of [
+      [1, 1.0],
+      [2, 1.5],
+      [3, 2.0],
+    ] as const) {
+      if (units.length < size) {
+        continue;
+      }
+
+      for (let start = 0; start <= units.length - size; start += 1) {
+        const feature = units.slice(start, start + size).join("");
+        const digest = createHash("sha256").update(feature, "utf8").digest();
+
+        for (let projection = 0; projection < 4; projection += 1) {
+          const offset = projection * 2;
+          const index =
+            digest.readUInt16BE(offset) % LOCAL_DEVELOPMENT_EMBEDDING_DIMENSION;
+          const sign = digest[8 + projection] % 2 === 0 ? 1 : -1;
+          vector[index] += weight * sign;
+        }
+      }
+    }
+
+    const norm = Math.sqrt(
+      vector.reduce((sum, value) => sum + value * value, 0),
+    );
+
+    if (norm <= 0) {
+      vector[0] = 1;
+      return vector;
+    }
+
+    return vector.map((value) => value / norm);
+  };
+
   const requestChromaJson = async <T>({
     path,
-    method = 'GET',
+    method = "GET",
     body,
   }: {
     path: string;
-    method?: 'GET' | 'POST';
+    method?: "GET" | "POST";
     body?: Record<string, unknown>;
   }): Promise<T> => {
     const baseUrl = requireChromaUrl();
@@ -153,10 +216,10 @@ export const createKnowledgeSearchService = ({
         {
           method,
           headers: {
-            accept: 'application/json',
+            accept: "application/json",
             ...(body
               ? {
-                  'content-type': 'application/json',
+                  "content-type": "application/json",
                 }
               : {}),
           },
@@ -188,13 +251,13 @@ export const createKnowledgeSearchService = ({
         throw error;
       }
 
-      throw createGatewayError('Chroma 请求失败', error);
+      throw createGatewayError("Chroma 请求失败", error);
     }
   };
 
   const listCollections = async (): Promise<ChromaCollectionSummary[]> => {
     return requestChromaJson<ChromaCollectionSummary[]>({
-      path: '/collections',
+      path: "/collections",
     });
   };
 
@@ -212,7 +275,9 @@ export const createKnowledgeSearchService = ({
     }
 
     const existingCollections = await listCollections();
-    const existing = existingCollections.find((collection) => collection.name === name);
+    const existing = existingCollections.find(
+      (collection) => collection.name === name,
+    );
 
     if (existing) {
       collectionCache.set(name, existing);
@@ -230,13 +295,16 @@ export const createKnowledgeSearchService = ({
     let responseBody: unknown = null;
 
     try {
-      const response = await fetch(buildApiUrl(env.knowledge.indexerUrl, '/health'), {
-        method: 'GET',
-        headers: {
-          accept: 'application/json',
+      const response = await fetch(
+        buildApiUrl(env.knowledge.indexerUrl, "/health"),
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json",
+          },
+          signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
         },
-        signal: AbortSignal.timeout(env.knowledge.indexerRequestTimeoutMs),
-      });
+      );
 
       const text = await response.text();
 
@@ -259,28 +327,35 @@ export const createKnowledgeSearchService = ({
         throw error;
       }
 
-      throw createGatewayError('Python indexer 健康检查失败', error);
+      throw createGatewayError("Python indexer 健康检查失败", error);
     }
   };
 
   const createEmbeddings = async (texts: string[]): Promise<number[][]> => {
+    if (env.nodeEnv === "development" && !env.openai.apiKey) {
+      return texts.map((text) => createLocalDevelopmentEmbedding(text));
+    }
+
     const apiKey = requireOpenAiApiKey();
     let responseBody: unknown = null;
 
     try {
-      const response = await fetch(buildApiUrl(env.openai.baseUrl, '/embeddings'), {
-        method: 'POST',
-        headers: {
-          accept: 'application/json',
-          authorization: `Bearer ${apiKey}`,
-          'content-type': 'application/json',
+      const response = await fetch(
+        buildApiUrl(env.openai.baseUrl, "/embeddings"),
+        {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            authorization: `Bearer ${apiKey}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            model: env.openai.embeddingModel,
+            input: texts,
+          }),
+          signal: AbortSignal.timeout(env.openai.requestTimeoutMs),
         },
-        body: JSON.stringify({
-          model: env.openai.embeddingModel,
-          input: texts,
-        }),
-        signal: AbortSignal.timeout(env.openai.requestTimeoutMs),
-      });
+      );
 
       const text = await response.text();
       if (text) {
@@ -302,21 +377,21 @@ export const createKnowledgeSearchService = ({
 
       if (
         !responseBody ||
-        typeof responseBody !== 'object' ||
-        !('data' in responseBody) ||
+        typeof responseBody !== "object" ||
+        !("data" in responseBody) ||
         !Array.isArray(responseBody.data)
       ) {
-        throw createGatewayError('OpenAI embedding 响应格式不合法');
+        throw createGatewayError("OpenAI embedding 响应格式不合法");
       }
 
       const embeddings = responseBody.data.map((item) => {
         if (
           !item ||
-          typeof item !== 'object' ||
-          !('embedding' in item) ||
+          typeof item !== "object" ||
+          !("embedding" in item) ||
           !Array.isArray(item.embedding)
         ) {
-          throw createGatewayError('OpenAI embedding 响应缺少 embedding');
+          throw createGatewayError("OpenAI embedding 响应缺少 embedding");
         }
 
         return item.embedding.map((value: unknown) => Number(value));
@@ -328,7 +403,7 @@ export const createKnowledgeSearchService = ({
         throw error;
       }
 
-      throw createGatewayError('OpenAI embedding 请求失败', error);
+      throw createGatewayError("OpenAI embedding 请求失败", error);
     }
   };
 
@@ -347,24 +422,22 @@ export const createKnowledgeSearchService = ({
     const distances = response.distances?.[0] ?? [];
     const items: KnowledgeSearchHitResponse[] = ids.map((id, index) => {
       const metadata = metadatas[index] ?? {};
-      const document = documents[index] ?? '';
+      const document = documents[index] ?? "";
       const distance = distances[index] ?? null;
 
       return {
         knowledgeId:
-          typeof metadata.knowledgeId === 'string' ? metadata.knowledgeId : '',
+          typeof metadata.knowledgeId === "string" ? metadata.knowledgeId : "",
         documentId:
-          typeof metadata.documentId === 'string' ? metadata.documentId : '',
-        chunkId:
-          typeof metadata.chunkId === 'string' ? metadata.chunkId : id,
+          typeof metadata.documentId === "string" ? metadata.documentId : "",
+        chunkId: typeof metadata.chunkId === "string" ? metadata.chunkId : id,
         chunkIndex:
-          typeof metadata.chunkIndex === 'number'
+          typeof metadata.chunkIndex === "number"
             ? metadata.chunkIndex
             : Number(metadata.chunkIndex ?? 0),
-        type:
-          metadata.type === 'global_code' ? 'global_code' : sourceType,
-        source: typeof metadata.source === 'string' ? metadata.source : '',
-        content: typeof document === 'string' ? document : '',
+        type: metadata.type === "global_code" ? "global_code" : sourceType,
+        source: typeof metadata.source === "string" ? metadata.source : "",
+        content: typeof document === "string" ? document : "",
         distance,
       };
     });
@@ -392,7 +465,7 @@ export const createKnowledgeSearchService = ({
 
     await requestChromaJson({
       path: `/collections/${collection.id}/delete`,
-      method: 'POST',
+      method: "POST",
       body: {
         where,
       },
@@ -407,7 +480,13 @@ export const createKnowledgeSearchService = ({
 
     // NOTE: Node 直连 Chroma 读侧 query 是已确认的架构例外条款
     // 参见 .agent/docs/contracts/chroma-decision.md
-    searchDocuments: async ({ query, knowledgeId, sourceType, collectionName, topK }) => {
+    searchDocuments: async ({
+      query,
+      knowledgeId,
+      sourceType,
+      collectionName,
+      topK,
+    }) => {
       const collection = await getExistingCollection(
         collectionName ?? getCollectionName(sourceType),
       );
@@ -423,11 +502,11 @@ export const createKnowledgeSearchService = ({
 
       const response = await requestChromaJson<ChromaQueryResponse>({
         path: `/collections/${collection.id}/query`,
-        method: 'POST',
+        method: "POST",
         body: {
           query_embeddings: [queryEmbedding],
           n_results: topK,
-          include: ['documents', 'metadatas', 'distances'],
+          include: ["documents", "metadatas", "distances"],
           ...(knowledgeId
             ? {
                 where: {
@@ -451,7 +530,7 @@ export const createKnowledgeSearchService = ({
           collection: {
             name: collectionName,
             exists: false,
-            errorMessage: 'Chroma 未配置，当前无法执行知识索引和检索',
+            errorMessage: "Chroma 未配置，当前无法执行知识索引和检索",
           },
         };
       }

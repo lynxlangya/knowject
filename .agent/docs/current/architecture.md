@@ -182,7 +182,7 @@ files/
 - 当前 API 已建立 MongoDB 连接管理基线，并已将用户与项目正式写模型接入 MongoDB；前端项目列表、项目基础信息与成员页当前直接消费这些正式接口。
 - `knowledge` 模块当前已在 MongoDB 中冻结 `knowledge_bases` 与 `knowledge_documents` 两组元数据集合模型，并已接入知识库 CRUD、文档上传记录写入、原始文件本地落盘、Node 后台触发 Python indexer、`global_docs` Chroma 写入，以及统一知识检索 service；其中 `knowledge_bases` 当前已补齐 `scope=global|project` 与 `projectId` 作用域字段，全局列表默认只返回 global scope，项目级 `/api/projects/:projectId/knowledge*` 已开放私有知识的 `list / create / detail / upload` 路由，project scope 文档会写入 `proj_{projectId}_docs`，并按 `projects/{projectId}/knowledge/...` 落盘。
 - `apps/indexer-py` 当前已切到 FastAPI + uv 基线，已提供 `POST /internal/v1/index/documents`、`POST /internal/v1/index/documents/{documentId}/rebuild` 与 `GET /internal/v1/index/diagnostics` 三个内部控制面入口，并开放 `/docs`、`/redoc`、`/openapi.json` 作为内部文档入口；当前仍隐藏兼容旧路径 `POST /internal/index-documents`，用于开发态 / 滚动重启期间的平滑过渡。
-- 开发环境下若缺少 `OPENAI_API_KEY`，知识库上传链路会退化到 deterministic 本地 embedding，并把文档元数据标记为 `local_dev / hash-1536-dev`；生产与正式检索仍以真实 OpenAI-compatible embedding 为基线。
+- 开发环境下若缺少 `OPENAI_API_KEY`，知识库上传链路会退化到 deterministic 本地 embedding，并把文档元数据标记为 `local_dev / hash-1536-dev`；Node 侧统一知识检索也会复用同一套 deterministic 本地 query embedding，保证开发环境上传 / 检索闭环可用。生产与正式环境仍以真实 OpenAI-compatible embedding 为基线。
 - `GET /api/health` 会联动返回数据库状态与可选的 Chroma 心跳状态，因此服务可在依赖不可达时以 `degraded` 状态启动并提供诊断。
 - 当前 Chroma 已进入正式知识索引链路：`global_docs` 的 collection 生命周期与写侧索引由 `indexer-py` 负责，Node 侧统一知识检索 service 保留读侧 query 的架构例外；向量删除的正式 Python 内部接口仍待补齐，当前 Node 代码保留了过渡期直连 delete TODO。`global_code` 当前只有 collection 预留，没有真实数据导入。
 - 根 `scripts/knowject.sh` 已收口三类常用命令包装：`dev:*`（宿主机开发 + Docker 依赖）、`host:*`（兼容宿主机命令）和 `docker:*`（本地 / 线上部署与验收）。

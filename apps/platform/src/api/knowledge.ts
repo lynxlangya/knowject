@@ -1,24 +1,23 @@
-import {
-  unwrapApiData,
-  type ApiEnvelope,
-} from '@knowject/request';
-import { client } from './client';
+import { unwrapApiData, type ApiEnvelope } from "@knowject/request";
+import { client } from "./client";
 
-export type KnowledgeSourceType = 'global_docs' | 'global_code';
-export type KnowledgeScope = 'global' | 'project';
+export type KnowledgeSourceType = "global_docs" | "global_code";
+export type KnowledgeScope = "global" | "project";
 export type KnowledgeIndexStatus =
-  | 'idle'
-  | 'pending'
-  | 'processing'
-  | 'completed'
-  | 'failed';
+  | "idle"
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
 export type KnowledgeDocumentStatus =
-  | 'pending'
-  | 'processing'
-  | 'completed'
-  | 'failed';
-export type KnowledgeEmbeddingProvider = 'openai' | 'local_dev';
-export type KnowledgeEmbeddingModel = 'text-embedding-3-small' | 'hash-1536-dev';
+  | "pending"
+  | "processing"
+  | "completed"
+  | "failed";
+export type KnowledgeEmbeddingProvider = "openai" | "local_dev";
+export type KnowledgeEmbeddingModel =
+  | "text-embedding-3-small"
+  | "hash-1536-dev";
 
 export interface KnowledgeSummaryResponse {
   id: string;
@@ -110,7 +109,7 @@ export interface KnowledgeDiagnosticsResponse {
     errorMessage: string | null;
   };
   indexer: {
-    status: 'ok' | 'degraded';
+    status: "ok" | "degraded";
     service: string | null;
     supportedFormats: string[];
     chunkSize: number | null;
@@ -120,6 +119,30 @@ export interface KnowledgeDiagnosticsResponse {
     errorMessage: string | null;
   };
   documents: KnowledgeDiagnosticsDocumentResponse[];
+}
+
+export interface SearchKnowledgeRequest {
+  knowledgeId: string;
+  query: string;
+  limit?: number;
+}
+
+export interface KnowledgeSearchHitResponse {
+  knowledgeId: string;
+  documentId: string;
+  chunkId: string;
+  chunkIndex: number;
+  type: KnowledgeSourceType;
+  source: string;
+  content: string;
+  distance: number | null;
+}
+
+export interface KnowledgeSearchResponse {
+  query: string;
+  sourceType: KnowledgeSourceType;
+  total: number;
+  items: KnowledgeSearchHitResponse[];
 }
 
 export interface CreateKnowledgeRequest {
@@ -134,7 +157,8 @@ export interface UpdateKnowledgeRequest {
 }
 
 export const listKnowledge = async (): Promise<KnowledgeListResponse> => {
-  const response = await client.get<ApiEnvelope<KnowledgeListResponse>>('/knowledge');
+  const response =
+    await client.get<ApiEnvelope<KnowledgeListResponse>>("/knowledge");
   return unwrapApiData(response.data);
 };
 
@@ -162,7 +186,7 @@ export const createKnowledge = async (
   payload: CreateKnowledgeRequest,
 ): Promise<KnowledgeMutationResponse> => {
   const response = await client.post<ApiEnvelope<KnowledgeMutationResponse>>(
-    '/knowledge',
+    "/knowledge",
     payload,
   );
 
@@ -206,17 +230,15 @@ export const uploadKnowledgeDocument = async (
 ): Promise<KnowledgeDocumentUploadResponse> => {
   const formData = new FormData();
 
-  formData.append('file', file);
+  formData.append("file", file);
 
-  const response = await client.post<ApiEnvelope<KnowledgeDocumentUploadResponse>>(
-    `/knowledge/${encodeURIComponent(knowledgeId)}/documents`,
-    formData,
-    {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+  const response = await client.post<
+    ApiEnvelope<KnowledgeDocumentUploadResponse>
+  >(`/knowledge/${encodeURIComponent(knowledgeId)}/documents`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
     },
-  );
+  });
 
   return unwrapApiData(response.data);
 };
@@ -228,14 +250,16 @@ export const uploadProjectKnowledgeDocument = async (
 ): Promise<KnowledgeDocumentUploadResponse> => {
   const formData = new FormData();
 
-  formData.append('file', file);
+  formData.append("file", file);
 
-  const response = await client.post<ApiEnvelope<KnowledgeDocumentUploadResponse>>(
+  const response = await client.post<
+    ApiEnvelope<KnowledgeDocumentUploadResponse>
+  >(
     `/projects/${encodeURIComponent(projectId)}/knowledge/${encodeURIComponent(knowledgeId)}/documents`,
     formData,
     {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     },
   );
@@ -278,6 +302,17 @@ export const getKnowledgeDiagnostics = async (
 ): Promise<KnowledgeDiagnosticsResponse> => {
   const response = await client.get<ApiEnvelope<KnowledgeDiagnosticsResponse>>(
     `/knowledge/${encodeURIComponent(knowledgeId)}/diagnostics`,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const searchKnowledgeDocuments = async (
+  payload: SearchKnowledgeRequest,
+): Promise<KnowledgeSearchResponse> => {
+  const response = await client.post<ApiEnvelope<KnowledgeSearchResponse>>(
+    "/knowledge/search",
+    payload,
   );
 
   return unwrapApiData(response.data);

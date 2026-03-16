@@ -1,49 +1,49 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
-import type { AppEnv } from '@config/env.js';
-import { createKnowledgeSearchService } from './knowledge.search.js';
+import assert from "node:assert/strict";
+import test from "node:test";
+import type { AppEnv } from "@config/env.js";
+import { createKnowledgeSearchService } from "./knowledge.search.js";
 
 const createTestEnv = (): AppEnv => {
   return {
-    workspaceRoot: '/tmp/knowject-workspace',
-    packageRoot: '/tmp/knowject-workspace/apps/api',
-    nodeEnv: 'test',
-    appName: 'Knowject Test',
+    workspaceRoot: "/tmp/knowject-workspace",
+    packageRoot: "/tmp/knowject-workspace/apps/api",
+    nodeEnv: "test",
+    appName: "Knowject Test",
     port: 3100,
-    logLevel: 'silent',
-    corsOrigin: '*',
+    logLevel: "silent",
+    corsOrigin: "*",
     mongo: {
-      uri: 'mongodb://127.0.0.1:27017',
-      dbName: 'knowject_test',
-      host: '127.0.0.1',
+      uri: "mongodb://127.0.0.1:27017",
+      dbName: "knowject_test",
+      host: "127.0.0.1",
     },
     chroma: {
-      url: 'http://127.0.0.1:8000',
-      host: '127.0.0.1',
-      heartbeatPath: '/api/v2/heartbeat',
-      tenant: 'default_tenant',
-      database: 'default_database',
+      url: "http://127.0.0.1:8000",
+      host: "127.0.0.1",
+      heartbeatPath: "/api/v2/heartbeat",
+      tenant: "default_tenant",
+      database: "default_database",
       requestTimeoutMs: 1000,
     },
     knowledge: {
-      storageRoot: '/tmp/knowject-knowledge',
-      indexerUrl: 'http://127.0.0.1:8001',
+      storageRoot: "/tmp/knowject-knowledge",
+      indexerUrl: "http://127.0.0.1:8001",
       indexerRequestTimeoutMs: 1000,
     },
     skills: {
-      storageRoot: '/tmp/knowject-skills',
+      storageRoot: "/tmp/knowject-skills",
     },
     openai: {
       apiKey: null,
-      baseUrl: 'https://api.openai.com/v1',
-      embeddingModel: 'text-embedding-3-small',
+      baseUrl: "https://api.openai.com/v1",
+      embeddingModel: "text-embedding-3-small",
       requestTimeoutMs: 1000,
     },
     jwt: {
-      secret: 'test-secret',
-      expiresIn: '1h',
-      issuer: 'knowject-test',
-      audience: 'knowject-test',
+      secret: "test-secret",
+      expiresIn: "1h",
+      issuer: "knowject-test",
+      audience: "knowject-test",
     },
     argon2: {
       memoryCost: 19456,
@@ -57,7 +57,7 @@ const createTestEnv = (): AppEnv => {
   };
 };
 
-test('getDiagnostics bypasses cached collection state and re-reads Chroma', async () => {
+test("getDiagnostics bypasses cached collection state and re-reads Chroma", async () => {
   const service = createKnowledgeSearchService({
     env: createTestEnv(),
   });
@@ -66,95 +66,110 @@ test('getDiagnostics bypasses cached collection state and re-reads Chroma', asyn
 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
     fetchCalls.push(url);
 
-    if (url.endsWith('/collections') && init?.method === 'GET') {
+    if (url.endsWith("/collections") && init?.method === "GET") {
       collectionsRequestCount += 1;
 
       return new Response(
         JSON.stringify(
           collectionsRequestCount === 1
-            ? [{ id: 'collection-1', name: 'global_docs' }]
+            ? [{ id: "collection-1", name: "global_docs" }]
             : [],
         ),
         {
           status: 200,
           headers: {
-            'content-type': 'application/json',
+            "content-type": "application/json",
           },
         },
       );
     }
 
-    if (url.endsWith('/collections/collection-1/delete') && init?.method === 'POST') {
-      return new Response(
-        JSON.stringify({}),
-        {
-          status: 200,
-          headers: {
-            'content-type': 'application/json',
-          },
+    if (
+      url.endsWith("/collections/collection-1/delete") &&
+      init?.method === "POST"
+    ) {
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: {
+          "content-type": "application/json",
         },
-      );
+      });
     }
 
-    throw new Error(`Unexpected fetch: ${init?.method ?? 'GET'} ${url}`);
+    throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
   };
 
   try {
-    await service.deleteDocumentChunks('document-1', {
-      collectionName: 'global_docs',
+    await service.deleteDocumentChunks("document-1", {
+      collectionName: "global_docs",
     });
 
     const diagnostics = await service.getDiagnostics({
-      collectionName: 'global_docs',
+      collectionName: "global_docs",
     });
 
     assert.equal(diagnostics.collection.exists, false);
     assert.equal(diagnostics.collection.errorMessage, null);
     assert.equal(collectionsRequestCount, 2);
     assert.deepEqual(fetchCalls, [
-      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections',
-      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-1/delete',
-      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections',
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections",
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-1/delete",
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections",
     ]);
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test('searchDocuments uses explicit collection name override when provided', async () => {
+test("searchDocuments uses explicit collection name override when provided", async () => {
   const service = createKnowledgeSearchService({
     env: {
       ...createTestEnv(),
       openai: {
         ...createTestEnv().openai,
-        apiKey: 'test-key',
+        apiKey: "test-key",
       },
     },
   });
   const fetchCalls: string[] = [];
-  let queryPath = '';
+  let queryPath = "";
 
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
     fetchCalls.push(url);
 
-    if (url.endsWith('/collections') && init?.method === 'GET') {
+    if (url.endsWith("/collections") && init?.method === "GET") {
       return new Response(
-        JSON.stringify([{ id: 'collection-project', name: 'proj_project-1_docs' }]),
+        JSON.stringify([
+          { id: "collection-project", name: "proj_project-1_docs" },
+        ]),
         {
           status: 200,
           headers: {
-            'content-type': 'application/json',
+            "content-type": "application/json",
           },
         },
       );
     }
 
-    if (url === 'https://api.openai.com/v1/embeddings' && init?.method === 'POST') {
+    if (
+      url === "https://api.openai.com/v1/embeddings" &&
+      init?.method === "POST"
+    ) {
       return new Response(
         JSON.stringify({
           data: [
@@ -166,13 +181,16 @@ test('searchDocuments uses explicit collection name override when provided', asy
         {
           status: 200,
           headers: {
-            'content-type': 'application/json',
+            "content-type": "application/json",
           },
         },
       );
     }
 
-    if (url.endsWith('/collections/collection-project/query') && init?.method === 'POST') {
+    if (
+      url.endsWith("/collections/collection-project/query") &&
+      init?.method === "POST"
+    ) {
       queryPath = url;
 
       return new Response(
@@ -185,33 +203,125 @@ test('searchDocuments uses explicit collection name override when provided', asy
         {
           status: 200,
           headers: {
-            'content-type': 'application/json',
+            "content-type": "application/json",
           },
         },
       );
     }
 
-    throw new Error(`Unexpected fetch: ${init?.method ?? 'GET'} ${url}`);
+    throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
   };
 
   try {
     const response = await service.searchDocuments({
-      query: 'project knowledge',
-      knowledgeId: 'knowledge-1',
-      sourceType: 'global_docs',
-      collectionName: 'proj_project-1_docs',
+      query: "project knowledge",
+      knowledgeId: "knowledge-1",
+      sourceType: "global_docs",
+      collectionName: "proj_project-1_docs",
       topK: 3,
     });
 
     assert.equal(response.total, 0);
     assert.equal(
       queryPath,
-      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-project/query',
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-project/query",
     );
     assert.deepEqual(fetchCalls, [
-      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections',
-      'https://api.openai.com/v1/embeddings',
-      'http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-project/query',
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections",
+      "https://api.openai.com/v1/embeddings",
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-project/query",
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("searchDocuments falls back to local development embedding in development without api key", async () => {
+  const service = createKnowledgeSearchService({
+    env: {
+      ...createTestEnv(),
+      nodeEnv: "development",
+    },
+  });
+  const fetchCalls: string[] = [];
+  let queryBody: { query_embeddings?: unknown } | null = null;
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    fetchCalls.push(url);
+
+    if (url.endsWith("/collections") && init?.method === "GET") {
+      return new Response(
+        JSON.stringify([{ id: "collection-dev", name: "global_docs" }]),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (
+      url.endsWith("/collections/collection-dev/query") &&
+      init?.method === "POST"
+    ) {
+      queryBody =
+        typeof init.body === "string"
+          ? (JSON.parse(init.body) as { query_embeddings?: unknown })
+          : null;
+
+      return new Response(
+        JSON.stringify({
+          ids: [[]],
+          documents: [[]],
+          metadatas: [[]],
+          distances: [[]],
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
+  };
+
+  try {
+    const response = await service.searchDocuments({
+      query: "project knowledge",
+      knowledgeId: "knowledge-1",
+      sourceType: "global_docs",
+      topK: 5,
+    });
+
+    assert.equal(response.total, 0);
+    if (!queryBody) {
+      throw new Error("Expected query body to be captured");
+    }
+    const queryEmbeddings = (queryBody as { query_embeddings?: unknown })
+      .query_embeddings;
+    assert.ok(Array.isArray(queryEmbeddings));
+    assert.equal(queryEmbeddings.length, 1);
+    assert.ok(Array.isArray(queryEmbeddings[0]));
+    assert.equal(queryEmbeddings[0].length, 1536);
+    assert.ok(
+      queryEmbeddings[0].some(
+        (value: unknown) => typeof value === "number" && value !== 0,
+      ),
+    );
+    assert.deepEqual(fetchCalls, [
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections",
+      "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-dev/query",
     ]);
   } finally {
     globalThis.fetch = originalFetch;

@@ -8,12 +8,12 @@ import {
   MoreOutlined,
   ReloadOutlined,
   ToolOutlined,
-} from '@ant-design/icons';
+} from "@ant-design/icons";
 import type {
   KnowledgeDetailResponse,
   KnowledgeDiagnosticsResponse,
   KnowledgeDocumentResponse,
-} from '@api/knowledge';
+} from "@api/knowledge";
 import {
   Alert,
   App,
@@ -27,10 +27,11 @@ import {
   Tabs,
   Tooltip,
   Typography,
-} from 'antd';
-import type { MenuProps } from 'antd';
-import { useEffect, useState } from 'react';
-import type { ProjectResourceItem } from '@app/project/project.types';
+} from "antd";
+import type { MenuProps } from "antd";
+import { useEffect, useState } from "react";
+import type { ProjectResourceItem } from "@app/project/project.types";
+import { KnowledgeSearchTab } from "@pages/knowledge/components/KnowledgeSearchTab";
 
 interface ProjectKnowledgeDetailDrawerProps {
   open: boolean;
@@ -62,62 +63,62 @@ interface ProjectKnowledgeDetailDrawerProps {
 
 const INDEX_STATUS_META = {
   idle: {
-    color: 'default',
-    label: '待索引',
+    color: "default",
+    label: "待索引",
   },
   pending: {
-    color: 'gold',
-    label: '排队中',
+    color: "gold",
+    label: "排队中",
   },
   processing: {
-    color: 'processing',
-    label: '处理中',
+    color: "processing",
+    label: "处理中",
   },
   completed: {
-    color: 'success',
-    label: '已完成',
+    color: "success",
+    label: "已完成",
   },
   failed: {
-    color: 'error',
-    label: '失败',
+    color: "error",
+    label: "失败",
   },
 } as const;
 
 const DOCUMENT_STATUS_META = {
   pending: {
-    color: 'gold',
-    label: '排队中',
+    color: "gold",
+    label: "排队中",
   },
   processing: {
-    color: 'processing',
-    label: '处理中',
+    color: "processing",
+    label: "处理中",
   },
   completed: {
-    color: 'success',
-    label: '已完成',
+    color: "success",
+    label: "已完成",
   },
   failed: {
-    color: 'error',
-    label: '失败',
+    color: "error",
+    label: "失败",
   },
 } as const;
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
-    return '未记录';
+    return "未记录";
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return '未记录';
+    return "未记录";
   }
 
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 };
 
@@ -149,53 +150,53 @@ export const ProjectKnowledgeDetailDrawer = ({
   onDeleteDocument,
 }: ProjectKnowledgeDetailDrawerProps) => {
   const { message } = App.useApp();
-  const [activeTabKey, setActiveTabKey] = useState('documents');
-  const readOnlyGlobal = knowledgeItem?.source === 'global';
+  const [activeTabKey, setActiveTabKey] = useState("documents");
+  const readOnlyGlobal = knowledgeItem?.source === "global";
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    setActiveTabKey('documents');
+    setActiveTabKey("documents");
   }, [knowledgeItem?.id, open]);
 
   const buildDocumentActionMenuItems = (
     document: KnowledgeDocumentResponse,
-  ): NonNullable<MenuProps['items']> => {
+  ): NonNullable<MenuProps["items"]> => {
     const busy = isDocumentBusy(document.id);
-    const commonItems: NonNullable<MenuProps['items']> = [
+    const commonItems: NonNullable<MenuProps["items"]> = [
       {
-        key: 'preview',
+        key: "preview",
         icon: <EyeOutlined />,
-        label: '预览',
+        label: "预览",
       },
       {
-        key: 'download',
+        key: "download",
         icon: <DownloadOutlined />,
-        label: '下载',
+        label: "下载",
       },
       {
-        type: 'divider',
+        type: "divider",
       },
     ];
 
-    if (document.status === 'pending' || document.status === 'processing') {
+    if (document.status === "pending" || document.status === "processing") {
       return [
         ...commonItems,
         {
-          key: 'refresh',
+          key: "refresh",
           icon: <ReloadOutlined />,
-          label: '刷新状态',
+          label: "刷新状态",
           disabled: busy,
         },
         {
-          type: 'divider',
+          type: "divider",
         },
         {
-          key: 'delete',
+          key: "delete",
           icon: <DeleteOutlined />,
-          label: '删除文档',
+          label: "删除文档",
           danger: true,
           disabled: busy,
         },
@@ -204,29 +205,29 @@ export const ProjectKnowledgeDetailDrawer = ({
 
     return [
       ...commonItems,
-      ...(document.status === 'failed'
+      ...(document.status === "failed"
         ? [
             {
-              key: 'retry',
+              key: "retry",
               icon: <ReloadOutlined />,
-              label: '重试索引',
+              label: "重试索引",
               disabled: busy,
             },
           ]
         : []),
       {
-        key: 'rebuild',
+        key: "rebuild",
         icon: <ToolOutlined />,
-        label: '重建索引',
+        label: "重建索引",
         disabled: busy,
       },
       {
-        type: 'divider',
+        type: "divider",
       },
       {
-        key: 'delete',
+        key: "delete",
         icon: <DeleteOutlined />,
-        label: '删除文档',
+        label: "删除文档",
         danger: true,
         disabled: busy,
       },
@@ -237,32 +238,32 @@ export const ProjectKnowledgeDetailDrawer = ({
     document: KnowledgeDocumentResponse,
     key: string,
   ) => {
-    if (key === 'preview') {
+    if (key === "preview") {
       message.info(`“${document.fileName}”预览原文即将开放`);
       return;
     }
 
-    if (key === 'download') {
+    if (key === "download") {
       message.info(`“${document.fileName}”下载原文即将开放`);
       return;
     }
 
-    if (key === 'refresh') {
+    if (key === "refresh") {
       onRefresh();
       return;
     }
 
-    if (key === 'retry') {
+    if (key === "retry") {
       onRetryDocument(document);
       return;
     }
 
-    if (key === 'rebuild') {
+    if (key === "rebuild") {
       onRebuildDocument(document);
       return;
     }
 
-    if (key === 'delete') {
+    if (key === "delete") {
       onDeleteDocument(document);
     }
   };
@@ -270,7 +271,9 @@ export const ProjectKnowledgeDetailDrawer = ({
   const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
     const statusMeta = DOCUMENT_STATUS_META[document.status];
     const busy = isDocumentBusy(document.id);
-    const diagnosticsDocument = diagnostics?.documents.find((item) => item.id === document.id);
+    const diagnosticsDocument = diagnostics?.documents.find(
+      (item) => item.id === document.id,
+    );
 
     return (
       <article
@@ -283,7 +286,12 @@ export const ProjectKnowledgeDetailDrawer = ({
               <div className="space-y-1 text-xs">
                 <div>格式：{document.mimeType}</div>
                 <div>上传时间：{formatDateTime(document.uploadedAt)}</div>
-                <div>最近索引：{formatDateTime(document.lastIndexedAt ?? document.processedAt)}</div>
+                <div>
+                  最近索引：
+                  {formatDateTime(
+                    document.lastIndexedAt ?? document.processedAt,
+                  )}
+                </div>
                 <div>分块数量：{document.chunkCount}</div>
               </div>
             }
@@ -306,7 +314,7 @@ export const ProjectKnowledgeDetailDrawer = ({
 
           {!readOnlyGlobal ? (
             <Dropdown
-              trigger={['click']}
+              trigger={["click"]}
               placement="bottomRight"
               menu={{
                 items: buildDocumentActionMenuItems(document),
@@ -325,7 +333,7 @@ export const ProjectKnowledgeDetailDrawer = ({
         </div>
 
         <Typography.Text className="mt-3 block text-xs text-slate-500">
-          上传于 {formatDateTime(document.uploadedAt)} · 最近索引{' '}
+          上传于 {formatDateTime(document.uploadedAt)} · 最近索引{" "}
           {formatDateTime(document.lastIndexedAt ?? document.processedAt)}
         </Typography.Text>
 
@@ -351,20 +359,20 @@ export const ProjectKnowledgeDetailDrawer = ({
         前往全局治理
       </Button>
       <Dropdown
-        trigger={['click']}
+        trigger={["click"]}
         placement="bottomRight"
         menu={{
           items: [
             {
-              key: 'unbind',
+              key: "unbind",
               icon: <LinkOutlined />,
-              label: '解除项目绑定',
+              label: "解除项目绑定",
               danger: true,
               disabled: unbindingGlobal,
             },
           ],
           onClick: ({ key }) => {
-            if (key === 'unbind') {
+            if (key === "unbind") {
               onUnbindGlobalKnowledge();
             }
           },
@@ -378,52 +386,61 @@ export const ProjectKnowledgeDetailDrawer = ({
       <Button onClick={onRefresh} icon={<ReloadOutlined />}>
         刷新
       </Button>
-      <Button type="primary" icon={<CloudUploadOutlined />} loading={uploading} onClick={onUploadDocument}>
+      <Button
+        type="primary"
+        icon={<CloudUploadOutlined />}
+        loading={uploading}
+        onClick={onUploadDocument}
+      >
         上传文档
       </Button>
       <Button onClick={onEditKnowledge}>编辑</Button>
       <Dropdown
-        trigger={['click']}
+        trigger={["click"]}
         placement="bottomRight"
         menu={{
           items: [
             {
-              key: 'rebuild',
+              key: "rebuild",
               icon: <ToolOutlined />,
-              label: '重建全部文档',
-              disabled: rebuildingKnowledge || loading || !knowledge?.documents.length,
+              label: "重建全部文档",
+              disabled:
+                rebuildingKnowledge || loading || !knowledge?.documents.length,
             },
             {
-              type: 'divider',
+              type: "divider",
             },
             {
-              key: 'delete',
+              key: "delete",
               icon: <DeleteOutlined />,
-              label: '删除知识库',
+              label: "删除知识库",
               danger: true,
               disabled: deletingKnowledge,
             },
           ],
           onClick: ({ key }) => {
-            if (key === 'rebuild') {
+            if (key === "rebuild") {
               onRebuildKnowledge();
               return;
             }
 
-            if (key === 'delete') {
+            if (key === "delete") {
               onDeleteKnowledge();
             }
           },
         }}
       >
-        <Button icon={<MoreOutlined />} loading={deletingKnowledge || rebuildingKnowledge} />
+        <Button
+          icon={<MoreOutlined />}
+          loading={deletingKnowledge || rebuildingKnowledge}
+        />
       </Dropdown>
     </div>
   );
 
   return (
     <Drawer
-      title={knowledgeItem?.name ?? '知识库详情'}
+      title={knowledgeItem?.name ?? "知识库详情"}
       open={open}
       onClose={onClose}
       size={720}
@@ -446,8 +463,8 @@ export const ProjectKnowledgeDetailDrawer = ({
         <div className="space-y-5">
           <section className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <Tag color={readOnlyGlobal ? 'blue' : 'green'}>
-                {readOnlyGlobal ? '全局绑定' : '项目私有'}
+              <Tag color={readOnlyGlobal ? "blue" : "green"}>
+                {readOnlyGlobal ? "全局绑定" : "项目私有"}
               </Tag>
               <Tag color={INDEX_STATUS_META[knowledge.indexStatus].color}>
                 {INDEX_STATUS_META[knowledge.indexStatus].label}
@@ -455,7 +472,7 @@ export const ProjectKnowledgeDetailDrawer = ({
             </div>
 
             <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-              {knowledge.description || '暂无描述'}
+              {knowledge.description || "暂无描述"}
             </Typography.Paragraph>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -463,7 +480,10 @@ export const ProjectKnowledgeDetailDrawer = ({
                 <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
                   文档
                 </Typography.Text>
-                <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
+                <Typography.Title
+                  level={4}
+                  className="mb-0! mt-2 text-slate-800!"
+                >
                   {knowledge.documents.length}
                 </Typography.Title>
               </div>
@@ -471,7 +491,10 @@ export const ProjectKnowledgeDetailDrawer = ({
                 <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
                   分块
                 </Typography.Text>
-                <Typography.Title level={4} className="mb-0! mt-2 text-slate-800!">
+                <Typography.Title
+                  level={4}
+                  className="mb-0! mt-2 text-slate-800!"
+                >
                   {knowledge.chunkCount}
                 </Typography.Title>
               </div>
@@ -479,7 +502,10 @@ export const ProjectKnowledgeDetailDrawer = ({
                 <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
                   最近更新
                 </Typography.Text>
-                <Typography.Title level={5} className="mb-0! mt-2 text-slate-800!">
+                <Typography.Title
+                  level={5}
+                  className="mb-0! mt-2 text-slate-800!"
+                >
                   {formatDateTime(knowledge.updatedAt)}
                 </Typography.Title>
               </div>
@@ -500,163 +526,189 @@ export const ProjectKnowledgeDetailDrawer = ({
             onChange={setActiveTabKey}
             items={[
               {
-                key: 'documents',
-                label: `文档 ${knowledge.documents.length}`,
-                children: knowledge.documents.length === 0 ? (
-                  <Empty
-                    className="my-12"
-                    description={
-                      readOnlyGlobal
-                        ? '当前全局知识库还没有文档，或文档尚未同步到这里。'
-                        : '当前知识库还没有文档，先上传一份 .md 或 .txt。'
-                    }
-                  >
-                    {!readOnlyGlobal ? (
-                      <Button
-                        type="primary"
-                        icon={<CloudUploadOutlined />}
-                        loading={uploading}
-                        onClick={onUploadDocument}
-                      >
-                        上传第一份文档
+                key: "documents",
+                label: "文档",
+                children:
+                  knowledge.documents.length === 0 ? (
+                    <Empty
+                      className="my-12"
+                      description={
+                        readOnlyGlobal
+                          ? "当前全局知识库还没有文档，或文档尚未同步到这里。"
+                          : "当前知识库还没有文档，先上传一份 .md 或 .txt。"
+                      }
+                    >
+                      {!readOnlyGlobal ? (
+                        <Button
+                          type="primary"
+                          icon={<CloudUploadOutlined />}
+                          loading={uploading}
+                          onClick={onUploadDocument}
+                        >
+                          上传第一份文档
+                        </Button>
+                      ) : null}
+                    </Empty>
+                  ) : (
+                    <div className="space-y-3">
+                      {knowledge.documents.map(renderDocumentCard)}
+                    </div>
+                  ),
+              },
+              {
+                key: "ops",
+                label: "运维",
+                children: diagnosticsLoading ? (
+                  <div className="flex min-h-60 items-center justify-center">
+                    <Spin size="large" />
+                  </div>
+                ) : diagnosticsError ? (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="加载诊断信息失败"
+                    description={diagnosticsError}
+                    action={
+                      <Button size="small" onClick={onRefreshDiagnostics}>
+                        重新获取
                       </Button>
+                    }
+                  />
+                ) : diagnostics ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                          Collection
+                        </Typography.Text>
+                        <Typography.Title
+                          level={5}
+                          className="mb-0! mt-2 text-slate-800!"
+                        >
+                          {diagnostics.collection.exists ? "已联通" : "未联通"}
+                        </Typography.Title>
+                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                          {diagnostics.expectedCollectionName}
+                        </Typography.Paragraph>
+                      </div>
+                      <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                          Indexer
+                        </Typography.Text>
+                        <Typography.Title
+                          level={5}
+                          className="mb-0! mt-2 text-slate-800!"
+                        >
+                          {diagnostics.indexer.status === "ok"
+                            ? "运行正常"
+                            : "降级"}
+                        </Typography.Title>
+                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                          {diagnostics.indexer.service ?? "未返回服务名"}
+                        </Typography.Paragraph>
+                      </div>
+                      <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                          异常文档
+                        </Typography.Text>
+                        <Typography.Title
+                          level={5}
+                          className="mb-0! mt-2 text-slate-800!"
+                        >
+                          {diagnostics.documentSummary.failed +
+                            diagnostics.documentSummary.missingStorage +
+                            diagnostics.documentSummary.staleProcessing}
+                        </Typography.Title>
+                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                          失败 / 原文件缺失 / 处理卡住
+                        </Typography.Paragraph>
+                      </div>
+                    </div>
+
+                    {diagnostics.collection.errorMessage ? (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        message="Collection 状态异常"
+                        description={diagnostics.collection.errorMessage}
+                      />
                     ) : null}
-                  </Empty>
+
+                    {diagnostics.indexer.errorMessage ? (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        message="Indexer 返回了降级信息"
+                        description={diagnostics.indexer.errorMessage}
+                      />
+                    ) : null}
+
+                    <div className="rounded-[20px] border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <FileTextOutlined className="text-slate-400" />
+                          <Typography.Title
+                            level={5}
+                            className="mb-0! text-slate-800!"
+                          >
+                            文档诊断
+                          </Typography.Title>
+                        </div>
+                        <Button onClick={onRefreshDiagnostics}>刷新诊断</Button>
+                      </div>
+
+                      <div className="mt-4 space-y-3">
+                        {diagnostics.documents.length === 0 ? (
+                          <Empty description="当前没有文档诊断记录。" />
+                        ) : (
+                          diagnostics.documents.map((document) => (
+                            <div
+                              key={document.id}
+                              className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-3"
+                            >
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Typography.Text className="font-medium text-slate-800!">
+                                  {document.fileName}
+                                </Typography.Text>
+                                <Tag
+                                  color={
+                                    DOCUMENT_STATUS_META[document.status].color
+                                  }
+                                >
+                                  {DOCUMENT_STATUS_META[document.status].label}
+                                </Tag>
+                                {document.missingStorage ? (
+                                  <Tag color="error">原文件缺失</Tag>
+                                ) : null}
+                                {document.staleProcessing ? (
+                                  <Tag color="warning">处理卡住</Tag>
+                                ) : null}
+                              </div>
+                              <Typography.Text className="mt-2 block text-xs text-slate-500">
+                                最近索引：
+                                {formatDateTime(document.lastIndexedAt)} ·
+                                更新时间：{formatDateTime(document.updatedAt)}
+                              </Typography.Text>
+                              {document.errorMessage ? (
+                                <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-rose-500!">
+                                  {document.errorMessage}
+                                </Typography.Paragraph>
+                              ) : null}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="space-y-3">{knowledge.documents.map(renderDocumentCard)}</div>
+                  <Empty description="当前暂无可展示的运维信息。" />
                 ),
               },
-              ...(!readOnlyGlobal
-                ? [
-                    {
-                      key: 'ops',
-                      label: '运维',
-                      children: diagnosticsLoading ? (
-                        <div className="flex min-h-60 items-center justify-center">
-                          <Spin size="large" />
-                        </div>
-                      ) : diagnosticsError ? (
-                        <Alert
-                          type="warning"
-                          showIcon
-                          message="加载诊断信息失败"
-                          description={diagnosticsError}
-                          action={
-                            <Button size="small" onClick={onRefreshDiagnostics}>
-                              重新获取
-                            </Button>
-                          }
-                        />
-                      ) : diagnostics ? (
-                        <div className="space-y-4">
-                          <div className="grid gap-3 sm:grid-cols-3">
-                            <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
-                              <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
-                                Collection
-                              </Typography.Text>
-                              <Typography.Title level={5} className="mb-0! mt-2 text-slate-800!">
-                                {diagnostics.collection.exists ? '已联通' : '未联通'}
-                              </Typography.Title>
-                              <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                                {diagnostics.expectedCollectionName}
-                              </Typography.Paragraph>
-                            </div>
-                            <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
-                              <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
-                                Indexer
-                              </Typography.Text>
-                              <Typography.Title level={5} className="mb-0! mt-2 text-slate-800!">
-                                {diagnostics.indexer.status === 'ok' ? '运行正常' : '降级'}
-                              </Typography.Title>
-                              <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                                {diagnostics.indexer.service ?? '未返回服务名'}
-                              </Typography.Paragraph>
-                            </div>
-                            <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
-                              <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
-                                异常文档
-                              </Typography.Text>
-                              <Typography.Title level={5} className="mb-0! mt-2 text-slate-800!">
-                                {diagnostics.documentSummary.failed + diagnostics.documentSummary.missingStorage + diagnostics.documentSummary.staleProcessing}
-                              </Typography.Title>
-                              <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                                失败 / 原文件缺失 / 处理卡住
-                              </Typography.Paragraph>
-                            </div>
-                          </div>
-
-                          {diagnostics.collection.errorMessage ? (
-                            <Alert
-                              type="warning"
-                              showIcon
-                              message="Collection 状态异常"
-                              description={diagnostics.collection.errorMessage}
-                            />
-                          ) : null}
-
-                          {diagnostics.indexer.errorMessage ? (
-                            <Alert
-                              type="warning"
-                              showIcon
-                              message="Indexer 返回了降级信息"
-                              description={diagnostics.indexer.errorMessage}
-                            />
-                          ) : null}
-
-                          <div className="rounded-[20px] border border-slate-200 bg-white p-4">
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2">
-                                <FileTextOutlined className="text-slate-400" />
-                                <Typography.Title level={5} className="mb-0! text-slate-800!">
-                                  文档诊断
-                                </Typography.Title>
-                              </div>
-                              <Button onClick={onRefreshDiagnostics}>刷新诊断</Button>
-                            </div>
-
-                            <div className="mt-4 space-y-3">
-                              {diagnostics.documents.length === 0 ? (
-                                <Empty description="当前没有文档诊断记录。" />
-                              ) : (
-                                diagnostics.documents.map((document) => (
-                                  <div
-                                    key={document.id}
-                                    className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-3"
-                                  >
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <Typography.Text className="font-medium text-slate-800!">
-                                        {document.fileName}
-                                      </Typography.Text>
-                                      <Tag color={DOCUMENT_STATUS_META[document.status].color}>
-                                        {DOCUMENT_STATUS_META[document.status].label}
-                                      </Tag>
-                                      {document.missingStorage ? (
-                                        <Tag color="error">原文件缺失</Tag>
-                                      ) : null}
-                                      {document.staleProcessing ? (
-                                        <Tag color="warning">处理卡住</Tag>
-                                      ) : null}
-                                    </div>
-                                    <Typography.Text className="mt-2 block text-xs text-slate-500">
-                                      最近索引：{formatDateTime(document.lastIndexedAt)} · 更新时间：{formatDateTime(document.updatedAt)}
-                                    </Typography.Text>
-                                    {document.errorMessage ? (
-                                      <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-rose-500!">
-                                        {document.errorMessage}
-                                      </Typography.Paragraph>
-                                    ) : null}
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <Empty description="当前暂无可展示的运维信息。" />
-                      ),
-                    },
-                  ]
-                : []),
+              {
+                key: "search",
+                label: "检索",
+                children: <KnowledgeSearchTab knowledgeId={knowledge.id} />,
+              },
             ]}
           />
         </div>

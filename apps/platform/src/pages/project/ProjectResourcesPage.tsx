@@ -258,21 +258,12 @@ export const ProjectResourcesPage = () => {
     const loadKnowledgeState = async () => {
       setActiveKnowledgeDetailLoading(true);
       setActiveKnowledgeDetailError(null);
-
-      if (activeKnowledgeSource === 'project') {
-        setActiveDiagnosticsLoading(true);
-        setActiveDiagnosticsError(null);
-      } else {
-        setActiveDiagnostics(null);
-        setActiveDiagnosticsError(null);
-        setActiveDiagnosticsLoading(false);
-      }
+      setActiveDiagnosticsLoading(true);
+      setActiveDiagnosticsError(null);
 
       const [detailResult, diagnosticsResult] = await Promise.allSettled([
         getKnowledgeDetail(activeKnowledgeId),
-        activeKnowledgeSource === 'project'
-          ? getKnowledgeDiagnostics(activeKnowledgeId)
-          : Promise.resolve(null),
+        getKnowledgeDiagnostics(activeKnowledgeId),
       ]);
 
       if (!isMounted) {
@@ -291,10 +282,6 @@ export const ProjectResourcesPage = () => {
       }
 
       setActiveKnowledgeDetailLoading(false);
-
-      if (activeKnowledgeSource !== 'project') {
-        return;
-      }
 
       if (diagnosticsResult.status === 'fulfilled') {
         setActiveDiagnostics(diagnosticsResult.value);
