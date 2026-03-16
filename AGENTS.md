@@ -23,7 +23,7 @@ docker/
   mongo/     MongoDB 初始化脚本
   caddy/     线上 HTTPS 入口
 scripts/     常用命令统一入口
-files/       按知识库分类的 Markdown 文档模板库
+files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设计文档）
 .agent/
   docs/
     current/        当前事实与架构文档
@@ -46,7 +46,7 @@ files/       按知识库分类的 Markdown 文档模板库
 - `apps/indexer-py`：承载内部 Python 索引控制面，当前采用 FastAPI + uv，已提供 `md / txt` 解析、清洗、分块、embedding 与 Chroma 写侧 HTTP 入口。
 - `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、`api / indexer-py / platform` 镜像构建、Mongo 初始化与 HTTPS 入口。
 - `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
-- `files`：承载按知识库分类的 Markdown 模板库，当前覆盖全局文档、产品规范、用户研究、市场竞品、项目决策、技术协作与发布运营七类文档。
+- `files`：承载按知识库分类的 Markdown 文档库，当前覆盖全局文档、产品规范、用户研究、市场竞品、项目决策、技术协作、发布运营与独立架构设计八类文档。
 - `.agent/docs`：项目文档统一根目录；`.agent/docs/current/architecture.md` 是项目结构与路由事实的主文档。
 - `.agent/gpt`：给 ChatGPT Projects 使用的上传副本目录；内容来自 `.agent/docs` 与项目规则的派生同步，不作为新的事实源。
 
