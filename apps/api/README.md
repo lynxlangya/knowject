@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-16，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话只读接口、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，支持模型切换后的 namespace 级全量重建与 active collection 切换。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
+截至 2026-03-17，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话最小写链路、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，支持模型切换后的 namespace 级全量重建与 active collection 切换。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
 
 ## 当前接口
 
@@ -30,9 +30,17 @@
 - `GET /api/projects/:projectId/conversations`
   - 需要 `Authorization: Bearer <token>`。
   - 返回当前项目可见的对话列表摘要：`id / projectId / title / updatedAt / preview`。
+- `POST /api/projects/:projectId/conversations`
+  - 需要 `Authorization: Bearer <token>`。
+  - 创建一条正式项目对话；`title` 可选，未提供时服务端会回退到默认标题。
 - `GET /api/projects/:projectId/conversations/:conversationId`
   - 需要 `Authorization: Bearer <token>`。
-  - 返回当前项目单条对话详情与消息列表；当前仅提供只读能力，不支持消息写入。
+  - 返回当前项目单条对话详情与消息列表。
+- `POST /api/projects/:projectId/conversations/:conversationId/messages`
+  - 需要 `Authorization: Bearer <token>`。
+  - 向当前对话追加一条 user message，随后执行项目级 merged retrieval，并基于当前 effective LLM config 生成 assistant 回复。
+  - merged retrieval 当前只覆盖“项目绑定的全局 docs + 当前项目私有 docs”；assistant 消息会返回最小 `sources` 引用数组。
+  - 当前实现会先持久化 user message，再尝试生成 assistant；若 assistant 生成失败，接口会返回 `5xx`，但 user message 可能已经落库。
 - `PATCH /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 更新项目基础信息与 `knowledgeBaseIds / agentIds / skillIds` 资源绑定字段。
@@ -223,11 +231,11 @@
 - 这是本地联调与基础框架接口；项目列表、项目基础信息、项目资源绑定、项目对话读链路、成员 roster 与全局成员概览已由它提供正式数据源。
 - 项目概览中的补充展示文案与成员协作快照仍主要由 `apps/platform` 本地 Mock 驱动；项目资源页的 `agents` 与项目私有 knowledge 已切正式消费。
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
-- `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET /api/projects/:projectId/conversations*` 只读接口。
+- `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET/POST /api/projects/:projectId/conversations*` 的最小对话读写基线。
 - `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写、knowledge diagnostics，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；同时已补齐 `scope=global|project` 与 `projectId` owner 模型，保证全局 `/api/knowledge` 列表不串 project scope，并已开放 `/api/projects/:projectId/knowledge*` 的项目私有知识 `list / create / detail / upload` 路由。当前知识索引额外引入了 namespace 级状态表：namespace key 继续使用 `global_docs / global_code / proj_{projectId}_docs / proj_{projectId}_code`，但实际写侧 collection 改为 versioned collection，并记录当前 active embedding config；模型切换后，单文档 retry / rebuild 会被显式拦截，要求先执行 namespace 级全量重建。Node 每次调用 Python indexer 时都会附带 `embeddingConfig` 与 `indexingConfig` request override，Python 侧按请求级配置优先、env 兜底执行。前端 `/knowledge` 与项目资源页都已正式接线，分别承担全局治理与项目最小消费闭环。
 - `settings` 当前已完成 `workspace_settings` 单例集合、AES-256-GCM API Key 加密、`GET/PATCH/TEST /api/settings/*`、effective config 读取层，以及 `/settings` 页面正式前后端链路；其中 `indexing/test` 会进一步校验 `Node -> indexer -> Chroma` 的当前诊断状态。本期访问控制固定为“所有已登录用户可访问”，后续若引入工作区管理员模型，再继续收紧。
 - `skills` 当前已完成正式 Skill 资产仓储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、详情读取、引用保护与绑定校验；`agents` 已完成 Mongo 正式模型、CRUD 和绑定校验。
-- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读链路、知识库正式检索、项目私有知识最小 write-side、知识索引运维基础接口、项目资源页对项目私有知识的正式消费、Skill 资产管理与 Agent CRUD；仍未落地的是项目对话消息写入、`global_code` 真实导入，以及更深的 Skill / Agent 运行时编排链路。
+- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读写链路、项目级 merged retrieval、assistant 来源引用、知识库正式检索、项目私有知识最小 write-side、知识索引运维基础接口、项目资源页对项目私有知识的正式消费、Skill 资产管理与 Agent CRUD；仍未落地的是项目对话页正式发送交互、`global_code` 真实导入，以及更深的 Skill / Agent 运行时编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
@@ -295,7 +303,7 @@
 - `src/db/mongo.ts`：MongoDB 连接管理与健康快照。
 - `src/modules/auth/*`：用户模型、密码哈希、JWT、中间件和注册 / 登录接口。
 - `src/modules/members/*`：全局成员聚合只读接口，按当前用户可见项目汇总成员概览。
-- `src/modules/projects/*`：项目模型、MongoDB 仓储、资源绑定字段、只读项目对话接口、权限校验和 CRUD 接口。
+- `src/modules/projects/*`：项目模型、MongoDB 仓储、资源绑定字段、项目对话读写基线、权限校验和 CRUD 接口。
 - `src/modules/memberships/*`：项目成员增删改接口与最小角色规则。
 - `src/modules/knowledge/*`：全局知识库元数据模型、Mongo 仓储、CRUD、详情接口、文档上传入口、retry / rebuild / diagnostics、后台状态推进、Chroma 统一检索 service 与 Python indexer 触发。
 - `src/modules/knowledge/knowledge.search.ts`：统一知识检索 service、collection 诊断、Python indexer 健康探活，以及当前过渡期的向量删除适配；Node 直连 Chroma 读侧 query 在这里作为架构例外保留。

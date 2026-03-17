@@ -1551,6 +1551,524 @@ test('searchDocuments resolves project scope knowledge to project collection for
   ]);
 });
 
+test('searchProjectDocuments merges bound global knowledge and project private knowledge into one ranked result', async () => {
+  const capturedInputs: Array<Parameters<KnowledgeSearchService['searchDocuments']>[0]> = [];
+  const listKnowledgeBaseCalls: Array<
+    Parameters<KnowledgeRepository['listKnowledgeBases']>[0] | undefined
+  > = [];
+  const globalKnowledgeId = '507f1f77bcf86cd799439221';
+  const globalKnowledgeSecondaryId = '507f1f77bcf86cd799439226';
+  const globalCodeKnowledgeId = '507f1f77bcf86cd799439222';
+  const projectKnowledgeId = '507f1f77bcf86cd799439223';
+  const projectKnowledgeSecondaryId = '507f1f77bcf86cd799439227';
+  const projectId = '507f1f77bcf86cd799439224';
+  const actorId = '507f1f77bcf86cd799439225';
+  const globalKnowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(globalKnowledgeId),
+    name: '全局文档知识',
+    description: '验证全局绑定 merged retrieval',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 4,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+  const globalKnowledgeSecondary: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(globalKnowledgeSecondaryId),
+    name: '全局文档知识 2',
+    description: '验证同 namespace 不再重复 embedding',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+  const globalCodeKnowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(globalCodeKnowledgeId),
+    name: '全局代码知识',
+    description: '不应进入文档 merged retrieval',
+    sourceType: 'global_code',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 2,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+  const projectKnowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(projectKnowledgeId),
+    name: '项目私有知识',
+    description: '验证项目私有 merged retrieval',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 5,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+  const projectKnowledgeSecondary: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(projectKnowledgeSecondaryId),
+    name: '项目私有知识 2',
+    description: '验证项目私有同 namespace 合并',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 2,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (knowledgeId: string) => {
+      if (knowledgeId === globalKnowledgeId) {
+        return globalKnowledge;
+      }
+
+      if (knowledgeId === globalKnowledgeSecondaryId) {
+        return globalKnowledgeSecondary;
+      }
+
+      if (knowledgeId === globalCodeKnowledgeId) {
+        return globalCodeKnowledge;
+      }
+
+      return null;
+    },
+    listKnowledgeBases: async (options?: Parameters<KnowledgeRepository['listKnowledgeBases']>[0]) => {
+      listKnowledgeBaseCalls.push(options);
+      return options?.scope === 'project'
+        ? [projectKnowledge, projectKnowledgeSecondary]
+        : [globalKnowledge, globalKnowledgeSecondary];
+    },
+  } as unknown as KnowledgeRepository;
+
+  const searchService = createSearchServiceStub({
+    searchDocuments: async (input: Parameters<KnowledgeSearchService['searchDocuments']>[0]) => {
+      capturedInputs.push(input);
+
+      if ((input.collectionName ?? '').startsWith(`proj_${projectId}_docs`)) {
+        return {
+          query: input.query,
+          sourceType: input.sourceType,
+          total: 3,
+          items: [
+            {
+              knowledgeId: projectKnowledgeId,
+              documentId: 'doc-project',
+              chunkId: 'chunk-project',
+              chunkIndex: 1,
+              type: 'global_docs',
+              source: 'project-brief.md',
+              content: '项目私有知识已经接入正式知识上传与项目资源页消费。',
+              distance: 0.08,
+            },
+            {
+              knowledgeId: projectKnowledgeSecondaryId,
+              documentId: 'doc-project-2',
+              chunkId: 'chunk-project-2',
+              chunkIndex: 0,
+              type: 'global_docs',
+              source: 'project-notes.md',
+              content: '第二个项目私有知识命中。',
+              distance: 0.52,
+            },
+            {
+              knowledgeId: 'project-not-allowed',
+              documentId: 'doc-project-x',
+              chunkId: 'chunk-project-x',
+              chunkIndex: 3,
+              type: 'global_docs',
+              source: 'project-other.md',
+              content: '不应被项目级过滤后的结果带出。',
+              distance: 0.02,
+            },
+          ],
+        };
+      }
+
+      return {
+        query: input.query,
+        sourceType: input.sourceType,
+        total: 3,
+        items: [
+          {
+            knowledgeId: globalKnowledgeId,
+            documentId: 'doc-global',
+            chunkId: 'chunk-global',
+            chunkIndex: 0,
+            type: 'global_docs',
+            source: 'architecture.md',
+            content: '全局绑定知识已经进入项目级 merged retrieval 编排。',
+            distance: 0.22,
+          },
+          {
+            knowledgeId: globalKnowledgeSecondaryId,
+            documentId: 'doc-global-2',
+            chunkId: 'chunk-global-2',
+            chunkIndex: 1,
+            type: 'global_docs',
+            source: 'sync.md',
+            content: '第二个全局绑定知识命中。',
+            distance: 0.31,
+          },
+          {
+            knowledgeId: 'global-not-allowed',
+            documentId: 'doc-global-x',
+            chunkId: 'chunk-global-x',
+            chunkIndex: 4,
+            type: 'global_docs',
+            source: 'other.md',
+            content: '不应被全局过滤后的结果带出。',
+            distance: 0.01,
+          },
+        ],
+      };
+    },
+  });
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-project-merged-search'),
+    repository,
+    searchService,
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [
+                globalKnowledgeId,
+                globalKnowledgeSecondaryId,
+                globalCodeKnowledgeId,
+                'missing-knowledge',
+              ],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-17T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  const response = await service.searchProjectDocuments(
+    {
+      actor: {
+        id: actorId,
+        username: 'langya',
+      },
+    },
+    projectId,
+    {
+      query: '项目知识',
+      topK: 2,
+    },
+  );
+
+  assert.deepEqual(listKnowledgeBaseCalls, [
+    {
+      scope: 'project',
+      projectId,
+      sourceType: 'global_docs',
+    },
+    {
+      scope: 'project',
+      projectId,
+      sourceType: 'global_docs',
+    },
+    {
+      scope: 'global',
+      projectId: undefined,
+      sourceType: 'global_docs',
+    },
+  ]);
+  assert.equal(capturedInputs.length, 2);
+  assert.deepEqual(
+    capturedInputs.map((input) => ({
+      query: input.query,
+      knowledgeId: input.knowledgeId,
+      sourceType: input.sourceType,
+      topK: input.topK,
+      embeddingProvider: input.embeddingConfig?.provider,
+      embeddingModel: input.embeddingConfig?.model,
+      embeddingBaseUrl: input.embeddingConfig?.baseUrl,
+    })),
+    [
+      {
+        query: '项目知识',
+        knowledgeId: undefined,
+        sourceType: 'global_docs',
+        topK: 4,
+        embeddingProvider: 'openai',
+        embeddingModel: 'text-embedding-3-small',
+        embeddingBaseUrl: 'https://api.openai.com/v1',
+      },
+      {
+        query: '项目知识',
+        knowledgeId: undefined,
+        sourceType: 'global_docs',
+        topK: 4,
+        embeddingProvider: 'openai',
+        embeddingModel: 'text-embedding-3-small',
+        embeddingBaseUrl: 'https://api.openai.com/v1',
+      },
+    ],
+  );
+  assert.match(capturedInputs[0]?.collectionName ?? '', new RegExp(`^proj_${projectId}_docs`));
+  assert.equal(capturedInputs[1]?.collectionName, 'global_docs');
+  assert.equal(response.total, 2);
+  assert.deepEqual(
+    response.items.map((item) => item.knowledgeId),
+    [projectKnowledgeId, globalKnowledgeId],
+  );
+});
+
+test('searchProjectDocuments does not compare raw distances across different embedding spaces', async () => {
+  const capturedInputs: Array<Parameters<KnowledgeSearchService['searchDocuments']>[0]> = [];
+  const globalKnowledgeId = '507f1f77bcf86cd799439228';
+  const projectKnowledgeId = '507f1f77bcf86cd799439229';
+  const projectId = '507f1f77bcf86cd799439230';
+  const actorId = '507f1f77bcf86cd799439231';
+  const globalKnowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(globalKnowledgeId),
+    name: '全局知识',
+    description: '验证不同 embedding space 不直接比较 distance',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 4,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+  const projectKnowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(projectKnowledgeId),
+    name: '项目私有知识',
+    description: '验证不同 embedding space 需要保守合并',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 5,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+  const globalCollectionName = buildExpectedCollectionName('global_docs');
+  const projectCollectionName = buildExpectedCollectionName(`proj_${projectId}_docs`, {
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'text-embedding-3-large',
+  });
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (knowledgeId: string) =>
+      knowledgeId === globalKnowledgeId ? globalKnowledge : null,
+    listKnowledgeBases: async (options?: Parameters<KnowledgeRepository['listKnowledgeBases']>[0]) =>
+      options?.scope === 'project' ? [projectKnowledge] : [globalKnowledge],
+    findKnowledgeNamespaceIndexState: async (namespaceKey: string) => {
+      if (namespaceKey === 'global_docs') {
+        return {
+          _id: new ObjectId('507f1f77bcf86cd799439232'),
+          namespaceKey,
+          scope: 'global' as const,
+          projectId: null,
+          sourceType: 'global_docs' as const,
+          activeCollectionName: globalCollectionName,
+          activeEmbeddingProvider: 'openai' as const,
+          activeApiKeyEncrypted: null,
+          activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+          activeEmbeddingModel: 'text-embedding-3-small',
+          activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+            provider: 'openai',
+            baseUrl: 'https://api.openai.com/v1',
+            model: 'text-embedding-3-small',
+          } as never),
+          rebuildStatus: 'idle' as const,
+          targetCollectionName: null,
+          targetEmbeddingProvider: null,
+          targetEmbeddingBaseUrl: null,
+          targetEmbeddingModel: null,
+          targetEmbeddingFingerprint: null,
+          lastErrorMessage: null,
+          createdAt: new Date('2026-03-17T00:00:00.000Z'),
+          updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+        };
+      }
+
+      return {
+        _id: new ObjectId('507f1f77bcf86cd799439233'),
+        namespaceKey,
+        scope: 'project' as const,
+        projectId,
+        sourceType: 'global_docs' as const,
+        activeCollectionName: projectCollectionName,
+        activeEmbeddingProvider: 'openai' as const,
+        activeApiKeyEncrypted: null,
+        activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+        activeEmbeddingModel: 'text-embedding-3-large',
+        activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+          provider: 'openai',
+          baseUrl: 'https://api.openai.com/v1',
+          model: 'text-embedding-3-large',
+        } as never),
+        rebuildStatus: 'idle' as const,
+        targetCollectionName: null,
+        targetEmbeddingProvider: null,
+        targetEmbeddingBaseUrl: null,
+        targetEmbeddingModel: null,
+        targetEmbeddingFingerprint: null,
+        lastErrorMessage: null,
+        createdAt: new Date('2026-03-17T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+      };
+    },
+  } as unknown as KnowledgeRepository;
+
+  const searchService = createSearchServiceStub({
+    searchDocuments: async (input: Parameters<KnowledgeSearchService['searchDocuments']>[0]) => {
+      capturedInputs.push(input);
+
+      if (input.collectionName === projectCollectionName) {
+        return {
+          query: input.query,
+          sourceType: input.sourceType,
+          total: 1,
+          items: [
+            {
+              knowledgeId: projectKnowledgeId,
+              documentId: 'doc-project',
+              chunkId: 'chunk-project',
+              chunkIndex: 0,
+              type: 'global_docs',
+              source: 'project-brief.md',
+              content: '项目私有知识来自另一套 embedding space。',
+              distance: 0.92,
+            },
+          ],
+        };
+      }
+
+      return {
+        query: input.query,
+        sourceType: input.sourceType,
+        total: 1,
+        items: [
+          {
+            knowledgeId: globalKnowledgeId,
+            documentId: 'doc-global',
+            chunkId: 'chunk-global',
+            chunkIndex: 0,
+            type: 'global_docs',
+            source: 'architecture.md',
+            content: '全局知识来自旧的 embedding space。',
+            distance: 0.03,
+          },
+        ],
+      };
+    },
+  });
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-project-merged-search-multi-space'),
+    repository,
+    searchService,
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [globalKnowledgeId],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-17T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  const response = await service.searchProjectDocuments(
+    {
+      actor: {
+        id: actorId,
+        username: 'langya',
+      },
+    },
+    projectId,
+    {
+      query: '项目知识',
+      topK: 2,
+    },
+  );
+
+  assert.equal(capturedInputs.length, 2);
+  assert.deepEqual(
+    response.items.map((item) => item.knowledgeId),
+    [projectKnowledgeId, globalKnowledgeId],
+  );
+});
+
 test('initializeSearchInfrastructure requeues pending knowledge documents on startup', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-recover-pending-'));
   const knowledgeId = '507f1f77bcf86cd799439401';

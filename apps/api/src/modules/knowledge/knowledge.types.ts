@@ -303,6 +303,12 @@ export interface SearchKnowledgeDocumentsInput {
   limit?: unknown;
 }
 
+export interface SearchProjectKnowledgeDocumentsInput {
+  query?: unknown;
+  topK?: unknown;
+  limit?: unknown;
+}
+
 export interface KnowledgeSearchHitResponse {
   knowledgeId: string;
   documentId: string;

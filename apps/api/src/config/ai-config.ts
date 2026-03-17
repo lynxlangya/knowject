@@ -17,7 +17,7 @@ import type { AppEnv } from './env.js';
 export const DEFAULT_EMBEDDING_PROVIDER: SettingsEmbeddingProvider = 'openai';
 export const DEFAULT_LLM_PROVIDER: SettingsLlmProvider = 'openai';
 export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small';
-export const DEFAULT_LLM_MODEL = 'gpt-4o';
+export const DEFAULT_LLM_MODEL = 'gpt-5.4';
 export const DEFAULT_LLM_BASE_URL = 'https://api.openai.com/v1';
 export const DEFAULT_INDEXING_CHUNK_SIZE = 1000;
 export const DEFAULT_INDEXING_CHUNK_OVERLAP = 200;

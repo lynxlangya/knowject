@@ -43,12 +43,23 @@ export interface ProjectConversationListResponse {
 
 export type ProjectConversationMessageRole = "user" | "assistant";
 
+export interface ProjectConversationSourceResponse {
+  knowledgeId: string;
+  documentId: string;
+  chunkId: string;
+  chunkIndex: number;
+  source: string;
+  snippet: string;
+  distance: number | null;
+}
+
 export interface ProjectConversationMessageResponse {
   id: string;
   conversationId: string;
   role: ProjectConversationMessageRole;
   content: string;
   createdAt: string;
+  sources?: ProjectConversationSourceResponse[];
 }
 
 export interface ProjectConversationDetailResponse
@@ -58,6 +69,14 @@ export interface ProjectConversationDetailResponse
 
 export interface ProjectConversationDetailEnvelope {
   conversation: ProjectConversationDetailResponse;
+}
+
+export interface CreateProjectConversationRequest {
+  title?: string;
+}
+
+export interface CreateProjectConversationMessageRequest {
+  content: string;
 }
 
 export interface ProjectsListResponse {
@@ -151,6 +170,18 @@ export const listProjectConversations = async (
   return unwrapApiData(response.data);
 };
 
+export const createProjectConversation = async (
+  projectId: string,
+  payload: CreateProjectConversationRequest = {},
+): Promise<ProjectConversationDetailEnvelope> => {
+  const response = await client.post<ApiEnvelope<ProjectConversationDetailEnvelope>>(
+    `/projects/${encodeURIComponent(projectId)}/conversations`,
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
 export const getProjectConversationDetail = async (
   projectId: string,
   conversationId: string,
@@ -159,6 +190,21 @@ export const getProjectConversationDetail = async (
     `/projects/${encodeURIComponent(projectId)}/conversations/${encodeURIComponent(
       conversationId,
     )}`,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const createProjectConversationMessage = async (
+  projectId: string,
+  conversationId: string,
+  payload: CreateProjectConversationMessageRequest,
+): Promise<ProjectConversationDetailEnvelope> => {
+  const response = await client.post<ApiEnvelope<ProjectConversationDetailEnvelope>>(
+    `/projects/${encodeURIComponent(projectId)}/conversations/${encodeURIComponent(
+      conversationId,
+    )}/messages`,
+    payload,
   );
 
   return unwrapApiData(response.data);

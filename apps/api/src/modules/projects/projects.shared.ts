@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { WithId } from 'mongodb';
 import { AppError } from '@lib/app-error.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
@@ -7,7 +8,10 @@ import type {
   ProjectConversationDetailResponse,
   ProjectConversationDocument,
   ProjectConversationMessageDocument,
+  ProjectConversationMessageRole,
   ProjectConversationMessageResponse,
+  ProjectConversationSourceDocument,
+  ProjectConversationSourceResponse,
   ProjectConversationSummaryResponse,
   ProjectDocument,
   ProjectMemberDocument,
@@ -148,6 +152,42 @@ export const createDefaultProjectConversation = (
   };
 };
 
+export const createProjectConversation = ({
+  title,
+  createdAt = new Date(),
+}: {
+  title: string;
+  createdAt?: Date;
+}): ProjectConversationDocument => {
+  return {
+    id: `chat-${randomUUID()}`,
+    title,
+    messages: [],
+    createdAt,
+    updatedAt: createdAt,
+  };
+};
+
+export const createProjectConversationMessage = ({
+  role,
+  content,
+  sources,
+  createdAt = new Date(),
+}: {
+  role: ProjectConversationMessageRole;
+  content: string;
+  sources?: ProjectConversationSourceDocument[];
+  createdAt?: Date;
+}): ProjectConversationMessageDocument => {
+  return {
+    id: `msg-${randomUUID()}`,
+    role,
+    content,
+    createdAt,
+    ...(sources !== undefined ? { sources } : {}),
+  };
+};
+
 export const getProjectConversations = (
   project: Pick<ProjectDocument, 'name' | 'conversations'>,
 ): ProjectConversationDocument[] => {
@@ -184,6 +224,20 @@ const getConversationPreview = (
   return latestMessage.content;
 };
 
+const toProjectConversationSourceResponse = (
+  source: ProjectConversationSourceDocument,
+): ProjectConversationSourceResponse => {
+  return {
+    knowledgeId: source.knowledgeId,
+    documentId: source.documentId,
+    chunkId: source.chunkId,
+    chunkIndex: source.chunkIndex,
+    source: source.source,
+    snippet: source.snippet,
+    distance: source.distance,
+  };
+};
+
 const toProjectConversationMessageResponse = (
   conversationId: string,
   message: ProjectConversationMessageDocument,
@@ -194,6 +248,13 @@ const toProjectConversationMessageResponse = (
     role: message.role,
     content: message.content,
     createdAt: message.createdAt.toISOString(),
+    ...(message.sources !== undefined
+      ? {
+          sources: message.sources.map((source) =>
+            toProjectConversationSourceResponse(source),
+          ),
+        }
+      : {}),
   };
 };
 

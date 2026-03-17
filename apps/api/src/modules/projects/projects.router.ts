@@ -4,7 +4,12 @@ import type { RequestHandler } from 'express';
 import { sendCreated, sendSuccess } from '@lib/api-response.js';
 import { getRequiredAuthUser } from '@lib/request-auth.js';
 import type { ProjectsService } from './projects.service.js';
-import type { CreateProjectInput, UpdateProjectInput } from './projects.types.js';
+import type {
+  CreateProjectConversationInput,
+  CreateProjectConversationMessageInput,
+  CreateProjectInput,
+  UpdateProjectInput,
+} from './projects.types.js';
 
 const getRequiredProjectId = (request: Request): string => {
   const projectId = request.params.projectId;
@@ -61,6 +66,21 @@ export const createProjectsRouter = (
     }),
   );
 
+  projectsRouter.post(
+    '/:projectId/conversations',
+    asyncHandler(async (req, res) => {
+      const result = await projectsService.createProjectConversation(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredProjectId(req),
+        req.body as CreateProjectConversationInput,
+      );
+
+      sendCreated(res, result);
+    }),
+  );
+
   projectsRouter.get(
     '/:projectId/conversations/:conversationId',
     asyncHandler(async (req, res) => {
@@ -74,6 +94,23 @@ export const createProjectsRouter = (
       );
 
       sendSuccess(res, result);
+    }),
+  );
+
+  projectsRouter.post(
+    '/:projectId/conversations/:conversationId/messages',
+    asyncHandler(async (req, res) => {
+      const conversationId = req.params.conversationId;
+      const result = await projectsService.createProjectConversationMessage(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredProjectId(req),
+        Array.isArray(conversationId) ? conversationId[0] ?? '' : conversationId ?? '',
+        req.body as CreateProjectConversationMessageInput,
+      );
+
+      sendCreated(res, result);
     }),
   );
 

@@ -1,6 +1,10 @@
 import { ObjectId, type Collection, type WithId } from 'mongodb';
 import type { MongoDatabaseManager } from '@db/mongo.js';
-import type { ProjectDocument } from './projects.types.js';
+import type {
+  ProjectConversationDocument,
+  ProjectConversationMessageDocument,
+  ProjectDocument,
+} from './projects.types.js';
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -106,6 +110,106 @@ export class ProjectsRepository {
       {
         $set: {
           members,
+          updatedAt,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return result;
+  }
+
+  async appendProjectConversation(
+    projectId: string,
+    conversation: ProjectConversationDocument,
+    updatedAt: Date,
+  ): Promise<WithId<ProjectDocument> | null> {
+    const objectId = toObjectId(projectId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getCollection();
+    const result = await collection.findOneAndUpdate(
+      { _id: objectId },
+      {
+        $push: {
+          conversations: {
+            $each: [conversation],
+            $position: 0,
+          },
+        },
+        $set: {
+          updatedAt,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return result;
+  }
+
+  async materializeDefaultProjectConversation(
+    projectId: string,
+    conversation: ProjectConversationDocument,
+    updatedAt: Date,
+  ): Promise<WithId<ProjectDocument> | null> {
+    const objectId = toObjectId(projectId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getCollection();
+    const result = await collection.findOneAndUpdate(
+      {
+        _id: objectId,
+        'conversations.0': {
+          $exists: false,
+        },
+      },
+      {
+        $push: {
+          conversations: conversation,
+        },
+        $set: {
+          updatedAt,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return result;
+  }
+
+  async appendProjectConversationMessage(
+    projectId: string,
+    conversationId: string,
+    message: ProjectConversationMessageDocument,
+    updatedAt: Date,
+  ): Promise<WithId<ProjectDocument> | null> {
+    const objectId = toObjectId(projectId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getCollection();
+    const result = await collection.findOneAndUpdate(
+      {
+        _id: objectId,
+        'conversations.id': conversationId,
+      },
+      {
+        $push: {
+          'conversations.$.messages': message,
+        },
+        $set: {
+          'conversations.$.updatedAt': updatedAt,
           updatedAt,
         },
       },

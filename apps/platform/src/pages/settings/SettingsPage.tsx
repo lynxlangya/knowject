@@ -126,7 +126,7 @@ const LLM_PROVIDER_PRESETS: Record<
   openai: {
     label: 'OpenAI',
     baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o',
+    model: 'gpt-5.4',
   },
   aliyun: {
     label: '阿里云百炼',
@@ -1248,7 +1248,7 @@ export const SettingsPage = () => {
                         type="warning"
                         showIcon
                         title="对话链路仍在开发中"
-                        description="本期保存的 LLM 配置主要用于后续能力接入与在线连通性校验，尚不会驱动现有聊天页运行时。"
+                        description="当前保存的 LLM 配置已经会驱动后端项目对话生成；但项目聊天页前端发送交互仍在接线中，现阶段主要用于运行时配置与在线连通性校验。"
                       />
 
                       {settings.llm.source === 'environment' && !llmServiceTargetChanged ? (
@@ -1322,7 +1322,7 @@ export const SettingsPage = () => {
                           <SettingField label="模型名称">
                             <Input
                               value={llmDraft.model}
-                              placeholder="gpt-4o"
+                              placeholder="gpt-5.4"
                               onChange={(event) =>
                                 {
                                   resetConnectionFeedback('llm');

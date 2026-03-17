@@ -25,7 +25,10 @@ import { createMembershipsRouter } from '@modules/memberships/memberships.router
 import { createMembershipsService } from '@modules/memberships/memberships.service.js';
 import { createProjectsRepository } from '@modules/projects/projects.repository.js';
 import { createProjectsRouter } from '@modules/projects/projects.router.js';
-import { createProjectsService } from '@modules/projects/projects.service.js';
+import {
+  createProjectConversationRuntime,
+  createProjectsService,
+} from '@modules/projects/projects.service.js';
 import { createSettingsRepository } from '@modules/settings/settings.repository.js';
 import { createSettingsRouter } from '@modules/settings/settings.router.js';
 import { createSettingsService } from '@modules/settings/settings.service.js';
@@ -80,6 +83,14 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         }
       },
     },
+    conversationRuntime: createProjectConversationRuntime({
+      env,
+      settingsRepository,
+      knowledgeSearch: {
+        searchProjectDocuments: (context, projectId, input) =>
+          knowledgeService.searchProjectDocuments(context, projectId, input),
+      },
+    }),
   });
   const agentsRepository = createAgentsRepository({ mongo });
   const skillsService = createSkillsService({
@@ -157,6 +168,8 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/auth/users',
         '/api/members',
         '/api/projects',
+        '/api/projects/:projectId/conversations',
+        '/api/projects/:projectId/conversations/:conversationId/messages',
         '/api/projects/:projectId/members',
         '/api/projects/:projectId/knowledge',
         '/api/projects/:projectId/knowledge/:knowledgeId',

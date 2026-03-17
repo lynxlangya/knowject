@@ -21,6 +21,17 @@ export interface ProjectConversationMessageDocument {
   role: ProjectConversationMessageRole;
   content: string;
   createdAt: Date;
+  sources?: ProjectConversationSourceDocument[];
+}
+
+export interface ProjectConversationSourceDocument {
+  knowledgeId: string;
+  documentId: string;
+  chunkId: string;
+  chunkIndex: number;
+  source: string;
+  snippet: string;
+  distance: number | null;
 }
 
 export interface ProjectConversationDocument {
@@ -51,6 +62,14 @@ export interface CreateProjectInput {
   knowledgeBaseIds?: unknown;
   agentIds?: unknown;
   skillIds?: unknown;
+}
+
+export interface CreateProjectConversationInput {
+  title?: unknown;
+}
+
+export interface CreateProjectConversationMessageInput {
+  content?: unknown;
 }
 
 export interface UpdateProjectInput {
@@ -107,6 +126,17 @@ export interface ProjectConversationMessageResponse {
   role: ProjectConversationMessageRole;
   content: string;
   createdAt: string;
+  sources?: ProjectConversationSourceResponse[];
+}
+
+export interface ProjectConversationSourceResponse {
+  knowledgeId: string;
+  documentId: string;
+  chunkId: string;
+  chunkIndex: number;
+  source: string;
+  snippet: string;
+  distance: number | null;
 }
 
 export interface ProjectConversationDetailResponse
