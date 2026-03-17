@@ -35,7 +35,8 @@ packages/
   ui/         共享 UI 包（@knowject/ui）
 docker/       Compose、镜像构建、反向代理与初始化脚本
 scripts/      统一命令入口
-.agent/docs/  架构事实、契约、计划、交接与设计文档
+.codex/       Codex 工作区（配置、文档、上传包、技能）
+.agent/       历史兼容说明目录（已废弃）
 ```
 
 ## 产品信息架构
@@ -123,15 +124,20 @@ pnpm knowject:help
 
 ## 文档入口
 
+当前仓库只维护 `.codex/` 这一套 Codex 工作区入口；`.agent/` 仅保留历史兼容说明，不再承担主维护职责。
+
 - [项目规则](./AGENTS.md)
-- [文档索引](./.agent/docs/README.md)
-- [架构事实](./.agent/docs/current/architecture.md)
-- [Docker 使用现状](./.agent/docs/current/docker-usage.md)
-- [Docker 操作清单](./.agent/docs/current/docker-operation-checklist.md)
-- [认证与环境契约](./.agent/docs/contracts/auth-contract.md)
-- [Chroma 决策说明](./.agent/docs/contracts/chroma-decision.md)
-- [快速接手指南](./.agent/docs/handoff/handoff-guide.md)
-- [ChatGPT / 外部模型项目说明](./.agent/docs/handoff/chatgpt-project-brief.md)
+- [Codex 工作区说明](./.codex/README.md)
+- [迁移说明](./.codex/MIGRATION.md)
+- [文档索引](./.codex/docs/README.md)
+- [架构事实](./.codex/docs/current/architecture.md)
+- [Docker 使用现状](./.codex/docs/current/docker-usage.md)
+- [Docker 操作清单](./.codex/docs/current/docker-operation-checklist.md)
+- [认证与环境契约](./.codex/docs/contracts/auth-contract.md)
+- [Chroma 决策说明](./.codex/docs/contracts/chroma-decision.md)
+- [快速接手指南](./.codex/docs/handoff/handoff-guide.md)
+- [ChatGPT / 外部模型项目说明](./.codex/docs/handoff/chatgpt-project-brief.md)
+- [ChatGPT Projects 上传包说明](./.codex/packs/chatgpt-projects/README.md)
 - [前端说明](./apps/platform/README.md)
 - [API 说明](./apps/api/README.md)
 - [Docker 说明](./docker/README.md)

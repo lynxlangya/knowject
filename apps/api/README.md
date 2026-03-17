@@ -232,9 +232,9 @@
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。
 - 当前 Chroma 已进入正式知识索引链路：`global_docs` 的写侧索引由 `indexer-py` 负责，Node 保留统一检索 service 的读侧 query 例外；collection 逻辑已从“固定 collection 名”升级为“namespace key + versioned collection + active pointer”模式，用于处理 embedding model 切换后的维度不兼容问题。向量删除与旧 collection 清理当前仍走 Node 侧过渡实现，后续再完全收口到 Python 内部控制面。`global_code` 只完成命名空间预留。
-- Week 3-4 的推荐演进路径是：`apps/api` 继续负责业务主链路与对外 API，Python 独立索引运行时负责解析、分块、向量写入、重建与诊断，具体边界以 [`.agent/docs/contracts/chroma-decision.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/chroma-decision.md) 为准。
+- Week 3-4 的推荐演进路径是：`apps/api` 继续负责业务主链路与对外 API，Python 独立索引运行时负责解析、分块、向量写入、重建与诊断，具体边界以 [`.codex/docs/contracts/chroma-decision.md`](/Users/langya/Documents/CodeHub/ai/knowject/.codex/docs/contracts/chroma-decision.md) 为准。
 - Docker 公共基线中的 `app / data` 网络默认保持 `internal`；本地若要从宿主机直接访问 API，则通过 `compose.local.yml` 额外挂载 `publish` 网络完成端口发布。
-- Docker 当前使用方式与部署边界见 [`.agent/docs/current/docker-usage.md`](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/current/docker-usage.md)。
+- Docker 当前使用方式与部署边界见 [`.codex/docs/current/docker-usage.md`](/Users/langya/Documents/CodeHub/ai/knowject/.codex/docs/current/docker-usage.md)。
 - Docker 操作手册见 [`docker/README.md`](/Users/langya/Documents/CodeHub/ai/knowject/docker/README.md)。
 
 ## 当前环境约定
@@ -282,7 +282,7 @@
   - `OPENAI_TIMEOUT_MS`
 - `SETTINGS_ENCRYPTION_KEY` 必须是 64 位十六进制字符串，推荐用 `openssl rand -hex 32` 生成；服务端仅通过它加密 / 解密数据库中的 AI API Key，不会把明文 Key 回显到响应、日志和错误对象。
 - 当前 embedding provider、本地文件存储、Node / Python 触发、Chroma namespace 与统一检索环境契约已经进入代码基线；生产环境仍需要真实 OpenAI 凭证才能完成正式向量化。
-- 认证和环境的详细实施合同见 [.agent/docs/contracts/auth-contract.md](/Users/langya/Documents/CodeHub/ai/knowject/.agent/docs/contracts/auth-contract.md)。
+- 认证和环境的详细实施合同见 [.codex/docs/contracts/auth-contract.md](/Users/langya/Documents/CodeHub/ai/knowject/.codex/docs/contracts/auth-contract.md)。
 
 ## 关键文件
 

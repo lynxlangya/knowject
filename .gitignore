@@ -20,6 +20,7 @@ __pycache__/
 *.pyo
 .venv/
 .pytest_cache/
+.codex/
 
 # Testing
 coverage

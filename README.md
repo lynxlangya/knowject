@@ -39,7 +39,8 @@ packages/
   ui/         Shared UI package (@knowject/ui)
 docker/       Compose files, image builds, reverse proxy, init scripts
 scripts/      Reusable command entrypoints
-.agent/docs/  Architecture facts, contracts, plans, handoff, design docs
+.codex/       Codex workspace (config, docs, packs, skills)
+.agent/       Legacy compatibility notes only (deprecated)
 ```
 
 ## Product Surface
@@ -129,15 +130,20 @@ pnpm knowject:help
 
 ## Documentation
 
+`.codex/` is now the only maintained Codex workspace root for this repository. `.agent/` remains only as a legacy compatibility layer.
+
 - [Project Rules](./AGENTS.md)
-- [Documentation Index](./.agent/docs/README.md)
-- [Current Architecture Facts](./.agent/docs/current/architecture.md)
-- [Docker Usage](./.agent/docs/current/docker-usage.md)
-- [Docker Operation Checklist](./.agent/docs/current/docker-operation-checklist.md)
-- [Auth and Environment Contract](./.agent/docs/contracts/auth-contract.md)
-- [Chroma Decision Record](./.agent/docs/contracts/chroma-decision.md)
-- [Handoff Guide](./.agent/docs/handoff/handoff-guide.md)
-- [ChatGPT / External Model Brief](./.agent/docs/handoff/chatgpt-project-brief.md)
+- [Codex Workspace](./.codex/README.md)
+- [Migration Guide](./.codex/MIGRATION.md)
+- [Documentation Index](./.codex/docs/README.md)
+- [Current Architecture Facts](./.codex/docs/current/architecture.md)
+- [Docker Usage](./.codex/docs/current/docker-usage.md)
+- [Docker Operation Checklist](./.codex/docs/current/docker-operation-checklist.md)
+- [Auth and Environment Contract](./.codex/docs/contracts/auth-contract.md)
+- [Chroma Decision Record](./.codex/docs/contracts/chroma-decision.md)
+- [Handoff Guide](./.codex/docs/handoff/handoff-guide.md)
+- [ChatGPT / External Model Brief](./.codex/docs/handoff/chatgpt-project-brief.md)
+- [ChatGPT Projects Pack](./.codex/packs/chatgpt-projects/README.md)
 - [Platform README](./apps/platform/README.md)
 - [API README](./apps/api/README.md)
 - [Docker README](./docker/README.md)

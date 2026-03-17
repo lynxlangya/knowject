@@ -6,7 +6,14 @@
 - 本文件仅定义 Knowject 项目的覆盖规则与项目上下文补充。
 - 全局规则与本文件不冲突时，按全局规则执行。
 
-## 1. 当前项目架构（2026-03-15）
+## 0.1 Codex 单主源约定
+
+- `.codex/` 是 Knowject 未来唯一的 Codex 协作主目录；`AGENTS.md` 仍是项目级长期指令入口。
+- 项目级 Codex 配置放在 `.codex/config.toml`；正式文档主源在 `.codex/docs/`；上传派生包在 `.codex/packs/`；项目级 Skills 在 `.codex/skills/`。
+- `.agent/` 已废弃，仅保留历史说明与兼容提示；禁止继续在 `.agent/*` 新增主内容、主文档或主配置。
+- 任何结构调整都必须保持单一真相源，避免 `.agent/*` 与 `.codex/*` 并列承担正式维护职责。
+
+## 1. 当前项目架构（2026-03-17）
 
 ```text
 apps/
@@ -24,7 +31,10 @@ docker/
   caddy/     线上 HTTPS 入口
 scripts/     常用命令统一入口
 files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设计文档）
-.agent/
+.codex/
+  config.toml       项目级 Codex 配置
+  README.md         Codex 入口与维护说明
+  MIGRATION.md      `.agent/` -> `.codex/` 迁移规则与映射
   docs/
     current/        当前事实与架构文档
     contracts/      实施契约
@@ -33,8 +43,10 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
     handoff/        接手与交接文档
     inputs/         输入材料与认知原稿
     design/         品牌与视觉设计资料
-  gpt/              ChatGPT Projects 上传副本（派生包，不是事实源）
-    templates/      模板与计划骨架
+  packs/
+    chatgpt-projects/ ChatGPT Projects 上传副本（派生包，不是事实源）
+  skills/           项目级 Skill 根目录（当前无项目私有 Skill）
+.agent/             已废弃的历史目录，仅保留迁移说明与兼容提示
 ```
 
 ## 2. 模块职责边界
@@ -47,8 +59,10 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 - `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、`api / indexer-py / platform` 镜像构建、Mongo 初始化与 HTTPS 入口。
 - `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
 - `files`：承载按知识库分类的 Markdown 文档库，当前覆盖全局文档、产品规范、用户研究、市场竞品、项目决策、技术协作、发布运营与独立架构设计八类文档。
-- `.agent/docs`：项目文档统一根目录；`.agent/docs/current/architecture.md` 是项目结构与路由事实的主文档。
-- `.agent/gpt`：给 ChatGPT Projects 使用的上传副本目录；内容来自 `.agent/docs` 与项目规则的派生同步，不作为新的事实源。
+- `.codex/docs`：项目文档统一根目录；`.codex/docs/current/architecture.md` 是项目结构与路由事实的主文档。
+- `.codex/packs/chatgpt-projects`：给 ChatGPT Projects 使用的上传副本目录；内容来自 `.codex/docs` 与项目规则的派生同步，不作为新的事实源。
+- `.codex/skills`：项目级 Skill 唯一主目录；当前仓库暂无需要迁移的项目私有 Skill，后续如新增统一放在 `.codex/skills/<skill>/SKILL.md`。
+- `.agent/`：历史兼容层，仅保留废弃说明，不再作为事实源、技能源或上传包主目录。
 
 ## 3. 当前产品信息架构（2026-03-10）
 
@@ -86,11 +100,12 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 - 涉及品牌文本必须使用：`知项 · Knowject` 与 `让项目知识，真正为团队所用。`
 - Tailwind 类名必须使用 canonical 写法：`!` 重要标记使用后缀形式（如 `mb-1!`），禁止前缀形式（如 `!mb-1`）。
 - 涉及以下变化时，必须同步检查并更新文档：
-  - 路由、重定向、页面命名变化：同步 `README.md`、`.agent/docs/current/architecture.md`、相关子模块 README。
-  - Mock 数据源、示例路径、存储键变化：同步 `.agent/docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
-  - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`.agent/docs/current/docker-usage.md`、`.agent/docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
-  - 仓库级命令包装或脚本入口变化：同步 `README.md`、`docker/README.md`、`.agent/docs/current/architecture.md`、必要时同步本文件。
-  - 模块边界、目录结构、协作规则变化：同步本文件与 `.agent/docs/current/architecture.md`。
+  - 路由、重定向、页面命名变化：同步 `README.md`、`.codex/docs/current/architecture.md`、相关子模块 README。
+  - Mock 数据源、示例路径、存储键变化：同步 `.codex/docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
+  - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`.codex/docs/current/docker-usage.md`、`.codex/docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
+  - 仓库级命令包装或脚本入口变化：同步 `README.md`、`docker/README.md`、`.codex/docs/current/architecture.md`、必要时同步本文件。
+  - Codex 主目录职责、上传包映射或 Skill 根目录变化：同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`，必要时同步 `.codex/packs/chatgpt-projects/README.md` 与 `.codex/skills/README.md`。
+  - 模块边界、目录结构、协作规则变化：同步本文件、`.codex/README.md`、`.codex/MIGRATION.md` 与 `.codex/docs/current/architecture.md`。
 
 ## 6. 页面与组件分层约定
 
@@ -104,12 +119,15 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 ## 7. 文档与协作入口
 
 - `README.md`：面向仓库协作者的总入口，说明当前定位、启动方式、信息架构与文档索引。
+- `.codex/README.md`：Knowject 当前唯一 Codex 工作区入口，说明配置、主文档、派生包与 Skill 根目录职责。
+- `.codex/MIGRATION.md`：`.agent/` 向 `.codex/` 收口迁移的规则、映射关系与后续维护方式。
 - `files/README.md`：知识库模板总导航，说明各知识库的用途、推荐使用顺序与通用元数据规则。
-- `.agent/docs/current/architecture.md`：项目结构、路由矩阵、数据来源、兼容策略的事实源。
-- `.agent/gpt/README.md`：ChatGPT Projects 上传包说明与推荐上传顺序。
-- `.agent/docs/design/*`：品牌与视觉设计资料。
+- `.codex/docs/current/architecture.md`：项目结构、路由矩阵、数据来源、兼容策略的事实源。
+- `.codex/packs/chatgpt-projects/README.md`：ChatGPT Projects 上传包说明与推荐上传顺序。
+- `.codex/skills/README.md`：项目级 Skill 根目录说明；后续项目私有 Skill 统一从这里扩展。
+- `.codex/docs/design/*`：品牌与视觉设计资料。
 - `apps/platform/README.md`、`apps/api/README.md`：分别说明前端与 API 子系统的当前职责与边界。
-- `.agent/docs/templates/PLANS.md`：复杂功能、迁移或高风险任务的执行计划模板。
+- `.codex/docs/templates/PLANS.md`：复杂功能、迁移或高风险任务的执行计划模板。
 
 ## 8. 提交信息协作约定
 

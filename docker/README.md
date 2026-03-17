@@ -74,7 +74,7 @@ docker/
   - `pnpm dev:deps:up`
   - `pnpm dev:deps:health`
   - `pnpm dev:deps:down`
-- 具体操作清单见 `../.agent/docs/current/docker-operation-checklist.md`
+- 具体操作清单见 `../.codex/docs/current/docker-operation-checklist.md`
 
 ### 3.1 准备环境文件
 
