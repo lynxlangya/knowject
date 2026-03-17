@@ -45,7 +45,7 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
     design/         品牌与视觉设计资料
   packs/
     chatgpt-projects/ ChatGPT Projects 上传副本（派生包，不是事实源）
-  skills/           项目级 Skill 根目录（当前无项目私有 Skill）
+  skills/           项目级 Skill 根目录（当前已落地 3 个项目私有审查 Skill）
 .agent/             已废弃的历史目录，仅保留迁移说明与兼容提示
 ```
 
@@ -61,7 +61,7 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 - `files`：承载按知识库分类的 Markdown 文档库，当前覆盖全局文档、产品规范、用户研究、市场竞品、项目决策、技术协作、发布运营与独立架构设计八类文档。
 - `.codex/docs`：项目文档统一根目录；`.codex/docs/current/architecture.md` 是项目结构与路由事实的主文档。
 - `.codex/packs/chatgpt-projects`：给 ChatGPT Projects 使用的上传副本目录；内容来自 `.codex/docs` 与项目规则的派生同步，不作为新的事实源。
-- `.codex/skills`：项目级 Skill 唯一主目录；当前仓库暂无需要迁移的项目私有 Skill，后续如新增统一放在 `.codex/skills/<skill>/SKILL.md`。
+- `.codex/skills`：项目级 Skill 唯一主目录；当前已落地 `docs-boundary-guard`、`knowledge-index-boundary-guard` 与 `api-contract-align-review` 三个项目私有审查 Skill，后续新增统一放在 `.codex/skills/<skill>/SKILL.md`。
 - `.agent/`：历史兼容层，仅保留废弃说明，不再作为事实源、技能源或上传包主目录。
 
 ## 3. 当前产品信息架构（2026-03-10）
