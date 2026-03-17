@@ -1,4 +1,4 @@
-# Knowject 现状与目标差距分析（2026-03-15）
+# Knowject 现状与目标差距分析（2026-03-17）
 
 本文档用于回答“当前仓库离目标蓝图还有多远、先补哪里最划算”。判断基于三类证据：当前代码设计、现有文档、关键 git 演进记录。
 
@@ -15,6 +15,7 @@
 - 与目标蓝图之间的最大断层不在 UI，而在项目对话写链路、项目级合并检索、Skill / Agent 运行时，以及更完整的索引运维与 CI 基线。
 - 当前 RAG 基线已不再停留在概念层：`/knowledge`、Node -> Python indexer、`global_docs` Chroma 写入，以及 `POST /api/knowledge/search` 已形成最小正式闭环。
 - 因此后续开发不应继续把“最小知识链路未落地”当作主要阻塞，而应直接基于已完成的 Week 5-6 基座，进入消息写链路、项目级合并检索与 Skill / Agent 运行时。
+- 当前仓库没有单独新增 `Week 7-8` 计划文档；如果要判断当前执行顺序，应直接组合使用本文、`.agent/docs/plans/tasks-index-ops-project-consumption.md` 的 Week 7-8 交接接口，以及 `.agent/docs/roadmap/target-architecture.md` 的 `5.3 Week 7-8 对话核心`。
 
 ## 2. 关键演进脉络
 
@@ -176,7 +177,7 @@
 
 1. 稳住当前信息架构，不再做大的页面和路由反复。
 2. 以当前已完成的索引运维和项目私有 knowledge 基线为前提，优先推进消息写链路。
-3. 在消息写链路稳定后，补项目 + 全局知识合并检索、来源引用与技能调用展示。
+3. 在消息写链路稳定后，补项目 + 全局知识合并检索与最小来源引用；`SSE` 与技能调用展示后置。
 4. 再推进 Skill 执行与 Agent 编排。
 5. 在运行时能力继续扩展前，把现有阶段性验证入口纳入 CI，并补 smoke、观测和回滚说明。
 
@@ -192,4 +193,4 @@
 
 - 想看当前真实状态：读 `.agent/docs/current/architecture.md`。
 - 想看最终想做成什么：读 `.agent/docs/roadmap/target-architecture.md`。
-- 想决定下一个迭代该做什么：先看本文，再落对应阶段执行计划；Week 5-6 直接读 `.agent/docs/plans/tasks-index-ops-project-consumption.md`。
+- 想决定下一个迭代该做什么：先看本文；当前若推进对话核心，再读 `.agent/docs/plans/tasks-index-ops-project-consumption.md` 的 Week 7-8 交接接口，并结合 `.agent/docs/roadmap/target-architecture.md` 的 `5.3 Week 7-8 对话核心` 判断目标边界。

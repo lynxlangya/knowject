@@ -1,7 +1,7 @@
 # Knowject 项目协作规则（ChatGPT Projects 上传版）
 
-状态：2026-03-14
-来源：基于项目 `AGENTS.md` 精简同步。  
+状态：2026-03-17
+来源：基于项目 `AGENTS.md` 与当前 handoff / roadmap 文档精简同步。  
 定位：这是给 ChatGPT Projects 用的协作规则副本，不是仓库自动生效规则。
 
 ## 1. 输出风格
@@ -56,13 +56,13 @@
 
 ## 6. 当前阶段范围约束
 
-- 当前阶段重点是“全局资产正式化”。
+- 当前迭代重点是“项目对话写链路、项目 + 全局知识合并检索与最小来源引用”。
+- 当前仓库没有单独新增 `Week 7-8` 任务文档；若需要判断优先级，优先参考 `PROJECT_BRIEF.md`、`GAP_ANALYSIS.md` 与 `WEEK5_6_TASKS.md` 的完成记录。
 - 不要提前一次做完：
-  - 项目私有知识库
-  - 完整对话链路
   - SSE
-  - Agent runtime
-  - Git 代码导入
+  - 完整 Skill / Agent runtime
+  - `global_code` 真实导入
+  - 更完整的 memory / 运行时沉淀链路
 
 ## 7. 文档同步要求
 

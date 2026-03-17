@@ -1,6 +1,6 @@
 # Knowject 索引分层决策（ChatGPT Projects 上传版）
 
-状态：2026-03-16
+状态：2026-03-17
 来源：基于 `.agent/docs/contracts/chroma-decision.md` 精简同步。  
 定位：这是当前最重要的新决策文档副本，用于解释为什么采用“Node 管业务，Python 管索引”，以及当前已经落地到什么程度。
 
@@ -10,6 +10,8 @@
 - MongoDB 继续承担业务主数据层职责。
 - `apps/api` 继续承担业务主链路。
 - `apps/indexer-py` 已经作为 Python 独立 indexer 落地，并已切到 FastAPI + `uv` 内部控制面。
+- 文档级 / 知识库级 rebuild、diagnostics 与项目私有 knowledge write-side 已落地。
+- 当前仍未落地的是项目 + 全局知识合并检索与对话 runtime 消费。
 - Knowject 不是“Node 直接全包 Chroma”。
 - Knowject 也不是“全仓切 Python”。
 - 自 2026-03-16 起，当前 runtime 契约已进一步升级为“namespace key + versioned collection + active pointer”；历史里提到的 OpenAI 固定基线，主要是 Week 3-4 的阶段冻结，不再等同于当前设置中心接管后的运行时配置来源。
@@ -96,8 +98,8 @@
 
 ### 3. Embedding 基线
 
-- provider：OpenAI
-- model：`text-embedding-3-small`
+- 当前运行时配置已不是单一固定 provider / model。
+- 规则是：数据库优先，环境变量回退；namespace 的搜索与重建应读取 active pointer / active embedding config，而不是直接猜“最新 settings”。
 - 仅在 `development` 且未配置 `OPENAI_API_KEY` 时，允许退化为 deterministic 本地 embedding，用于保证上传 / 状态流联调。
 
 ### 4. 文件保留策略

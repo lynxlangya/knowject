@@ -1,4 +1,4 @@
-# Knowject 目标架构蓝图（2026-03-15）
+# Knowject 目标架构蓝图（2026-03-17）
 
 本文档回答“Knowject 想做成什么”，以 `.agent/docs/inputs/知项Knowject-项目认知总结-v3.md` 为主要输入，并结合当前仓库现状做状态标注。它不是当前实现事实源。
 
@@ -130,10 +130,14 @@
 
 ### 5.3 Week 7-8 对话核心
 
-- 项目对话消息写链路。
-- 项目 + 全局知识合并检索。
-- SSE 流式对话。
-- 来源引用与技能调用展示。
+- 建议按最小可执行路径推进，而不是四项并行展开。
+- MVP：
+  - 项目对话消息写链路。
+  - 项目 + 全局知识合并检索。
+  - 最小来源引用。
+- Stretch goal：
+  - SSE 流式对话。
+  - 技能调用展示。
 
 ### 5.4 Week 9-10 运行时与代码资产
 
@@ -188,3 +192,4 @@
 - 当前事实请以 `.agent/docs/current/architecture.md` 为准。
 - 本文档只描述目标方向和阶段边界。
 - 一旦某项蓝图进入实现并稳定落地，需要先更新 `.agent/docs/current/architecture.md`，再回头更新这里的状态标注。
+- 当前仓库没有单独新增 `Week 7-8` 计划文档；执行顺序暂以 `.agent/docs/roadmap/gap-analysis.md`、`.agent/docs/plans/tasks-index-ops-project-consumption.md` 的 Week 7-8 交接接口，以及 `.agent/docs/handoff/handoff-guide.md` 为准。

@@ -1,6 +1,6 @@
 # Knowject 当前差距与演进顺序（ChatGPT Projects 上传版）
 
-状态：2026-03-15
+状态：2026-03-17
 来源：基于 `.agent/docs/roadmap/gap-analysis.md` 精简同步。  
 定位：用于回答“当前离目标还有多远、下一步先补哪里最划算”。
 
@@ -13,6 +13,7 @@
   - Skill / Agent 运行时与 AI 主链路
 - Chroma 已进入 `global_docs` 正式索引链路，Week 5-6 的 rebuild / diagnostics 与项目 collection contract 也已落地。
 - 当前已经有 Python indexer、统一知识检索 service，以及项目私有 knowledge 最小闭环；下一阶段重点不再是基础设施收口，而是对话与运行时。
+- 当前仓库没有单独新增 `Week 7-8` 任务文档；判断当前迭代重点时，应直接组合 `PROJECT_BRIEF.md`、`WEEK5_6_TASKS.md` 与 `CURRENT_ARCHITECTURE.md`。
 
 ## 2. 六个核心 gap
 
@@ -69,9 +70,9 @@
   - 先判断方案是否服务于 `global_docs` 最小闭环
   - 再判断是否会提前把项目级 / 对话级复杂度卷进来
 - 如果你在帮这个项目排优先级：
-  - 优先资产正式化
-  - 再知识索引
-  - 再对话链路
+  - 优先项目对话消息写链路
+  - 再项目 + 全局知识合并检索与最小来源引用
+  - 再 SSE
   - 再 Skill / Agent runtime
 
 ## 6. 一句话总结

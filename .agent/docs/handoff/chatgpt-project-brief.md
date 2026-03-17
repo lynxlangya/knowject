@@ -10,7 +10,7 @@
   - `apps/platform`：React + Vite + Ant Design 前端
   - `apps/api`：Express + TypeScript 后端
   - `apps/indexer-py`：FastAPI + `uv` 的内部 Python 索引控制面
-- 当前阶段不是纯 Demo，也不是完整 AI 产品；更准确地说，是“前后端基础框架已接通，局部业务仍依赖 Mock”。
+- 当前阶段不是纯 Demo，也不是完整 AI 产品；更准确地说，是“前后端主链路、索引运维基线、项目私有 knowledge 最小闭环与工作区设置中心已接通，消息写链路与 AI runtime 仍待补齐”。
 
 ## 2. 当前已经落地的事实
 
@@ -75,7 +75,7 @@
 - 仍主要依赖前端本地 / Mock：
   - 项目概览页内容
   - 对话消息演示数据
-  - 项目资源消费态中 `agents` 的目录 fallback
+  - 项目成员协作快照与部分概览补充层
 - 当前关键本地状态：
   - `knowject_token`：登录 token
   - `knowject_project_pins`：项目置顶偏好
@@ -120,8 +120,22 @@
 - 项目级合并检索，以及项目知识原文的预览 / 下载能力
 - `global_code` 真实导入与项目级合并检索
 - LLM 配置对现有聊天页运行时仍未生效；当前只完成存储与在线测试能力
-- 对话消息写入、流式消息链路、来源引用渲染
+- 对话消息写入与最小来源引用
+- 流式消息链路
 - refresh token、组织级 RBAC、邀请链接、密码找回
+
+## 7.1 当前迭代重点
+
+- 当前仓库没有单独新增 `Week 7-8` 计划文档。
+- 当前如果要继续推进对话核心，默认顺序是：
+  - 项目对话消息写链路
+  - 项目 + 全局知识合并检索
+  - 最小来源引用
+  - `SSE`、Skill / Agent runtime 后置
+- 判断当前优先级时，优先看：
+  - `.agent/docs/roadmap/gap-analysis.md`
+  - `.agent/docs/plans/tasks-index-ops-project-consumption.md`
+  - `.agent/docs/handoff/handoff-guide.md`
 
 ## 8. 给 ChatGPT 的工作约束
 

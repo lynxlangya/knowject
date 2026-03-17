@@ -1,4 +1,4 @@
-# Knowject 交接 Prompt 模板（2026-03-13）
+# Knowject 交接 Prompt 模板（2026-03-17）
 
 ## 使用方式
 
@@ -24,10 +24,11 @@
    - `.agent/docs/handoff/handoff-guide.md`
    - `.agent/docs/current/architecture.md`
    - `.agent/docs/roadmap/gap-analysis.md`
-   - `.agent/docs/contracts/auth-contract.md`
-   - `.agent/docs/plans/tasks-foundation-framework.md`
+   - `.agent/docs/plans/tasks-index-ops-project-consumption.md`
+   - `.agent/docs/contracts/chroma-decision.md`
 2. 只有在需要理解目标态或阶段路线时，再读：
    - `.agent/docs/roadmap/target-architecture.md`
+   - `.agent/docs/plans/settings-page-task.md`
 3. 核对这些源码入口：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/navigation/routeRedirects.tsx`
@@ -60,7 +61,8 @@
 - `knowject_project_pins` 当前承载前端置顶偏好，`knowject_project_resource_bindings` 已退为历史资源绑定迁移缓存。
 - `knowject_projects` 已退为历史本地 Mock 缓存键，当前只在首次刷新时作为一次性迁移源读取。
 - 项目成员正式管理接口已经落地，前端成员页当前已切到正式后端 roster，全局成员页也已切到 `/api/members`。
-- `GET /api/projects/:projectId/conversations` 与 `GET /api/projects/:projectId/conversations/:conversationId` 当前只提供只读链路，消息写入尚未实现。
+- `GET /api/projects/:projectId/conversations` 与 `GET /api/projects/:projectId/conversations/:conversationId` 当前只提供只读链路；消息写入、项目 + 全局知识合并检索与最小来源引用尚未实现。
+- 当前仓库没有单独新增 `Week 7-8` 计划文档；判断当前执行顺序时，应直接结合 `gap-analysis`、`tasks-index-ops-project-consumption.md` 的 Week 7-8 交接接口，以及 `handoff-guide.md`。
 
 你的输出必须先包含：
 
@@ -76,6 +78,7 @@
 - 改路由、数据来源、localStorage 键、API 边界或文档角色时，必须同步更新 `.agent/docs/current/architecture.md` 和 `.agent/docs/README.md`，必要时更新 `README.md` 与 `.agent/docs/contracts/auth-contract.md`。
 - 不要把 `.agent/docs/roadmap/target-architecture.md` 中的目标能力表述成当前现状。
 - 在没有完成正式消息写入、项目级合并检索，以及 Skill / Agent 运行时前，不要继续把更多真实业务逻辑堆进 `project.mock.ts` 和 `project.catalog.ts`。
+- 当前如果要推进对话核心，默认顺序是：消息写链路 -> 项目 + 全局知识合并检索 -> 最小来源引用；`SSE`、Skill / Agent runtime 后置。
 ```
 
 ## 人类接手 Prompt
@@ -89,8 +92,9 @@
    - `.agent/docs/handoff/handoff-guide.md`
    - `.agent/docs/current/architecture.md`
    - `.agent/docs/roadmap/gap-analysis.md`
-   - 如果涉及基础框架阶段边界，再读 `.agent/docs/plans/tasks-foundation-framework.md`
+   - `.agent/docs/plans/tasks-index-ops-project-consumption.md`
    - 如果涉及登录或环境，再读 `.agent/docs/contracts/auth-contract.md`
+   - 如果涉及检索分层或合并检索边界，再读 `.agent/docs/contracts/chroma-decision.md`
 2. 打开以下源码确认文档没有过时：
    - `apps/platform/src/app/navigation/routes.tsx`
    - `apps/platform/src/app/layouts/components/AppSider.tsx`
@@ -112,6 +116,7 @@
    - 哪些数据仍是 mock
    - 哪些行为是兼容跳转，不是 canonical 设计
    - 需要同步更新哪些文档
+   - 当前仓库没有单独 Week 7-8 计划文档时，你将以哪几份文档组合判断优先级
 4. 最小验证至少执行：
    - `pnpm verify:global-assets-foundation`
    - `pnpm verify:index-ops-project-consumption`
@@ -123,6 +128,7 @@
 
 - 当前最稳定的是信息架构、产品壳、项目主数据、项目资源绑定、全局知识库 / 技能 / 智能体管理页、索引运维基线，以及项目私有 knowledge 最小闭环；消息写入与 AI 运行时仍未正式化。
 - 当前 auth、全局成员概览、最小项目 CRUD、项目资源绑定、项目对话只读接口、Knowledge / Skill / Agent 全局资产接口、项目私有 knowledge 接口与成员接口已经落地；剩余主要断层在消息写入、项目级合并检索、Skill / Agent 运行时与检索融合链路。
+- 当前若推进对话核心，默认不把 `SSE`、Skill / Agent runtime 与更重的 AI 框架一起打包进首轮实现。
 - 如果你的改动影响路由、主数据来源、认证契约或存储键，文档必须同步更新。
 ```
 

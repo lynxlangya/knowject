@@ -1,7 +1,7 @@
 # Knowject 项目简介（ChatGPT Projects 上传版）
 
-状态：2026-03-16
-来源：基于 `AGENTS.md`、`.agent/docs/current/architecture.md`、`.agent/docs/contracts/chroma-decision.md`、`.agent/docs/plans/tasks-index-ops-project-consumption.md`、`.agent/docs/roadmap/gap-analysis.md` 汇总。
+状态：2026-03-17
+来源：基于 `AGENTS.md`、`.agent/docs/current/architecture.md`、`.agent/docs/contracts/chroma-decision.md`、`.agent/docs/plans/tasks-index-ops-project-consumption.md`、`.agent/docs/roadmap/gap-analysis.md` 与 `.agent/docs/handoff/chatgpt-project-brief.md` 汇总。
 定位：这是给 ChatGPT Projects 建立上下文的首份文档，不是主事实源。
 
 ## 1. 项目是什么
@@ -53,9 +53,23 @@
 
 - Skill / Agent 执行闭环
 - `global_code` 真实导入与项目级合并检索
-- 项目对话消息写入与 SSE
-- 来源引用渲染
+- 项目对话消息写入与最小来源引用
+- SSE
+- 更完整的来源引用渲染与交互
 - 项目知识原文的预览 / 下载能力
+
+## 3.1 当前迭代重点
+
+- 当前仓库没有单独新增 `Week 7-8` 任务文档。
+- 当前如果要继续推进对话核心，默认顺序是：
+  - 项目对话消息写链路
+  - 项目 + 全局知识合并检索
+  - 最小来源引用
+  - `SSE`、Skill / Agent runtime 后置
+- 判断当前优先级时，优先看：
+  - `GAP_ANALYSIS.md`
+  - `WEEK5_6_TASKS.md`
+  - `CURRENT_ARCHITECTURE.md`
 
 ## 4. 当前信息架构
 
@@ -170,7 +184,7 @@
 9. Node 的统一知识检索 service 查询 Chroma 并返回标准结果。
 10. `search_documents` Skill 只能调用统一知识检索 service，不能自己直连 Chroma。
 
-## 9. Week 5-6 当前阶段结果
+## 9. Week 5-6 已完成基线
 
 ### 本阶段已完成
 
@@ -182,8 +196,9 @@
 
 ### 顺延到下一阶段
 
-- 项目对话消息写入、SSE、来源引用 UI
+- 项目对话消息写入、最小来源引用与对话主链路
 - 项目 + 全局知识合并检索
+- SSE
 - `global_code` 真实 Git 导入
 - 完整 Agent runtime
 - 项目知识原文的预览 / 下载能力

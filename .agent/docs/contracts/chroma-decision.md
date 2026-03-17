@@ -1,6 +1,6 @@
 # Knowject 的 Chroma 决策说明书（项目版）
 
-状态：部分实施（截至 2026-03-15，`global_docs` 已打通 Node -> Python FastAPI 控制面 -> OpenAI-compatible embedding -> Chroma 写入与 Node 统一检索闭环；`global_code` 仍只做 collection 预留，文档级 / 知识库级 rebuild、diagnostics 与项目级检索仍未落地；Week 5-6 的 scope / collection / 运维粒度 contract 已通过 `IC-01` 冻结）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责固定 Knowject 使用 Chroma 的角色定位、阶段边界与推荐实现约束。
+状态：部分实施（截至 2026-03-17，`global_docs` 已打通 Node -> Python FastAPI 控制面 -> OpenAI-compatible / settings-driven embedding -> Chroma 写入与 Node 统一检索闭环；文档级 / 知识库级 rebuild、diagnostics 与项目私有 knowledge write-side 已落地；`global_code` 仍只做 collection 预留，项目级合并检索与对话 runtime 消费仍未落地）；当前事实仍以 `.agent/docs/current/architecture.md` 为准，本文件负责固定 Knowject 使用 Chroma 的角色定位、阶段边界与推荐实现约束。
 
 ## 1. 文档目标
 
@@ -33,16 +33,18 @@
   - Node 侧统一知识检索 service
   - 非版本化运维探活 `GET /health`
   - 版本化内部写侧入口 `POST /internal/v1/index/documents`
+  - 文档级 / 知识库级 rebuild 与 diagnostics
+  - 项目私有 knowledge 的 `scope / projectId`、`proj_{projectId}_docs` 写侧与最小运维闭环
 - 当前已收口的职责边界：
   - Node 允许保留统一知识检索 service 的 Chroma 读侧 query 例外
   - collection init 已下沉为 `indexer-py` 写侧生命周期的一部分
 - 当前仓库尚未正式接入：
   - `global_code` 真实导入链路
-  - 项目私有知识库写入与检索
-  - 文档 / 知识库级 rebuild 与 diagnostics API
+  - 项目 + 全局知识的合并检索
+  - 项目对话 runtime 对 merged retrieval 的正式消费
 - 当前仍处于过渡态的实现：
   - 向量 delete 的正式 Python 内部接口尚未补齐，因此 Node 代码里仍保留过渡期直连 delete TODO
-- 当前阶段（Week 3-4）的核心任务是“全局资产正式化”，不是一次做完整 AI 对话系统。
+- 当前迭代重点已经从 Week 3-4 的“全局资产正式化”转向“项目对话写链路与项目级合并检索”；本文件只继续固定索引分层、namespace / collection 与检索边界，不把未来运行时能力写成已落地事实。
 
 ## 3. 核心决策摘要
 
@@ -51,7 +53,7 @@
 - `apps/api` 继续承担业务主链路；当前已与独立 Python FastAPI 索引控制面分层协作，由后者承担 parse / clean / chunk / embed / upsert / delete 等写侧索引职责。
 - 自 2026-03-13 起，Week 3-4 的 Node -> Python 触发方式冻结为“Node 调 Python 本地 HTTP 服务”；若实现初期暂时用 CLI，只能作为内部过渡细节，不能暴露为长期业务契约。
 - 自 2026-03-13 起，MongoDB 中的业务状态只允许由 Node/Express 回写；Python 不直接写业务主状态表。
-- 自 2026-03-13 起，Week 3-4 的 embedding 基线冻结为 OpenAI provider + `text-embedding-3-small`。
+- 自 `/settings` 与 effective config 落地后，embedding 运行时配置已升级为“数据库优先、环境变量回退”；具体 provider / model 不再以 Week 3-4 的固定 OpenAI 基线作为唯一来源。
 - 原始上传文件需要长期保留，直到文档被删除或被新版本替换；处理中间产物采用短期保留策略。
 - Week 3-4 只要求把 `global_docs` 跑通，`global_code` 只做集合预留与契约，不做真实代码导入。
 - 文档和代码必须分 collection，全局和项目必须分 collection，不能混存。
@@ -72,7 +74,7 @@
 
 ### Now
 
-- Chroma 当前只服务于全局知识库正式化的最短闭环。
+- Chroma 当前已服务于全局知识索引运维基线、项目私有 knowledge write-side，以及 Node 统一知识检索 service。
 
 ### Later
 
@@ -101,12 +103,12 @@
 
 下表描述的是推荐分层；其中 `apps/indexer-py` 的 FastAPI + `uv` 基线已经落地，其余能力仍按阶段渐进补齐。
 
-| 层 / 运行时 | 推荐职责 | 本阶段边界 |
-| ----------- | -------- | ---------- |
-| `apps/api` | 对外正式 API、鉴权、权限、知识库 CRUD、文档记录、上传入口、状态查询、统一知识检索 service、触发索引任务、同步索引结果状态 | 保持业务主链路，不承接复杂解析 / 分块 / 重建细节 |
+| 层 / 运行时                     | 推荐职责                                                                                                                                                         | 本阶段边界                                           |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `apps/api`                      | 对外正式 API、鉴权、权限、知识库 CRUD、文档记录、上传入口、状态查询、统一知识检索 service、触发索引任务、同步索引结果状态                                        | 保持业务主链路，不承接复杂解析 / 分块 / 重建细节     |
 | `apps/indexer-py`（已落地基线） | Python 独立索引控制面 / worker；当前已采用 FastAPI + `uv`，负责 parse / clean / chunk / embed / upsert / delete，并为 rebuild / retry / diagnostics 预留命名空间 | 本阶段已落为最小独立运行时，不要求一上来做分布式队列 |
-| MongoDB | 知识库元数据、文档记录、索引状态、失败原因、绑定关系、权限与其他业务主数据 | 主数据源，不存向量 |
-| Chroma | chunk embeddings 与检索 metadata | 衍生索引层，可重建，不承担业务主库职责 |
+| MongoDB                         | 知识库元数据、文档记录、索引状态、失败原因、绑定关系、权限与其他业务主数据                                                                                       | 主数据源，不存向量                                   |
+| Chroma                          | chunk embeddings 与检索 metadata                                                                                                                                 | 衍生索引层，可重建，不承担业务主库职责               |
 
 补充约束：
 

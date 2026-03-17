@@ -1,6 +1,6 @@
 # Knowject ChatGPT Projects 上传包
 
-状态：2026-03-16 同步。
+状态：2026-03-17 同步。
 定位：本目录是“给 ChatGPT Projects 上传用的派生文档包”，不是新的事实源。  
 事实、契约与任务的正式维护仍以仓库原文档为准：
 
@@ -28,8 +28,8 @@
 2. `PROJECT_RULES.md`
 3. `CURRENT_ARCHITECTURE.md`
 4. `INDEXING_DECISION.md`
-5. `WEEK5_6_TASKS.md`
-6. `GAP_ANALYSIS.md`
+5. `GAP_ANALYSIS.md`
+6. `WEEK5_6_TASKS.md`
 
 ### 按需补传
 
@@ -43,10 +43,10 @@
   - 任务拆解
   - 文档协作
   - 架构/实现评审
-  那么前 6 份通常够用。
+    那么前 6 份通常够用。
 - 如果你还要让它参与：
   - 登录 / JWT / env / Docker secrets 相关设计
-  再加传 `AUTH_ENV_CONTRACT.md`。
+    再加传 `AUTH_ENV_CONTRACT.md`。
 
 ## 3. 各文件用途
 
@@ -59,7 +59,7 @@
 - `INDEXING_DECISION.md`
   - Node / Python / MongoDB / Chroma 的新分层决策。
 - `WEEK5_6_TASKS.md`
-  - 当前活跃阶段的完成记录、DoD、顺延项与验证入口。
+  - 最近一个已完成阶段的基线、DoD、顺延项与 Week 7-8 交接接口。
 - `WEEK3_4_TASKS.md`
   - 上一阶段的历史任务边界与 DoD。
 - `GAP_ANALYSIS.md`
@@ -73,9 +73,11 @@
 - 当原文档发生变化时，应优先更新原文，再同步这里。
 - 若这里与原文冲突，以原文为准。
 - 本轮已同步 Week 5-6 的索引运维、项目私有 knowledge 最小闭环、`/project/:projectId/resources` 正式消费、Week 7 的 `/settings` 设置中心，以及知识索引“namespace key + versioned collection + active pointer”契约。
+- 当前仓库没有单独新增 `WEEK7_8_TASKS.md`；ChatGPT 判断当前迭代重点时，应优先组合 `PROJECT_BRIEF.md`、`GAP_ANALYSIS.md` 与 `WEEK5_6_TASKS.md` 中的完成记录和交接段落。
 
 ## 5. 一句话建议
 
 - 把 `PROJECT_BRIEF.md` 当成 ChatGPT Projects 的默认入口。
 - 把 `CURRENT_ARCHITECTURE.md` 和 `INDEXING_DECISION.md` 当成它判断“现在是什么、为什么这样做”的主依据。
-- 把 `WEEK5_6_TASKS.md` 当成它判断“当前阶段已经做完什么、下一阶段应该接什么”的主依据。
+- 把 `GAP_ANALYSIS.md` 当成它判断“当前迭代先做什么”的主依据。
+- 把 `WEEK5_6_TASKS.md` 当成它判断“最近一阶段已经做完什么、当前该接什么”的交接基线。

@@ -1,4 +1,4 @@
-# Knowject 快速接手指南（2026-03-16）
+# Knowject 快速接手指南（2026-03-17）
 
 ## 目标
 
@@ -7,19 +7,23 @@
 ## 先记住 4 个判断
 
 1. 当前事实以 `.agent/docs/current/architecture.md` 和源码为准，不以蓝图文档为准。
-2. 当前产品主线已经进入“前后端基础框架、索引运维基线、项目私有 knowledge 最小闭环与工作区设置中心都已接通，下一阶段应直接进入对话写链路与运行时能力”的阶段，而不是单纯“前端产品壳 + 演示 API”。
+2. 当前产品主线已经进入“前后端基础框架、索引运维基线、项目私有 knowledge 最小闭环与工作区设置中心都已接通，当前迭代重点是项目对话写链路与项目级合并检索”的阶段，而不是单纯“前端产品壳 + 演示 API”。
 3. 后端已经完成 auth、members、最小项目 CRUD 和成员接口，前端项目列表、项目基础信息、成员 roster 与全局成员概览也已切到数据库接口。
 4. canonical 路由已经稳定，兼容路由只做跳转，不应再回退成业务主入口。
+
+补充一条：
+
+- 当前仓库没有单独新增 `Week 7-8` 计划文档；需要判断当前执行顺序时，直接组合阅读 `.agent/docs/roadmap/gap-analysis.md`、`.agent/docs/plans/tasks-index-ops-project-consumption.md` 中的“Week 7-8 的交接接口”，以及本文的继续开发顺序。
 
 ## 10 到 15 分钟阅读顺序
 
 1. 先读 `.agent/docs/current/architecture.md`
 2. 再读 `.agent/docs/roadmap/gap-analysis.md`
-3. 涉及基础框架阶段范围与完成记录时读 `.agent/docs/plans/tasks-foundation-framework.md`
-4. 涉及 Week 5-6 收口结果与顺延项时读 `.agent/docs/plans/tasks-index-ops-project-consumption.md`
-5. 涉及登录、JWT、环境变量时读 `.agent/docs/contracts/auth-contract.md`
+3. 再读 `.agent/docs/plans/tasks-index-ops-project-consumption.md`
+4. 只有在需要判断 Week 7-10 目标边界时，再读 `.agent/docs/roadmap/target-architecture.md`，重点看 `5.3 Week 7-8 对话核心`
+5. 涉及 Chroma、namespace、metadata 与检索分层时读 `.agent/docs/contracts/chroma-decision.md`
 6. 涉及工作区设置中心、effective AI config 或 `/api/settings/*` 时读 `.agent/docs/plans/settings-page-task.md`
-7. 只有需要理解目标态时，再读 `.agent/docs/roadmap/target-architecture.md`
+7. 涉及登录、JWT、环境变量时读 `.agent/docs/contracts/auth-contract.md`
 8. 如果是要给 ChatGPT / 外部模型快速补上下文，可先喂 `.agent/docs/handoff/chatgpt-project-brief.md`
 9. 最后核对以下源码入口：
    - `apps/platform/src/app/navigation/routes.tsx`
@@ -128,11 +132,12 @@
 ## 如果你要继续开发，先按这个顺序推进
 
 1. 保持当前 canonical 路由和信息架构稳定，不再做大幅重命名。
-2. 优先补项目对话消息写路径、来源引用与真正的上下文沉淀。
-3. 在消息写路径稳定后，再推进项目 + 全局知识合并检索，以及 Skill runtime / Agent 编排入口。
-4. 最后逐步替换概览补充文案和成员协作快照这些剩余展示 Mock。
+2. 优先补项目对话消息写路径。
+3. 在消息写路径稳定后，再推进项目 + 全局知识合并检索与最小来源引用。
+4. `SSE`、Skill runtime、Agent 编排和更完整的 AI 主链路继续后置，不要和消息写侧一起打包推进。
+5. 最后再逐步替换概览补充文案和成员协作快照这些剩余展示 Mock。
 
-这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“消息写路径、合并检索与 AI 主链路仍未形成”。
+这个顺序的理由很简单：当前最大断层已经从“项目主数据没接后端”切换为“消息写路径、合并检索与最小引用仍未形成”，而不是先缺 `SSE` 或更重的 runtime 框架。
 
 ## 这一轮文档迭代做了什么
 
@@ -148,12 +153,14 @@
   - `.agent/docs/handoff/handoff-guide.md`
   - `.agent/docs/handoff/handoff-prompt.md`
 - 更新了 `.agent/docs/README.md` 和根 `README.md`，把“事实 / 接手 / 交接”入口收口到 `.agent/docs/`。
+- 本轮又补充收口了一层“当前迭代重点”说明：当前没有独立 Week 7-8 计划文档，继续开发时应直接按 gap-analysis、Week 5-6 交接接口与 handoff 文档组合判断顺序。
 
 ## 接手后最容易犯的错
 
 - 把 `.agent/docs/roadmap/target-architecture.md` 当成当前实现说明。
 - 把 `knowject_project_resource_bindings` 当成仍在运行时驱动项目资源页的主状态，而忽略它已经退为迁移缓存。
 - 看到 `/api/projects/:projectId/conversations*` 已落地，就误判“消息写入、来源引用和对话检索也已经完成”。
+- 以为仓库里已经有一份单独的 Week 7-8 执行计划文档，结果错过了真正的当前入口。
 - 把 `/project/:projectId/resources?focus=*` 当成新的 canonical 设计，而不是兼容跳转。
 - 在剩余的 `project.mock.ts` 和 `project.catalog.ts` 补充层上继续堆更多真实业务逻辑。
 
