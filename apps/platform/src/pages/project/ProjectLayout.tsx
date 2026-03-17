@@ -46,6 +46,7 @@ export const ProjectLayout = () => {
   >([]);
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const [conversationsError, setConversationsError] = useState<string | null>(null);
+  const conversationsProjectIdRef = useRef<string | null>(null);
   const [knowledgeCatalog, setKnowledgeCatalog] = useState<
     KnowledgeSummaryResponse[]
   >([]);
@@ -69,9 +70,62 @@ export const ProjectLayout = () => {
   const [skillsCatalogError, setSkillsCatalogError] = useState<string | null>(null);
   const activeProject = projectId ? getProjectById(projectId) : null;
   const activeProjectId = activeProject?.id ?? null;
+  const latestActiveProjectIdRef = useRef<string | null>(activeProjectId);
+  latestActiveProjectIdRef.current = activeProjectId;
+  const scopedConversations = activeProjectId
+    ? conversations.filter((conversation) => conversation.projectId === activeProjectId)
+    : [];
   const shouldPollProjectKnowledge = hasProjectKnowledgeInFlight(
     projectKnowledgeCatalog,
   );
+  const refreshConversations = async () => {
+    const requestProjectId = activeProject?.id ?? null;
+
+    if (!requestProjectId) {
+      setConversations([]);
+      setConversationsError(null);
+      setConversationsLoading(false);
+      conversationsProjectIdRef.current = null;
+      return;
+    }
+
+    if (latestActiveProjectIdRef.current !== requestProjectId) {
+      return;
+    }
+
+    setConversationsLoading(true);
+
+    try {
+      const result = await listProjectConversations(requestProjectId);
+
+      if (latestActiveProjectIdRef.current !== requestProjectId) {
+        return;
+      }
+
+      setConversations(result.items);
+      conversationsProjectIdRef.current = requestProjectId;
+      setConversationsError(null);
+    } catch (currentError) {
+      if (latestActiveProjectIdRef.current !== requestProjectId) {
+        return;
+      }
+
+      console.error('[ProjectLayout] 加载项目对话失败:', currentError);
+      if (conversationsProjectIdRef.current !== requestProjectId) {
+        setConversations([]);
+      }
+      setConversationsError(
+        extractApiErrorMessage(
+          currentError,
+          '加载项目对话失败，请稍后重试。',
+        ),
+      );
+    } finally {
+      if (latestActiveProjectIdRef.current === requestProjectId) {
+        setConversationsLoading(false);
+      }
+    }
+  };
   const refreshProjectKnowledge = () => {
     if (activeProjectId) {
       projectKnowledgePollingAttemptsRef.current[activeProjectId] = 0;
@@ -82,19 +136,77 @@ export const ProjectLayout = () => {
 
   useEffect(() => {
     if (!activeProject) {
+      setConversations([]);
+      setConversationsError(null);
+      setConversationsLoading(false);
+      conversationsProjectIdRef.current = null;
+      return;
+    }
+
+    const projectChanged = conversationsProjectIdRef.current !== activeProject.id;
+
+    if (projectChanged) {
+      setConversations([]);
+      setConversationsError(null);
+    }
+
+    let isMounted = true;
+
+    const loadConversations = async () => {
+      setConversationsLoading(true);
+
+      try {
+        const result = await listProjectConversations(activeProject.id);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setConversations(result.items);
+        conversationsProjectIdRef.current = activeProject.id;
+        setConversationsError(null);
+      } catch (currentError) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error('[ProjectLayout] 加载项目对话失败:', currentError);
+        if (conversationsProjectIdRef.current !== activeProject.id) {
+          setConversations([]);
+        }
+        setConversationsError(
+          extractApiErrorMessage(
+            currentError,
+            '加载项目对话失败，请稍后重试。',
+          ),
+        );
+      } finally {
+        if (isMounted) {
+          setConversationsLoading(false);
+        }
+      }
+    };
+
+    void loadConversations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject) {
       return;
     }
 
     let isMounted = true;
 
-    const loadProjectPageData = async () => {
-      setConversationsLoading(true);
+    const loadProjectCatalogs = async () => {
       setKnowledgeCatalogLoading(true);
       setAgentsCatalogLoading(true);
       setSkillsCatalogLoading(true);
 
-      const [conversationsResult, knowledgeResult, agentsResult, skillsResult] = await Promise.allSettled([
-        listProjectConversations(activeProject.id),
+      const [knowledgeResult, agentsResult, skillsResult] = await Promise.allSettled([
         listKnowledge(),
         listAgents(),
         listSkills(),
@@ -102,23 +214,6 @@ export const ProjectLayout = () => {
 
       if (!isMounted) {
         return;
-      }
-
-      if (conversationsResult.status === 'fulfilled') {
-        setConversations(conversationsResult.value.items);
-        setConversationsError(null);
-      } else {
-        console.error(
-          '[ProjectLayout] 加载项目对话失败:',
-          conversationsResult.reason,
-        );
-        setConversations([]);
-        setConversationsError(
-          extractApiErrorMessage(
-            conversationsResult.reason,
-            '加载项目对话失败，请稍后重试。',
-          ),
-        );
       }
 
       if (knowledgeResult.status === 'fulfilled') {
@@ -172,13 +267,12 @@ export const ProjectLayout = () => {
         );
       }
 
-      setConversationsLoading(false);
       setKnowledgeCatalogLoading(false);
       setAgentsCatalogLoading(false);
       setSkillsCatalogLoading(false);
     };
 
-    void loadProjectPageData();
+    void loadProjectCatalogs();
 
     return () => {
       isMounted = false;
@@ -337,7 +431,7 @@ export const ProjectLayout = () => {
   const isOverviewSection = activeSection === 'overview';
   const workspaceSnapshot = getProjectWorkspaceSnapshot(
     activeProject,
-    conversations.length,
+    scopedConversations.length,
     {
       projectKnowledgeCount: projectKnowledgeCatalog.length,
     },
@@ -366,9 +460,10 @@ export const ProjectLayout = () => {
           context={{
             activeProject,
             ...workspaceSnapshot,
-            conversations,
+            conversations: scopedConversations,
             conversationsLoading,
             conversationsError,
+            refreshConversations,
             knowledgeCatalog,
             knowledgeCatalogLoading,
             knowledgeCatalogError,

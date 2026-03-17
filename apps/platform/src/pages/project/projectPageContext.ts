@@ -13,6 +13,7 @@ export interface ProjectPageContextValue extends ProjectWorkspaceSnapshot {
   conversations: ConversationSummary[];
   conversationsLoading: boolean;
   conversationsError: string | null;
+  refreshConversations: () => Promise<void>;
   knowledgeCatalog: KnowledgeSummaryResponse[];
   knowledgeCatalogLoading: boolean;
   knowledgeCatalogError: string | null;
