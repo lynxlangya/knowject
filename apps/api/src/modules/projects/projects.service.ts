@@ -115,9 +115,14 @@ const NOOP_PROJECT_KNOWLEDGE_USAGE: ProjectKnowledgeUsage = {
 const DEFAULT_PROJECT_CONVERSATION_TITLE = '新对话';
 const PROJECT_CONVERSATION_RETRIEVAL_TOP_K = 5;
 const PROJECT_CONVERSATION_HISTORY_LIMIT = 6;
-const OPENAI_COMPATIBLE_PROJECT_LLM_PROVIDERS = new Set<SettingsLlmProvider>([
+const CHAT_COMPLETIONS_COMPATIBLE_PROJECT_LLM_PROVIDERS = new Set<SettingsLlmProvider>([
   'openai',
+  'anthropic',
+  'gemini',
   'aliyun',
+  'deepseek',
+  'moonshot',
+  'zhipu',
   'custom',
 ]);
 
@@ -158,6 +163,19 @@ const normalizeOpenAiCompatibleErrorMessage = (
     typeof body.error.message === 'string'
   ) {
     return body.error.message;
+  }
+
+  if (
+    body &&
+    typeof body === 'object' &&
+    'message' in body &&
+    typeof body.message === 'string'
+  ) {
+    return body.message;
+  }
+
+  if (typeof body === 'string' && body.trim()) {
+    return body;
   }
 
   return fallback;
@@ -336,7 +354,7 @@ const requestProjectConversationCompletion = async ({
     content: string;
   }>;
 }): Promise<string> => {
-  if (!OPENAI_COMPATIBLE_PROJECT_LLM_PROVIDERS.has(llmConfig.provider)) {
+  if (!CHAT_COMPLETIONS_COMPATIBLE_PROJECT_LLM_PROVIDERS.has(llmConfig.provider)) {
     throw createProjectConversationLlmProviderUnsupportedError();
   }
 

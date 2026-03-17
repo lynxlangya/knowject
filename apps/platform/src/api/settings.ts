@@ -3,8 +3,25 @@ import { client } from './client';
 
 export type SettingsSource = 'database' | 'environment';
 export type SettingsTestStatus = 'ok' | 'failed';
-export type SettingsEmbeddingProvider = 'openai' | 'aliyun' | 'zhipu' | 'voyage' | 'custom';
-export type SettingsLlmProvider = 'openai' | 'aliyun' | 'anthropic' | 'custom';
+export const SETTINGS_EMBEDDING_PROVIDERS = [
+  'openai',
+  'aliyun',
+  'zhipu',
+  'voyage',
+  'custom',
+] as const;
+export const SETTINGS_LLM_PROVIDERS = [
+  'openai',
+  'anthropic',
+  'gemini',
+  'aliyun',
+  'deepseek',
+  'moonshot',
+  'zhipu',
+  'custom',
+] as const;
+export type SettingsEmbeddingProvider = (typeof SETTINGS_EMBEDDING_PROVIDERS)[number];
+export type SettingsLlmProvider = (typeof SETTINGS_LLM_PROVIDERS)[number];
 export type SettingsSupportedType = 'md' | 'txt';
 
 export interface SettingsAiConfigResponse<TProvider extends string> {

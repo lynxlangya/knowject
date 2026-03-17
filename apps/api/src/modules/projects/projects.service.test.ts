@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AppEnv } from '@config/env.js';
+import { encryptApiKey } from '@lib/crypto.js';
 import { ObjectId } from 'mongodb';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { SettingsRepository } from '@modules/settings/settings.repository.js';
@@ -12,6 +13,51 @@ import type {
   ProjectConversationSourceDocument,
   ProjectDocument,
 } from './projects.types.js';
+
+const TEST_ENCRYPTION_KEY =
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const SUPPORTED_LLM_PROVIDER_CASES = [
+  {
+    provider: 'openai' as const,
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-5.4',
+  },
+  {
+    provider: 'anthropic' as const,
+    baseUrl: 'https://api.anthropic.com/v1',
+    model: 'claude-sonnet-4-6',
+  },
+  {
+    provider: 'gemini' as const,
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    model: 'gemini-2.5-flash',
+  },
+  {
+    provider: 'aliyun' as const,
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-max',
+  },
+  {
+    provider: 'deepseek' as const,
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-chat',
+  },
+  {
+    provider: 'moonshot' as const,
+    baseUrl: 'https://api.moonshot.cn/v1',
+    model: 'kimi-k2-turbo-preview',
+  },
+  {
+    provider: 'zhipu' as const,
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+    model: 'glm-5',
+  },
+  {
+    provider: 'custom' as const,
+    baseUrl: 'https://llm.example.com/v1',
+    model: 'custom-chat-model',
+  },
+] as const;
 
 const createAuthRepositoryStub = (): AuthRepository => {
   return {
@@ -59,10 +105,51 @@ const createConversationRuntimeStub = (implementation?: () => Promise<{
   };
 };
 
-const createSettingsRepositoryStub = (): SettingsRepository => {
+const createSettingsRepositoryStub = (options?: {
+  llm?: {
+    provider: (typeof SUPPORTED_LLM_PROVIDER_CASES)[number]['provider'];
+    baseUrl: string;
+    model: string;
+    apiKey: string;
+  };
+}): SettingsRepository => {
   return {
-    getSettings: async () => null,
+    getSettings: async () => {
+      if (!options?.llm) {
+        return null;
+      }
+
+      return {
+        singleton: 'default' as const,
+        llm: {
+          provider: options.llm.provider,
+          baseUrl: options.llm.baseUrl,
+          model: options.llm.model,
+          apiKeyEncrypted: encryptApiKey(options.llm.apiKey),
+          apiKeyHint: '...key',
+          testedAt: null,
+          testStatus: null,
+        },
+        updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+        updatedBy: 'user-1',
+      };
+    },
   } as unknown as SettingsRepository;
+};
+
+const withEncryptionKey = async (callback: () => Promise<void>) => {
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY;
+
+  try {
+    await callback();
+  } finally {
+    if (originalEncryptionKey === undefined) {
+      delete process.env.SETTINGS_ENCRYPTION_KEY;
+    } else {
+      process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
+    }
+  }
 };
 
 const createTestEnv = (): AppEnv => {
@@ -703,6 +790,146 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('createProjectConversationRuntime accepts all configured chat-completions providers', async () => {
+  await withEncryptionKey(async () => {
+    const projectId = '507f1f77bcf86cd799439100';
+    const project: ProjectDocument & {
+      _id: NonNullable<ProjectDocument['_id']>;
+    } = {
+      _id: new ObjectId(projectId),
+      name: '多 Provider 对话',
+      description: '验证项目对话 runtime 支持全部兼容 provider',
+      ownerId: 'user-1',
+      members: [
+        {
+          userId: 'user-1',
+          role: 'admin',
+          joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+        },
+      ],
+      knowledgeBaseIds: ['kb-1'],
+      agentIds: [],
+      skillIds: [],
+      conversations: [],
+      createdAt: new Date('2026-03-17T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+    };
+    const conversation = {
+      id: 'chat-provider-check',
+      title: 'Provider 检查',
+      messages: [
+        {
+          id: 'msg-provider-user',
+          role: 'user' as const,
+          content: '请总结当前多 provider 对话链路',
+          createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        },
+      ],
+      createdAt: new Date('2026-03-17T09:00:00.000Z'),
+      updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+    };
+    const originalFetch = global.fetch;
+    let activeProviderCase:
+      | (typeof SUPPORTED_LLM_PROVIDER_CASES)[number]
+      | null = null;
+
+    global.fetch = async (input, init) => {
+      if (!activeProviderCase) {
+        throw new Error('activeProviderCase should not be null');
+      }
+
+      const url = typeof input === 'string' ? input : input.toString();
+      const body = JSON.parse(String(init?.body ?? '{}')) as {
+        model?: string;
+        messages?: Array<{ content?: string }>;
+      };
+
+      assert.equal(
+        url,
+        new URL(
+          'chat/completions',
+          activeProviderCase.baseUrl.endsWith('/')
+            ? activeProviderCase.baseUrl
+            : `${activeProviderCase.baseUrl}/`,
+        ).toString(),
+      );
+      assert.equal(body.model, activeProviderCase.model);
+      assert.match(body.messages?.[body.messages.length - 1]?.content ?? '', /项目知识片段/);
+
+      return new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: `provider:${activeProviderCase.provider}`,
+              },
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+          },
+        },
+      );
+    };
+
+    try {
+      for (const providerCase of SUPPORTED_LLM_PROVIDER_CASES) {
+        activeProviderCase = providerCase;
+
+        const runtime = createProjectConversationRuntime({
+          env: createTestEnv(),
+          settingsRepository: createSettingsRepositoryStub({
+            llm: {
+              provider: providerCase.provider,
+              baseUrl: providerCase.baseUrl,
+              model: providerCase.model,
+              apiKey: `${providerCase.provider}-api-key`,
+            },
+          }),
+          knowledgeSearch: {
+            searchProjectDocuments: async () => ({
+              query: '请总结当前多 provider 对话链路',
+              sourceType: 'global_docs',
+              total: 1,
+              items: [
+                {
+                  knowledgeId: 'kb-1',
+                  documentId: 'doc-1',
+                  chunkId: 'chunk-1',
+                  chunkIndex: 0,
+                  type: 'global_docs',
+                  source: 'chat-runtime.md',
+                  content:
+                    '项目对话当前统一复用 chat/completions 兼容协议，并由 settings 中的 provider/baseUrl/model 驱动。',
+                  distance: 0.03,
+                },
+              ],
+            }),
+          },
+        });
+
+        const result = await runtime.generateAssistantReply({
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+          project,
+          conversation,
+          userMessage: conversation.messages[0]!,
+        });
+
+        assert.equal(result.content, `provider:${providerCase.provider}`);
+        assert.equal(result.sources[0]?.source, 'chat-runtime.md');
+      }
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 test('createProjectConversation rejects non-object request bodies', async () => {

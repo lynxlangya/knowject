@@ -1,6 +1,6 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Alert, Button, Empty, Input, Skeleton, Typography } from 'antd';
-import { extractApiErrorMessage } from '@api/error';
+import { extractApiErrorCode, extractApiErrorMessage } from '@api/error';
 import {
   createProjectConversation,
   createProjectConversationMessage,
@@ -8,11 +8,36 @@ import {
   type ProjectConversationDetailResponse,
   type ProjectConversationSourceResponse,
 } from '@api/projects';
-import { useEffect, useRef, useState } from 'react';
+import {
+  getSettings,
+  SETTINGS_LLM_PROVIDERS,
+  type SettingsAiConfigResponse,
+  type SettingsLlmProvider,
+} from '@api/settings';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { buildProjectChatPath, buildProjectResourcesPath } from '@app/navigation/paths';
+import {
+  PATHS,
+  buildProjectChatPath,
+  buildProjectResourcesPath,
+} from '@app/navigation/paths';
 import { ProjectConversationList } from './components/ProjectConversationList';
 import { useProjectPageContext } from './projectPageContext';
+
+type ProjectChatIssueCode =
+  | 'PROJECT_CONVERSATION_LLM_UNAVAILABLE'
+  | 'PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED'
+  | 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR';
+
+interface ProjectChatIssue {
+  code: ProjectChatIssueCode;
+  title: string;
+  description: string;
+}
+
+const PROJECT_CHAT_SUPPORTED_LLM_PROVIDERS = new Set<SettingsLlmProvider>(
+  SETTINGS_LLM_PROVIDERS,
+);
 
 const formatMessageTime = (value: string): string => {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -102,6 +127,14 @@ export const ProjectChatPage = () => {
   const [composerValue, setComposerValue] = useState('');
   const [creatingConversation, setCreatingConversation] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [chatLlmSettings, setChatLlmSettings] = useState<
+    SettingsAiConfigResponse<SettingsLlmProvider> | null
+  >(null);
+  const [chatSettingsLoading, setChatSettingsLoading] = useState(true);
+  const [chatSettingsError, setChatSettingsError] = useState<string | null>(null);
+  const [chatRuntimeIssue, setChatRuntimeIssue] = useState<ProjectChatIssue | null>(
+    null,
+  );
   const activeConversation = chatId
     ? conversations.find((conversation) => conversation.id === chatId) ?? null
     : null;
@@ -110,8 +143,46 @@ export const ProjectChatPage = () => {
     conversationDetail.id === chatId
       ? conversationDetail
       : null;
+  const blockingChatIssue = (() => {
+    if (chatLlmSettings) {
+      if (!chatLlmSettings.hasKey) {
+        return {
+          code: 'PROJECT_CONVERSATION_LLM_UNAVAILABLE' as const,
+          title: '当前未配置可用的对话模型',
+          description:
+            '请先前往设置页保存并测试 LLM API Key，项目对话才会生成 assistant 回复。',
+        };
+      }
+
+      if (!PROJECT_CHAT_SUPPORTED_LLM_PROVIDERS.has(chatLlmSettings.provider)) {
+        return {
+          code: 'PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED' as const,
+          title: '当前 LLM Provider 暂不支持项目对话',
+          description:
+            '请在设置页切换到兼容 `/chat/completions` 的 Provider 后，再回到项目对话继续测试。',
+        };
+      }
+    }
+
+    if (
+      chatRuntimeIssue &&
+      chatRuntimeIssue.code !== 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR'
+    ) {
+      return chatRuntimeIssue;
+    }
+
+    return null;
+  })();
+  const inlineChatIssue =
+    chatRuntimeIssue?.code === 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR'
+      ? chatRuntimeIssue
+      : null;
   const createActionLocked = creatingConversation || sendingMessage;
-  const sendActionLocked = sendingMessage || detailLoading;
+  const sendActionLocked =
+    sendingMessage ||
+    detailLoading ||
+    chatSettingsLoading ||
+    blockingChatIssue !== null;
   const canSendMessage = composerValue.trim().length > 0 && !sendActionLocked;
   const isCurrentProject = (projectId: string): boolean => {
     return latestConversationTargetRef.current.projectId === projectId;
@@ -131,10 +202,65 @@ export const ProjectChatPage = () => {
     Boolean(chatId) &&
     (detailLoading ||
       (conversationDetail !== null && currentConversationDetail === null));
+  const buildChatIssueFromError = (
+    error: unknown,
+    fallback: string,
+  ): ProjectChatIssue | null => {
+    const code = extractApiErrorCode(error);
+    const description = extractApiErrorMessage(error, fallback);
+
+    if (code === 'PROJECT_CONVERSATION_LLM_UNAVAILABLE') {
+      return {
+        code,
+        title: '当前未配置可用的对话模型',
+        description,
+      };
+    }
+
+    if (code === 'PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED') {
+      return {
+        code,
+        title: '当前 LLM Provider 暂不支持项目对话',
+        description,
+      };
+    }
+
+    if (code === 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR') {
+      return {
+        code,
+        title: '项目对话模型调用失败',
+        description,
+      };
+    }
+
+    return null;
+  };
+  const loadChatSettings = useCallback(async () => {
+    setChatSettingsLoading(true);
+    setChatSettingsError(null);
+
+    try {
+      const result = await getSettings();
+      setChatLlmSettings(result.llm);
+      setChatRuntimeIssue(null);
+    } catch (currentError) {
+      console.error('[ProjectChatPage] 加载对话配置失败:', currentError);
+      setChatLlmSettings(null);
+      setChatSettingsError(
+        extractApiErrorMessage(currentError, '读取对话配置失败，请稍后重试'),
+      );
+    } finally {
+      setChatSettingsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     setComposerValue('');
   }, [activeProject.id, chatId]);
+
+  useEffect(() => {
+    void loadChatSettings();
+  }, [loadChatSettings, activeProject.id]);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({
@@ -247,15 +373,25 @@ export const ProjectChatPage = () => {
         return;
       }
 
+      setChatRuntimeIssue(null);
       navigate(buildProjectChatPath(requestProjectId, result.conversation.id));
       void refreshConversations();
     } catch (currentError) {
       console.error(currentError);
 
       if (isCurrentProject(requestProjectId)) {
-        message.error(
-          extractApiErrorMessage(currentError, '新建对话失败，请稍后重试'),
+        const nextIssue = buildChatIssueFromError(
+          currentError,
+          '新建对话失败，请稍后重试',
         );
+
+        if (nextIssue) {
+          setChatRuntimeIssue(nextIssue);
+        } else {
+          message.error(
+            extractApiErrorMessage(currentError, '新建对话失败，请稍后重试'),
+          );
+        }
       }
     } finally {
       setCreatingConversation(false);
@@ -296,6 +432,7 @@ export const ProjectChatPage = () => {
       );
 
       if (isCurrentConversationTarget(requestProjectId, requestConversationId)) {
+        setChatRuntimeIssue(null);
         setConversationDetail(result.conversation);
         setDetailError(null);
         setComposerValue('');
@@ -308,9 +445,18 @@ export const ProjectChatPage = () => {
       console.error(currentError);
 
       if (isCurrentProject(requestProjectId)) {
-        message.error(
-          extractApiErrorMessage(currentError, '发送消息失败，请稍后重试'),
+        const nextIssue = buildChatIssueFromError(
+          currentError,
+          '发送消息失败，请稍后重试',
         );
+
+        if (nextIssue) {
+          setChatRuntimeIssue(nextIssue);
+        } else {
+          message.error(
+            extractApiErrorMessage(currentError, '发送消息失败，请稍后重试'),
+          );
+        }
       }
 
       await Promise.allSettled([
@@ -341,7 +487,7 @@ export const ProjectChatPage = () => {
       icon={<PlusOutlined />}
       size="large"
       loading={creatingConversation}
-      disabled={sendingMessage}
+      disabled={createActionLocked}
       onClick={() => void handleCreateChat()}
       className={[
         compact
@@ -433,6 +579,45 @@ export const ProjectChatPage = () => {
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/40 px-6 py-5">
+              {blockingChatIssue ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  className="mb-4"
+                  message={blockingChatIssue.title}
+                  description={
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span>{blockingChatIssue.description}</span>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="primary" onClick={() => navigate(PATHS.settings)}>
+                          前往设置
+                        </Button>
+                        <Button onClick={() => void loadChatSettings()}>
+                          重新检查配置
+                        </Button>
+                      </div>
+                    </div>
+                  }
+                />
+              ) : null}
+              {chatSettingsError ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  className="mb-4"
+                  message="当前无法确认对话配置"
+                  description={`${chatSettingsError}。如后续发送失败，请前往设置页检查配置。`}
+                />
+              ) : null}
+              {inlineChatIssue ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  className="mb-4"
+                  message={inlineChatIssue.title}
+                  description={inlineChatIssue.description}
+                />
+              ) : null}
               {currentConversationDetail.messages.length > 0 ? (
                 <div className="space-y-3">
                   {currentConversationDetail.messages.map((chatMessage) => (
@@ -532,6 +717,34 @@ export const ProjectChatPage = () => {
               />
             ) : (
               <div className="flex max-w-md flex-col items-center gap-5 text-center">
+                {blockingChatIssue ? (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message={blockingChatIssue.title}
+                    description={
+                      <div className="flex flex-col gap-3">
+                        <span>{blockingChatIssue.description}</span>
+                        <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                          <Button type="primary" onClick={() => navigate(PATHS.settings)}>
+                            前往设置
+                          </Button>
+                          <Button onClick={() => void loadChatSettings()}>
+                            重新检查配置
+                          </Button>
+                        </div>
+                      </div>
+                    }
+                  />
+                ) : null}
+                {chatSettingsError ? (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="当前无法确认对话配置"
+                    description={`${chatSettingsError}。你仍可先创建线程；若发送失败，请前往设置页检查。`}
+                  />
+                ) : null}
                 <Empty
                   description={
                     <Typography.Text type="secondary">

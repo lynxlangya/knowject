@@ -13,6 +13,48 @@ const ACTOR = {
 
 const TEST_ENCRYPTION_KEY =
   '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const SUPPORTED_LLM_PROVIDER_CASES = [
+  {
+    provider: 'openai' as const,
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-5.4',
+  },
+  {
+    provider: 'anthropic' as const,
+    baseUrl: 'https://api.anthropic.com/v1',
+    model: 'claude-sonnet-4-6',
+  },
+  {
+    provider: 'gemini' as const,
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    model: 'gemini-2.5-flash',
+  },
+  {
+    provider: 'aliyun' as const,
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-max',
+  },
+  {
+    provider: 'deepseek' as const,
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-chat',
+  },
+  {
+    provider: 'moonshot' as const,
+    baseUrl: 'https://api.moonshot.cn/v1',
+    model: 'kimi-k2-turbo-preview',
+  },
+  {
+    provider: 'zhipu' as const,
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+    model: 'glm-5',
+  },
+  {
+    provider: 'custom' as const,
+    baseUrl: 'https://llm.example.com/v1',
+    model: 'custom-chat-model',
+  },
+] as const;
 
 const createTestEnv = (): AppEnv => {
   return {
@@ -287,6 +329,237 @@ test('testEmbedding rejects provider switch without a new api key', async () => 
             provider: 'zhipu',
             baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
             model: 'embedding-3',
+          },
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.code, 'SETTINGS_API_KEY_REENTRY_REQUIRED');
+        assert.equal(error.message, '切换 Provider 或 Base URL 后，请重新输入新的 API Key');
+        return true;
+      },
+    );
+  });
+});
+
+test('updateLlm accepts chat-completions compatible providers and persists encrypted key', async () => {
+  await withEncryptionKey(async () => {
+    for (const providerCase of SUPPORTED_LLM_PROVIDER_CASES) {
+      let persistedPatch:
+        | Parameters<SettingsRepository['upsertSettings']>[0]
+        | undefined;
+
+      const repository = {
+        getSettings: async () => null,
+        upsertSettings: async (
+          patch: Parameters<SettingsRepository['upsertSettings']>[0],
+        ) => {
+          persistedPatch = patch;
+
+          return {
+            singleton: 'default' as const,
+            llm: patch.llm,
+            updatedAt: patch.updatedAt ?? new Date(),
+            updatedBy: patch.updatedBy ?? ACTOR.id,
+          };
+        },
+      } as unknown as SettingsRepository;
+
+      const service = createSettingsService({
+        env: createTestEnv(),
+        repository,
+      });
+
+      const response = await service.updateLlm(
+        {
+          actor: ACTOR,
+        },
+        {
+          provider: providerCase.provider,
+          baseUrl: providerCase.baseUrl,
+          model: providerCase.model,
+          apiKey: `${providerCase.provider}-api-key`,
+        },
+      );
+
+      assert.equal(response.llm.provider, providerCase.provider);
+      assert.equal(response.llm.baseUrl, providerCase.baseUrl);
+      assert.equal(response.llm.model, providerCase.model);
+      assert.equal(response.llm.source, 'database');
+      assert.equal(response.llm.hasKey, true);
+      assert.ok(persistedPatch?.llm);
+      assert.equal(persistedPatch?.llm?.provider, providerCase.provider);
+      assert.equal(persistedPatch?.llm?.baseUrl, providerCase.baseUrl);
+      assert.equal(persistedPatch?.llm?.model, providerCase.model);
+      assert.notEqual(
+        persistedPatch?.llm?.apiKeyEncrypted,
+        `${providerCase.provider}-api-key`,
+      );
+      assert.ok(persistedPatch?.llm?.apiKeyHint);
+    }
+  });
+});
+
+test('updateLlm rejects base URL switch without a new api key', async () => {
+  await withEncryptionKey(async () => {
+    const repository = {
+      getSettings: async () => ({
+        singleton: 'default' as const,
+        llm: {
+          provider: 'openai' as const,
+          baseUrl: 'https://api.openai.com/v1',
+          model: 'gpt-5.4',
+          apiKeyEncrypted: encryptApiKey('sk-existing-openai'),
+          apiKeyHint: '...nAI',
+          testedAt: null,
+          testStatus: null,
+        },
+        updatedAt: new Date(),
+        updatedBy: ACTOR.id,
+      }),
+      upsertSettings: async () => {
+        throw new Error('upsertSettings should not be called when new key is missing');
+      },
+    } as unknown as SettingsRepository;
+
+    const service = createSettingsService({
+      env: createTestEnv(),
+      repository,
+    });
+
+    await assert.rejects(
+      async () =>
+        service.updateLlm(
+          {
+            actor: ACTOR,
+          },
+          {
+            provider: 'openai',
+            baseUrl: 'https://openai-proxy.example.com/v1',
+            model: 'gpt-5.4',
+          },
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.code, 'SETTINGS_API_KEY_REENTRY_REQUIRED');
+        assert.equal(error.message, '切换 Provider 或 Base URL 后，请重新输入新的 API Key');
+        return true;
+      },
+    );
+  });
+});
+
+test('testLlm accepts chat-completions compatible providers', async () => {
+  await withEncryptionKey(async () => {
+    const originalFetch = globalThis.fetch;
+    let activeProviderCase:
+      | (typeof SUPPORTED_LLM_PROVIDER_CASES)[number]
+      | null = null;
+
+    globalThis.fetch = async (input, init) => {
+      if (!activeProviderCase) {
+        throw new Error('activeProviderCase should not be null');
+      }
+
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      const body = JSON.parse(String(init?.body ?? '{}')) as {
+        model?: string;
+        messages?: Array<{ role?: string; content?: string }>;
+      };
+
+      assert.equal(
+        url,
+        new URL(
+          'chat/completions',
+          activeProviderCase.baseUrl.endsWith('/')
+            ? activeProviderCase.baseUrl
+            : `${activeProviderCase.baseUrl}/`,
+        ).toString(),
+      );
+      assert.equal(body.model, activeProviderCase.model);
+      assert.equal(body.messages?.[0]?.role, 'user');
+      assert.equal(body.messages?.[0]?.content, 'test');
+
+      return new Response('{}', {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      });
+    };
+
+    try {
+      for (const providerCase of SUPPORTED_LLM_PROVIDER_CASES) {
+        activeProviderCase = providerCase;
+        const service = createSettingsService({
+          env: createTestEnv(),
+          repository: createRepositoryStub(),
+        });
+
+        const result = await service.testLlm(
+          {
+            actor: ACTOR,
+          },
+          {
+            provider: providerCase.provider,
+            baseUrl: providerCase.baseUrl,
+            model: providerCase.model,
+            apiKey: `${providerCase.provider}-api-key`,
+          },
+        );
+
+        assert.equal(result.success, true);
+        assert.equal(typeof result.latencyMs, 'number');
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
+test('testLlm rejects base URL switch without a new api key', async () => {
+  await withEncryptionKey(async () => {
+    const repository = {
+      getSettings: async () => ({
+        singleton: 'default' as const,
+        llm: {
+          provider: 'openai' as const,
+          baseUrl: 'https://api.openai.com/v1',
+          model: 'gpt-5.4',
+          apiKeyEncrypted: encryptApiKey('sk-existing-openai'),
+          apiKeyHint: '...nAI',
+          testedAt: null,
+          testStatus: null,
+        },
+        updatedAt: new Date(),
+        updatedBy: ACTOR.id,
+      }),
+      upsertSettings: async () => {
+        throw new Error('upsertSettings should not be called when test preconditions fail');
+      },
+    } as unknown as SettingsRepository;
+
+    const service = createSettingsService({
+      env: createTestEnv(),
+      repository,
+    });
+
+    await assert.rejects(
+      async () =>
+        service.testLlm(
+          {
+            actor: ACTOR,
+          },
+          {
+            provider: 'openai',
+            baseUrl: 'https://openai-proxy.example.com/v1',
+            model: 'gpt-5.4',
           },
         ),
       (error: unknown) => {

@@ -3,7 +3,16 @@ import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 
 export const SETTINGS_SINGLETON_ID = 'default';
 export const SETTINGS_EMBEDDING_PROVIDERS = ['openai', 'aliyun', 'zhipu', 'voyage', 'custom'] as const;
-export const SETTINGS_LLM_PROVIDERS = ['openai', 'aliyun', 'anthropic', 'custom'] as const;
+export const SETTINGS_LLM_PROVIDERS = [
+  'openai',
+  'anthropic',
+  'gemini',
+  'aliyun',
+  'deepseek',
+  'moonshot',
+  'zhipu',
+  'custom',
+] as const;
 export const SETTINGS_TEST_STATUSES = ['ok', 'failed'] as const;
 export const SETTINGS_SOURCES = ['database', 'environment'] as const;
 export const SETTINGS_INDEXING_SUPPORTED_TYPES = ['md', 'txt'] as const;

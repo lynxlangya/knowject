@@ -33,6 +33,7 @@ import { useNavigate } from 'react-router-dom';
 import { extractApiErrorMessage } from '@api/error';
 import {
   getSettings,
+  SETTINGS_LLM_PROVIDERS,
   testEmbeddingSettings,
   testIndexingSettings,
   testLlmSettings,
@@ -128,15 +129,35 @@ const LLM_PROVIDER_PRESETS: Record<
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-5.4',
   },
+  anthropic: {
+    label: 'Anthropic',
+    baseUrl: 'https://api.anthropic.com/v1',
+    model: 'claude-sonnet-4-6',
+  },
+  gemini: {
+    label: 'Gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    model: 'gemini-2.5-flash',
+  },
   aliyun: {
     label: '阿里云百炼',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model: 'qwen-max',
   },
-  anthropic: {
-    label: 'Anthropic',
-    baseUrl: 'https://api.anthropic.com',
-    model: 'claude-sonnet-4-6',
+  deepseek: {
+    label: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-chat',
+  },
+  moonshot: {
+    label: 'Kimi',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    model: 'kimi-k2-turbo-preview',
+  },
+  zhipu: {
+    label: '智谱 GLM',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+    model: 'glm-5',
   },
   custom: {
     label: '自定义',
@@ -171,7 +192,10 @@ const buildProviderOptions = <TProvider extends string>(
 };
 
 const EMBEDDING_PROVIDER_OPTIONS = buildProviderOptions(EMBEDDING_PROVIDER_PRESETS);
-const LLM_PROVIDER_OPTIONS = buildProviderOptions(LLM_PROVIDER_PRESETS);
+const LLM_PROVIDER_OPTIONS = SETTINGS_LLM_PROVIDERS.map((provider) => ({
+  value: provider,
+  label: LLM_PROVIDER_PRESETS[provider].label,
+}));
 
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   dateStyle: 'medium',
@@ -1231,7 +1255,7 @@ export const SettingsPage = () => {
 
                   <SectionBlock
                     title="对话模型（LLM）"
-                    description="当前只落库存储与在线测试能力；真正的对话链路将在后续版本接入。Anthropic 本期允许保存，但在线测试会返回“不支持”。"
+                    description="当前设置会直接驱动项目对话 MVP。各 Provider 统一走兼容 `/chat/completions` 协议，先跑通最小可用链路。"
                     extra={
                       <Space size={8} wrap>
                         <Tag color={SOURCE_META[settings.llm.source].color}>
@@ -1245,10 +1269,10 @@ export const SettingsPage = () => {
                   >
                     <Space orientation="vertical" size={16} style={{ width: '100%' }}>
                       <Alert
-                        type="warning"
+                        type="info"
                         showIcon
-                        title="对话链路仍在开发中"
-                        description="当前保存的 LLM 配置已经会驱动后端项目对话生成；但项目聊天页前端发送交互仍在接线中，现阶段主要用于运行时配置与在线连通性校验。"
+                        title="当前 LLM 设置会直接影响项目对话"
+                        description="保存并测试通过后，项目页会直接使用当前配置生成 assistant 回复。本期不引入额外对话组件或独立 runtime。"
                       />
 
                       {settings.llm.source === 'environment' && !llmServiceTargetChanged ? (
@@ -1360,7 +1384,7 @@ export const SettingsPage = () => {
 
                       <Flex justify="space-between" align="center" gap={12} wrap>
                         <Text type="secondary">
-                          Anthropic 可保存，但当前在线测试仅支持 OpenAI-compatible provider。
+                          在线测试与项目对话当前统一走兼容 `/chat/completions` 协议；若服务商提供多个入口，请填写兼容端点的 Base URL。
                         </Text>
                         <Space>
                           <Button

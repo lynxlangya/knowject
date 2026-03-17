@@ -186,7 +186,8 @@
   - 若当前还没有已存 Key，则必须重新提交新的明文 Key 才能把配置正式保存为工作区设置。
 - `PATCH /api/settings/llm`
   - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
-  - 接收 `provider / baseUrl / model / apiKey`，保存逻辑与 embedding 相同；本期配置先落库，后续再接入正式对话链路。
+  - 接收 `provider / baseUrl / model / apiKey`，保存逻辑与 embedding 相同；保存后的 effective LLM config 会直接驱动项目对话 runtime。
+  - 当前支持 `openai / anthropic / gemini / aliyun / deepseek / moonshot / zhipu / custom`，统一按 `chat/completions` 兼容协议接入。
 - `PATCH /api/settings/indexing`
   - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
   - 接收 `chunkSize / chunkOverlap / supportedTypes / indexerTimeoutMs`，保存后会直接影响后续 Node -> Python 的索引请求级 override。
@@ -198,7 +199,8 @@
   - 使用请求体内临时值或已保存配置做一次最小 OpenAI-compatible embeddings 请求，返回 `success / latencyMs / error`。
 - `POST /api/settings/llm/test`
   - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
-  - 本期只对 OpenAI-compatible provider 提供在线测试；`anthropic` 可保存，但会明确返回“当前 provider 暂不支持在线测试”。
+  - 使用请求体内临时值或已保存配置做一次最小 `chat/completions` 请求，返回 `success / latencyMs / error`。
+  - 当前支持 `openai / anthropic / gemini / aliyun / deepseek / moonshot / zhipu / custom` 八类 provider 的统一在线测试。
 - `POST /api/settings/indexing/test`
   - 需要 `Authorization: Bearer <token>`，并纳入敏感路由保护。
   - 服务端会实际请求 Python indexer 的 diagnostics 接口，并把 `Node -> indexer -> Chroma` 当前连通性归一化为测试结果。
@@ -233,9 +235,9 @@
 - `memory` 路由中的返回结果用于演示“项目记忆查询”流程，不代表正式检索服务接口设计。
 - `projects` 已落地最小项目模型与 CRUD，并补齐 `knowledgeBaseIds / agentIds / skillIds` 三类资源绑定字段，以及 `GET/POST /api/projects/:projectId/conversations*` 的最小对话读写基线。
 - `knowledge` 当前已完成 Mongo 元数据模型、集合索引、知识库 CRUD、文档上传入口、单文档 retry / rebuild / delete、知识库级 rebuild、Node 触发 Python indexer、`pending -> processing -> completed|failed` 状态回写、knowledge diagnostics，以及 `global_docs` 的 Chroma 写入和统一知识检索 service；同时已补齐 `scope=global|project` 与 `projectId` owner 模型，保证全局 `/api/knowledge` 列表不串 project scope，并已开放 `/api/projects/:projectId/knowledge*` 的项目私有知识 `list / create / detail / upload` 路由。当前知识索引额外引入了 namespace 级状态表：namespace key 继续使用 `global_docs / global_code / proj_{projectId}_docs / proj_{projectId}_code`，但实际写侧 collection 改为 versioned collection，并记录当前 active embedding config；模型切换后，单文档 retry / rebuild 会被显式拦截，要求先执行 namespace 级全量重建。Node 每次调用 Python indexer 时都会附带 `embeddingConfig` 与 `indexingConfig` request override，Python 侧按请求级配置优先、env 兜底执行。前端 `/knowledge` 与项目资源页都已正式接线，分别承担全局治理与项目最小消费闭环。
-- `settings` 当前已完成 `workspace_settings` 单例集合、AES-256-GCM API Key 加密、`GET/PATCH/TEST /api/settings/*`、effective config 读取层，以及 `/settings` 页面正式前后端链路；其中 `indexing/test` 会进一步校验 `Node -> indexer -> Chroma` 的当前诊断状态。本期访问控制固定为“所有已登录用户可访问”，后续若引入工作区管理员模型，再继续收紧。
+- `settings` 当前已完成 `workspace_settings` 单例集合、AES-256-GCM API Key 加密、`GET/PATCH/TEST /api/settings/*`、effective config 读取层，以及 `/settings` 页面正式前后端链路；其中保存后的 LLM 配置会直接进入项目对话 runtime，`indexing/test` 会进一步校验 `Node -> indexer -> Chroma` 的当前诊断状态。本期访问控制固定为“所有已登录用户可访问”，后续若引入工作区管理员模型，再继续收紧。
 - `skills` 当前已完成正式 Skill 资产仓储、`SKILL.md` 解析、GitHub/URL 导入、草稿/发布、详情读取、引用保护与绑定校验；`agents` 已完成 Mongo 正式模型、CRUD 和绑定校验。
-- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读写链路、项目级 merged retrieval、assistant 来源引用、知识库正式检索、项目私有知识最小 write-side、知识索引运维基础接口、项目资源页对项目私有知识的正式消费、Skill 资产管理与 Agent CRUD；仍未落地的是项目对话页正式发送交互、`global_code` 真实导入，以及更深的 Skill / Agent 运行时编排链路。
+- 当前已经有真实用户注册、登录、JWT 鉴权、全局成员概览、项目 CRUD、项目资源绑定、项目对话读写链路、项目级 merged retrieval、assistant 来源引用、知识库正式检索、项目私有知识最小 write-side、知识索引运维基础接口、项目资源页对项目私有知识的正式消费、Skill 资产管理与 Agent CRUD；仍未落地的是更丰富的项目对话引用交互与流式返回、`global_code` 真实导入，以及更深的 Skill / Agent 运行时编排链路。
 - 当前宿主机默认开发拓扑为 `platform + api + indexer-py`，依赖服务按推荐流由 Docker 托管 `mongodb + chroma`。
 - 若要单独调试 API 上传链路，仍需要额外运行本地 `indexer-py + chroma`。
 - 仓库已交付 Docker Compose 基线，可在容器内运行 `api + indexer-py + mongodb + chroma`，并通过 `platform / caddy` 进入完整部署拓扑。

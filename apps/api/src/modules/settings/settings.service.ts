@@ -37,9 +37,14 @@ import {
   type WorkspaceInfoDocument,
 } from './settings.types.js';
 
-const OPENAI_COMPATIBLE_LLM_PROVIDERS = new Set<SettingsLlmProvider>([
+const CHAT_COMPLETIONS_COMPATIBLE_LLM_PROVIDERS = new Set<SettingsLlmProvider>([
   'openai',
+  'anthropic',
+  'gemini',
   'aliyun',
+  'deepseek',
+  'moonshot',
+  'zhipu',
   'custom',
 ]);
 
@@ -989,7 +994,7 @@ export const createSettingsService = ({
         currentSection?.provider ??
         fallback.provider;
 
-      if (!OPENAI_COMPATIBLE_LLM_PROVIDERS.has(provider)) {
+      if (!CHAT_COMPLETIONS_COMPATIBLE_LLM_PROVIDERS.has(provider)) {
         throw createUnsupportedLlmProviderError();
       }
 
