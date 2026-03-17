@@ -480,6 +480,7 @@ test('createProjectConversationMessage appends persisted user and assistant mess
 
   assert.equal(appendCalls, 2);
   assert.equal(persistedConversation.id, 'chat-existing');
+  assert.equal(persistedConversation.title, '已有会话');
   assert.equal(persistedConversation.messages.length, 2);
   assert.equal(persistedConversation.messages[0]?.role, 'user');
   assert.equal(persistedConversation.messages[0]?.content, '先把对话写链路打通');
@@ -507,6 +508,539 @@ test('createProjectConversationMessage appends persisted user and assistant mess
     '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
   );
   assert.equal(result.conversation.messages[1]?.sources?.length, 1);
+  assert.equal(result.conversation.title, '已有会话');
+});
+
+test('createProjectConversationMessage auto-generates a concise title from the first user message', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439019'),
+    name: '对话标题生成',
+    description: '验证首条消息自动命名',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-title',
+        title: '新对话',
+        messages: [],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+  let appendCalls = 0;
+  let titleUpdateCalls = 0;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      appendCalls += 1;
+      assert.equal(conversationId, 'chat-title');
+      persistedConversation = {
+        ...persistedConversation,
+        messages: [...persistedConversation.messages, message],
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+    updateProjectConversationTitle: async (
+      _projectId: string,
+      conversationId: string,
+      title: string,
+      updatedAt: Date,
+    ) => {
+      titleUpdateCalls += 1;
+      assert.equal(conversationId, 'chat-title');
+      persistedConversation = {
+        ...persistedConversation,
+        title,
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub(),
+  });
+
+  const result = await service.createProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-title',
+    {
+      content: '请帮我梳理项目对话命名策略，要求像 ChatGPT 一样简洁',
+    },
+  );
+
+  assert.equal(appendCalls, 2);
+  assert.equal(titleUpdateCalls, 1);
+  assert.equal(persistedConversation.title, '梳理项目对话命名策略');
+  assert.equal(result.conversation.title, '梳理项目对话命名策略');
+});
+
+test('createProjectConversationMessage keeps a concurrent manual rename when auto-title guard misses', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd79943901a'),
+    name: '并发改名保护',
+    description: '验证自动标题不会覆盖并发手动改名',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-title-race',
+        title: '新对话',
+        messages: [],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+  let titleUpdateCalls = 0;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString()
+        ? {
+            ...project,
+            conversations: [persistedConversation],
+            updatedAt: persistedConversation.updatedAt,
+            _id: project._id,
+          }
+        : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      assert.equal(conversationId, 'chat-title-race');
+      persistedConversation = {
+        ...persistedConversation,
+        messages: [...persistedConversation.messages, message],
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+    updateProjectConversationTitle: async (
+      _projectId: string,
+      conversationId: string,
+      _title: string,
+      updatedAt: Date,
+      options?: {
+        expectedCurrentTitle?: string;
+      },
+    ) => {
+      titleUpdateCalls += 1;
+      assert.equal(conversationId, 'chat-title-race');
+      assert.equal(options?.expectedCurrentTitle, '新对话');
+      persistedConversation = {
+        ...persistedConversation,
+        title: '人工改名后的标题',
+        updatedAt,
+      };
+
+      return null;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub(),
+  });
+
+  const result = await service.createProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-title-race',
+    {
+      content: '请帮我总结并发场景下的项目对话命名策略',
+    },
+  );
+
+  assert.equal(titleUpdateCalls, 1);
+  assert.equal(persistedConversation.title, '人工改名后的标题');
+  assert.equal(result.conversation.title, '人工改名后的标题');
+});
+
+test('updateProjectConversation updates the current thread title', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439020'),
+    name: '对话标题编辑',
+    description: '验证会话标题更新',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-editable',
+        title: '旧标题',
+        messages: [],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    updateProjectConversationTitle: async (
+      _projectId: string,
+      conversationId: string,
+      title: string,
+      updatedAt: Date,
+    ) => {
+      assert.equal(conversationId, 'chat-editable');
+      persistedConversation = {
+        ...persistedConversation,
+        title,
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await service.updateProjectConversation(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-editable',
+    {
+      title: '新的项目线程标题',
+    },
+  );
+
+  assert.equal(persistedConversation.title, '新的项目线程标题');
+  assert.equal(result.conversation.title, '新的项目线程标题');
+});
+
+test('deleteProjectConversation removes a thread when other threads still exist', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439021'),
+    name: '对话线程删除',
+    description: '验证会话删除',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-default',
+        title: '默认线程',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+      {
+        id: 'chat-removable',
+        title: '待删除线程',
+        messages: [],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+  };
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    deleteProjectConversation: async (
+      _projectId: string,
+      conversationId: string,
+      updatedAt: Date,
+    ) => {
+      assert.equal(conversationId, 'chat-removable');
+
+      return {
+        ...project,
+        conversations: project.conversations.filter(
+          (conversation) => conversation.id !== conversationId,
+        ),
+        updatedAt,
+        _id: project._id,
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  await service.deleteProjectConversation(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-removable',
+  );
+});
+
+test('deleteProjectConversation rejects when the delete guard would drop the last persisted thread', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439023'),
+    name: '删除竞争保护',
+    description: '验证并发删除不会删空最后一个线程',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-default',
+        title: '默认线程',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+      {
+        id: 'chat-removable',
+        title: '待删除线程',
+        messages: [],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+  };
+
+  let currentProject = project;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? currentProject : null,
+    deleteProjectConversation: async (
+      _projectId: string,
+      conversationId: string,
+      updatedAt: Date,
+    ) => {
+      assert.equal(conversationId, 'chat-removable');
+      currentProject = {
+        ...project,
+        conversations: [project.conversations[1]!],
+        updatedAt,
+        _id: project._id,
+      };
+
+      return null;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  await assert.rejects(
+    () =>
+      service.deleteProjectConversation(
+        {
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+        },
+        project._id.toHexString(),
+        'chat-removable',
+      ),
+    (error) => {
+      assert.equal(
+        (error as { code?: string }).code,
+        'PROJECT_CONVERSATION_LAST_THREAD_FORBIDDEN',
+      );
+      return true;
+    },
+  );
+});
+
+test('deleteProjectConversation rejects removing the last visible thread', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439022'),
+    name: '保底线程',
+    description: '验证最后一个线程不可删除',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-default',
+        title: '唯一线程',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    deleteProjectConversation: async () => {
+      throw new Error('deleteProjectConversation should not be called');
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  await assert.rejects(
+    () =>
+      service.deleteProjectConversation(
+        {
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+        },
+        project._id.toHexString(),
+        'chat-default',
+      ),
+    (error) => {
+      assert.equal((error as { code?: string }).code, 'PROJECT_CONVERSATION_LAST_THREAD_FORBIDDEN');
+      return true;
+    },
+  );
 });
 
 test('createProjectConversationMessage materializes the fallback default thread and appends assistant reply', async () => {
@@ -535,6 +1069,7 @@ test('createProjectConversationMessage materializes the fallback default thread 
   let persistedConversation: ProjectConversationDocument | null = null;
   let appendCalls = 0;
   let materializeCalls = 0;
+  let titleUpdateCalls = 0;
 
   const repository = {
     findById: async (projectId: string) =>
@@ -550,6 +1085,32 @@ test('createProjectConversationMessage materializes the fallback default thread 
       return {
         ...project,
         conversations: [conversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+    updateProjectConversationTitle: async (
+      _projectId: string,
+      conversationId: string,
+      title: string,
+      updatedAt: Date,
+    ) => {
+      titleUpdateCalls += 1;
+      assert.equal(conversationId, 'chat-default');
+
+      if (!persistedConversation) {
+        return null;
+      }
+
+      persistedConversation = {
+        ...persistedConversation,
+        title,
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
         updatedAt,
         _id: project._id,
       };
@@ -605,6 +1166,7 @@ test('createProjectConversationMessage materializes the fallback default thread 
 
   assert.equal(materializeCalls, 1);
   assert.equal(appendCalls, 3);
+  assert.equal(titleUpdateCalls, 1);
   assert.notEqual(persistedConversation, null);
   if (!persistedConversation) {
     throw new Error('persistedConversation should not be null');
@@ -613,6 +1175,7 @@ test('createProjectConversationMessage materializes the fallback default thread 
   const persistedDefaultConversation =
     persistedConversation as ProjectDocument['conversations'][number];
   assert.equal(persistedDefaultConversation.id, 'chat-default');
+  assert.equal(persistedDefaultConversation.title, '给默认会话写第一条消息');
   assert.equal(persistedDefaultConversation.messages.length, 3);
   assert.equal(
     persistedDefaultConversation.messages[1]?.content,
@@ -625,6 +1188,7 @@ test('createProjectConversationMessage materializes the fallback default thread 
     '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
   );
   assert.equal(result.conversation.id, 'chat-default');
+  assert.equal(result.conversation.title, '给默认会话写第一条消息');
   assert.equal(result.conversation.messages.length, 3);
   assert.equal(result.conversation.messages[2]?.sources?.[0]?.knowledgeId, 'kb-1');
 });

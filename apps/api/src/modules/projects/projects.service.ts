@@ -13,6 +13,7 @@ import type { EffectiveLlmConfig, SettingsLlmProvider } from '@modules/settings/
 import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
 import { ProjectsRepository } from './projects.repository.js';
 import {
+  buildDefaultProjectConversationTitle,
   buildProjectMemberProfileMap,
   createDefaultProjectConversation,
   createProjectConversation,
@@ -41,6 +42,7 @@ import type {
   ProjectMemberDocument,
   ProjectResponse,
   ProjectsListResponse,
+  UpdateProjectConversationInput,
   UpdateProjectInput,
 } from './projects.types.js';
 
@@ -55,12 +57,23 @@ export interface ProjectsService {
     projectId: string,
     input: CreateProjectConversationInput,
   ): Promise<ProjectConversationDetailEnvelope>;
+  updateProjectConversation(
+    context: ProjectCommandContext,
+    projectId: string,
+    conversationId: string,
+    input: UpdateProjectConversationInput,
+  ): Promise<ProjectConversationDetailEnvelope>;
   createProjectConversationMessage(
     context: ProjectCommandContext,
     projectId: string,
     conversationId: string,
     input: CreateProjectConversationMessageInput,
   ): Promise<ProjectConversationDetailEnvelope>;
+  deleteProjectConversation(
+    context: ProjectCommandContext,
+    projectId: string,
+    conversationId: string,
+  ): Promise<void>;
   getProjectConversationDetail(
     context: ProjectCommandContext,
     projectId: string,
@@ -115,6 +128,7 @@ const NOOP_PROJECT_KNOWLEDGE_USAGE: ProjectKnowledgeUsage = {
 const DEFAULT_PROJECT_CONVERSATION_TITLE = '新对话';
 const PROJECT_CONVERSATION_RETRIEVAL_TOP_K = 5;
 const PROJECT_CONVERSATION_HISTORY_LIMIT = 6;
+const PROJECT_CONVERSATION_AUTO_TITLE_MAX_LENGTH = 24;
 const CHAT_COMPLETIONS_COMPATIBLE_PROJECT_LLM_PROVIDERS = new Set<SettingsLlmProvider>([
   'openai',
   'anthropic',
@@ -127,7 +141,10 @@ const CHAT_COMPLETIONS_COMPATIBLE_PROJECT_LLM_PROVIDERS = new Set<SettingsLlmPro
 ]);
 
 const readProjectConversationMutationInput = <
-  T extends CreateProjectConversationInput | CreateProjectConversationMessageInput,
+  T extends
+    | CreateProjectConversationInput
+    | UpdateProjectConversationInput
+    | CreateProjectConversationMessageInput,
 >(
   input: T | undefined,
 ): T => {
@@ -206,6 +223,14 @@ const createProjectConversationLlmUpstreamError = (
     code: 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR',
     message,
     cause,
+  });
+};
+
+const createProjectConversationLastThreadForbiddenError = (): AppError => {
+  return new AppError({
+    statusCode: 409,
+    code: 'PROJECT_CONVERSATION_LAST_THREAD_FORBIDDEN',
+    message: '项目至少保留一个对话线程',
   });
 };
 
@@ -328,6 +353,97 @@ const buildProjectConversationSourceSnippet = (content: string): string => {
   }
 
   return `${normalizedContent.slice(0, 217)}...`;
+};
+
+const normalizeProjectConversationTitleSource = (value: string): string => {
+  return value
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^>\s?/gm, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/~~([^~]+)~~/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const trimProjectConversationTitlePrefix = (value: string): string => {
+  const prefixPatterns = [
+    /^请帮我\s*/u,
+    /^帮我\s*/u,
+    /^帮忙\s*/u,
+    /^麻烦(?:你)?\s*/u,
+    /^请问\s*/u,
+    /^请\s*/u,
+    /^给我\s*/u,
+    /^我想(?:要)?\s*/u,
+    /^想要\s*/u,
+    /^如何\s*/u,
+    /^怎么\s*/u,
+    /^为什么\s*/u,
+    /^能否\s*/u,
+    /^可以\s*/u,
+  ];
+
+  let result = value.trim();
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    for (const pattern of prefixPatterns) {
+      if (pattern.test(result)) {
+        const nextResult = result.replace(pattern, '').trimStart();
+
+        if (nextResult && nextResult !== result) {
+          result = nextResult;
+          changed = true;
+        }
+      }
+    }
+  }
+
+  return result;
+};
+
+const createProjectConversationAutoTitle = (content: string): string => {
+  const normalized = normalizeProjectConversationTitleSource(content);
+  const firstSentence =
+    normalized.split(/[。！？!?；;\n\r]+/u)[0]?.trim() ?? normalized;
+  let candidate = trimProjectConversationTitlePrefix(firstSentence)
+    .replace(/[。！？!?；;，,:：、]+$/u, '')
+    .trim();
+
+  if (candidate.length > PROJECT_CONVERSATION_AUTO_TITLE_MAX_LENGTH) {
+    const firstClause = candidate.split(/[，,:：]/u)[0]?.trim() ?? candidate;
+
+    if (firstClause.length >= 4) {
+      candidate = firstClause;
+    }
+  }
+
+  if (candidate.length > PROJECT_CONVERSATION_AUTO_TITLE_MAX_LENGTH) {
+    candidate = `${candidate.slice(0, PROJECT_CONVERSATION_AUTO_TITLE_MAX_LENGTH).trimEnd()}…`;
+  }
+
+  return candidate || DEFAULT_PROJECT_CONVERSATION_TITLE;
+};
+
+const shouldAutoGenerateProjectConversationTitle = (
+  conversation: ProjectConversationDocument,
+  projectName: string,
+): boolean => {
+  const normalizedTitle = conversation.title.trim();
+
+  return (
+    !normalizedTitle ||
+    normalizedTitle === DEFAULT_PROJECT_CONVERSATION_TITLE ||
+    normalizedTitle === buildDefaultProjectConversationTitle(projectName)
+  );
 };
 
 const toProjectConversationSources = (
@@ -589,6 +705,25 @@ const validateCreateProjectConversationInput = (
   };
 };
 
+const validateUpdateProjectConversationInput = (
+  input: UpdateProjectConversationInput,
+): {
+  title: string;
+} => {
+  const normalizedInput = readProjectConversationMutationInput(input);
+  const title = readOptionalStringField(normalizedInput.title, 'title');
+
+  if (!title) {
+    throw createValidationAppError('请输入对话标题', {
+      title: '请输入对话标题',
+    });
+  }
+
+  return {
+    title,
+  };
+};
+
 const validateCreateProjectConversationMessageInput = (
   input: CreateProjectConversationMessageInput,
 ): {
@@ -653,6 +788,26 @@ const getRequiredPersistedConversation = (
   }
 
   return conversation;
+};
+
+const readPersistedConversationTarget = async (
+  repository: ProjectsRepository,
+  projectId: string,
+  conversationId: string,
+): Promise<{
+  project: WithId<ProjectDocument>;
+  conversation: ProjectConversationDocument | null;
+}> => {
+  const currentProject = await repository.findById(projectId);
+
+  if (!currentProject) {
+    throw createProjectNotFoundError();
+  }
+
+  return {
+    project: currentProject,
+    conversation: getProjectConversation(currentProject, conversationId),
+  };
 };
 
 const throwConversationPersistenceTargetError = async (
@@ -730,6 +885,62 @@ export const createProjectsService = ({
       };
     },
 
+    updateProjectConversation: async (
+      { actor },
+      projectId,
+      conversationId,
+      input,
+    ) => {
+      const project = await requireVisibleProject(repository, projectId, actor);
+      const { title } = validateUpdateProjectConversationInput(input);
+      const currentConversation = getProjectConversation(project, conversationId);
+
+      if (!currentConversation) {
+        throw createProjectConversationNotFoundError();
+      }
+
+      const now = new Date();
+      const persistedProjectId = project._id.toHexString();
+      let updatedProject = await repository.updateProjectConversationTitle(
+        persistedProjectId,
+        conversationId,
+        title,
+        now,
+      );
+
+      if (
+        !updatedProject &&
+        conversationId === 'chat-default' &&
+        (project.conversations?.length ?? 0) === 0
+      ) {
+        const defaultConversation = createDefaultProjectConversation(project);
+
+        await repository.materializeDefaultProjectConversation(
+          persistedProjectId,
+          defaultConversation,
+          defaultConversation.updatedAt,
+        );
+
+        updatedProject = await repository.updateProjectConversationTitle(
+          persistedProjectId,
+          conversationId,
+          title,
+          now,
+        );
+      }
+
+      const ensuredUpdatedProject =
+        updatedProject ??
+        (await throwConversationPersistenceTargetError(repository, persistedProjectId));
+
+      return {
+        conversation: toProjectConversationDetailResponse(
+          ensuredUpdatedProject._id.toHexString(),
+          getRequiredPersistedConversation(ensuredUpdatedProject, conversationId),
+        ),
+      };
+    },
+
     createProjectConversationMessage: async (
       { actor },
       projectId,
@@ -777,15 +988,61 @@ export const createProjectsService = ({
         persistedUserProject ??
         (await throwConversationPersistenceTargetError(repository, persistedProjectId));
 
-      const userConversation = getRequiredPersistedConversation(
+      let ensuredConversationProject = ensuredUserProject;
+      let userConversation = getRequiredPersistedConversation(
         ensuredUserProject,
         conversationId,
       );
 
+      if (
+        shouldAutoGenerateProjectConversationTitle(
+          userConversation,
+          ensuredUserProject.name,
+        )
+      ) {
+        const nextTitle = createProjectConversationAutoTitle(content);
+        const expectedCurrentTitle = userConversation.title;
+
+        if (nextTitle !== userConversation.title) {
+          const projectWithUpdatedTitle =
+            await repository.updateProjectConversationTitle(
+              persistedProjectId,
+              conversationId,
+              nextTitle,
+              now,
+              {
+                expectedCurrentTitle,
+              },
+            );
+
+          if (projectWithUpdatedTitle) {
+            ensuredConversationProject = projectWithUpdatedTitle;
+            userConversation = getRequiredPersistedConversation(
+              projectWithUpdatedTitle,
+              conversationId,
+            );
+          } else {
+            const latestConversationTarget =
+              await readPersistedConversationTarget(
+                repository,
+                persistedProjectId,
+                conversationId,
+              );
+
+            if (!latestConversationTarget.conversation) {
+              throw createProjectConversationNotFoundError();
+            }
+
+            ensuredConversationProject = latestConversationTarget.project;
+            userConversation = latestConversationTarget.conversation;
+          }
+        }
+      }
+
       if (!conversationRuntime) {
         return {
           conversation: toProjectConversationDetailResponse(
-            ensuredUserProject._id.toHexString(),
+            ensuredConversationProject._id.toHexString(),
             userConversation,
           ),
         };
@@ -793,7 +1050,7 @@ export const createProjectsService = ({
 
       const assistantReply = await conversationRuntime.generateAssistantReply({
         actor,
-        project: ensuredUserProject,
+        project: ensuredConversationProject,
         conversation: userConversation,
         userMessage,
       });
@@ -821,6 +1078,39 @@ export const createProjectsService = ({
           getRequiredPersistedConversation(ensuredAssistantProject, conversationId),
         ),
       };
+    },
+
+    deleteProjectConversation: async ({ actor }, projectId, conversationId) => {
+      const project = await requireVisibleProject(repository, projectId, actor);
+      const currentConversation = getProjectConversation(project, conversationId);
+
+      if (!currentConversation) {
+        throw createProjectConversationNotFoundError();
+      }
+
+      if (getProjectConversations(project).length <= 1) {
+        throw createProjectConversationLastThreadForbiddenError();
+      }
+
+      const deletedProject = await repository.deleteProjectConversation(
+        project._id.toHexString(),
+        conversationId,
+        new Date(),
+      );
+
+      if (!deletedProject) {
+        const latestProject = await repository.findById(project._id.toHexString());
+
+        if (!latestProject) {
+          throw createProjectNotFoundError();
+        }
+
+        if (getProjectConversations(latestProject).length <= 1) {
+          throw createProjectConversationLastThreadForbiddenError();
+        }
+
+        throw createProjectConversationNotFoundError();
+      }
     },
 
     getProjectConversationDetail: async ({ actor }, projectId, conversationId) => {

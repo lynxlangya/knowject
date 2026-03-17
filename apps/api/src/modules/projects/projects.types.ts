@@ -68,6 +68,10 @@ export interface CreateProjectConversationInput {
   title?: unknown;
 }
 
+export interface UpdateProjectConversationInput {
+  title?: unknown;
+}
+
 export interface CreateProjectConversationMessageInput {
   content?: unknown;
 }

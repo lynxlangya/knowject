@@ -50,45 +50,79 @@ export const ProjectOverviewPage = () => {
 
         <Card
           className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
-          styles={{ body: { padding: '20px 20px 18px' } }}
+          styles={{ body: { padding: '0' } }}
         >
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <Typography.Title level={4} className="mb-1! text-slate-800!">
-                最近对话
-              </Typography.Title>
-              <Typography.Text className="text-sm text-slate-500">
-                从项目最近讨论快速回到上下文。
-              </Typography.Text>
+          <div className="border-b border-slate-100 px-5 py-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex items-center gap-2">
+                  <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    项目对话
+                  </Typography.Text>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                    最近 {recentConversations.length} 条
+                  </span>
+                </div>
+                <Typography.Title level={4} className="mb-1! mt-0! text-slate-800!">
+                  最近对话
+                </Typography.Title>
+                <Typography.Text className="text-sm text-slate-500">
+                  快速回到最近推进的讨论。
+                </Typography.Text>
+              </div>
+              <Button
+                className="h-10! rounded-full! border-slate-200! px-4! text-sm! font-medium! text-slate-600!"
+                onClick={() => navigate(buildProjectChatPath(activeProject.id))}
+              >
+                查看全部
+              </Button>
             </div>
-            <Button onClick={() => navigate(buildProjectChatPath(activeProject.id))}>查看全部</Button>
           </div>
 
           {recentConversations.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {recentConversations.map((conversation) => (
-                <button
-                  key={conversation.id}
-                  type="button"
-                  className="w-full rounded-[20px] border border-slate-200 bg-slate-50/55 px-4 py-4 text-left transition-colors hover:border-slate-300 hover:bg-white"
-                  onClick={() => navigate(buildProjectChatPath(activeProject.id, conversation.id))}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <Typography.Text className="text-base font-semibold text-slate-800">
-                      {conversation.title}
-                    </Typography.Text>
-                    <Typography.Text className="text-xs text-slate-400">
-                      {formatConversationUpdatedAt(conversation.updatedAt)}
-                    </Typography.Text>
-                  </div>
-                  <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-600!">
-                    {conversation.preview}
-                  </Typography.Paragraph>
-                </button>
-              ))}
+            <div className="px-4 py-4">
+              <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
+                {recentConversations.map((conversation) => (
+                  <button
+                    key={conversation.id}
+                    type="button"
+                    className="group w-full border-b border-slate-100 px-5 py-4 text-left transition-colors last:border-b-0 hover:bg-slate-50/70"
+                    onClick={() =>
+                      navigate(buildProjectChatPath(activeProject.id, conversation.id))
+                    }
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span
+                            className="h-2 w-2 rounded-full bg-slate-300 transition-colors duration-200 group-hover:bg-emerald-400"
+                            aria-hidden="true"
+                          />
+                          <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                            最近活跃
+                          </Typography.Text>
+                        </div>
+                        <Typography.Text className="block truncate text-[15px] font-semibold text-slate-800">
+                          {conversation.title}
+                        </Typography.Text>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                        {formatConversationUpdatedAt(conversation.updatedAt)}
+                      </span>
+                    </div>
+                    <Typography.Paragraph className="mb-0! text-[13px]! leading-6! text-slate-500! [display:-webkit-box] overflow-hidden [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                      {conversation.preview}
+                    </Typography.Paragraph>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前暂无对话" />
+            <div className="px-4 py-4">
+              <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/40 px-6 py-10">
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前暂无对话" />
+              </div>
+            </div>
           )}
         </Card>
 

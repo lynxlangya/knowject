@@ -145,11 +145,17 @@ export const createDefaultProjectConversation = (
 
   return {
     id: 'chat-default',
-    title: `${project.name} 项目上下文`,
+    title: buildDefaultProjectConversationTitle(project.name),
     messages: buildDefaultConversationMessages(project.name),
     createdAt: now,
     updatedAt: now,
   };
+};
+
+export const buildDefaultProjectConversationTitle = (
+  projectName: string,
+): string => {
+  return `${projectName} 项目上下文`;
 };
 
 export const createProjectConversation = ({

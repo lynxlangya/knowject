@@ -75,6 +75,10 @@ export interface CreateProjectConversationRequest {
   title?: string;
 }
 
+export interface UpdateProjectConversationRequest {
+  title: string;
+}
+
 export interface CreateProjectConversationMessageRequest {
   content: string;
 }
@@ -195,6 +199,21 @@ export const getProjectConversationDetail = async (
   return unwrapApiData(response.data);
 };
 
+export const updateProjectConversation = async (
+  projectId: string,
+  conversationId: string,
+  payload: UpdateProjectConversationRequest,
+): Promise<ProjectConversationDetailEnvelope> => {
+  const response = await client.patch<ApiEnvelope<ProjectConversationDetailEnvelope>>(
+    `/projects/${encodeURIComponent(projectId)}/conversations/${encodeURIComponent(
+      conversationId,
+    )}`,
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
 export const createProjectConversationMessage = async (
   projectId: string,
   conversationId: string,
@@ -208,6 +227,19 @@ export const createProjectConversationMessage = async (
   );
 
   return unwrapApiData(response.data);
+};
+
+export const deleteProjectConversation = async (
+  projectId: string,
+  conversationId: string,
+): Promise<void> => {
+  const response = await client.delete<ApiEnvelope<null>>(
+    `/projects/${encodeURIComponent(projectId)}/conversations/${encodeURIComponent(
+      conversationId,
+    )}`,
+  );
+
+  unwrapApiData(response.data);
 };
 
 export const updateProject = async (

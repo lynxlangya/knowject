@@ -16,6 +16,10 @@ const toObjectId = (value: string): ObjectId | null => {
   return new ObjectId(value);
 };
 
+interface UpdateProjectConversationTitleOptions {
+  expectedCurrentTitle?: string;
+}
+
 export class ProjectsRepository {
   private indexesEnsured = false;
   private ensureIndexesPromise: Promise<void> | null = null;
@@ -210,6 +214,86 @@ export class ProjectsRepository {
         },
         $set: {
           'conversations.$.updatedAt': updatedAt,
+          updatedAt,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return result;
+  }
+
+  async updateProjectConversationTitle(
+    projectId: string,
+    conversationId: string,
+    title: string,
+    updatedAt: Date,
+    options?: UpdateProjectConversationTitleOptions,
+  ): Promise<WithId<ProjectDocument> | null> {
+    const objectId = toObjectId(projectId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getCollection();
+    const result = await collection.findOneAndUpdate(
+      options?.expectedCurrentTitle !== undefined
+        ? {
+            _id: objectId,
+            conversations: {
+              $elemMatch: {
+                id: conversationId,
+                title: options.expectedCurrentTitle,
+              },
+            },
+          }
+        : {
+            _id: objectId,
+            'conversations.id': conversationId,
+          },
+      {
+        $set: {
+          'conversations.$.title': title,
+          'conversations.$.updatedAt': updatedAt,
+          updatedAt,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return result;
+  }
+
+  async deleteProjectConversation(
+    projectId: string,
+    conversationId: string,
+    updatedAt: Date,
+  ): Promise<WithId<ProjectDocument> | null> {
+    const objectId = toObjectId(projectId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getCollection();
+    const result = await collection.findOneAndUpdate(
+      {
+        _id: objectId,
+        'conversations.id': conversationId,
+        'conversations.1': {
+          $exists: true,
+        },
+      },
+      {
+        $pull: {
+          conversations: {
+            id: conversationId,
+          },
+        },
+        $set: {
           updatedAt,
         },
       },

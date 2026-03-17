@@ -33,13 +33,22 @@
 - `POST /api/projects/:projectId/conversations`
   - 需要 `Authorization: Bearer <token>`。
   - 创建一条正式项目对话；`title` 可选，未提供时服务端会回退到默认标题。
+- `PATCH /api/projects/:projectId/conversations/:conversationId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 更新当前对话标题；`title` 去除首尾空格后不能为空。
+  - 若目标是历史遗留的 fallback `chat-default` 且尚未物化，服务端会先物化再更新标题。
 - `GET /api/projects/:projectId/conversations/:conversationId`
   - 需要 `Authorization: Bearer <token>`。
   - 返回当前项目单条对话详情与消息列表。
+- `DELETE /api/projects/:projectId/conversations/:conversationId`
+  - 需要 `Authorization: Bearer <token>`。
+  - 删除当前项目中的一条对话线程。
+  - 服务端会拒绝删除最后一个可见线程，避免对话区删空后又回落默认线程。
 - `POST /api/projects/:projectId/conversations/:conversationId/messages`
   - 需要 `Authorization: Bearer <token>`。
   - 向当前对话追加一条 user message，随后执行项目级 merged retrieval，并基于当前 effective LLM config 生成 assistant 回复。
   - merged retrieval 当前只覆盖“项目绑定的全局 docs + 当前项目私有 docs”；assistant 消息会返回最小 `sources` 引用数组。
+  - 当当前线程标题仍是默认值（如“新对话”或默认上下文标题）时，服务端会基于首条 user message 自动生成更接近 ChatGPT 风格的短标题。
   - 当前实现会先持久化 user message，再尝试生成 assistant；若 assistant 生成失败，接口会返回 `5xx`，但 user message 可能已经落库。
 - `PATCH /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。

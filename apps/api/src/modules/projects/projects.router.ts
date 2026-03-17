@@ -8,6 +8,7 @@ import type {
   CreateProjectConversationInput,
   CreateProjectConversationMessageInput,
   CreateProjectInput,
+  UpdateProjectConversationInput,
   UpdateProjectInput,
 } from './projects.types.js';
 
@@ -15,6 +16,14 @@ const getRequiredProjectId = (request: Request): string => {
   const projectId = request.params.projectId;
 
   return Array.isArray(projectId) ? projectId[0] ?? '' : projectId;
+};
+
+const getRequiredConversationId = (request: Request): string => {
+  const conversationId = request.params.conversationId;
+
+  return Array.isArray(conversationId)
+    ? conversationId[0] ?? ''
+    : conversationId ?? '';
 };
 
 export const createProjectsRouter = (
@@ -84,29 +93,58 @@ export const createProjectsRouter = (
   projectsRouter.get(
     '/:projectId/conversations/:conversationId',
     asyncHandler(async (req, res) => {
-      const conversationId = req.params.conversationId;
       const result = await projectsService.getProjectConversationDetail(
         {
           actor: getRequiredAuthUser(req),
         },
         getRequiredProjectId(req),
-        Array.isArray(conversationId) ? conversationId[0] ?? '' : conversationId ?? '',
+        getRequiredConversationId(req),
       );
 
       sendSuccess(res, result);
     }),
   );
 
+  projectsRouter.patch(
+    '/:projectId/conversations/:conversationId',
+    asyncHandler(async (req, res) => {
+      const result = await projectsService.updateProjectConversation(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredProjectId(req),
+        getRequiredConversationId(req),
+        req.body as UpdateProjectConversationInput,
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  projectsRouter.delete(
+    '/:projectId/conversations/:conversationId',
+    asyncHandler(async (req, res) => {
+      await projectsService.deleteProjectConversation(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredProjectId(req),
+        getRequiredConversationId(req),
+      );
+
+      sendSuccess(res, null);
+    }),
+  );
+
   projectsRouter.post(
     '/:projectId/conversations/:conversationId/messages',
     asyncHandler(async (req, res) => {
-      const conversationId = req.params.conversationId;
       const result = await projectsService.createProjectConversationMessage(
         {
           actor: getRequiredAuthUser(req),
         },
         getRequiredProjectId(req),
-        Array.isArray(conversationId) ? conversationId[0] ?? '' : conversationId ?? '',
+        getRequiredConversationId(req),
         req.body as CreateProjectConversationMessageInput,
       );
 
