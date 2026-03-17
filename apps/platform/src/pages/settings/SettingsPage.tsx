@@ -34,6 +34,7 @@ import { extractApiErrorMessage } from '@api/error';
 import {
   getSettings,
   testEmbeddingSettings,
+  testIndexingSettings,
   testLlmSettings,
   updateEmbeddingSettings,
   updateIndexingSettings,
@@ -42,6 +43,7 @@ import {
   type SettingsAiConfigResponse,
   type SettingsConnectionTestResponse,
   type SettingsEmbeddingProvider,
+  type SettingsIndexingConnectionTestResponse,
   type SettingsLlmProvider,
   type SettingsResponse,
   type SettingsSource,
@@ -55,7 +57,7 @@ import {
 
 type SettingsTabKey = 'ai' | 'indexing' | 'workspace' | 'permissions';
 type SaveSection = 'embedding' | 'llm' | 'indexing' | 'workspace' | null;
-type TestSection = 'embedding' | 'llm' | null;
+type TestSection = 'embedding' | 'llm' | 'indexing' | null;
 type TestableSection = Exclude<TestSection, null>;
 
 interface AiDraft<TProvider extends string> {
@@ -245,6 +247,52 @@ const buildConnectionFeedback = (
     status: 'error',
     message: '连接测试失败',
     detail: result.error || '远端服务返回了失败结果。',
+  };
+};
+
+const buildIndexingConnectionFeedback = (
+  result: SettingsIndexingConnectionTestResponse,
+): ConnectionFeedback => {
+  const summaryParts = [
+    result.service ? `服务 ${result.service}` : null,
+    result.chromaReachable === true
+      ? 'Chroma 可达'
+      : result.chromaReachable === false
+        ? 'Chroma 不可达'
+        : null,
+    result.supportedFormats.length > 0
+      ? `支持 ${result.supportedFormats.join(' / ')}`
+      : null,
+    result.chunkSize !== null && result.chunkOverlap !== null
+      ? `runtime chunk ${result.chunkSize} / ${result.chunkOverlap}`
+      : null,
+    result.embeddingProvider ? `embedding ${result.embeddingProvider}` : null,
+  ].filter((item): item is string => Boolean(item));
+
+  if (result.success) {
+    return {
+      status: 'success',
+      message: '索引链路测试通过',
+      detail: [
+        result.latencyMs !== undefined ? `Node 到 indexer 往返约 ${result.latencyMs}ms` : null,
+        ...summaryParts,
+      ]
+        .filter((item): item is string => Boolean(item))
+        .join('，'),
+    };
+  }
+
+  const statusLabel =
+    result.indexerStatus === 'degraded'
+      ? 'Python indexer 可达，但链路处于降级状态'
+      : '当前无法完成 Python indexer diagnostics';
+
+  return {
+    status: 'error',
+    message: '索引链路测试失败',
+    detail: [statusLabel, ...summaryParts, result.error || '索引链路返回失败结果']
+      .filter((item): item is string => Boolean(item))
+      .join('，'),
   };
 };
 
@@ -501,9 +549,11 @@ export const SettingsPage = () => {
   const [embeddingRebuildPending, setEmbeddingRebuildPending] = useState(false);
   const [connectionFeedback, setConnectionFeedback] = useState<{
     embedding: ConnectionFeedback | null;
+    indexing: ConnectionFeedback | null;
     llm: ConnectionFeedback | null;
   }>({
     embedding: null,
+    indexing: null,
     llm: null,
   });
 
@@ -515,6 +565,7 @@ export const SettingsPage = () => {
     setWorkspaceDraft(getInitialWorkspaceDraft(nextSettings));
     setConnectionFeedback({
       embedding: null,
+      indexing: null,
       llm: null,
     });
   }, []);
@@ -850,6 +901,33 @@ export const SettingsPage = () => {
           status: 'error',
           message: '连接测试失败',
           detail: extractApiErrorMessage(currentError, '对话模型连接测试失败'),
+        },
+      }));
+    } finally {
+      setTestingSection(null);
+    }
+  };
+
+  const handleTestIndexing = async () => {
+    setTestingSection('indexing');
+    resetConnectionFeedback('indexing');
+
+    try {
+      const result = await testIndexingSettings({
+        indexerTimeoutMs: indexingDraft.indexerTimeoutMs,
+      });
+
+      setConnectionFeedback((current) => ({
+        ...current,
+        indexing: buildIndexingConnectionFeedback(result),
+      }));
+    } catch (currentError) {
+      setConnectionFeedback((current) => ({
+        ...current,
+        indexing: {
+          status: 'error',
+          message: '索引链路测试失败',
+          detail: extractApiErrorMessage(currentError, '索引链路测试失败'),
         },
       }));
     } finally {
@@ -1363,12 +1441,13 @@ export const SettingsPage = () => {
                           max={2000}
                           step={100}
                           value={indexingDraft.chunkSize}
-                          onChange={(value) =>
+                          onChange={(value) => {
+                            resetConnectionFeedback('indexing');
                             setIndexingDraft((current) => ({
                               ...current,
                               chunkSize: Array.isArray(value) ? value[0] ?? current.chunkSize : value,
-                            }))
-                          }
+                            }));
+                          }}
                           style={{ flex: 1 }}
                         />
                         <InputNumber
@@ -1376,12 +1455,13 @@ export const SettingsPage = () => {
                           max={2000}
                           step={100}
                           value={indexingDraft.chunkSize}
-                          onChange={(value) =>
+                          onChange={(value) => {
+                            resetConnectionFeedback('indexing');
                             setIndexingDraft((current) => ({
                               ...current,
                               chunkSize: typeof value === 'number' ? value : current.chunkSize,
-                            }))
-                          }
+                            }));
+                          }}
                         />
                       </Flex>
                     </div>
@@ -1397,14 +1477,15 @@ export const SettingsPage = () => {
                           max={500}
                           step={50}
                           value={indexingDraft.chunkOverlap}
-                          onChange={(value) =>
+                          onChange={(value) => {
+                            resetConnectionFeedback('indexing');
                             setIndexingDraft((current) => ({
                               ...current,
                               chunkOverlap: Array.isArray(value)
                                 ? value[0] ?? current.chunkOverlap
                                 : value,
-                            }))
-                          }
+                            }));
+                          }}
                           style={{ flex: 1 }}
                         />
                         <InputNumber
@@ -1412,13 +1493,14 @@ export const SettingsPage = () => {
                           max={500}
                           step={50}
                           value={indexingDraft.chunkOverlap}
-                          onChange={(value) =>
+                          onChange={(value) => {
+                            resetConnectionFeedback('indexing');
                             setIndexingDraft((current) => ({
                               ...current,
                               chunkOverlap:
                                 typeof value === 'number' ? value : current.chunkOverlap,
-                            }))
-                          }
+                            }));
+                          }}
                         />
                       </Flex>
                     </div>
@@ -1431,13 +1513,14 @@ export const SettingsPage = () => {
                         min={1}
                         step={1000}
                         value={indexingDraft.indexerTimeoutMs}
-                        onChange={(value) =>
+                        onChange={(value) => {
+                          resetConnectionFeedback('indexing');
                           setIndexingDraft((current) => ({
                             ...current,
                             indexerTimeoutMs:
                               typeof value === 'number' ? value : current.indexerTimeoutMs,
-                          }))
-                        }
+                          }));
+                        }}
                         style={{ width: compactTabs ? '100%' : 240 }}
                       />
                     </SettingField>
@@ -1452,12 +1535,13 @@ export const SettingsPage = () => {
                       >
                         <Checkbox.Group
                           value={indexingDraft.supportedTypes}
-                          onChange={(value) =>
+                          onChange={(value) => {
+                            resetConnectionFeedback('indexing');
                             setIndexingDraft((current) => ({
                               ...current,
                               supportedTypes: value as SettingsSupportedType[],
-                            }))
-                          }
+                            }));
+                          }}
                           options={[
                             { label: 'Markdown (.md)', value: 'md' },
                             { label: '纯文本 (.txt)', value: 'txt' },
@@ -1471,14 +1555,40 @@ export const SettingsPage = () => {
                       </Text>
                     </div>
 
-                    <Flex justify="flex-end">
-                      <Button
-                        type="primary"
-                        loading={savingSection === 'indexing'}
-                        onClick={() => void handleSaveIndexing()}
-                      >
-                        保存索引参数
-                      </Button>
+                    {connectionFeedback.indexing ? (
+                      <Alert
+                        type={
+                          connectionFeedback.indexing.status === 'success'
+                            ? 'success'
+                            : 'error'
+                        }
+                        showIcon
+                        title={connectionFeedback.indexing.message}
+                        description={connectionFeedback.indexing.detail}
+                      />
+                    ) : null}
+
+                    <Flex justify="space-between" align="center" gap={12} wrap>
+                      <Text type="secondary">
+                        测试会校验当前 Node 到 Python indexer 与 Chroma 的连通性，不会验证未保存的
+                        chunk 草稿已经被运行中的 Python 服务采纳。
+                      </Text>
+                      <Space>
+                        <Button
+                          icon={<ApiOutlined />}
+                          loading={testingSection === 'indexing'}
+                          onClick={() => void handleTestIndexing()}
+                        >
+                          测试索引链路
+                        </Button>
+                        <Button
+                          type="primary"
+                          loading={savingSection === 'indexing'}
+                          onClick={() => void handleSaveIndexing()}
+                        >
+                          保存索引参数
+                        </Button>
+                      </Space>
                     </Flex>
                   </Space>
                 </SectionBlock>

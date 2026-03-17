@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from app.domain.indexing import pipeline
 from app.schemas.indexing import (
+    DeleteChunksRequestPayload,
+    DeleteDocumentChunksSuccessResponse,
+    DeleteKnowledgeChunksSuccessResponse,
     IndexDocumentRequestPayload,
     IndexDocumentSuccessResponse,
     IndexerDiagnosticsResponse,
@@ -29,6 +32,28 @@ class IndexingService:
     def get_diagnostics(self) -> IndexerDiagnosticsResponse:
         result = pipeline.collect_diagnostics()
         return IndexerDiagnosticsResponse.model_validate(result)
+
+    def delete_document_chunks(
+        self,
+        document_id: str,
+        payload: DeleteChunksRequestPayload,
+    ) -> DeleteDocumentChunksSuccessResponse:
+        result = pipeline.delete_document_vectors(
+            document_id,
+            payload.model_dump(by_alias=True),
+        )
+        return DeleteDocumentChunksSuccessResponse.model_validate(result)
+
+    def delete_knowledge_chunks(
+        self,
+        knowledge_id: str,
+        payload: DeleteChunksRequestPayload,
+    ) -> DeleteKnowledgeChunksSuccessResponse:
+        result = pipeline.delete_knowledge_vectors(
+            knowledge_id,
+            payload.model_dump(by_alias=True),
+        )
+        return DeleteKnowledgeChunksSuccessResponse.model_validate(result)
 
 
 def get_indexing_service() -> IndexingService:

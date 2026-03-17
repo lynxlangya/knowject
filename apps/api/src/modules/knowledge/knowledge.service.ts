@@ -212,6 +212,64 @@ const createLegacyNamespaceRebuildRequiredError = (): AppError => {
   });
 };
 
+const createDuplicateKnowledgeDocumentVersionError = (
+  document: WithId<KnowledgeDocumentRecord>,
+): AppError => {
+  return new AppError({
+    statusCode: 409,
+    code: 'KNOWLEDGE_DOCUMENT_DUPLICATE_VERSION',
+    message: '相同内容的文档已存在，请直接重试或重建现有文档',
+    details: {
+      knowledgeId: document.knowledgeId,
+      documentId: document._id.toHexString(),
+      fileName: document.fileName,
+      status: document.status,
+    },
+  });
+};
+
+const isKnowledgeDocumentVersionDuplicateError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const duplicateError = error as {
+    code?: unknown;
+    keyPattern?: unknown;
+    keyValue?: unknown;
+    message?: unknown;
+  };
+
+  if (duplicateError.code !== 11000) {
+    return false;
+  }
+
+  const hasKnowledgeIdAndVersionHash = (value: unknown): boolean => {
+    return (
+      value !== null &&
+      typeof value === 'object' &&
+      'knowledgeId' in value &&
+      'documentVersionHash' in value
+    );
+  };
+
+  if (
+    hasKnowledgeIdAndVersionHash(duplicateError.keyPattern) ||
+    hasKnowledgeIdAndVersionHash(duplicateError.keyValue)
+  ) {
+    return true;
+  }
+
+  if (
+    typeof duplicateError.message === 'string' &&
+    duplicateError.message.includes('knowledge_documents_knowledge_id_version_hash')
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 const NOOP_PROJECTS_REPOSITORY = {
   findById: async () => null,
 } as unknown as ProjectsRepository;
@@ -322,7 +380,7 @@ const validateSearchDocumentsInput = (
   const query = typeof input.query === 'string' ? input.query.trim() : '';
   const knowledgeId = readOptionalStringField(input.knowledgeId, 'knowledgeId');
   const sourceType = readOptionalSourceType(input.sourceType) ?? 'global_docs';
-  const rawTopK = input.topK;
+  const rawTopK = input.topK ?? input.limit;
 
   if (!query) {
     throw new AppError(createRequiredFieldError('query'));
@@ -1773,6 +1831,168 @@ const queueNamespaceRebuild = ({
   });
 };
 
+const recoverInterruptedKnowledgeTasks = async ({
+  env,
+  repository,
+  searchService,
+  settingsRepository,
+}: {
+  env: AppEnv;
+  repository: KnowledgeRepository;
+  searchService: KnowledgeSearchService;
+  settingsRepository: SettingsRepository;
+}): Promise<void> => {
+  const knowledgeItems = await repository.listKnowledgeBases();
+  const knowledgeIds = knowledgeItems
+    .map((knowledge) => knowledge._id?.toHexString())
+    .filter((knowledgeId): knowledgeId is string => Boolean(knowledgeId));
+
+  if (knowledgeIds.length === 0) {
+    return;
+  }
+
+  const documents = await listDocumentsForKnowledgeIds({
+    repository,
+    knowledgeIds,
+  });
+  const now = new Date();
+  const interruptedDocuments = documents.filter(
+    (document) =>
+      document.status === 'pending' || isStaleProcessingDocument(document, now),
+  );
+
+  if (interruptedDocuments.length === 0) {
+    return;
+  }
+
+  const knowledgeById = new Map(
+    knowledgeItems.map((knowledge) => [knowledge._id?.toHexString(), knowledge] as const),
+  );
+  const documentsByNamespace = new Map<
+    string,
+    {
+      knowledge: WithId<KnowledgeBaseDocument>;
+      documents: WithId<KnowledgeDocumentRecord>[];
+    }
+  >();
+
+  for (const document of interruptedDocuments) {
+    const knowledge = knowledgeById.get(document.knowledgeId);
+
+    if (!knowledge) {
+      await persistProcessingFailure({
+        repository,
+        knowledgeId: document.knowledgeId,
+        documentId: document._id.toHexString(),
+        errorMessage: '所属知识库不存在，无法恢复索引任务',
+      });
+      continue;
+    }
+
+    const namespaceKey = buildKnowledgeNamespaceDescriptor(knowledge).namespaceKey;
+    const existingGroup = documentsByNamespace.get(namespaceKey);
+
+    if (existingGroup) {
+      existingGroup.documents.push(document);
+      continue;
+    }
+
+    documentsByNamespace.set(namespaceKey, {
+      knowledge,
+      documents: [document],
+    });
+  }
+
+  for (const { knowledge, documents: namespaceRecoveryDocuments } of documentsByNamespace.values()) {
+    const namespaceContext = await resolveNamespaceIndexContext({
+      env,
+      repository,
+      settingsRepository,
+      knowledge,
+    });
+
+    if (
+      namespaceContext.mode === 'versioned' &&
+      namespaceContext.state.rebuildStatus === 'rebuilding'
+    ) {
+      const namespaceDocuments = await listNamespaceDocuments(
+        repository,
+        namespaceContext.namespace,
+      );
+
+      if (namespaceDocuments.length > 0) {
+        queueNamespaceRebuild({
+          env,
+          repository,
+          searchService,
+          settingsRepository,
+          namespaceContext,
+          documents: namespaceDocuments,
+        });
+      }
+      continue;
+    }
+
+    if (namespaceContext.mode === 'legacy_untracked') {
+      await Promise.all(
+        namespaceRecoveryDocuments.map((document) =>
+          persistProcessingFailure({
+            repository,
+            knowledgeId: document.knowledgeId,
+            documentId: document._id.toHexString(),
+            errorMessage: createLegacyNamespaceRebuildRequiredError().message,
+          }),
+        ),
+      );
+      continue;
+    }
+
+    if (
+      namespaceContext.state.activeEmbeddingFingerprint !==
+      namespaceContext.currentEmbeddingFingerprint
+    ) {
+      await Promise.all(
+        namespaceRecoveryDocuments.map((document) =>
+          persistProcessingFailure({
+            repository,
+            knowledgeId: document.knowledgeId,
+            documentId: document._id.toHexString(),
+            errorMessage: createNamespaceRebuildRequiredError().message,
+          }),
+        ),
+      );
+      continue;
+    }
+
+    const indexingConfig = await getEffectiveIndexingConfig({
+      env,
+      repository: settingsRepository,
+    });
+    const embeddingMetadata = toKnowledgeEmbeddingMetadata(
+      namespaceContext.currentEmbeddingConfig,
+    );
+
+    await Promise.all(
+      namespaceRecoveryDocuments.map((document) =>
+        queueExistingKnowledgeDocument({
+          env,
+          repository,
+          searchService,
+          settingsRepository,
+          knowledgeId: document.knowledgeId,
+          document,
+          sourceType: knowledge.sourceType,
+          collectionName: namespaceContext.state.activeCollectionName,
+          embeddingConfig: namespaceContext.currentEmbeddingConfig,
+          indexingConfig,
+          embeddingMetadata,
+          mode: 'index',
+        }),
+      ),
+    );
+  }
+};
+
 const buildKnowledgeDetailEnvelope = async ({
   repository,
   authRepository,
@@ -1820,6 +2040,14 @@ const uploadKnowledgeDocument = async ({
 
   const documentId = new ObjectId();
   const documentVersionHash = buildDocumentVersionHash(file);
+  const duplicatedDocument =
+    (await repository.findKnowledgeDocumentByVersionHash?.(knowledgeId, documentVersionHash)) ??
+    null;
+
+  if (duplicatedDocument) {
+    throw createDuplicateKnowledgeDocumentVersionError(duplicatedDocument);
+  }
+
   const [namespaceContext, indexingConfig] = await Promise.all([
     resolveNamespaceIndexContext({
       env,
@@ -1892,7 +2120,25 @@ const uploadKnowledgeDocument = async ({
       updatedAt: now,
     };
 
-    const document = await repository.createKnowledgeDocument(documentRecord);
+    let document: WithId<KnowledgeDocumentRecord>;
+    try {
+      document = await repository.createKnowledgeDocument(documentRecord);
+    } catch (error) {
+      if (isKnowledgeDocumentVersionDuplicateError(error)) {
+        const duplicatedDocument =
+          (await repository.findKnowledgeDocumentByVersionHash?.(
+            knowledgeId,
+            documentVersionHash,
+          )) ?? null;
+
+        if (duplicatedDocument) {
+          throw createDuplicateKnowledgeDocumentVersionError(duplicatedDocument);
+        }
+      }
+
+      throw error;
+    }
+
     documentPersisted = true;
     const updatedKnowledge = await repository.updateKnowledgeSummaryAfterDocumentUpload(
       knowledgeId,
@@ -1959,7 +2205,14 @@ export const createKnowledgeService = ({
   return {
     initializeSearchInfrastructure: async () => {
       // Startup 只探活 indexer；collection init 由 indexer-py 在写侧链路内保证。
+      await repository.ensureMetadataModel();
       await searchService.ensureCollections();
+      await recoverInterruptedKnowledgeTasks({
+        env,
+        repository,
+        searchService,
+        settingsRepository,
+      });
     },
 
     // Keep future metadata, upload, index trigger, and search orchestration behind the service.

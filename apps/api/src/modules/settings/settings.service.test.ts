@@ -328,3 +328,110 @@ test('updateIndexing rejects empty supportedTypes', async () => {
     },
   );
 });
+
+test('testIndexing returns success when indexer diagnostics and Chroma are reachable', async () => {
+  const service = createSettingsService({
+    env: createTestEnv(),
+    repository: createRepositoryStub(),
+  });
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: string[] = [];
+
+  globalThis.fetch = async (input, init) => {
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    fetchCalls.push(url);
+
+    assert.equal(init?.method, 'GET');
+
+    return new Response(
+      JSON.stringify({
+        status: 'ok',
+        service: 'knowject-indexer-py',
+        chunkSize: 1000,
+        chunkOverlap: 200,
+        supportedFormats: ['md', 'txt'],
+        embeddingProvider: 'openai',
+        chromaReachable: true,
+        errorMessage: null,
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    const result = await service.testIndexing(
+      {
+        actor: ACTOR,
+      },
+      {
+        indexerTimeoutMs: 45000,
+      },
+    );
+
+    assert.equal(result.success, true);
+    assert.equal(result.indexerStatus, 'ok');
+    assert.equal(result.service, 'knowject-indexer-py');
+    assert.deepEqual(result.supportedFormats, ['md', 'txt']);
+    assert.equal(result.chromaReachable, true);
+    assert.equal(typeof result.latencyMs, 'number');
+    assert.equal(result.error, undefined);
+    assert.deepEqual(fetchCalls, ['http://127.0.0.1:8001/internal/v1/index/diagnostics']);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('testIndexing reports degraded status when Chroma is unreachable', async () => {
+  const service = createSettingsService({
+    env: createTestEnv(),
+    repository: createRepositoryStub(),
+  });
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        status: 'degraded',
+        service: 'knowject-indexer-py',
+        chunkSize: 1000,
+        chunkOverlap: 200,
+        supportedFormats: ['md', 'txt'],
+        embeddingProvider: 'custom',
+        chromaReachable: false,
+        errorMessage: 'Chroma 诊断失败: connection refused',
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+
+  try {
+    const result = await service.testIndexing(
+      {
+        actor: ACTOR,
+      },
+      {},
+    );
+
+    assert.equal(result.success, false);
+    assert.equal(result.indexerStatus, 'degraded');
+    assert.equal(result.service, 'knowject-indexer-py');
+    assert.equal(result.chromaReachable, false);
+    assert.equal(result.error, 'Chroma 诊断失败: connection refused');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

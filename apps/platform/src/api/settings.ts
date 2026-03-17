@@ -77,6 +77,25 @@ export interface SettingsConnectionTestResponse {
   error?: string;
 }
 
+export type SettingsIndexingTestStatus = 'ok' | 'degraded' | 'unreachable';
+
+export interface TestIndexingConnectionRequest {
+  indexerTimeoutMs?: number;
+}
+
+export interface SettingsIndexingConnectionTestResponse {
+  success: boolean;
+  indexerStatus: SettingsIndexingTestStatus;
+  latencyMs?: number;
+  error?: string;
+  service: string | null;
+  supportedFormats: string[];
+  chunkSize: number | null;
+  chunkOverlap: number | null;
+  embeddingProvider: string | null;
+  chromaReachable: boolean | null;
+}
+
 export const getSettings = async (): Promise<SettingsResponse> => {
   const response = await client.get<ApiEnvelope<SettingsResponse>>('/settings');
   return unwrapApiData(response.data);
@@ -142,6 +161,17 @@ export const testLlmSettings = async (
 ): Promise<SettingsConnectionTestResponse> => {
   const response = await client.post<ApiEnvelope<SettingsConnectionTestResponse>>(
     '/settings/llm/test',
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const testIndexingSettings = async (
+  payload: TestIndexingConnectionRequest,
+): Promise<SettingsIndexingConnectionTestResponse> => {
+  const response = await client.post<ApiEnvelope<SettingsIndexingConnectionTestResponse>>(
+    '/settings/indexing/test',
     payload,
   );
 

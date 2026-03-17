@@ -767,6 +767,539 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
   assert.equal(completedChunkCount, 4);
 });
 
+test('uploadDocument rejects duplicate content within the same global knowledge base', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-duplicate-global-'));
+  const knowledgeId = '507f1f77bcf86cd799439511';
+  const actorId = '507f1f77bcf86cd799439512';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '全局知识库',
+    description: '用于验证重复上传拦截',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  const duplicateDocumentId = '507f1f77bcf86cd799439513';
+  let createCalled = false;
+  const duplicateLookups: Array<{ knowledgeId: string; documentVersionHash: string }> = [];
+  let recordedDuplicateKnowledgeId: string | null = null;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeDocumentByVersionHash: async (
+      scopedKnowledgeId: string,
+      documentVersionHash: string,
+    ) => {
+      duplicateLookups.push({
+        knowledgeId: scopedKnowledgeId,
+        documentVersionHash,
+      });
+      recordedDuplicateKnowledgeId = scopedKnowledgeId;
+
+      return {
+        _id: new ObjectId(duplicateDocumentId),
+        knowledgeId,
+        fileName: 'README.md',
+        mimeType: 'text/markdown',
+        storagePath: `${knowledgeId}/${duplicateDocumentId}/hash-1/README.md`,
+        status: 'completed' as const,
+        chunkCount: 3,
+        documentVersionHash,
+        embeddingProvider: 'openai' as const,
+        embeddingModel: 'text-embedding-3-small' as const,
+        lastIndexedAt: new Date('2026-03-16T00:01:00.000Z'),
+        retryCount: 0,
+        errorMessage: null,
+        uploadedBy: actorId,
+        uploadedAt: new Date('2026-03-16T00:00:00.000Z'),
+        processedAt: new Date('2026-03-16T00:01:00.000Z'),
+        createdAt: new Date('2026-03-16T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-16T00:01:00.000Z'),
+      };
+    },
+    createKnowledgeDocument: async () => {
+      createCalled = true;
+      throw new Error('should not create duplicated document');
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+  });
+
+  await assert.rejects(
+    () =>
+      service.uploadDocument(
+        {
+          actor: {
+            id: actorId,
+            username: 'langya',
+          },
+        },
+        knowledgeId,
+        {
+          originalName: 'README-copy.md',
+          mimeType: 'text/markdown',
+          size: 15,
+          buffer: Buffer.from('# same content\n', 'utf-8'),
+        },
+      ),
+    (error: unknown) => {
+      assert.equal((error as { code?: string }).code, 'KNOWLEDGE_DOCUMENT_DUPLICATE_VERSION');
+      assert.equal((error as { statusCode?: number }).statusCode, 409);
+      assert.deepEqual((error as { details?: unknown }).details, {
+        knowledgeId,
+        documentId: duplicateDocumentId,
+        fileName: 'README.md',
+        status: 'completed',
+      });
+      return true;
+    },
+  );
+
+  assert.equal(createCalled, false);
+  assert.equal(duplicateLookups.length, 1);
+  assert.equal(recordedDuplicateKnowledgeId, knowledgeId);
+});
+
+test('uploadDocument converts duplicate key races into duplicate-version conflicts', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-duplicate-race-'));
+  const knowledgeId = '507f1f77bcf86cd799439516';
+  const actorId = '507f1f77bcf86cd799439517';
+  const duplicateDocumentId = '507f1f77bcf86cd799439518';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '全局知识库',
+    description: '用于验证重复上传竞态兜底',
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 3,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  let duplicateLookupCount = 0;
+  let createCalled = false;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeDocumentByVersionHash: async (
+      scopedKnowledgeId: string,
+      documentVersionHash: string,
+    ) => {
+      duplicateLookupCount += 1;
+      assert.equal(scopedKnowledgeId, knowledgeId);
+
+      if (duplicateLookupCount === 1) {
+        return null;
+      }
+
+      return {
+        _id: new ObjectId(duplicateDocumentId),
+        knowledgeId,
+        fileName: 'README.md',
+        mimeType: 'text/markdown',
+        storagePath: `${knowledgeId}/${duplicateDocumentId}/${documentVersionHash}/README.md`,
+        status: 'completed' as const,
+        chunkCount: 3,
+        documentVersionHash,
+        embeddingProvider: 'openai' as const,
+        embeddingModel: 'text-embedding-3-small' as const,
+        lastIndexedAt: new Date('2026-03-16T00:01:00.000Z'),
+        retryCount: 0,
+        errorMessage: null,
+        uploadedBy: actorId,
+        uploadedAt: new Date('2026-03-16T00:00:00.000Z'),
+        processedAt: new Date('2026-03-16T00:01:00.000Z'),
+        createdAt: new Date('2026-03-16T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-16T00:01:00.000Z'),
+      };
+    },
+    createKnowledgeDocument: async () => {
+      createCalled = true;
+      throw {
+        code: 11000,
+        keyPattern: {
+          knowledgeId: 1,
+          documentVersionHash: 1,
+        },
+      };
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+  });
+
+  await assert.rejects(
+    () =>
+      service.uploadDocument(
+        {
+          actor: {
+            id: actorId,
+            username: 'langya',
+          },
+        },
+        knowledgeId,
+        {
+          originalName: 'README-copy.md',
+          mimeType: 'text/markdown',
+          size: 15,
+          buffer: Buffer.from('# same content\n', 'utf-8'),
+        },
+      ),
+    (error: unknown) => {
+      assert.equal((error as { code?: string }).code, 'KNOWLEDGE_DOCUMENT_DUPLICATE_VERSION');
+      assert.equal((error as { statusCode?: number }).statusCode, 409);
+      assert.deepEqual((error as { details?: unknown }).details, {
+        knowledgeId,
+        documentId: duplicateDocumentId,
+        fileName: 'README.md',
+        status: 'completed',
+      });
+      return true;
+    },
+  );
+
+  assert.equal(createCalled, true);
+  assert.equal(duplicateLookupCount, 2);
+});
+
+test('uploadProjectKnowledgeDocument rejects duplicate content within the same project knowledge base', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-duplicate-project-'));
+  const knowledgeId = '507f1f77bcf86cd799439521';
+  const projectId = '507f1f77bcf86cd799439522';
+  const actorId = '507f1f77bcf86cd799439523';
+  const duplicateDocumentId = '507f1f77bcf86cd799439524';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '项目知识库',
+    description: '用于验证项目重复上传拦截',
+    scope: 'project',
+    projectId,
+    sourceType: 'global_docs',
+    indexStatus: 'completed',
+    documentCount: 1,
+    chunkCount: 2,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  let createCalled = false;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeDocumentByVersionHash: async (
+      scopedKnowledgeId: string,
+      documentVersionHash: string,
+    ) => {
+      assert.equal(scopedKnowledgeId, knowledgeId);
+
+      return {
+        _id: new ObjectId(duplicateDocumentId),
+        knowledgeId,
+        fileName: 'project-doc.md',
+        mimeType: 'text/markdown',
+        storagePath: `projects/${projectId}/knowledge/${knowledgeId}/${duplicateDocumentId}/${documentVersionHash}/project-doc.md`,
+        status: 'failed' as const,
+        chunkCount: 0,
+        documentVersionHash,
+        embeddingProvider: 'openai' as const,
+        embeddingModel: 'text-embedding-3-small' as const,
+        lastIndexedAt: null,
+        retryCount: 1,
+        errorMessage: 'embedding timeout',
+        uploadedBy: actorId,
+        uploadedAt: new Date('2026-03-16T00:00:00.000Z'),
+        processedAt: null,
+        createdAt: new Date('2026-03-16T00:00:00.000Z'),
+        updatedAt: new Date('2026-03-16T00:00:10.000Z'),
+      };
+    },
+    createKnowledgeDocument: async () => {
+      createCalled = true;
+      throw new Error('should not create duplicated project document');
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    projectsRepository: createProjectsRepositoryStub({
+      findById: async (id: string) =>
+        id === projectId
+          ? ({
+              _id: new ObjectId(projectId),
+              name: '项目 A',
+              description: '',
+              ownerId: actorId,
+              members: [
+                {
+                  userId: actorId,
+                  role: 'admin',
+                  joinedAt: new Date('2026-03-16T00:00:00.000Z'),
+                },
+              ],
+              knowledgeBaseIds: [],
+              agentIds: [],
+              skillIds: [],
+              conversations: [],
+              createdAt: new Date('2026-03-16T00:00:00.000Z'),
+              updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+            })
+          : null,
+    }),
+  });
+
+  await assert.rejects(
+    () =>
+      service.uploadProjectKnowledgeDocument(
+        {
+          actor: {
+            id: actorId,
+            username: 'langya',
+          },
+        },
+        projectId,
+        knowledgeId,
+        {
+          originalName: 'project-doc-copy.md',
+          mimeType: 'text/markdown',
+          size: 18,
+          buffer: Buffer.from('# same project doc\n', 'utf-8'),
+        },
+      ),
+    (error: unknown) => {
+      assert.equal((error as { code?: string }).code, 'KNOWLEDGE_DOCUMENT_DUPLICATE_VERSION');
+      assert.equal((error as { statusCode?: number }).statusCode, 409);
+      assert.deepEqual((error as { details?: unknown }).details, {
+        knowledgeId,
+        documentId: duplicateDocumentId,
+        fileName: 'project-doc.md',
+        status: 'failed',
+      });
+      return true;
+    },
+  );
+
+  assert.equal(createCalled, false);
+});
+
+test('uploadDocument scopes duplicate detection to the current knowledge base', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-duplicate-scope-'));
+  const knowledgeId = '507f1f77bcf86cd799439531';
+  const otherKnowledgeId = '507f1f77bcf86cd799439532';
+  const actorId = '507f1f77bcf86cd799439533';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '目标知识库',
+    description: '用于验证防重范围',
+    sourceType: 'global_docs',
+    indexStatus: 'idle',
+    documentCount: 0,
+    chunkCount: 0,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  const updatedKnowledge = {
+    ...knowledge,
+    documentCount: 1,
+    updatedAt: new Date('2026-03-16T00:00:01.000Z'),
+  };
+  let createdDocumentKnowledgeId: string | null = null;
+  let createdDocument: (KnowledgeDocumentRecord & {
+    _id: NonNullable<KnowledgeDocumentRecord['_id']>;
+  }) | null = null;
+  let resolveCompleted: (() => void) | null = null;
+  const processingCompleted = new Promise<void>((resolve) => {
+    resolveCompleted = resolve;
+  });
+  const duplicateLookups: Array<{ knowledgeId: string; documentVersionHash: string }> = [];
+  let recordedDuplicateKnowledgeId: string | null = null;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeDocumentByVersionHash: async (
+      scopedKnowledgeId: string,
+      documentVersionHash: string,
+    ) => {
+      duplicateLookups.push({
+        knowledgeId: scopedKnowledgeId,
+        documentVersionHash,
+      });
+      recordedDuplicateKnowledgeId = scopedKnowledgeId;
+
+      if (scopedKnowledgeId === otherKnowledgeId) {
+        return {
+          _id: new ObjectId('507f1f77bcf86cd799439534'),
+          knowledgeId: otherKnowledgeId,
+          fileName: 'README.md',
+          mimeType: 'text/markdown',
+          storagePath: `${otherKnowledgeId}/507f1f77bcf86cd799439534/${documentVersionHash}/README.md`,
+          status: 'completed' as const,
+          chunkCount: 2,
+          documentVersionHash,
+          embeddingProvider: 'openai' as const,
+          embeddingModel: 'text-embedding-3-small' as const,
+          lastIndexedAt: new Date('2026-03-16T00:01:00.000Z'),
+          retryCount: 0,
+          errorMessage: null,
+          uploadedBy: actorId,
+          uploadedAt: new Date('2026-03-16T00:00:00.000Z'),
+          processedAt: new Date('2026-03-16T00:01:00.000Z'),
+          createdAt: new Date('2026-03-16T00:00:00.000Z'),
+          updatedAt: new Date('2026-03-16T00:01:00.000Z'),
+        };
+      }
+
+      return null;
+    },
+    createKnowledgeDocument: async (
+      document: KnowledgeDocumentRecord & {
+        _id: NonNullable<KnowledgeDocumentRecord['_id']>;
+      },
+    ) => {
+      createdDocument = document;
+      createdDocumentKnowledgeId = document.knowledgeId;
+      return document;
+    },
+    updateKnowledgeSummaryAfterDocumentUpload: async () => updatedKnowledge,
+    updateKnowledgeDocument: async (
+      documentId: string,
+      patch: Partial<
+        Pick<
+          KnowledgeDocumentRecord,
+          'status' | 'chunkCount' | 'lastIndexedAt' | 'errorMessage' | 'processedAt' | 'updatedAt'
+        >
+      >,
+    ) => {
+      if (patch.status === 'completed') {
+        resolveCompleted?.();
+      }
+
+      return {
+        _id: new ObjectId(documentId),
+        knowledgeId,
+        fileName: createdDocument?.fileName ?? 'README.md',
+        mimeType: createdDocument?.mimeType ?? 'text/markdown',
+        storagePath: createdDocument?.storagePath ?? '',
+        status: patch.status ?? 'pending',
+        chunkCount: patch.chunkCount ?? 0,
+        documentVersionHash: createdDocument?.documentVersionHash ?? 'hash-1',
+        embeddingProvider: createdDocument?.embeddingProvider ?? 'openai',
+        embeddingModel: createdDocument?.embeddingModel ?? 'text-embedding-3-small',
+        lastIndexedAt: patch.lastIndexedAt ?? null,
+        retryCount: 0,
+        errorMessage: patch.errorMessage ?? null,
+        uploadedBy: actorId,
+        uploadedAt: new Date('2026-03-16T00:00:00.000Z'),
+        processedAt: patch.processedAt ?? null,
+        createdAt: new Date('2026-03-16T00:00:00.000Z'),
+        updatedAt: patch.updatedAt ?? new Date('2026-03-16T00:00:00.000Z'),
+      };
+    },
+    syncKnowledgeSummaryFromDocuments: async () => undefined,
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        status: 'completed',
+        knowledgeId,
+        documentId: createdDocument?._id.toHexString() ?? '507f1f77bcf86cd799439535',
+        chunkCount: 2,
+        characterCount: 24,
+        parser: 'markdown',
+        collectionName: buildExpectedCollectionName('global_docs'),
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+
+  try {
+    const response = await service.uploadDocument(
+      {
+        actor: {
+          id: actorId,
+          username: 'langya',
+        },
+      },
+      knowledgeId,
+      {
+        originalName: 'README.md',
+        mimeType: 'text/markdown',
+        size: 15,
+        buffer: Buffer.from('# same content\n', 'utf-8'),
+      },
+    );
+
+    assert.equal(response.document.status, 'pending');
+
+    await Promise.race([
+      processingCompleted,
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for duplicate-scope upload processing');
+      }),
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(createdDocumentKnowledgeId, knowledgeId);
+  assert.equal(duplicateLookups.length, 1);
+  assert.equal(recordedDuplicateKnowledgeId, knowledgeId);
+});
+
 test('searchDocuments normalizes query filters and delegates to the shared search service', async () => {
   const capturedInputs: Array<{
     query: string;
@@ -865,6 +1398,51 @@ test('searchDocuments normalizes query filters and delegates to the shared searc
   ]);
   assert.equal(response.total, 1);
   assert.equal(response.items[0]?.type, 'global_docs');
+});
+
+test('searchDocuments accepts legacy limit when topK is absent', async () => {
+  const capturedInputs: Array<Parameters<KnowledgeSearchService['searchDocuments']>[0]> = [];
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+  } as unknown as KnowledgeRepository;
+
+  const searchService = createSearchServiceStub({
+    searchDocuments: async (input: Parameters<KnowledgeSearchService['searchDocuments']>[0]) => {
+      capturedInputs.push(input);
+
+      return {
+        query: input.query,
+        sourceType: input.sourceType,
+        total: 0,
+        items: [],
+      };
+    },
+  });
+
+  const service = createKnowledgeService({
+    env: createTestEnv('/tmp/knowject-knowledge-search-limit'),
+    repository,
+    searchService,
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+  });
+
+  await service.searchDocuments(
+    {
+      actor: {
+        id: '507f1f77bcf86cd799439099',
+        username: 'langya',
+      },
+    },
+    {
+      query: 'knowledge',
+      limit: '4',
+    } as { query: string; limit: string },
+  );
+
+  assert.equal(capturedInputs[0]?.topK, 4);
 });
 
 test('searchDocuments resolves project scope knowledge to project collection for visible members', async () => {
@@ -971,6 +1549,406 @@ test('searchDocuments resolves project scope knowledge to project collection for
       topK: 2,
     },
   ]);
+});
+
+test('initializeSearchInfrastructure requeues pending knowledge documents on startup', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-recover-pending-'));
+  const knowledgeId = '507f1f77bcf86cd799439401';
+  const documentId = '507f1f77bcf86cd799439402';
+  const storagePath = `${knowledgeId}/${documentId}/hash-1/README.md`;
+  await mkdir(join(storageRoot, knowledgeId, documentId, 'hash-1'), { recursive: true });
+  await writeFile(join(storageRoot, storagePath), '# README\n');
+
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库恢复',
+    description: '',
+    sourceType: 'global_docs',
+    indexStatus: 'pending',
+    documentCount: 1,
+    chunkCount: 0,
+    maintainerId: 'user-1',
+    createdBy: 'user-1',
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  let currentDocument: KnowledgeDocumentRecord & { _id: ObjectId } = {
+    _id: new ObjectId(documentId),
+    knowledgeId,
+    fileName: 'README.md',
+    mimeType: 'text/markdown',
+    storagePath,
+    status: 'pending',
+    chunkCount: 0,
+    documentVersionHash: 'hash-1',
+    embeddingProvider: 'openai',
+    embeddingModel: 'text-embedding-3-small',
+    lastIndexedAt: null,
+    retryCount: 0,
+    errorMessage: null,
+    uploadedBy: 'user-1',
+    uploadedAt: new Date('2026-03-16T00:00:00.000Z'),
+    processedAt: null,
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  const fetchCalls: string[] = [];
+  let resolveCompleted: (() => void) | null = null;
+  const completed = new Promise<void>((resolve) => {
+    resolveCompleted = resolve;
+  });
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    listKnowledgeBases: async () => [knowledge],
+    listKnowledgeBasesByNamespace: async () => [knowledge],
+    listDocumentsByKnowledgeIds: async () => [currentDocument],
+    findKnowledgeNamespaceIndexState: async () => ({
+      _id: new ObjectId('507f1f77bcf86cd799439403'),
+      namespaceKey: 'global_docs',
+      scope: 'global' as const,
+      projectId: null,
+      sourceType: 'global_docs' as const,
+      activeCollectionName: buildExpectedCollectionName('global_docs'),
+      activeEmbeddingProvider: 'openai' as const,
+      activeApiKeyEncrypted: null,
+      activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+      activeEmbeddingModel: 'text-embedding-3-small',
+      activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+        provider: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        model: 'text-embedding-3-small',
+      } as never),
+      rebuildStatus: 'idle' as const,
+      targetCollectionName: null,
+      targetEmbeddingProvider: null,
+      targetEmbeddingBaseUrl: null,
+      targetEmbeddingModel: null,
+      targetEmbeddingFingerprint: null,
+      lastErrorMessage: null,
+      createdAt: new Date('2026-03-16T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+    }),
+    updateKnowledgeDocument: async (
+      _documentId: string,
+      patch: Partial<
+        Pick<
+          KnowledgeDocumentRecord,
+          | 'status'
+          | 'chunkCount'
+          | 'embeddingProvider'
+          | 'embeddingModel'
+          | 'lastIndexedAt'
+          | 'errorMessage'
+          | 'processedAt'
+          | 'updatedAt'
+        >
+      >,
+    ) => {
+      currentDocument = {
+        ...currentDocument,
+        ...patch,
+      };
+
+      if (patch.status === 'completed') {
+        resolveCompleted?.();
+      }
+
+      return currentDocument;
+    },
+    syncKnowledgeSummaryFromDocuments: async () => undefined,
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    fetchCalls.push(url);
+
+    return new Response(
+      JSON.stringify({
+        status: 'completed',
+        knowledgeId,
+        documentId,
+        chunkCount: 2,
+        characterCount: 16,
+        parser: 'markdown',
+        collectionName: buildExpectedCollectionName('global_docs'),
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    await service.initializeSearchInfrastructure();
+
+    await Promise.race([
+      completed,
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for startup recovery processing');
+      }),
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(currentDocument.status, 'completed');
+  assert.deepEqual(fetchCalls, ['http://127.0.0.1:8001/internal/v1/index/documents']);
+});
+
+test('initializeSearchInfrastructure resumes namespace rebuilds marked as rebuilding', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-recover-rebuild-'));
+  const knowledgeId = '507f1f77bcf86cd799439411';
+  const siblingKnowledgeId = '507f1f77bcf86cd799439412';
+  let currentDocuments: Array<KnowledgeDocumentRecord & { _id: ObjectId }> = [
+    {
+      _id: new ObjectId('507f1f77bcf86cd799439413'),
+      knowledgeId,
+      fileName: 'README-A.md',
+      mimeType: 'text/markdown',
+      storagePath: `${knowledgeId}/507f1f77bcf86cd799439413/hash-a/README-A.md`,
+      status: 'pending',
+      chunkCount: 0,
+      documentVersionHash: 'hash-a',
+      embeddingProvider: 'openai',
+      embeddingModel: 'text-embedding-3-small',
+      lastIndexedAt: null,
+      retryCount: 0,
+      errorMessage: null,
+      uploadedBy: 'user-1',
+      uploadedAt: new Date('2026-03-16T00:00:00.000Z'),
+      processedAt: null,
+      createdAt: new Date('2026-03-16T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+    },
+    {
+      _id: new ObjectId('507f1f77bcf86cd799439414'),
+      knowledgeId: siblingKnowledgeId,
+      fileName: 'README-B.md',
+      mimeType: 'text/markdown',
+      storagePath: `${siblingKnowledgeId}/507f1f77bcf86cd799439414/hash-b/README-B.md`,
+      status: 'completed',
+      chunkCount: 1,
+      documentVersionHash: 'hash-b',
+      embeddingProvider: 'openai',
+      embeddingModel: 'text-embedding-3-small',
+      lastIndexedAt: new Date('2026-03-16T00:00:10.000Z'),
+      retryCount: 0,
+      errorMessage: null,
+      uploadedBy: 'user-1',
+      uploadedAt: new Date('2026-03-16T00:00:00.000Z'),
+      processedAt: new Date('2026-03-16T00:00:10.000Z'),
+      createdAt: new Date('2026-03-16T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-16T00:00:10.000Z'),
+    },
+  ];
+  for (const document of currentDocuments) {
+    await mkdir(join(storageRoot, ...document.storagePath.split('/').slice(0, -1)), {
+      recursive: true,
+    });
+    await writeFile(join(storageRoot, document.storagePath), `# ${document.fileName}\n`);
+  }
+
+  const knowledge = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '',
+    sourceType: 'global_docs' as const,
+    indexStatus: 'pending' as const,
+    documentCount: 1,
+    chunkCount: 0,
+    maintainerId: 'user-1',
+    createdBy: 'user-1',
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  const siblingKnowledge = {
+    _id: new ObjectId(siblingKnowledgeId),
+    name: '知识库 B',
+    description: '',
+    sourceType: 'global_docs' as const,
+    indexStatus: 'completed' as const,
+    documentCount: 1,
+    chunkCount: 1,
+    maintainerId: 'user-1',
+    createdBy: 'user-1',
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  let namespaceState: KnowledgeNamespaceIndexStateDocument & { _id: ObjectId } = {
+    _id: new ObjectId('507f1f77bcf86cd799439415'),
+    namespaceKey: 'global_docs',
+    scope: 'global',
+    projectId: null,
+    sourceType: 'global_docs',
+    activeCollectionName: 'global_docs__emb_old',
+    activeEmbeddingProvider: 'openai',
+    activeApiKeyEncrypted: null,
+    activeEmbeddingBaseUrl: 'https://api.openai.com/v1',
+    activeEmbeddingModel: 'text-embedding-3-small',
+    activeEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'text-embedding-3-small',
+    } as never),
+    rebuildStatus: 'rebuilding',
+    targetCollectionName: buildExpectedCollectionName('global_docs'),
+    targetEmbeddingProvider: 'openai',
+    targetEmbeddingBaseUrl: 'https://api.openai.com/v1',
+    targetEmbeddingModel: 'text-embedding-3-small',
+    targetEmbeddingFingerprint: buildKnowledgeEmbeddingFingerprint({
+      provider: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'text-embedding-3-small',
+    } as never),
+    lastErrorMessage: null,
+    createdAt: new Date('2026-03-16T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-16T00:00:00.000Z'),
+  };
+  let completedCount = 0;
+  let resolveCompleted: (() => void) | null = null;
+  const rebuildCompleted = new Promise<void>((resolve) => {
+    resolveCompleted = resolve;
+  });
+  const fetchCalls: string[] = [];
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    listKnowledgeBases: async () => [knowledge, siblingKnowledge],
+    listKnowledgeBasesByNamespace: async () => [knowledge, siblingKnowledge],
+    listDocumentsByKnowledgeIds: async (knowledgeIds: string[]) =>
+      currentDocuments.filter((document) => knowledgeIds.includes(document.knowledgeId)),
+    findKnowledgeNamespaceIndexState: async () => namespaceState,
+    updateKnowledgeDocument: async (
+      documentId: string,
+      patch: Partial<
+        Pick<
+          KnowledgeDocumentRecord,
+          | 'status'
+          | 'chunkCount'
+          | 'embeddingProvider'
+          | 'embeddingModel'
+          | 'lastIndexedAt'
+          | 'errorMessage'
+          | 'processedAt'
+          | 'updatedAt'
+        >
+      >,
+    ) => {
+      currentDocuments = currentDocuments.map((document) =>
+        document._id.toHexString() === documentId
+          ? {
+              ...document,
+              ...patch,
+            }
+          : document,
+      );
+
+      const updated =
+        currentDocuments.find((document) => document._id.toHexString() === documentId) ?? null;
+      if (patch.status === 'completed') {
+        completedCount += 1;
+        if (completedCount === 2) {
+          resolveCompleted?.();
+        }
+      }
+
+      return updated;
+    },
+    syncKnowledgeSummaryFromDocuments: async () => undefined,
+    updateKnowledgeNamespaceIndexState: async (_namespaceKey: string, patch: Record<string, unknown>) => {
+      namespaceState = {
+        ...namespaceState,
+        ...patch,
+      };
+
+      return namespaceState;
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub({
+      deleteCollection: async () => undefined,
+    }),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    fetchCalls.push(url);
+    const body = JSON.parse(String(init?.body ?? '{}')) as {
+      documentId?: string;
+      knowledgeId?: string;
+    };
+
+    return new Response(
+      JSON.stringify({
+        status: 'completed',
+        knowledgeId: body.knowledgeId,
+        documentId: body.documentId,
+        chunkCount: 2,
+        characterCount: 24,
+        parser: 'markdown',
+        collectionName: buildExpectedCollectionName('global_docs'),
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    await service.initializeSearchInfrastructure();
+
+    await Promise.race([
+      rebuildCompleted,
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for namespace rebuild recovery');
+      }),
+    ]);
+
+    await Promise.race([
+      (async () => {
+        while (namespaceState.rebuildStatus !== 'idle') {
+          await delay(10);
+        }
+      })(),
+      delay(2000).then(() => {
+        throw new Error('Timed out waiting for namespace rebuild state reset');
+      }),
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(namespaceState.rebuildStatus, 'idle');
+  assert.equal(namespaceState.activeCollectionName, buildExpectedCollectionName('global_docs'));
+  assert.equal(fetchCalls.length, 2);
 });
 
 test('deleteKnowledge uses project collection name during Chroma cleanup', async () => {

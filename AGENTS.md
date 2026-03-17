@@ -12,7 +12,7 @@
 apps/
   platform/  前端应用（React + Vite + Ant Design）
   api/       基础框架 API（Express + TypeScript）
-  indexer-py/ Python 索引服务（FastAPI + uv 内部控制面，负责解析 / 分块 / Chroma 写侧）
+  indexer-py/ Python 索引服务（FastAPI + uv 内部控制面，负责解析 / 分块 / Chroma 写删侧）
 packages/
   request/   请求库（@knowject/request）
   ui/        UI 组件库（@knowject/ui）
@@ -43,7 +43,7 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 - `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`memory` 九组接口；其中 auth、projects、members、memberships、knowledge、skills、agents 已接入正式主链路，`skills` 当前支持系统内置 + 自建 + GitHub/URL 导入的正式资产治理、草稿/发布与绑定校验，`agents` 已支持正式 CRUD 与绑定校验，`memory` 保持系统 / 演示接口。
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
-- `apps/indexer-py`：承载内部 Python 索引控制面，当前采用 FastAPI + uv，已提供 `md / txt` 解析、清洗、分块、embedding 与 Chroma 写侧 HTTP 入口。
+- `apps/indexer-py`：承载内部 Python 索引控制面，当前采用 FastAPI + uv，已提供 `md / txt` 解析、清洗、分块、embedding，以及文档 / 知识库级 Chroma 写删侧 HTTP 入口。
 - `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、`api / indexer-py / platform` 镜像构建、Mongo 初始化与 HTTPS 入口。
 - `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
 - `files`：承载按知识库分类的 Markdown 文档库，当前覆盖全局文档、产品规范、用户研究、市场竞品、项目决策、技术协作、发布运营与独立架构设计八类文档。

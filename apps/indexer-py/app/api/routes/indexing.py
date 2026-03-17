@@ -3,6 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from app.schemas.indexing import (
+    DeleteChunksRequestPayload,
+    DeleteDocumentChunksSuccessResponse,
+    DeleteKnowledgeChunksSuccessResponse,
     IndexDocumentRequestPayload,
     IndexDocumentSuccessResponse,
     IndexerDiagnosticsResponse,
@@ -28,6 +31,22 @@ def handle_rebuild_document(
     return service.rebuild_document(document_id, payload)
 
 
+def handle_delete_document_chunks(
+    document_id: str,
+    payload: DeleteChunksRequestPayload,
+    service: IndexingService,
+) -> DeleteDocumentChunksSuccessResponse:
+    return service.delete_document_chunks(document_id, payload)
+
+
+def handle_delete_knowledge_chunks(
+    knowledge_id: str,
+    payload: DeleteChunksRequestPayload,
+    service: IndexingService,
+) -> DeleteKnowledgeChunksSuccessResponse:
+    return service.delete_knowledge_chunks(knowledge_id, payload)
+
+
 @router.post(
     "/internal/v1/index/documents",
     response_model=IndexDocumentSuccessResponse,
@@ -49,6 +68,30 @@ def rebuild_document(
     service: IndexingService = Depends(get_indexing_service),
 ) -> IndexDocumentSuccessResponse:
     return handle_rebuild_document(document_id, payload, service)
+
+
+@router.post(
+    "/internal/v1/index/documents/{document_id}/delete",
+    response_model=DeleteDocumentChunksSuccessResponse,
+)
+def delete_document_chunks(
+    document_id: str,
+    payload: DeleteChunksRequestPayload,
+    service: IndexingService = Depends(get_indexing_service),
+) -> DeleteDocumentChunksSuccessResponse:
+    return handle_delete_document_chunks(document_id, payload, service)
+
+
+@router.post(
+    "/internal/v1/index/knowledge/{knowledge_id}/delete",
+    response_model=DeleteKnowledgeChunksSuccessResponse,
+)
+def delete_knowledge_chunks(
+    knowledge_id: str,
+    payload: DeleteChunksRequestPayload,
+    service: IndexingService = Depends(get_indexing_service),
+) -> DeleteKnowledgeChunksSuccessResponse:
+    return handle_delete_knowledge_chunks(knowledge_id, payload, service)
 
 
 @router.post(

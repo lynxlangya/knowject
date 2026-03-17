@@ -11,6 +11,8 @@
   - `GET /health`：返回服务状态、chunk 配置和当前支持格式。
   - `POST /internal/v1/index/documents`：接收 Node 下发的文档处理请求。
   - `POST /internal/v1/index/documents/{documentId}/rebuild`：接收单文档 rebuild 请求。
+  - `POST /internal/v1/index/documents/{documentId}/delete`：接收单文档向量删除请求。
+  - `POST /internal/v1/index/knowledge/{knowledgeId}/delete`：接收知识库级向量删除请求。
   - `GET /internal/v1/index/diagnostics`：返回当前 chunk 配置、embedding provider 和 Chroma 可达性诊断。
   - 继续兼容旧入口 `POST /internal/index-documents`，用于开发态 / 滚动重启期间的平滑过渡。
   - `/docs`、`/redoc`、`/openapi.json`：内部文档与 schema 入口。
@@ -50,11 +52,13 @@
 - 当前版本化内部入口固定为：
   - `POST /internal/v1/index/documents`
   - `POST /internal/v1/index/documents/{documentId}/rebuild`
+  - `POST /internal/v1/index/documents/{documentId}/delete`
+  - `POST /internal/v1/index/knowledge/{knowledgeId}/delete`
   - `GET /internal/v1/index/diagnostics`
 - 为避免开发态 API / indexer 重启顺序导致上传 404，当前仍兼容旧路径 `POST /internal/index-documents`。
 - MongoDB 中的知识库 / 文档状态只能由 Node 回写。
 - Python 当前只返回处理结果；Node 负责把状态推进为 `processing / completed / failed`。
-- Python 负责写侧 Chroma 索引；Node 负责读侧统一知识检索 service。
+- Python 负责写删侧 Chroma 索引；Node 负责读侧统一知识检索 service。
 - Skill 不能直连底层 Chroma，后续必须走统一知识检索 service。
 
 ## 运行方式

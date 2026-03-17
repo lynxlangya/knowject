@@ -4,7 +4,12 @@ from fastapi.testclient import TestClient
 
 from app.domain.indexing.pipeline import IndexerError
 from app.main import app
-from app.schemas.indexing import IndexDocumentSuccessResponse, IndexerDiagnosticsResponse
+from app.schemas.indexing import (
+    DeleteDocumentChunksSuccessResponse,
+    DeleteKnowledgeChunksSuccessResponse,
+    IndexDocumentSuccessResponse,
+    IndexerDiagnosticsResponse,
+)
 from app.services.indexing_service import IndexingService, get_indexing_service
 
 
@@ -17,10 +22,14 @@ class StubIndexingService(IndexingService):
         *,
         index_behavior=None,
         rebuild_behavior=None,
+        delete_document_behavior=None,
+        delete_knowledge_behavior=None,
         diagnostics_behavior=None,
     ):
         self._index_behavior = index_behavior
         self._rebuild_behavior = rebuild_behavior
+        self._delete_document_behavior = delete_document_behavior
+        self._delete_knowledge_behavior = delete_knowledge_behavior
         self._diagnostics_behavior = diagnostics_behavior
 
     def index_document(self, payload):  # type: ignore[override]
@@ -33,6 +42,16 @@ class StubIndexingService(IndexingService):
             raise AssertionError("rebuild_document should not be called in this test")
         return self._rebuild_behavior(document_id, payload)
 
+    def delete_document_chunks(self, document_id, payload):  # type: ignore[override]
+        if self._delete_document_behavior is None:
+            raise AssertionError("delete_document_chunks should not be called in this test")
+        return self._delete_document_behavior(document_id, payload)
+
+    def delete_knowledge_chunks(self, knowledge_id, payload):  # type: ignore[override]
+        if self._delete_knowledge_behavior is None:
+            raise AssertionError("delete_knowledge_chunks should not be called in this test")
+        return self._delete_knowledge_behavior(knowledge_id, payload)
+
     def get_diagnostics(self):  # type: ignore[override]
         if self._diagnostics_behavior is None:
             raise AssertionError("get_diagnostics should not be called in this test")
@@ -43,11 +62,15 @@ def override_indexing_service(
     *,
     index_behavior=None,
     rebuild_behavior=None,
+    delete_document_behavior=None,
+    delete_knowledge_behavior=None,
     diagnostics_behavior=None,
 ):
     app.dependency_overrides[get_indexing_service] = lambda: StubIndexingService(
         index_behavior=index_behavior,
         rebuild_behavior=rebuild_behavior,
+        delete_document_behavior=delete_document_behavior,
+        delete_knowledge_behavior=delete_knowledge_behavior,
         diagnostics_behavior=diagnostics_behavior,
     )
 
@@ -364,6 +387,60 @@ def test_rebuild_document_uses_document_scoped_internal_route():
         "characterCount": 64,
         "parser": "markdown",
         "collectionName": "global_docs",
+    }
+
+
+def test_delete_document_chunks_uses_document_scoped_internal_route():
+    override_indexing_service(
+        delete_document_behavior=lambda document_id, payload: DeleteDocumentChunksSuccessResponse(
+            status="completed",
+            document_id=document_id,
+            collection_name=payload.collection_name,
+        )
+    )
+
+    try:
+        response = client.post(
+            "/internal/v1/index/documents/document-1/delete",
+            json={
+                "collectionName": "global_docs",
+            },
+        )
+    finally:
+        clear_overrides()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "completed",
+        "documentId": "document-1",
+        "collectionName": "global_docs",
+    }
+
+
+def test_delete_knowledge_chunks_uses_knowledge_scoped_internal_route():
+    override_indexing_service(
+        delete_knowledge_behavior=lambda knowledge_id, payload: DeleteKnowledgeChunksSuccessResponse(
+            status="completed",
+            knowledge_id=knowledge_id,
+            collection_name=payload.collection_name,
+        )
+    )
+
+    try:
+        response = client.post(
+            "/internal/v1/index/knowledge/knowledge-1/delete",
+            json={
+                "collectionName": "proj_project-1_docs",
+            },
+        )
+    finally:
+        clear_overrides()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "completed",
+        "knowledgeId": "knowledge-1",
+        "collectionName": "proj_project-1_docs",
     }
 
 

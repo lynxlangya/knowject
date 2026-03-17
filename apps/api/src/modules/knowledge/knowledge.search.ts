@@ -127,6 +127,14 @@ const resolveDiagnosticsErrorMessage = (error: unknown): string => {
   return "Chroma 诊断失败";
 };
 
+const isIndexerRouteNotFoundError = (error: unknown): error is AppError => {
+  return (
+    error instanceof AppError &&
+    error.statusCode === 404 &&
+    error.code === "KNOWLEDGE_SEARCH_INDEXER_ROUTE_NOT_FOUND"
+  );
+};
+
 export const createKnowledgeSearchService = ({
   env,
   settingsRepository = NOOP_SETTINGS_REPOSITORY,
@@ -334,6 +342,74 @@ export const createKnowledgeSearchService = ({
     }
   };
 
+  const requestIndexerJson = async <T>({
+    path,
+    method = "GET",
+    body,
+    failureMessage,
+  }: {
+    path: string;
+    method?: "GET" | "POST";
+    body?: Record<string, unknown>;
+    failureMessage: string;
+  }): Promise<T> => {
+    let responseBody: unknown = null;
+    const indexingConfig = await getEffectiveIndexingConfig({
+      env,
+      repository: settingsRepository,
+    });
+
+    try {
+      const response = await fetch(buildApiUrl(env.knowledge.indexerUrl, path), {
+        method,
+        headers: {
+          accept: "application/json",
+          ...(body
+            ? {
+                "content-type": "application/json",
+              }
+            : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
+      });
+
+      const text = await response.text();
+
+      if (text) {
+        try {
+          responseBody = JSON.parse(text);
+        } catch {
+          responseBody = text;
+        }
+      }
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new AppError({
+            statusCode: 404,
+            code: "KNOWLEDGE_SEARCH_INDEXER_ROUTE_NOT_FOUND",
+            message: `${failureMessage}（HTTP 404）`,
+            details: responseBody,
+          });
+        }
+
+        throw createGatewayError(
+          `${failureMessage}（HTTP ${response.status}）`,
+          responseBody,
+        );
+      }
+
+      return (responseBody ?? null) as T;
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      throw createGatewayError(failureMessage, error);
+    }
+  };
+
   const createEmbeddings = async (
     texts: string[],
     configOverride?: EffectiveEmbeddingConfig,
@@ -476,7 +552,7 @@ export const createKnowledgeSearchService = ({
     collectionName: string;
     where: Record<string, unknown>;
   }): Promise<void> => {
-    // TODO: 待 indexer-py 提供正式 delete 端点后，删除 Node 侧直连 Chroma delete。
+    // Legacy fallback: 仅当旧版 indexer 缺少 delete 路由时，才回退到 Node 直连 Chroma。
     const collection = await getExistingCollection(collectionName);
     if (!collection) {
       return;
@@ -504,6 +580,45 @@ export const createKnowledgeSearchService = ({
       method: "DELETE",
     });
     collectionCache.delete(collectionName);
+  };
+
+  const deleteChunksViaIndexer = async ({
+    path,
+    collectionName,
+    where,
+    failureMessage,
+  }: {
+    path: string;
+    collectionName: string;
+    where: Record<string, unknown>;
+    failureMessage: string;
+  }): Promise<void> => {
+    if (env.knowledge.indexerUrl) {
+      try {
+        await requestIndexerJson({
+          path,
+          method: "POST",
+          body: {
+            collectionName,
+          },
+          failureMessage,
+        });
+        return;
+      } catch (error) {
+        if (!isIndexerRouteNotFoundError(error) || !env.chroma.url) {
+          throw error;
+        }
+      }
+    }
+
+    if (!env.chroma.url) {
+      return;
+    }
+
+    await deleteByWhere({
+      collectionName,
+      where,
+    });
   };
 
   return {
@@ -594,28 +709,24 @@ export const createKnowledgeSearchService = ({
     },
 
     deleteKnowledgeChunks: async (knowledgeId, { collectionName }) => {
-      if (!env.chroma.url) {
-        return;
-      }
-
-      await deleteByWhere({
+      await deleteChunksViaIndexer({
+        path: `/internal/v1/index/knowledge/${knowledgeId}/delete`,
         collectionName,
         where: {
           knowledgeId,
         },
+        failureMessage: "Python indexer 删除知识库向量失败",
       });
     },
 
     deleteDocumentChunks: async (documentId, { collectionName }) => {
-      if (!env.chroma.url) {
-        return;
-      }
-
-      await deleteByWhere({
+      await deleteChunksViaIndexer({
+        path: `/internal/v1/index/documents/${documentId}/delete`,
         collectionName,
         where: {
           documentId,
         },
+        failureMessage: "Python indexer 删除文档向量失败",
       });
     },
 

@@ -62,7 +62,7 @@ const createTestEnv = (): AppEnv => {
   };
 };
 
-test("getDiagnostics bypasses cached collection state and re-reads Chroma", async () => {
+test("deleteDocumentChunks falls back to legacy Chroma delete when the indexer route is unavailable", async () => {
   const service = createKnowledgeSearchService({
     env: createTestEnv(),
   });
@@ -78,6 +78,24 @@ test("getDiagnostics bypasses cached collection state and re-reads Chroma", asyn
           ? input.toString()
           : input.url;
     fetchCalls.push(url);
+
+    if (
+      url === "http://127.0.0.1:8001/internal/v1/index/documents/document-1/delete" &&
+      init?.method === "POST"
+    ) {
+      return new Response(
+        JSON.stringify({
+          status: "not_found",
+          message: "Unknown route",
+        }),
+        {
+          status: 404,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
 
     if (url.endsWith("/collections") && init?.method === "GET") {
       collectionsRequestCount += 1;
@@ -125,9 +143,61 @@ test("getDiagnostics bypasses cached collection state and re-reads Chroma", asyn
     assert.equal(diagnostics.collection.errorMessage, null);
     assert.equal(collectionsRequestCount, 2);
     assert.deepEqual(fetchCalls, [
+      "http://127.0.0.1:8001/internal/v1/index/documents/document-1/delete",
       "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections",
       "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-1/delete",
       "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections",
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("deleteKnowledgeChunks prefers the indexer delete endpoint when available", async () => {
+  const service = createKnowledgeSearchService({
+    env: createTestEnv(),
+  });
+  const fetchCalls: string[] = [];
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+    fetchCalls.push(url);
+
+    if (
+      url === "http://127.0.0.1:8001/internal/v1/index/knowledge/knowledge-1/delete" &&
+      init?.method === "POST"
+    ) {
+      return new Response(
+        JSON.stringify({
+          status: "completed",
+          knowledgeId: "knowledge-1",
+          collectionName: "global_docs",
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
+  };
+
+  try {
+    await service.deleteKnowledgeChunks("knowledge-1", {
+      collectionName: "global_docs",
+    });
+
+    assert.deepEqual(fetchCalls, [
+      "http://127.0.0.1:8001/internal/v1/index/knowledge/knowledge-1/delete",
     ]);
   } finally {
     globalThis.fetch = originalFetch;

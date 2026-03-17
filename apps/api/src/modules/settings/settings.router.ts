@@ -5,6 +5,7 @@ import { sendSuccess } from '@lib/api-response.js';
 import { getRequiredAuthUser } from '@lib/request-auth.js';
 import type { SettingsService } from './settings.service.js';
 import type {
+  TestIndexingConnectionInput,
   TestSettingsConnectionInput,
   UpdateEmbeddingSettingsInput,
   UpdateIndexingSettingsInput,
@@ -95,6 +96,20 @@ export const createSettingsRouter = (
           actor: getRequiredAuthUser(req),
         },
         req.body as TestSettingsConnectionInput,
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  settingsRouter.post(
+    '/indexing/test',
+    asyncHandler(async (req, res) => {
+      const result = await settingsService.testIndexing(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        req.body as TestIndexingConnectionInput,
       );
 
       sendSuccess(res, result);

@@ -329,5 +329,63 @@ class ProcessDocumentTest(unittest.TestCase):
         )
 
 
+class DeleteChunksTest(unittest.TestCase):
+    def test_delete_document_vectors_uses_document_selector(self):
+        with patch.object(
+            pipeline,
+            "find_collection",
+            return_value={"id": "collection-1", "name": "global_docs"},
+        ), patch.object(pipeline, "request_json", return_value={}) as request_json:
+            response = pipeline.delete_document_vectors(
+                "document-1",
+                {
+                    "collectionName": "global_docs",
+                },
+            )
+
+        request_json.assert_called_once_with(
+            pipeline.build_chroma_database_url("/collections/collection-1/delete"),
+            method="POST",
+            timeout_ms=pipeline.DEFAULT_CHROMA_TIMEOUT_MS,
+            payload={
+                "where": {
+                    "documentId": "document-1",
+                }
+            },
+            error_prefix="Chroma 文档向量删除失败",
+        )
+        self.assertEqual(
+            response,
+            {
+                "status": "completed",
+                "documentId": "document-1",
+                "collectionName": "global_docs",
+            },
+        )
+
+    def test_delete_knowledge_vectors_noops_when_collection_is_missing(self):
+        with patch.object(
+            pipeline,
+            "find_collection",
+            return_value=None,
+        ), patch.object(pipeline, "request_json") as request_json:
+            response = pipeline.delete_knowledge_vectors(
+                "knowledge-1",
+                {
+                    "collectionName": "global_docs",
+                },
+            )
+
+        request_json.assert_not_called()
+        self.assertEqual(
+            response,
+            {
+                "status": "completed",
+                "knowledgeId": "knowledge-1",
+                "collectionName": "global_docs",
+            },
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

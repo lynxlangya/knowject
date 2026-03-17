@@ -81,6 +81,11 @@ class IndexDocumentRequest:
 
 
 @dataclass(frozen=True)
+class DeleteChunksRequest:
+    collection_name: str
+
+
+@dataclass(frozen=True)
 class ChunkBlock:
     text: str
     carries_overlap: bool = False
@@ -133,6 +138,36 @@ def process_document(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def delete_document_vectors(document_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    request = parse_delete_chunks_request(payload)
+    delete_chunks_by_where(
+        request.collection_name,
+        {"documentId": document_id},
+        error_prefix="Chroma 文档向量删除失败",
+    )
+
+    return {
+        "status": "completed",
+        "documentId": document_id,
+        "collectionName": request.collection_name,
+    }
+
+
+def delete_knowledge_vectors(knowledge_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    request = parse_delete_chunks_request(payload)
+    delete_chunks_by_where(
+        request.collection_name,
+        {"knowledgeId": knowledge_id},
+        error_prefix="Chroma 知识库向量删除失败",
+    )
+
+    return {
+        "status": "completed",
+        "knowledgeId": knowledge_id,
+        "collectionName": request.collection_name,
+    }
+
+
 def parse_request(payload: dict[str, Any]) -> IndexDocumentRequest:
     required_fields = {
         "knowledgeId": "knowledge_id",
@@ -163,6 +198,14 @@ def parse_request(payload: dict[str, Any]) -> IndexDocumentRequest:
     values["indexing_config"] = parse_indexing_config(payload.get("indexingConfig"))
 
     return IndexDocumentRequest(**values)
+
+
+def parse_delete_chunks_request(payload: dict[str, Any]) -> DeleteChunksRequest:
+    raw_collection_name = payload.get("collectionName")
+    if not isinstance(raw_collection_name, str) or not raw_collection_name.strip():
+        raise IndexerError("collectionName 缺失或格式不合法")
+
+    return DeleteChunksRequest(collection_name=raw_collection_name.strip())
 
 
 def parse_document_text(request: IndexDocumentRequest) -> str:
@@ -611,10 +654,15 @@ def parse_embeddings_response(response: Any, *, expected_count: int) -> list[lis
     return embeddings
 
 
-def ensure_collection(name: str) -> dict[str, Any]:
-    cached = _COLLECTION_CACHE.get(name)
-    if cached:
-        return cached
+def find_collection(
+    name: str,
+    *,
+    bypass_cache: bool = False,
+) -> dict[str, Any] | None:
+    if not bypass_cache:
+        cached = _COLLECTION_CACHE.get(name)
+        if cached:
+            return cached
 
     collections = request_json(
         build_chroma_database_url("/collections"),
@@ -633,6 +681,15 @@ def ensure_collection(name: str) -> dict[str, Any]:
         if isinstance(existing, dict):
             _COLLECTION_CACHE[name] = existing
             return existing
+
+    _COLLECTION_CACHE.pop(name, None)
+    return None
+
+
+def ensure_collection(name: str) -> dict[str, Any]:
+    existing = find_collection(name)
+    if existing:
+        return existing
 
     try:
         created = request_json(
@@ -667,6 +724,25 @@ def ensure_collection(name: str) -> dict[str, Any]:
                 return existing
 
         raise
+
+
+def delete_chunks_by_where(
+    collection_name: str,
+    where: dict[str, Any],
+    *,
+    error_prefix: str,
+) -> None:
+    collection = find_collection(collection_name)
+    if collection is None:
+        return
+
+    request_json(
+        build_chroma_database_url(f"/collections/{collection['id']}/delete"),
+        method="POST",
+        timeout_ms=DEFAULT_CHROMA_TIMEOUT_MS,
+        payload={"where": where},
+        error_prefix=error_prefix,
+    )
 
 
 def delete_document_chunks(collection_id: str, document_id: str) -> None:

@@ -52,6 +52,22 @@ class IndexDocumentSuccessResponse(CamelCaseModel):
     collection_name: str = Field(alias="collectionName")
 
 
+class DeleteChunksRequestPayload(CamelCaseModel):
+    collection_name: str = Field(alias="collectionName")
+
+
+class DeleteDocumentChunksSuccessResponse(CamelCaseModel):
+    status: Literal["completed"]
+    document_id: str = Field(alias="documentId")
+    collection_name: str = Field(alias="collectionName")
+
+
+class DeleteKnowledgeChunksSuccessResponse(CamelCaseModel):
+    status: Literal["completed"]
+    knowledge_id: str = Field(alias="knowledgeId")
+    collection_name: str = Field(alias="collectionName")
+
+
 class IndexerFailureResponse(CamelCaseModel):
     status: Literal["failed"]
     error_message: str = Field(alias="errorMessage")

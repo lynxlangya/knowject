@@ -152,6 +152,25 @@ export interface SettingsConnectionTestResponse {
   error?: string;
 }
 
+export interface TestIndexingConnectionInput {
+  indexerTimeoutMs?: unknown;
+}
+
+export type SettingsIndexingTestStatus = 'ok' | 'degraded' | 'unreachable';
+
+export interface SettingsIndexingConnectionTestResponse {
+  success: boolean;
+  indexerStatus: SettingsIndexingTestStatus;
+  latencyMs?: number;
+  error?: string;
+  service: string | null;
+  supportedFormats: string[];
+  chunkSize: number | null;
+  chunkOverlap: number | null;
+  embeddingProvider: string | null;
+  chromaReachable: boolean | null;
+}
+
 export interface EmbeddingConfigOverrideRequest {
   provider?: SettingsEmbeddingProvider;
   apiKey?: string | null;

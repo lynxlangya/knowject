@@ -124,6 +124,7 @@ export interface KnowledgeDiagnosticsResponse {
 export interface SearchKnowledgeRequest {
   knowledgeId: string;
   query: string;
+  topK?: number;
   limit?: number;
 }
 
@@ -310,9 +311,13 @@ export const getKnowledgeDiagnostics = async (
 export const searchKnowledgeDocuments = async (
   payload: SearchKnowledgeRequest,
 ): Promise<KnowledgeSearchResponse> => {
+  const { limit, topK, ...rest } = payload;
   const response = await client.post<ApiEnvelope<KnowledgeSearchResponse>>(
     "/knowledge/search",
-    payload,
+    {
+      ...rest,
+      ...(topK !== undefined ? { topK } : limit !== undefined ? { topK: limit } : {}),
+    },
   );
 
   return unwrapApiData(response.data);

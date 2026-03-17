@@ -134,6 +134,18 @@ export class KnowledgeRepository {
     return collection.findOne({ _id: objectId });
   }
 
+  async findKnowledgeDocumentByVersionHash(
+    knowledgeId: string,
+    documentVersionHash: string,
+  ): Promise<WithId<KnowledgeDocumentRecord> | null> {
+    const collection = await this.getKnowledgeDocumentsCollection();
+
+    return collection.findOne({
+      knowledgeId,
+      documentVersionHash,
+    });
+  }
+
   async createKnowledgeBase(
     document: Omit<KnowledgeBaseDocument, '_id'>,
   ): Promise<WithId<KnowledgeBaseDocument>> {
@@ -419,10 +431,7 @@ export class KnowledgeRepository {
           { knowledgeId: 1, status: 1, updatedAt: -1 },
           { name: 'knowledge_documents_knowledge_id_status_updated_at_desc' },
         ),
-        collection.createIndex(
-          { knowledgeId: 1, documentVersionHash: 1 },
-          { name: 'knowledge_documents_knowledge_id_version_hash' },
-        ),
+        this.ensureKnowledgeDocumentVersionHashUniqueIndex(collection),
         collection.createIndex(
           { uploadedBy: 1, uploadedAt: -1 },
           { name: 'knowledge_documents_uploaded_by_uploaded_at_desc' },
@@ -437,6 +446,22 @@ export class KnowledgeRepository {
     }
 
     await this.ensureDocumentIndexesPromise;
+  }
+
+  private async ensureKnowledgeDocumentVersionHashUniqueIndex(
+    collection: Collection<KnowledgeDocumentRecord>,
+  ): Promise<void> {
+    const indexName = 'knowledge_documents_knowledge_id_version_hash';
+    const existingIndex = (await collection.indexes()).find((index) => index.name === indexName);
+
+    if (existingIndex && existingIndex.unique !== true) {
+      await collection.dropIndex(indexName);
+    }
+
+    await collection.createIndex(
+      { knowledgeId: 1, documentVersionHash: 1 },
+      { name: indexName, unique: true },
+    );
   }
 
   private async ensureNamespaceIndexes(

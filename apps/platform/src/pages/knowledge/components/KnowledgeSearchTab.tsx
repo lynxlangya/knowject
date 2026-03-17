@@ -71,7 +71,7 @@ export const KnowledgeSearchTab = ({
       const result = await searchKnowledgeDocuments({
         knowledgeId,
         query: trimmedQuery,
-        limit: 5,
+        topK: 5,
       });
 
       if (requestIdRef.current !== requestId) {

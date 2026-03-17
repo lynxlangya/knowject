@@ -7,6 +7,7 @@ import {
 import type { AppEnv } from '@config/env.js';
 import {
   getDefaultWorkspaceSettings,
+  getEffectiveIndexingConfig,
   getEnvironmentEmbeddingSettings,
   getEnvironmentIndexingSettings,
   getEnvironmentLlmSettings,
@@ -21,9 +22,11 @@ import {
   type SettingsCommandContext,
   type SettingsConnectionTestResponse,
   type SettingsEmbeddingProvider,
+  type SettingsIndexingConnectionTestResponse,
   type SettingsIndexingResponse,
   type SettingsLlmProvider,
   type SettingsResponse,
+  type TestIndexingConnectionInput,
   type TestSettingsConnectionInput,
   type UpdateEmbeddingSettingsInput,
   type UpdateIndexingSettingsInput,
@@ -68,6 +71,10 @@ export interface SettingsService {
     context: SettingsCommandContext,
     input: TestSettingsConnectionInput,
   ): Promise<SettingsConnectionTestResponse>;
+  testIndexing(
+    context: SettingsCommandContext,
+    input: TestIndexingConnectionInput,
+  ): Promise<SettingsIndexingConnectionTestResponse>;
   testLlm(
     context: SettingsCommandContext,
     input: TestSettingsConnectionInput,
@@ -363,6 +370,20 @@ const normalizeConnectionTestInput = (input: TestSettingsConnectionInput) => {
   };
 };
 
+const normalizeIndexingConnectionTestInput = (input: TestIndexingConnectionInput) => {
+  const normalizedInput = createSettingsMutationInput(input);
+
+  return {
+    indexerTimeoutMs: readRequiredIntegerInRange(
+      normalizedInput.indexerTimeoutMs,
+      'indexerTimeoutMs',
+      {
+        min: 1,
+      },
+    ),
+  };
+};
+
 const buildEmbeddingSection = ({
   current,
   fallback,
@@ -517,6 +538,86 @@ const parseResponseBody = async (response: Response): Promise<unknown> => {
   }
 };
 
+const normalizeIndexerErrorMessage = (
+  responseBody: unknown,
+  fallbackMessage: string,
+): string => {
+  if (
+    responseBody &&
+    typeof responseBody === 'object' &&
+    'errorMessage' in responseBody &&
+    typeof responseBody.errorMessage === 'string'
+  ) {
+    return responseBody.errorMessage;
+  }
+
+  if (
+    responseBody &&
+    typeof responseBody === 'object' &&
+    'message' in responseBody &&
+    typeof responseBody.message === 'string'
+  ) {
+    return responseBody.message;
+  }
+
+  return fallbackMessage;
+};
+
+interface IndexerDiagnosticsResponseBody {
+  status: 'ok' | 'degraded';
+  service: string;
+  chunkSize: number;
+  chunkOverlap: number;
+  supportedFormats: string[];
+  embeddingProvider: string;
+  chromaReachable: boolean;
+  errorMessage: string | null;
+}
+
+const isIndexerDiagnosticsResponseBody = (
+  value: unknown,
+): value is IndexerDiagnosticsResponseBody => {
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
+
+  return (
+    'status' in value &&
+    (value.status === 'ok' || value.status === 'degraded') &&
+    'service' in value &&
+    typeof value.service === 'string' &&
+    'chunkSize' in value &&
+    typeof value.chunkSize === 'number' &&
+    'chunkOverlap' in value &&
+    typeof value.chunkOverlap === 'number' &&
+    'supportedFormats' in value &&
+    Array.isArray(value.supportedFormats) &&
+    value.supportedFormats.every((item) => typeof item === 'string') &&
+    'embeddingProvider' in value &&
+    typeof value.embeddingProvider === 'string' &&
+    'chromaReachable' in value &&
+    typeof value.chromaReachable === 'boolean' &&
+    'errorMessage' in value &&
+    (value.errorMessage === null || typeof value.errorMessage === 'string')
+  );
+};
+
+const createUnreachableIndexingTestResponse = (
+  error: string,
+): SettingsIndexingConnectionTestResponse => {
+  return {
+    success: false,
+    indexerStatus: 'unreachable',
+    error,
+    service: null,
+    supportedFormats: [],
+    chunkSize: null,
+    chunkOverlap: null,
+    embeddingProvider: null,
+    chromaReachable: null,
+  };
+};
+
 const testOpenAiCompatibleRequest = async ({
   baseUrl,
   apiKey,
@@ -564,6 +665,79 @@ const testOpenAiCompatibleRequest = async ({
       success: false,
       error: error instanceof Error ? error.message : '连接测试失败',
     };
+  }
+};
+
+const testIndexingRequest = async ({
+  env,
+  timeoutMs,
+}: {
+  env: AppEnv;
+  timeoutMs: number;
+}): Promise<SettingsIndexingConnectionTestResponse> => {
+  const startedAt = Date.now();
+
+  try {
+    const response = await fetch(
+      buildApiUrl(env.knowledge.indexerUrl, '/internal/v1/index/diagnostics'),
+      {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(timeoutMs),
+      },
+    );
+    const responseBody = await parseResponseBody(response);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createUnreachableIndexingTestResponse(
+          '当前 Python indexer 不支持 diagnostics 接口，请先升级服务',
+        );
+      }
+
+      return createUnreachableIndexingTestResponse(
+        normalizeIndexerErrorMessage(
+          responseBody,
+          `索引链路测试失败（HTTP ${response.status}）`,
+        ),
+      );
+    }
+
+    if (!isIndexerDiagnosticsResponseBody(responseBody)) {
+      return createUnreachableIndexingTestResponse(
+        'Python indexer diagnostics 响应不合法',
+      );
+    }
+
+    const success =
+      responseBody.status === 'ok' && responseBody.chromaReachable === true;
+
+    return {
+      success,
+      indexerStatus: responseBody.status,
+      latencyMs: Date.now() - startedAt,
+      ...(success
+        ? {}
+        : {
+            error:
+              responseBody.errorMessage ??
+              (responseBody.chromaReachable
+                ? 'Python indexer 当前处于降级状态'
+                : 'Python indexer 可达，但 Chroma 不可达'),
+          }),
+      service: responseBody.service,
+      supportedFormats: [...responseBody.supportedFormats],
+      chunkSize: responseBody.chunkSize,
+      chunkOverlap: responseBody.chunkOverlap,
+      embeddingProvider: responseBody.embeddingProvider,
+      chromaReachable: responseBody.chromaReachable,
+    };
+  } catch (error) {
+    return createUnreachableIndexingTestResponse(
+      error instanceof Error ? error.message : '索引链路测试失败',
+    );
   }
 };
 
@@ -789,6 +963,20 @@ export const createSettingsService = ({
       }
 
       return result;
+    },
+
+    testIndexing: async (_context, input) => {
+      const normalizedInput = normalizeIndexingConnectionTestInput(input);
+      const effectiveIndexingConfig = await getEffectiveIndexingConfig({
+        env,
+        repository,
+      });
+
+      return testIndexingRequest({
+        env,
+        timeoutMs:
+          normalizedInput.indexerTimeoutMs ?? effectiveIndexingConfig.indexerTimeoutMs,
+      });
     },
 
     testLlm: async ({ actor }, input) => {

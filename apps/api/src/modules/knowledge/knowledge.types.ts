@@ -300,6 +300,7 @@ export interface SearchKnowledgeDocumentsInput {
   knowledgeId?: unknown;
   sourceType?: unknown;
   topK?: unknown;
+  limit?: unknown;
 }
 
 export interface KnowledgeSearchHitResponse {
