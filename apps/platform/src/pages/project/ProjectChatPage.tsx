@@ -5,6 +5,7 @@ import {
   EditOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
+import { Bubble, Sender } from '@ant-design/x';
 import {
   App,
   Alert,
@@ -24,7 +25,6 @@ import {
   getProjectConversationDetail,
   updateProjectConversation,
   type ProjectConversationDetailResponse,
-  type ProjectConversationSourceResponse,
 } from '@api/projects';
 import {
   getSettings,
@@ -40,6 +40,12 @@ import {
   buildProjectResourcesPath,
 } from '@app/navigation/paths';
 import { ProjectConversationList } from './components/ProjectConversationList';
+import {
+  buildProjectChatBubbleItems,
+  PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES,
+  PROJECT_CHAT_BUBBLE_LIST_STYLES,
+  PROJECT_CHAT_BUBBLE_ROLES,
+} from './projectChat.adapters';
 import { useProjectPageContext } from './projectPageContext';
 
 type ProjectChatIssueCode =
@@ -57,72 +63,10 @@ const PROJECT_CHAT_SUPPORTED_LLM_PROVIDERS = new Set<SettingsLlmProvider>(
   SETTINGS_LLM_PROVIDERS,
 );
 
-const formatMessageTime = (value: string): string => {
-  return new Intl.DateTimeFormat('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
-};
-
-const formatSourceDistance = (value: number | null): string | null => {
-  if (value === null) {
-    return null;
-  }
-
-  return `distance ${value.toFixed(2)}`;
-};
-
-const ProjectConversationSources = ({
-  sources,
-}: {
-  sources: ProjectConversationSourceResponse[];
-}) => {
-  if (sources.length === 0) {
-    return null;
-  }
-
-  return (
-    <section className="mt-3 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3 py-3">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-          来源引用
-        </Typography.Text>
-        <Typography.Text className="text-[11px] text-slate-400">
-          {sources.length} 条
-        </Typography.Text>
-      </div>
-
-      <div className="space-y-2">
-        {sources.map((source) => (
-          <article
-            key={`${source.knowledgeId}:${source.documentId}:${source.chunkId}`}
-            className="rounded-2xl border border-slate-200 bg-white px-3 py-3"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <Typography.Text className="block truncate text-xs font-semibold text-slate-700">
-                {source.source}
-              </Typography.Text>
-              {formatSourceDistance(source.distance) ? (
-                <Typography.Text className="shrink-0 text-[11px] text-slate-400">
-                  {formatSourceDistance(source.distance)}
-                </Typography.Text>
-              ) : null}
-            </div>
-            <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-6! text-slate-600!">
-              {source.snippet}
-            </Typography.Paragraph>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-};
-
 export const ProjectChatPage = () => {
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const { chatId } = useParams<{ chatId?: string }>();
-  const messageEndRef = useRef<HTMLDivElement | null>(null);
   const titleInputRef = useRef<InputRef | null>(null);
   const {
     activeProject,
@@ -166,6 +110,9 @@ export const ProjectChatPage = () => {
     conversationDetail.id === chatId
       ? conversationDetail
       : null;
+  const conversationBubbleItems = buildProjectChatBubbleItems(
+    currentConversationDetail?.messages ?? [],
+  );
   const blockingChatIssue = (() => {
     if (chatLlmSettings) {
       if (!chatLlmSettings.hasKey) {
@@ -316,17 +263,6 @@ export const ProjectChatPage = () => {
   useEffect(() => {
     void loadChatSettings();
   }, [loadChatSettings, activeProject.id]);
-
-  useEffect(() => {
-    messageEndRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'end',
-    });
-  }, [
-    currentConversationDetail?.projectId,
-    currentConversationDetail?.id,
-    currentConversationDetail?.messages.length,
-  ]);
 
   useEffect(() => {
     if (!chatId) {
@@ -884,7 +820,7 @@ export const ProjectChatPage = () => {
               </div>
             </header>
 
-            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/40 px-6 py-5">
+            <div className="flex min-h-0 flex-1 flex-col bg-slate-50/40 px-6 py-5">
               {blockingChatIssue ? (
                 <Alert
                   type="warning"
@@ -924,89 +860,54 @@ export const ProjectChatPage = () => {
                   description={inlineChatIssue.description}
                 />
               ) : null}
-              {currentConversationDetail.messages.length > 0 ? (
-                <div className="space-y-3">
-                  {currentConversationDetail.messages.map((chatMessage) => (
-                    <article
-                      key={chatMessage.id}
-                      className={[
-                        'max-w-[85%] rounded-2xl px-4 py-3',
-                        chatMessage.role === 'user'
-                          ? 'ml-auto bg-blue-500 text-white'
-                          : 'border border-slate-200 bg-white text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.035)]',
-                      ].join(' ')}
-                    >
-                      <Typography.Paragraph
-                        className={
-                          chatMessage.role === 'user'
-                            ? 'mb-1! text-sm text-white!'
-                            : 'mb-1! text-sm text-slate-700!'
-                        }
-                      >
-                        {chatMessage.content}
-                      </Typography.Paragraph>
-                      <Typography.Text
-                        className={
-                          chatMessage.role === 'user'
-                            ? 'text-[11px] text-blue-100'
-                            : 'text-[11px] text-slate-400'
-                        }
-                      >
-                        {formatMessageTime(chatMessage.createdAt)}
-                      </Typography.Text>
-                      {chatMessage.role === 'assistant' && chatMessage.sources?.length ? (
-                        <ProjectConversationSources sources={chatMessage.sources} />
-                      ) : null}
-                    </article>
-                  ))}
-
-                  <div ref={messageEndRef} />
+              {conversationBubbleItems.length > 0 ? (
+                <div className="min-h-0 flex-1">
+                  <Bubble.List
+                    items={conversationBubbleItems}
+                    autoScroll
+                    role={PROJECT_CHAT_BUBBLE_ROLES}
+                    classNames={PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES}
+                    styles={PROJECT_CHAT_BUBBLE_LIST_STYLES}
+                  />
                 </div>
               ) : (
-                <div className="grid h-full place-items-center">
+                <div className="grid min-h-0 flex-1 place-items-center">
                   <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该对话暂无消息" />
                 </div>
               )}
             </div>
 
             <footer className="border-t border-slate-200 bg-white px-6 py-4">
-              <form
-                className="space-y-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
+              <Sender
+                value={composerValue}
+                submitType="enter"
+                loading={sendingMessage}
+                disabled={sendActionLocked}
+                autoSize={{ minRows: 2, maxRows: 6 }}
+                placeholder="输入项目问题，Enter 发送，Shift + Enter 换行。"
+                rootClassName="rounded-[24px] border border-slate-200 bg-slate-50/70 p-3 shadow-[0_8px_22px_rgba(15,23,42,0.035)]"
+                classNames={{
+                  input: 'rounded-[18px]! bg-white!',
+                  footer: 'mt-3',
+                }}
+                footer={
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <Typography.Text className="text-xs text-slate-400">
+                      发送失败时会自动回读服务端线程，避免遗漏已持久化的 user
+                      message。
+                    </Typography.Text>
+                    {!canSendMessage && composerValue.trim().length === 0 ? (
+                      <Typography.Text className="text-xs text-slate-400">
+                        请输入消息后发送
+                      </Typography.Text>
+                    ) : null}
+                  </div>
+                }
+                onChange={(value) => setComposerValue(value)}
+                onSubmit={() => {
                   void handleSendMessage();
                 }}
-              >
-                <Input.TextArea
-                  value={composerValue}
-                  autoSize={{ minRows: 2, maxRows: 6 }}
-                  disabled={sendActionLocked}
-                  placeholder="输入项目问题，Enter 发送，Shift + Enter 换行。"
-                  onChange={(event) => setComposerValue(event.target.value)}
-                  onPressEnter={(event) => {
-                    if (event.shiftKey || event.nativeEvent.isComposing) {
-                      return;
-                    }
-
-                    event.preventDefault();
-                    void handleSendMessage();
-                  }}
-                />
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <Typography.Text className="text-xs text-slate-400">
-                    发送失败时会自动回读服务端线程，避免遗漏已持久化的 user message。
-                  </Typography.Text>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={sendingMessage}
-                    disabled={!canSendMessage}
-                    className="h-11! rounded-full! px-6! font-semibold!"
-                  >
-                    发送消息
-                  </Button>
-                </div>
-              </form>
+              />
             </footer>
           </>
         ) : (

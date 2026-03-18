@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@ant-design/icons": "^6",
+    "@ant-design/x": "2.4.0",
+    "@ant-design/x-markdown": "2.4.0",
     "@knowject/request": "workspace:*",
     "@knowject/ui": "workspace:*",
     "antd": "^6.1.4",
