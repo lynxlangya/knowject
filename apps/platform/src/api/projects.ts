@@ -83,6 +83,8 @@ export interface CreateProjectConversationMessageRequest {
   content: string;
 }
 
+const PROJECT_CHAT_MESSAGE_TIMEOUT_MS = 30000;
+
 export interface ProjectsListResponse {
   total: number;
   items: ProjectResponse[];
@@ -224,6 +226,9 @@ export const createProjectConversationMessage = async (
       conversationId,
     )}/messages`,
     payload,
+    {
+      timeout: PROJECT_CHAT_MESSAGE_TIMEOUT_MS,
+    },
   );
 
   return unwrapApiData(response.data);

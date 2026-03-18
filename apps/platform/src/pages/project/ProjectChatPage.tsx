@@ -755,7 +755,7 @@ export const ProjectChatPage = () => {
             <Alert
               type="warning"
               showIcon
-              message="项目对话加载失败"
+              title="项目对话加载失败"
               description={conversationsError}
             />
           ) : (
@@ -890,7 +890,7 @@ export const ProjectChatPage = () => {
                   type="warning"
                   showIcon
                   className="mb-4"
-                  message={blockingChatIssue.title}
+                  title={blockingChatIssue.title}
                   description={
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <span>{blockingChatIssue.description}</span>
@@ -911,7 +911,7 @@ export const ProjectChatPage = () => {
                   type="warning"
                   showIcon
                   className="mb-4"
-                  message="当前无法确认对话配置"
+                  title="当前无法确认对话配置"
                   description={`${chatSettingsError}。如后续发送失败，请前往设置页检查配置。`}
                 />
               ) : null}
@@ -920,7 +920,7 @@ export const ProjectChatPage = () => {
                   type="warning"
                   showIcon
                   className="mb-4"
-                  message={inlineChatIssue.title}
+                  title={inlineChatIssue.title}
                   description={inlineChatIssue.description}
                 />
               ) : null}
@@ -1015,7 +1015,7 @@ export const ProjectChatPage = () => {
               <Alert
                 type={detailError ? 'error' : 'warning'}
                 showIcon
-                message={detailError ? '项目对话加载失败' : '对话不存在'}
+                title={detailError ? '项目对话加载失败' : '对话不存在'}
                 description={
                   detailError ??
                   '当前 chatId 无法匹配到会话，请从左侧重新选择。'
@@ -1027,7 +1027,7 @@ export const ProjectChatPage = () => {
                   <Alert
                     type="warning"
                     showIcon
-                    message={blockingChatIssue.title}
+                    title={blockingChatIssue.title}
                     description={
                       <div className="flex flex-col gap-3">
                         <span>{blockingChatIssue.description}</span>
@@ -1047,7 +1047,7 @@ export const ProjectChatPage = () => {
                   <Alert
                     type="warning"
                     showIcon
-                    message="当前无法确认对话配置"
+                    title="当前无法确认对话配置"
                     description={`${chatSettingsError}。你仍可先创建线程；若发送失败，请前往设置页检查。`}
                   />
                 ) : null}
