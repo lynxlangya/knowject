@@ -1,11 +1,8 @@
 import {
-  CheckOutlined,
-  CloseOutlined,
-  DeleteOutlined,
-  EditOutlined,
+  ArrowUpOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { Bubble, Sender } from '@ant-design/x';
+import { Bubble } from '@ant-design/x';
 import {
   App,
   Alert,
@@ -13,9 +10,7 @@ import {
   Empty,
   Input,
   Skeleton,
-  Tooltip,
   Typography,
-  type InputRef,
 } from 'antd';
 import { extractApiErrorCode, extractApiErrorMessage } from '@api/error';
 import {
@@ -37,9 +32,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   PATHS,
   buildProjectChatPath,
-  buildProjectResourcesPath,
 } from '@app/navigation/paths';
-import { ProjectConversationList } from './components/ProjectConversationList';
+import type { ConversationSummary } from '@app/project/project.types';
+import { KNOWJECT_BRAND } from '@styles/brand';
+import {
+  ProjectConversationList,
+  type ProjectConversationContextAction,
+} from './components/ProjectConversationList';
 import {
   buildProjectChatBubbleItems,
   PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES,
@@ -67,7 +66,6 @@ export const ProjectChatPage = () => {
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const { chatId } = useParams<{ chatId?: string }>();
-  const titleInputRef = useRef<InputRef | null>(null);
   const {
     activeProject,
     conversations,
@@ -88,8 +86,10 @@ export const ProjectChatPage = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [composerValue, setComposerValue] = useState('');
-  const [editingConversationTitle, setEditingConversationTitle] = useState(false);
-  const [conversationTitleDraft, setConversationTitleDraft] = useState('');
+  const [renameTargetConversation, setRenameTargetConversation] =
+    useState<ConversationSummary | null>(null);
+  const [renameConversationTitleDraft, setRenameConversationTitleDraft] =
+    useState('');
   const [creatingConversation, setCreatingConversation] = useState(false);
   const [renamingConversation, setRenamingConversation] = useState(false);
   const [deletingConversation, setDeletingConversation] = useState(false);
@@ -148,24 +148,14 @@ export const ProjectChatPage = () => {
       ? chatRuntimeIssue
       : null;
   const createActionLocked = creatingConversation || sendingMessage;
-  const conversationHeaderActionLocked =
-    detailLoading ||
-    renamingConversation ||
-    deletingConversation ||
-    editingConversationTitle;
+  const conversationActionsLocked =
+    detailLoading || renamingConversation || deletingConversation;
   const sendActionLocked =
     sendingMessage ||
     detailLoading ||
     chatSettingsLoading ||
     blockingChatIssue !== null;
-  const canSendMessage = composerValue.trim().length > 0 && !sendActionLocked;
-  const normalizedConversationTitleDraft = conversationTitleDraft.trim();
-  const hasPendingConversationTitleChange =
-    currentConversationDetail !== null &&
-    normalizedConversationTitleDraft.length > 0 &&
-    normalizedConversationTitleDraft !== currentConversationDetail.title.trim();
-  const canDeleteCurrentConversation =
-    currentConversationDetail !== null && conversations.length > 1;
+  const canSubmitMessage = composerValue.trim().length > 0 && !sendActionLocked;
   const isCurrentProject = (projectId: string): boolean => {
     return latestConversationTargetRef.current.projectId === projectId;
   };
@@ -241,24 +231,9 @@ export const ProjectChatPage = () => {
   }, [activeProject.id, chatId]);
 
   useEffect(() => {
-    setEditingConversationTitle(false);
-    setConversationTitleDraft(currentConversationDetail?.title ?? '');
-  }, [currentConversationDetail?.id, currentConversationDetail?.title]);
-
-  useEffect(() => {
-    if (!editingConversationTitle) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      titleInputRef.current?.focus();
-      titleInputRef.current?.select();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [editingConversationTitle]);
+    setRenameTargetConversation(null);
+    setRenameConversationTitleDraft('');
+  }, [activeProject.id]);
 
   useEffect(() => {
     void loadChatSettings();
@@ -466,40 +441,45 @@ export const ProjectChatPage = () => {
     }
   };
 
-  const handleStartEditingConversationTitle = () => {
-    if (!currentConversationDetail || conversationHeaderActionLocked) {
+  const handleStartRenamingConversation = (
+    conversation: ConversationSummary,
+  ) => {
+    if (conversationActionsLocked) {
       return;
     }
 
-    setConversationTitleDraft(currentConversationDetail.title);
-    setEditingConversationTitle(true);
+    setRenameTargetConversation(conversation);
+    setRenameConversationTitleDraft(conversation.title);
   };
 
-  const handleCancelEditingConversationTitle = () => {
-    setConversationTitleDraft(currentConversationDetail?.title ?? '');
-    setEditingConversationTitle(false);
+  const handleCancelRenamingConversation = () => {
+    if (renamingConversation) {
+      return;
+    }
+
+    setRenameTargetConversation(null);
+    setRenameConversationTitleDraft('');
   };
 
   const handleUpdateConversationTitle = async () => {
-    if (!chatId || !currentConversationDetail || renamingConversation) {
+    if (!renameTargetConversation || renamingConversation) {
       return;
     }
 
-    const nextTitle = conversationTitleDraft.trim();
+    const nextTitle = renameConversationTitleDraft.trim();
 
     if (!nextTitle) {
       message.warning('请输入对话标题');
-      titleInputRef.current?.focus();
       return;
     }
 
-    if (nextTitle === currentConversationDetail.title.trim()) {
-      handleCancelEditingConversationTitle();
+    if (nextTitle === renameTargetConversation.title.trim()) {
+      handleCancelRenamingConversation();
       return;
     }
 
     const requestProjectId = activeProject.id;
-    const requestConversationId = chatId;
+    const requestConversationId = renameTargetConversation.id;
     setRenamingConversation(true);
 
     try {
@@ -511,17 +491,17 @@ export const ProjectChatPage = () => {
         },
       );
 
-      if (isCurrentConversationTarget(requestProjectId, requestConversationId)) {
+      if (chatId === requestConversationId) {
         setConversationDetail(result.conversation);
         setDetailError(null);
-        setConversationTitleDraft(result.conversation.title);
-        setEditingConversationTitle(false);
       }
 
       if (isCurrentProject(requestProjectId)) {
         void refreshConversations();
       }
 
+      setRenameTargetConversation(null);
+      setRenameConversationTitleDraft('');
       message.success('对话标题已更新');
     } catch (currentError) {
       console.error(currentError);
@@ -533,19 +513,19 @@ export const ProjectChatPage = () => {
     }
   };
 
-  const handleDeleteConversation = () => {
-    if (!chatId || !currentConversationDetail || deletingConversation) {
+  const handleDeleteConversation = (conversation: ConversationSummary) => {
+    if (deletingConversation) {
       return;
     }
 
-    if (!canDeleteCurrentConversation) {
+    if (conversations.length <= 1) {
       message.warning('至少保留一个对话线程');
       return;
     }
 
     const requestProjectId = activeProject.id;
-    const requestConversationId = chatId;
-    const currentTitle = currentConversationDetail.title;
+    const requestConversationId = conversation.id;
+    const currentTitle = conversation.title;
     const currentIndex = conversations.findIndex(
       (conversation) => conversation.id === requestConversationId,
     );
@@ -578,12 +558,16 @@ export const ProjectChatPage = () => {
             if (isCurrentConversationTarget(requestProjectId, requestConversationId)) {
               setConversationDetail(null);
               setDetailError(null);
-              setEditingConversationTitle(false);
               navigate(
                 nextConversation
                   ? buildProjectChatPath(requestProjectId, nextConversation.id)
                   : buildProjectChatPath(requestProjectId),
               );
+            }
+
+            if (renameTargetConversation?.id === requestConversationId) {
+              setRenameTargetConversation(null);
+              setRenameConversationTitleDraft('');
             }
 
             message.success(`已删除「${currentTitle}」`);
@@ -616,6 +600,40 @@ export const ProjectChatPage = () => {
         })();
       },
     });
+  };
+
+  const handleConversationContextAction = (
+    action: ProjectConversationContextAction,
+    conversation: ConversationSummary,
+  ) => {
+    switch (action) {
+      case 'share':
+        message.info('后续将支持分享线程。');
+        return;
+      case 'knowledge':
+        message.info('后续将支持把当前讨论沉淀为知识条目。');
+        return;
+      case 'resources':
+        message.info('后续将支持从线程上下文直接查看相关资源。');
+        return;
+      case 'rename':
+        handleStartRenamingConversation(conversation);
+        return;
+      case 'delete':
+        handleDeleteConversation(conversation);
+        return;
+      default:
+        return;
+    }
+  };
+
+  const handleSelectConversation = (conversationId: string) => {
+    if (renameTargetConversation !== null) {
+      setRenameTargetConversation(null);
+      setRenameConversationTitleDraft('');
+    }
+
+    navigate(buildProjectChatPath(activeProject.id, conversationId));
   };
 
   const renderCreateChatButton = ({
@@ -674,7 +692,7 @@ export const ProjectChatPage = () => {
                   正式项目线程
                 </span>
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                  标题点击可改
+                  右键更多操作
                 </span>
               </div>
             </div>
@@ -698,9 +716,15 @@ export const ProjectChatPage = () => {
             <ProjectConversationList
               conversations={conversations}
               activeConversationId={activeConversation?.id}
-              onSelect={(conversationId) =>
-                navigate(buildProjectChatPath(activeProject.id, conversationId))
-              }
+              actionsLocked={conversationActionsLocked}
+              editingConversationId={renameTargetConversation?.id}
+              editingTitleDraft={renameConversationTitleDraft}
+              renamingConversation={renamingConversation}
+              onAction={handleConversationContextAction}
+              onEditingTitleDraftChange={setRenameConversationTitleDraft}
+              onRenameSubmit={() => void handleUpdateConversationTitle()}
+              onRenameCancel={handleCancelRenamingConversation}
+              onSelect={handleSelectConversation}
             />
           )}
         </div>
@@ -717,110 +741,7 @@ export const ProjectChatPage = () => {
           </div>
         ) : currentConversationDetail ? (
           <>
-            <header className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0 flex-1">
-                <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  当前线程
-                </Typography.Text>
-                {editingConversationTitle ? (
-                  <div className="mt-2 max-w-2xl rounded-[24px] border border-slate-200 bg-slate-50/80 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                    <Input
-                      ref={titleInputRef}
-                      size="large"
-                      maxLength={80}
-                      value={conversationTitleDraft}
-                      disabled={renamingConversation}
-                      placeholder="输入线程标题"
-                      className="rounded-[16px]!"
-                      onChange={(event) =>
-                        setConversationTitleDraft(event.target.value)
-                      }
-                      onPressEnter={(event) => {
-                        if (event.nativeEvent.isComposing) {
-                          return;
-                        }
-
-                        void handleUpdateConversationTitle();
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') {
-                          event.preventDefault();
-                          handleCancelEditingConversationTitle();
-                        }
-                      }}
-                    />
-                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <Typography.Text className="text-[11px] text-slate-400">
-                        Enter 保存，Esc 取消
-                      </Typography.Text>
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          icon={<CloseOutlined />}
-                          disabled={renamingConversation}
-                          onClick={handleCancelEditingConversationTitle}
-                        >
-                          取消
-                        </Button>
-                        <Button
-                          type="primary"
-                          icon={<CheckOutlined />}
-                          loading={renamingConversation}
-                          disabled={!hasPendingConversationTitleChange}
-                          onClick={() => void handleUpdateConversationTitle()}
-                        >
-                          保存标题
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-2 max-w-3xl">
-                    <Tooltip title="点击修改标题">
-                      <button
-                        type="button"
-                        className="group -ml-2 inline-flex max-w-full items-start gap-2 rounded-[18px] px-2 py-1 text-left transition-colors duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-100"
-                        onClick={handleStartEditingConversationTitle}
-                      >
-                        <Typography.Title
-                          level={4}
-                          className="mb-0! mt-0! [display:-webkit-box] overflow-hidden text-slate-800! [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"
-                        >
-                          {currentConversationDetail.title}
-                        </Typography.Title>
-                        <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:text-slate-600 group-focus-visible:opacity-100">
-                          <EditOutlined />
-                        </span>
-                      </button>
-                    </Tooltip>
-                  </div>
-                )}
-                <Typography.Text className="mt-1 block text-xs text-slate-400">
-                  {activeProject.name} · 正式项目对话
-                </Typography.Text>
-              </div>
-              <div className="flex flex-wrap items-start gap-2 lg:justify-end">
-                <Tooltip title={canDeleteCurrentConversation ? '删除当前线程' : '至少保留一个对话线程'}>
-                  <span className="inline-flex">
-                    <Button
-                      danger
-                      icon={<DeleteOutlined />}
-                      aria-label="删除当前线程"
-                      loading={deletingConversation}
-                      disabled={!canDeleteCurrentConversation || conversationHeaderActionLocked}
-                      onClick={handleDeleteConversation}
-                    />
-                  </span>
-                </Tooltip>
-                <Button onClick={() => message.info('后续将支持把当前讨论沉淀为知识条目。')}>
-                  沉淀为知识
-                </Button>
-                <Button onClick={() => navigate(buildProjectResourcesPath(activeProject.id))}>
-                  查看相关资源
-                </Button>
-              </div>
-            </header>
-
-            <div className="flex min-h-0 flex-1 flex-col bg-slate-50/40 px-6 py-5">
+            <div className="flex min-h-0 flex-1 flex-col bg-[radial-gradient(circle_at_bottom,rgba(40,184,160,0.08),transparent_34%),linear-gradient(180deg,rgba(246,251,250,0.82)_0%,rgba(255,255,255,0.98)_26%,rgba(255,255,255,1)_100%)] px-6 py-5">
               {blockingChatIssue ? (
                 <Alert
                   type="warning"
@@ -862,13 +783,15 @@ export const ProjectChatPage = () => {
               ) : null}
               {conversationBubbleItems.length > 0 ? (
                 <div className="min-h-0 flex-1">
-                  <Bubble.List
-                    items={conversationBubbleItems}
-                    autoScroll
-                    role={PROJECT_CHAT_BUBBLE_ROLES}
-                    classNames={PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES}
-                    styles={PROJECT_CHAT_BUBBLE_LIST_STYLES}
-                  />
+                  <div className="mx-auto h-full w-full max-w-[1280px]">
+                    <Bubble.List
+                      items={conversationBubbleItems}
+                      autoScroll
+                      role={PROJECT_CHAT_BUBBLE_ROLES}
+                      classNames={PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES}
+                      styles={PROJECT_CHAT_BUBBLE_LIST_STYLES}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="grid min-h-0 flex-1 place-items-center">
@@ -877,37 +800,60 @@ export const ProjectChatPage = () => {
               )}
             </div>
 
-            <footer className="border-t border-slate-200 bg-white px-6 py-4">
-              <Sender
-                value={composerValue}
-                submitType="enter"
-                loading={sendingMessage}
-                disabled={sendActionLocked}
-                autoSize={{ minRows: 2, maxRows: 6 }}
-                placeholder="输入项目问题，Enter 发送，Shift + Enter 换行。"
-                rootClassName="rounded-[24px] border border-slate-200 bg-slate-50/70 p-3 shadow-[0_8px_22px_rgba(15,23,42,0.035)]"
-                classNames={{
-                  input: 'rounded-[18px]! bg-white!',
-                  footer: 'mt-3',
-                }}
-                footer={
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <Typography.Text className="text-xs text-slate-400">
-                      发送失败时会自动回读服务端线程，避免遗漏已持久化的 user
-                      message。
-                    </Typography.Text>
-                    {!canSendMessage && composerValue.trim().length === 0 ? (
-                      <Typography.Text className="text-xs text-slate-400">
-                        请输入消息后发送
-                      </Typography.Text>
-                    ) : null}
+            <footer className="border-t border-slate-200/70 bg-white px-6 pb-5 pt-4">
+              <div className="mx-auto w-full max-w-[1280px]">
+                <form
+                  className="rounded-[28px] border bg-white p-2.5 transition-colors duration-200"
+                  style={{
+                    borderColor: KNOWJECT_BRAND.primaryBorder,
+                  }}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleSendMessage();
+                  }}
+                >
+                  <div className="flex items-end gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Input.TextArea
+                        value={composerValue}
+                        autoSize={{ minRows: 1, maxRows: 6 }}
+                        disabled={sendActionLocked}
+                        variant="borderless"
+                        aria-label="项目消息输入框"
+                        placeholder="输入项目问题"
+                        style={{ width: '100%' }}
+                        className="w-full! rounded-[22px]! bg-transparent! px-4! py-3! text-[15px]! leading-7! text-slate-700! placeholder:text-slate-400!"
+                        onChange={(event) => setComposerValue(event.target.value)}
+                        onPressEnter={(event) => {
+                          if (event.shiftKey || event.nativeEvent.isComposing) {
+                            return;
+                          }
+
+                          event.preventDefault();
+                          void handleSendMessage();
+                        }}
+                      />
+                    </div>
+
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      shape="circle"
+                      aria-label="发送消息"
+                      loading={sendingMessage}
+                      disabled={!canSubmitMessage}
+                      icon={<ArrowUpOutlined />}
+                      className="mb-1 h-11! w-11! shrink-0 border-0!"
+                      style={{
+                        background: canSubmitMessage
+                          ? KNOWJECT_BRAND.primary
+                          : KNOWJECT_BRAND.primarySurfaceStrong,
+                        color: canSubmitMessage ? '#ffffff' : KNOWJECT_BRAND.textMuted,
+                      }}
+                    />
                   </div>
-                }
-                onChange={(value) => setComposerValue(value)}
-                onSubmit={() => {
-                  void handleSendMessage();
-                }}
-              />
+                </form>
+              </div>
             </footer>
           </>
         ) : (
@@ -965,6 +911,7 @@ export const ProjectChatPage = () => {
           </div>
         )}
       </main>
+
     </section>
   );
 };

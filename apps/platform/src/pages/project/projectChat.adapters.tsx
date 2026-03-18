@@ -1,4 +1,10 @@
-import type { CSSProperties } from 'react';
+import {
+  CopyOutlined,
+  EditOutlined,
+  FileTextOutlined,
+  RedoOutlined,
+} from '@ant-design/icons';
+import type { CSSProperties, ReactNode } from 'react';
 import {
   type BubbleItemType,
   type BubbleListProps,
@@ -8,7 +14,7 @@ import {
   XMarkdown,
   type ComponentProps as XMarkdownComponentProps,
 } from '@ant-design/x-markdown';
-import { Typography } from 'antd';
+import { Popover, Typography } from 'antd';
 import type { ConversationSummary } from '@app/project/project.types';
 import type {
   ProjectConversationMessageResponse,
@@ -22,17 +28,14 @@ interface ProjectChatBubbleExtraInfo {
 }
 
 const AI_BUBBLE_STYLE: CSSProperties = {
-  padding: 16,
-  borderRadius: 20,
-  backgroundColor: '#ffffff',
-  border: '1px solid rgba(226,232,240,1)',
-  boxShadow: '0 10px 24px rgba(15,23,42,0.035)',
+  padding: 18,
+  borderRadius: 4,
 };
 
 const USER_BUBBLE_STYLE: CSSProperties = {
-  padding: 16,
-  borderRadius: 20,
-  backgroundColor: '#3b82f6',
+  padding: '10px 12px',
+  borderRadius: 4,
+  background: KNOWJECT_BRAND.primarySurface,
 };
 
 const joinClassName = (...classNames: Array<string | undefined>) => {
@@ -93,7 +96,10 @@ const renderMarkdownHeading1 = ({
   return (
     <h1
       {...rest}
-      className={joinClassName('mb-3 text-xl font-semibold text-slate-900', className)}
+      className={joinClassName(
+        'mb-3 text-xl font-semibold text-slate-900',
+        className,
+      )}
     >
       {children}
     </h1>
@@ -110,7 +116,10 @@ const renderMarkdownHeading2 = ({
   return (
     <h2
       {...rest}
-      className={joinClassName('mb-3 text-lg font-semibold text-slate-900', className)}
+      className={joinClassName(
+        'mb-3 text-lg font-semibold text-slate-900',
+        className,
+      )}
     >
       {children}
     </h2>
@@ -127,7 +136,10 @@ const renderMarkdownHeading3 = ({
   return (
     <h3
       {...rest}
-      className={joinClassName('mb-3 text-base font-semibold text-slate-900', className)}
+      className={joinClassName(
+        'mb-3 text-base font-semibold text-slate-900',
+        className,
+      )}
     >
       {children}
     </h3>
@@ -310,7 +322,9 @@ const renderMarkdownImage = ({
       <span className="font-semibold">已拦截外部图片加载</span>
       <span>{fallbackLabel}</span>
       {src ? (
-        <span className="break-all text-[11px] leading-5 text-amber-700">{src}</span>
+        <span className="break-all text-[11px] leading-5 text-amber-700">
+          {src}
+        </span>
       ) : null}
     </span>
   );
@@ -318,7 +332,7 @@ const renderMarkdownImage = ({
 
 const renderAssistantMessage = (content: string) => {
   return (
-    <div className="text-sm text-slate-700">
+    <div className="text-[15px] text-slate-700">
       <XMarkdown
         content={content}
         openLinksInNewTab
@@ -344,50 +358,42 @@ const renderAssistantMessage = (content: string) => {
 
 const renderUserMessage = (content: string) => {
   return (
-    <Typography.Paragraph className="mb-0! whitespace-pre-wrap text-sm! leading-6! text-white!">
+    <Typography.Paragraph className="mb-0! whitespace-pre-wrap text-[15px]! leading-7! text-slate-800!">
       {content}
     </Typography.Paragraph>
   );
 };
 
-const renderBubbleTimestamp = ({
-  createdAt,
-  tone,
-}: {
-  createdAt: string;
-  tone: 'user' | 'assistant';
-}) => {
+const renderBubbleTimestamp = ({ createdAt }: { createdAt: string }) => {
   return (
-    <Typography.Text
-      className={
-        tone === 'user' ? 'text-[11px] text-blue-100' : 'text-[11px] text-slate-400'
-      }
-    >
+    <Typography.Text className="text-[11px] font-medium tracking-[0.02em] text-slate-400">
       {formatMessageTime(createdAt)}
     </Typography.Text>
   );
 };
 
-const renderConversationLabel = ({
+export const renderProjectConversationLabel = ({
   conversation,
   active,
+  titleContent,
 }: {
   conversation: ConversationSummary;
   active: boolean;
+  titleContent?: ReactNode;
 }) => {
   return (
     <div
       className={[
-        'group relative w-full overflow-hidden rounded-[24px] border px-4 py-4 text-left transition-all duration-200 ease-out',
+        'group relative w-full overflow-hidden rounded-[24px] border px-4 py-4 text-left transition-colors duration-200 ease-out',
         active
-          ? 'bg-white shadow-[0_14px_30px_rgba(15,23,42,0.045)]'
-          : 'border-slate-200/90 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.03)] hover:border-slate-300 hover:bg-slate-50/70',
+          ? 'bg-white'
+          : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/70',
       ].join(' ')}
       style={
         active
           ? {
+              backgroundColor: KNOWJECT_BRAND.primarySurface,
               borderColor: KNOWJECT_BRAND.primaryBorder,
-              boxShadow: `0 12px 28px ${KNOWJECT_BRAND.primaryGlow}`,
             }
           : undefined
       }
@@ -408,7 +414,9 @@ const renderConversationLabel = ({
               <span
                 className={[
                   'h-2.5 w-2.5 rounded-full transition-colors duration-200',
-                  active ? 'bg-emerald-400' : 'bg-slate-300 group-hover:bg-slate-400',
+                  active
+                    ? 'bg-emerald-400'
+                    : 'bg-slate-300 group-hover:bg-slate-400',
                 ].join(' ')}
                 aria-hidden="true"
               />
@@ -435,9 +443,11 @@ const renderConversationLabel = ({
           </span>
         </div>
 
-        <Typography.Text className="block [display:-webkit-box] overflow-hidden text-[15px] font-semibold leading-7 text-slate-800 [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-          {conversation.title}
-        </Typography.Text>
+        {titleContent ?? (
+          <Typography.Text className="block [display:-webkit-box] overflow-hidden text-[15px] font-semibold leading-7 text-slate-800 [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+            {conversation.title}
+          </Typography.Text>
+        )}
       </div>
     </div>
   );
@@ -453,39 +463,57 @@ const ProjectConversationSources = ({
   }
 
   return (
-    <section className="w-full rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3 py-3">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-          来源引用
-        </Typography.Text>
-        <Typography.Text className="text-[11px] text-slate-400">
-          {sources.length} 条
-        </Typography.Text>
-      </div>
+    <div className="flex flex-wrap gap-2">
+      {sources.map((source, index) => {
+        const fileName =
+          source.source.split(/[\\/]/).filter(Boolean).pop() || source.source;
 
-      <div className="space-y-2">
-        {sources.map((source) => (
-          <article
+        return (
+          <Popover
             key={`${source.knowledgeId}:${source.documentId}:${source.chunkId}:${source.chunkIndex}`}
-            className="rounded-2xl border border-slate-200 bg-white px-3 py-3"
+            trigger={['hover', 'focus']}
+            placement="topLeft"
+            mouseEnterDelay={0.12}
+            overlayClassName="max-w-[420px]"
+            content={
+              <div className="max-w-[360px] space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
+                      {fileName}
+                    </Typography.Text>
+                    {source.source !== fileName ? (
+                      <Typography.Text className="block text-[11px] leading-5 text-slate-400">
+                        {source.source}
+                      </Typography.Text>
+                    ) : null}
+                  </div>
+                  {formatSourceDistance(source.distance) ? (
+                    <Typography.Text className="shrink-0 text-[11px] text-slate-400">
+                      {formatSourceDistance(source.distance)}
+                    </Typography.Text>
+                  ) : null}
+                </div>
+                <Typography.Paragraph className="mb-0! text-xs! leading-6! text-slate-600!">
+                  {source.snippet}
+                </Typography.Paragraph>
+              </div>
+            }
           >
-            <div className="flex items-start justify-between gap-3">
-              <Typography.Text className="block truncate text-xs font-semibold text-slate-700">
-                {source.source}
-              </Typography.Text>
-              {formatSourceDistance(source.distance) ? (
-                <Typography.Text className="shrink-0 text-[11px] text-slate-400">
-                  {formatSourceDistance(source.distance)}
-                </Typography.Text>
-              ) : null}
-            </div>
-            <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-6! text-slate-600!">
-              {source.snippet}
-            </Typography.Paragraph>
-          </article>
-        ))}
-      </div>
-    </section>
+            <span
+              tabIndex={0}
+              className="inline-flex max-w-full cursor-default items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/80 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-100"
+            >
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1 text-[11px] font-semibold text-slate-500">
+                {index + 1}
+              </span>
+              <FileTextOutlined className="text-[12px] text-slate-400" />
+              <span className="max-w-[13rem] truncate">{fileName}</span>
+            </span>
+          </Popover>
+        );
+      })}
+    </div>
   );
 };
 
@@ -495,14 +523,13 @@ const renderAssistantFooter = (extraInfo?: ProjectChatBubbleExtraInfo) => {
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-3">
-      {renderBubbleTimestamp({
-        createdAt: extraInfo.createdAt,
-        tone: 'assistant',
-      })}
+    <div className="mt-2.5 flex flex-col gap-2.5">
       {extraInfo.sources.length > 0 ? (
         <ProjectConversationSources sources={extraInfo.sources} />
       ) : null}
+      {renderBubbleTimestamp({
+        createdAt: extraInfo.createdAt,
+      })}
     </div>
   );
 };
@@ -513,11 +540,37 @@ const renderUserFooter = (extraInfo?: ProjectChatBubbleExtraInfo) => {
   }
 
   return (
-    <div className="mt-2 flex justify-end">
-      {renderBubbleTimestamp({
-        createdAt: extraInfo.createdAt,
-        tone: 'user',
-      })}
+    <div className="mt-1.5 h-6">
+      <div className="invisible flex h-full items-center justify-end gap-1 pr-0.5 text-slate-400 opacity-0 transition-opacity duration-200 group-hover:visible group-hover:opacity-100">
+        {renderBubbleTimestamp({
+          createdAt: extraInfo.createdAt,
+        })}
+
+        <button
+          type="button"
+          aria-label="重新发起请求"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600"
+          onClick={(event) => event.preventDefault()}
+        >
+          <RedoOutlined className="text-[12px]" />
+        </button>
+        <button
+          type="button"
+          aria-label="编辑消息"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600"
+          onClick={(event) => event.preventDefault()}
+        >
+          <EditOutlined className="text-[12px]" />
+        </button>
+        <button
+          type="button"
+          aria-label="复制消息"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600"
+          onClick={(event) => event.preventDefault()}
+        >
+          <CopyOutlined className="text-[12px]" />
+        </button>
+      </div>
     </div>
   );
 };
@@ -531,7 +584,7 @@ export const buildProjectConversationItems = ({
 }): ConversationItemType[] => {
   return conversations.map((conversation) => ({
     key: conversation.id,
-    label: renderConversationLabel({
+    label: renderProjectConversationLabel({
       conversation,
       active: conversation.id === activeConversationId,
     }),
@@ -556,37 +609,45 @@ export const PROJECT_CHAT_BUBBLE_ROLES: BubbleListProps['role'] = {
   ai: {
     placement: 'start',
     variant: 'borderless',
-    rootClassName: 'max-w-[85%]',
+    rootClassName: 'w-fit max-w-[calc(100%-0.5rem)] sm:max-w-[64rem]',
     styles: {
-      body: AI_BUBBLE_STYLE,
+      content: AI_BUBBLE_STYLE,
     },
     contentRender: (content) => renderAssistantMessage(String(content)),
-    footerPlacement: 'inner-start',
+    footerPlacement: 'outer-start',
     footer: (_content, info) =>
-      renderAssistantFooter(info.extraInfo as ProjectChatBubbleExtraInfo | undefined),
+      renderAssistantFooter(
+        info.extraInfo as ProjectChatBubbleExtraInfo | undefined,
+      ),
   },
   user: {
     placement: 'end',
     variant: 'borderless',
-    rootClassName: 'max-w-[85%]',
+    rootClassName:
+      'group mb-0! w-fit min-w-[16rem] max-w-[calc(100%-0.5rem)] sm:max-w-[64rem]',
     styles: {
-      body: USER_BUBBLE_STYLE,
+      content: USER_BUBBLE_STYLE,
     },
     contentRender: (content) => renderUserMessage(String(content)),
-    footerPlacement: 'inner-end',
+    footerPlacement: 'outer-end',
     footer: (_content, info) =>
-      renderUserFooter(info.extraInfo as ProjectChatBubbleExtraInfo | undefined),
+      renderUserFooter(
+        info.extraInfo as ProjectChatBubbleExtraInfo | undefined,
+      ),
   },
 };
 
 export const PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES = {
-  bubble: 'mb-3 last:mb-0',
+  bubble: 'mb-6 last:mb-0',
   root: 'h-full',
-  scroll: 'pr-1',
+  scroll: 'pr-1 sm:pr-2',
 } as const;
 
 export const PROJECT_CHAT_BUBBLE_LIST_STYLES = {
   root: {
     height: '100%',
   },
-} satisfies Record<'root', CSSProperties>;
+  scroll: {
+    padding: '8px 0 24px',
+  },
+} satisfies Partial<Record<'root' | 'scroll', CSSProperties>>;
