@@ -45,6 +45,7 @@ export const MembersPage = () => {
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [contentAreaHeight, setContentAreaHeight] = useState<number | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     const loadMembers = async () => {
@@ -80,7 +81,7 @@ export const MembersPage = () => {
     };
 
     void loadMembers();
-  }, []);
+  }, [reloadToken]);
 
   const members = useMemo(() => {
     return buildMemberViewModels({
@@ -238,7 +239,9 @@ export const MembersPage = () => {
           <Typography.Paragraph className="text-slate-500!">
             {error}
           </Typography.Paragraph>
-          <Button onClick={() => window.location.reload()}>重新加载</Button>
+          <Button onClick={() => setReloadToken((currentToken) => currentToken + 1)}>
+            重新加载
+          </Button>
         </Card>
       </section>
     );

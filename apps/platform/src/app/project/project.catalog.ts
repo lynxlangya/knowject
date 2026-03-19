@@ -5,13 +5,34 @@ import type {
   ProjectResourceFocus,
 } from './project.types';
 
-const AVATAR_ALEX = 'https://i.pravatar.cc/80?img=12';
-const AVATAR_YUKI = 'https://i.pravatar.cc/80?img=23';
-const AVATAR_NINA = 'https://i.pravatar.cc/80?img=24';
-const AVATAR_LEO = 'https://i.pravatar.cc/80?img=14';
-const AVATAR_IRIS = 'https://i.pravatar.cc/80?img=48';
-const AVATAR_OLIVIA = 'https://i.pravatar.cc/80?img=5';
-const AVATAR_JASON = 'https://i.pravatar.cc/80?img=63';
+const createInitialAvatarDataUrl = (
+  name: string,
+  backgroundColor: string,
+  foregroundColor = '#f8fafc',
+) => {
+  const initials = name
+    .split(' ')
+    .map((segment) => segment.trim().charAt(0).toUpperCase())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('');
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" role="img" aria-label="${name}">
+      <rect width="80" height="80" rx="20" fill="${backgroundColor}" />
+      <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="${foregroundColor}" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">${initials}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const AVATAR_ALEX = createInitialAvatarDataUrl('Alex Chen', '#0f766e');
+const AVATAR_YUKI = createInitialAvatarDataUrl('Yuki Zhang', '#7c3aed');
+const AVATAR_NINA = createInitialAvatarDataUrl('Nina Song', '#c2410c');
+const AVATAR_LEO = createInitialAvatarDataUrl('Leo Zhou', '#1d4ed8');
+const AVATAR_IRIS = createInitialAvatarDataUrl('Iris Wang', '#be185d');
+const AVATAR_OLIVIA = createInitialAvatarDataUrl('Olivia Gu', '#047857');
+const AVATAR_JASON = createInitialAvatarDataUrl('Jason Fu', '#b45309');
 
 const KNOWLEDGE_ASSETS: GlobalAssetItem[] = [
   {
