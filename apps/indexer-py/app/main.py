@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.routes.health import router as health_router
 from app.api.routes.indexing import router as indexing_router
 from app.core.config import get_app_config
+from app.core.runtime_env import read_optional_string
 from app.domain.indexing.pipeline import IndexerError
 from app.schemas.indexing import IndexerFailureResponse, IndexerNotFoundResponse
 
@@ -45,14 +46,21 @@ def build_validation_error_message(error: dict[str, Any]) -> str:
     return "请求体不合法"
 
 
+def is_development_environment() -> bool:
+    return (read_optional_string("NODE_ENV") or "development").strip() == "development"
+
+
 def create_app() -> FastAPI:
     config = get_app_config()
+    docs_url = "/docs" if is_development_environment() else None
+    redoc_url = "/redoc" if is_development_environment() else None
+    openapi_url = "/openapi.json" if is_development_environment() else None
     app = FastAPI(
         title="Knowject Indexer API",
         version=config.app_version,
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
     )
 
     @app.exception_handler(IndexerError)
@@ -81,6 +89,9 @@ def create_app() -> FastAPI:
             return JSONResponse(status_code=404, content=payload)
 
         detail = exc.detail if isinstance(exc.detail, str) else "HTTP error"
+        if exc.status_code in {401, 403}:
+            return create_failure_response(exc.status_code, detail)
+
         return JSONResponse(
             status_code=exc.status_code,
             content={

@@ -12,7 +12,8 @@
 ## 当前接口
 
 - `GET /api/health`
-  - 返回应用状态、数据库状态与可选的 Chroma 心跳诊断信息。
+  - 返回最小 public health surface：顶层 `status` 与 `checks.{app,database,vectorStore}.status`，状态统一为 `up/down`。
+  - 不再返回 `service / environment / timestamp / uptimeSeconds` 与数据库 / 向量存储的 `host / url / lastError` 等敏感诊断明细。
 - `POST /api/auth/register`
   - 接收 `username`、`password`、`name`。
   - 注册成功后以统一响应壳返回 JWT 与基础用户信息。
@@ -114,6 +115,7 @@
 - `DELETE /api/knowledge/:knowledgeId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除知识库、对应文档记录、当前知识库的本地原始文件目录，以及该知识库当前 active collection 中的向量记录。
+  - 若向量清理失败，会直接返回 `502` 并停止继续删除 Mongo 记录与原始文件，避免继续制造脏状态。
   - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
 - `POST /api/knowledge/:knowledgeId/documents`
   - 需要 `Authorization: Bearer <token>`。
@@ -150,7 +152,7 @@
 - `DELETE /api/knowledge/:knowledgeId/documents/:documentId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除单个文档记录、本地原始文件目录，并尝试清理对应 Chroma 向量。
-  - 若删除发生在后台索引过程中，服务端会在最终状态回写缺失时继续尝试补做孤儿 chunk 清理，尽量避免留下脏向量。
+  - 若向量清理失败，会直接返回 `502` 并停止继续删除 Mongo 记录与原始文件；若删除发生在后台索引过程中，服务端会在最终状态回写缺失时继续尝试补做孤儿 chunk 清理，尽量避免留下脏向量。
   - 删除成功后返回 `HTTP 200`，`data` 为 `null`。
 - `POST /api/knowledge/search`
   - 需要 `Authorization: Bearer <token>`。
@@ -172,6 +174,8 @@
 - `POST /api/skills/import`
   - 需要 `Authorization: Bearer <token>`。
   - 支持 `github` 与原始 Markdown `url` 两种导入模式。
+  - 当前导入边界要求 HTTPS：`github` 模式只接受 `github.com` / `raw.githubusercontent.com`，`url` 模式只接受受信任 raw host；URL 不允许携带认证信息。
+  - 导入还会执行单文件 / 总字节 / 总文件数预算限制；超限时返回 `413 SKILL_IMPORT_LIMIT_EXCEEDED`。
   - 传 `dryRun=true` 时只返回解析预览，不落库；正式导入后会保留来源 provenance，但导入结果视为当前系统自有资产。
 - `PATCH /api/skills/:skillId`
   - 需要 `Authorization: Bearer <token>`。

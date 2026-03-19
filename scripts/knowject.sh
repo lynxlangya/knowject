@@ -219,8 +219,8 @@ case "$command_name" in
     info "后续 docker:prod:config / up 会按生产 env + mongo_app_password 自动派生 ${DOCKER_MONGODB_URI_FILE}"
     ;;
   docker:prod:up)
-    info "启动生产 Docker 环境"
-    compose_production up -d --build
+    info "启动生产 Docker 环境（默认只拉起已准备好的镜像，不执行本地构建）"
+    compose_production up -d --no-build
     ;;
   docker:prod:down)
     info "停止生产 Docker 环境"

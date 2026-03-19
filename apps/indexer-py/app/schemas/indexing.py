@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from app.domain.indexing.parser import normalize_storage_path
 from app.domain.indexing import pipeline
 
 
@@ -57,6 +58,11 @@ class IndexDocumentRequestPayload(CamelCaseModel):
         default=None,
         alias="indexingConfig",
     )
+
+    @field_validator("storage_path")
+    @classmethod
+    def validate_storage_path(cls, value: str) -> str:
+        return normalize_storage_path(value)
 
     def to_domain_request(self) -> pipeline.IndexDocumentRequest:
         return pipeline.build_index_document_request(

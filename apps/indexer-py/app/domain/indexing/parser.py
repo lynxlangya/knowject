@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from os import PathLike
 from pathlib import Path
 from typing import Callable, Protocol
+
+from app.core.runtime_env import WORKSPACE_ROOT, read_optional_string
 
 
 ErrorFactory = Callable[[str], Exception]
@@ -18,13 +21,44 @@ class DocumentRequestLike(Protocol):
     indexing_config: IndexingConfigLike
 
 
+DEFAULT_KNOWLEDGE_STORAGE_ROOT = WORKSPACE_ROOT / ".knowject-storage" / "knowledge"
+
+
+def resolve_knowledge_storage_root() -> Path:
+    configured_root = read_optional_string("KNOWLEDGE_STORAGE_ROOT")
+    root = Path(configured_root).expanduser() if configured_root else DEFAULT_KNOWLEDGE_STORAGE_ROOT
+    return root.resolve(strict=False)
+
+
+def normalize_storage_path(storage_path: str | PathLike[str]) -> str:
+    root = resolve_knowledge_storage_root()
+    candidate = Path(storage_path).expanduser()
+
+    if not candidate.is_absolute():
+        candidate = root / candidate
+
+    normalized = candidate.resolve(strict=False)
+
+    try:
+        normalized.relative_to(root)
+    except ValueError as error:
+        raise ValueError("storagePath 超出知识库存储根目录") from error
+
+    return str(normalized)
+
+
 @dataclass
 class DocumentParser:
     resolve_supported_extensions: ResolveSupportedExtensionsCallable
     error_factory: ErrorFactory
 
     def parse_document_text(self, request: DocumentRequestLike) -> str:
-        path = Path(request.storage_path)
+        try:
+            normalized_storage_path = normalize_storage_path(request.storage_path)
+        except ValueError as error:
+            raise self.error_factory(str(error)) from error
+
+        path = Path(normalized_storage_path)
         if not path.exists() or not path.is_file():
             raise self.error_factory("上传文件不存在，无法触发 Python 解析")
 

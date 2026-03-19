@@ -166,6 +166,12 @@ export interface UpdateProjectRequest {
   skillIds?: string[];
 }
 
+export interface UpdateProjectResourceBindingsRequest {
+  knowledgeBaseIds?: string[];
+  agentIds?: string[];
+  skillIds?: string[];
+}
+
 export interface UpdateProjectMemberRequest {
   role: ProjectRole;
 }
@@ -305,6 +311,18 @@ export const deleteProjectConversation = async (
 export const updateProject = async (
   projectId: string,
   payload: UpdateProjectRequest,
+): Promise<ProjectMutationResponse> => {
+  const response = await client.patch<ApiEnvelope<ProjectMutationResponse>>(
+    `/projects/${encodeURIComponent(projectId)}`,
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const updateProjectResourceBindings = async (
+  projectId: string,
+  payload: UpdateProjectResourceBindingsRequest,
 ): Promise<ProjectMutationResponse> => {
   const response = await client.patch<ApiEnvelope<ProjectMutationResponse>>(
     `/projects/${encodeURIComponent(projectId)}`,

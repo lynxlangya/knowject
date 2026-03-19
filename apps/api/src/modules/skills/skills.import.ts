@@ -15,6 +15,18 @@ import type {
 } from "./skills.types.js";
 
 const IMPORT_REQUEST_TIMEOUT_MS = 15000;
+const IMPORT_MAX_METADATA_BYTES = 512 * 1024;
+const IMPORT_MAX_SINGLE_FILE_BYTES = 512 * 1024;
+const IMPORT_MAX_TOTAL_BYTES = 2 * 1024 * 1024;
+const IMPORT_MAX_TOTAL_FILES = 32;
+
+const ALLOWED_GITHUB_PAGE_HOSTS = new Set(["github.com"]);
+const ALLOWED_GITHUB_API_HOSTS = new Set(["api.github.com"]);
+const ALLOWED_GITHUB_RAW_HOSTS = new Set([
+  "raw.githubusercontent.com",
+  "gist.githubusercontent.com",
+]);
+const ALLOWED_DIRECT_IMPORT_HOSTS = ALLOWED_GITHUB_RAW_HOSTS;
 
 interface ImportedSkillBundleFile {
   path: string;
@@ -61,6 +73,11 @@ interface GitHubContentItem {
   download_url: string | null;
 }
 
+interface ImportBudget {
+  totalBytes: number;
+  totalFiles: number;
+}
+
 const createImportFetchError = (
   message: string,
   details?: unknown,
@@ -68,6 +85,18 @@ const createImportFetchError = (
   return new AppError({
     statusCode: 400,
     code: "SKILL_IMPORT_FETCH_FAILED",
+    message,
+    details,
+  });
+};
+
+const createImportLimitError = (
+  message: string,
+  details?: unknown,
+): AppError => {
+  return new AppError({
+    statusCode: 413,
+    code: "SKILL_IMPORT_LIMIT_EXCEEDED",
     message,
     details,
   });
@@ -106,8 +135,159 @@ const readOptionalBooleanField = (
   });
 };
 
+const parseValidatedHttpsInputUrl = (value: string, field: string): URL => {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw createValidationAppError(`${field} 格式不合法`, {
+      [field]: `${field} 必须为合法 URL`,
+    });
+  }
+
+  if (url.protocol !== "https:") {
+    throw createValidationAppError(`${field} 仅支持 HTTPS`, {
+      [field]: `${field} 仅支持 HTTPS`,
+    });
+  }
+
+  if (url.username || url.password) {
+    throw createValidationAppError(`${field} 不支持携带认证信息`, {
+      [field]: `${field} 不支持携带认证信息`,
+    });
+  }
+
+  return url;
+};
+
+const assertAllowedInputUrlHost = (
+  url: URL,
+  field: string,
+  allowedHosts: ReadonlySet<string>,
+  message: string,
+): URL => {
+  if (!allowedHosts.has(url.hostname.toLowerCase())) {
+    throw createValidationAppError(message, {
+      [field]: `${field} 仅支持受信任来源`,
+    });
+  }
+
+  return url;
+};
+
+const assertAllowedRemoteUrl = (
+  value: string,
+  allowedHosts: ReadonlySet<string>,
+  label: string,
+): URL => {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw createImportFetchError(`${label} URL 不合法`, {
+      url: value,
+    });
+  }
+
+  if (url.protocol !== "https:") {
+    throw createImportFetchError(`${label} 仅支持 HTTPS`, {
+      url: value,
+    });
+  }
+
+  if (url.username || url.password) {
+    throw createImportFetchError(`${label} 不支持携带认证信息`, {
+      url: value,
+    });
+  }
+
+  if (!allowedHosts.has(url.hostname.toLowerCase())) {
+    throw createImportFetchError(`${label} 不在允许列表内`, {
+      url: value,
+      hostname: url.hostname,
+    });
+  }
+
+  return url;
+};
+
+const parseContentLength = (response: Response): number | null => {
+  const headerValue = response.headers.get("content-length");
+  if (!headerValue) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(headerValue, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
+const readResponseBuffer = async (
+  response: Response,
+  url: string,
+  maxBytes: number,
+  label: string,
+): Promise<Buffer> => {
+  const contentLength = parseContentLength(response);
+  if (contentLength !== null && contentLength > maxBytes) {
+    throw createImportLimitError(`${label} 超过大小上限`, {
+      url,
+      contentLength,
+      maxBytes,
+    });
+  }
+
+  if (!response.body) {
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    if (buffer.length > maxBytes) {
+      throw createImportLimitError(`${label} 超过大小上限`, {
+        url,
+        bytes: buffer.length,
+        maxBytes,
+      });
+    }
+
+    return buffer;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    if (!value) {
+      continue;
+    }
+
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw createImportLimitError(`${label} 超过大小上限`, {
+        url,
+        bytes: totalBytes,
+        maxBytes,
+      });
+    }
+
+    chunks.push(Buffer.from(value));
+  }
+
+  return Buffer.concat(chunks, totalBytes);
+};
+
 const fetchJson = async (url: string): Promise<unknown> => {
-  const response = await fetch(url, {
+  const normalizedUrl = assertAllowedRemoteUrl(
+    url,
+    ALLOWED_GITHUB_API_HOSTS,
+    "GitHub API",
+  );
+  const response = await fetch(normalizedUrl, {
     headers: {
       Accept: "application/vnd.github+json",
       "User-Agent": "knowject-skill-import",
@@ -122,13 +302,36 @@ const fetchJson = async (url: string): Promise<unknown> => {
     });
   }
 
-  return response.json();
+  const buffer = await readResponseBuffer(
+    response,
+    normalizedUrl.toString(),
+    IMPORT_MAX_METADATA_BYTES,
+    "GitHub 元数据",
+  );
+
+  try {
+    return JSON.parse(buffer.toString("utf8")) as unknown;
+  } catch {
+    throw createImportFetchError("GitHub 返回不是有效 JSON", {
+      url: normalizedUrl.toString(),
+    });
+  }
 };
 
 const fetchBuffer = async (
   url: string,
+  options: {
+    allowedHosts: ReadonlySet<string>;
+    maxBytes: number;
+    label: string;
+  },
 ): Promise<{ buffer: Buffer; contentType: string | null }> => {
-  const response = await fetch(url, {
+  const normalizedUrl = assertAllowedRemoteUrl(
+    url,
+    options.allowedHosts,
+    options.label,
+  );
+  const response = await fetch(normalizedUrl, {
     headers: {
       "User-Agent": "knowject-skill-import",
     },
@@ -145,17 +348,26 @@ const fetchBuffer = async (
     );
   }
 
-  const arrayBuffer = await response.arrayBuffer();
   return {
-    buffer: Buffer.from(arrayBuffer),
+    buffer: await readResponseBuffer(
+      response,
+      normalizedUrl.toString(),
+      options.maxBytes,
+      options.label,
+    ),
     contentType: response.headers.get("content-type"),
   };
 };
 
 const fetchText = async (
   url: string,
+  options: {
+    allowedHosts: ReadonlySet<string>;
+    maxBytes: number;
+    label: string;
+  },
 ): Promise<{ text: string; contentType: string | null }> => {
-  const { buffer, contentType } = await fetchBuffer(url);
+  const { buffer, contentType } = await fetchBuffer(url, options);
 
   return {
     text: buffer.toString("utf8"),
@@ -209,9 +421,15 @@ const resolveGitHubBundleRootPath = (rawPath: string): string => {
 };
 
 const parseGitHubUrl = (value: string): GitHubImportTarget => {
-  const url = new URL(value);
+  const url = parseValidatedHttpsInputUrl(value, "githubUrl");
 
   if (url.hostname === "raw.githubusercontent.com") {
+    assertAllowedInputUrlHost(
+      url,
+      "githubUrl",
+      ALLOWED_GITHUB_RAW_HOSTS,
+      "GitHub URL 不合法",
+    );
     const segments = url.pathname.split("/").filter(Boolean);
 
     if (segments.length < 4) {
@@ -231,6 +449,13 @@ const parseGitHubUrl = (value: string): GitHubImportTarget => {
       githubUrl: value,
     };
   }
+
+  assertAllowedInputUrlHost(
+    url,
+    "githubUrl",
+    ALLOWED_GITHUB_PAGE_HOSTS,
+    "GitHub URL 不合法",
+  );
 
   if (url.hostname !== "github.com") {
     throw createValidationAppError("GitHub URL 不合法", {
@@ -291,18 +516,25 @@ const normalizeImportInput = (
     readOptionalBooleanField(normalizedInput.dryRun, "dryRun") ?? false;
 
   if (mode === "url") {
-    const url = readOptionalStringField(normalizedInput.url, "url");
+    const rawUrl = readOptionalStringField(normalizedInput.url, "url");
 
-    if (!url) {
+    if (!rawUrl) {
       throw createValidationAppError("请输入原始 Markdown URL", {
         url: "请输入原始 Markdown URL",
       });
     }
 
+    const url = assertAllowedInputUrlHost(
+      parseValidatedHttpsInputUrl(rawUrl, "url"),
+      "url",
+      ALLOWED_DIRECT_IMPORT_HOSTS,
+      "URL 导入仅支持受信任的原始文件地址",
+    );
+
     return {
       mode,
       dryRun,
-      url,
+      url: url.toString(),
     };
   }
 
@@ -356,6 +588,10 @@ const normalizeImportInput = (
   });
 };
 
+export const validateSkillImportInput = (input: ImportSkillInput): void => {
+  normalizeImportInput(input);
+};
+
 const buildGitHubContentsUrl = (
   target: GitHubImportTarget,
   bundleRootPath: string,
@@ -398,6 +634,43 @@ const readGitHubDirectoryEntries = async (
   ) as GitHubContentItem[];
 };
 
+const createImportBudget = (): ImportBudget => ({
+  totalBytes: 0,
+  totalFiles: 0,
+});
+
+const assertImportBudgetAllowsAnotherFile = (budget: ImportBudget): void => {
+  if (budget.totalFiles >= IMPORT_MAX_TOTAL_FILES) {
+    throw createImportLimitError("Skill bundle 文件数超过上限", {
+      maxFiles: IMPORT_MAX_TOTAL_FILES,
+    });
+  }
+};
+
+const registerImportedFile = (
+  budget: ImportBudget,
+  file: { path: string; size: number },
+): void => {
+  if (file.size > IMPORT_MAX_SINGLE_FILE_BYTES) {
+    throw createImportLimitError("Skill bundle 单文件超过上限", {
+      path: file.path,
+      size: file.size,
+      maxBytes: IMPORT_MAX_SINGLE_FILE_BYTES,
+    });
+  }
+
+  if (budget.totalBytes + file.size > IMPORT_MAX_TOTAL_BYTES) {
+    throw createImportLimitError("Skill bundle 总大小超过上限", {
+      path: file.path,
+      totalBytes: budget.totalBytes + file.size,
+      maxBytes: IMPORT_MAX_TOTAL_BYTES,
+    });
+  }
+
+  budget.totalFiles += 1;
+  budget.totalBytes += file.size;
+};
+
 const collectGitHubBundleFiles = async (
   target: GitHubImportTarget,
   bundleRootPath: string,
@@ -406,6 +679,7 @@ const collectGitHubBundleFiles = async (
     buildGitHubContentsUrl(target, bundleRootPath),
   );
   const files: ImportedSkillBundleFile[] = [];
+  const budget = createImportBudget();
 
   const walkEntries = async (entries: GitHubContentItem[]): Promise<void> => {
     for (const entry of entries) {
@@ -419,12 +693,21 @@ const collectGitHubBundleFiles = async (
         continue;
       }
 
-      const { buffer } = await fetchBuffer(entry.download_url);
+      assertImportBudgetAllowsAnotherFile(budget);
+      const { buffer } = await fetchBuffer(entry.download_url, {
+        allowedHosts: ALLOWED_GITHUB_RAW_HOSTS,
+        maxBytes: IMPORT_MAX_SINGLE_FILE_BYTES,
+        label: "Skill bundle 文件",
+      });
       const relativePath = assertSafeBundleRelativePath(
         bundleRootPath
           ? posix.relative(bundleRootPath, entry.path)
           : entry.path,
       );
+      registerImportedFile(budget, {
+        path: relativePath,
+        size: buffer.length,
+      });
 
       files.push({
         path: relativePath,
@@ -480,7 +763,11 @@ const looksLikeHtmlDocument = (value: string): boolean => {
 };
 
 const importFromUrl = async (url: string): Promise<ImportedSkillBundle> => {
-  const { text, contentType } = await fetchText(url);
+  const { text, contentType } = await fetchText(url, {
+    allowedHosts: ALLOWED_DIRECT_IMPORT_HOSTS,
+    maxBytes: IMPORT_MAX_SINGLE_FILE_BYTES,
+    label: "Skill Markdown",
+  });
 
   if (contentType?.includes("text/html") || looksLikeHtmlDocument(text)) {
     throw createImportFetchError(
@@ -493,6 +780,11 @@ const importFromUrl = async (url: string): Promise<ImportedSkillBundle> => {
   }
 
   const buffer = Buffer.from(text, "utf8");
+  const budget = createImportBudget();
+  registerImportedFile(budget, {
+    path: SKILL_ENTRY_FILE_NAME,
+    size: buffer.length,
+  });
 
   return {
     origin: "url",

@@ -10,6 +10,20 @@ interface CreateHealthRouterOptions {
   mongo: MongoDatabaseManager;
 }
 
+type PublicHealthStatus = 'up' | 'down';
+
+const toPublicDatabaseStatus = (
+  status: Awaited<ReturnType<MongoDatabaseManager['getHealthSnapshot']>>['status'],
+): PublicHealthStatus => {
+  return status === 'up' ? 'up' : 'down';
+};
+
+const toPublicVectorStoreStatus = (
+  status: Awaited<ReturnType<typeof getChromaHealthSnapshot>>['status'],
+): PublicHealthStatus => {
+  return status === 'down' ? 'down' : 'up';
+};
+
 export const createHealthRouter = ({ env, mongo }: CreateHealthRouterOptions): Router => {
   const healthRouter = Router();
 
@@ -18,21 +32,22 @@ export const createHealthRouter = ({ env, mongo }: CreateHealthRouterOptions): R
     asyncHandler(async (_req, res) => {
       const database = await mongo.getHealthSnapshot();
       const vectorStore = await getChromaHealthSnapshot(env);
-      const status =
-        database.status === 'up' && vectorStore.status !== 'down' ? 'ok' : 'degraded';
+      const databaseStatus = toPublicDatabaseStatus(database.status);
+      const vectorStoreStatus = toPublicVectorStoreStatus(vectorStore.status);
+      const status = databaseStatus === 'up' && vectorStoreStatus === 'up' ? 'up' : 'down';
 
       sendSuccess(res, {
         status,
-        service: env.appName,
-        environment: env.nodeEnv,
-        timestamp: new Date().toISOString(),
-        uptimeSeconds: Number(process.uptime().toFixed(2)),
         checks: {
           app: {
             status: 'up',
           },
-          database,
-          vectorStore,
+          database: {
+            status: databaseStatus,
+          },
+          vectorStore: {
+            status: vectorStoreStatus,
+          },
         },
       });
     }),

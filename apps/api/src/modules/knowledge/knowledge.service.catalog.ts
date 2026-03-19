@@ -1,4 +1,9 @@
+import { AppError } from "@lib/app-error.js";
+import { normalizeIndexerErrorMessage } from "@lib/http.js";
 import { requireVisibleProject } from "@modules/projects/projects.shared.js";
+import {
+  registerKnowledgeSearchResultGuard,
+} from "./knowledge.search.js";
 import { resolveNamespaceIndexContext } from "./knowledge.namespace.js";
 import {
   cleanupEmptyNamespaceAfterKnowledgeDelete,
@@ -28,6 +33,56 @@ export const createKnowledgeCatalogHandlers = ({
   projectsRepository,
   settingsRepository,
 }: KnowledgeServiceDependencies) => {
+  registerKnowledgeSearchResultGuard(searchService, async (items) => {
+    if (items.length === 0) {
+      return items;
+    }
+
+    const knowledgeIds = Array.from(
+      new Set(items.map((item) => item.knowledgeId).filter(Boolean)),
+    );
+    const documentIds = Array.from(
+      new Set(items.map((item) => item.documentId).filter(Boolean)),
+    );
+
+    const [knowledgeEntries, documentEntries] = await Promise.all([
+      Promise.all(
+        knowledgeIds.map(async (knowledgeId) => [
+          knowledgeId,
+          await repository.findKnowledgeById(knowledgeId),
+        ] as const),
+      ),
+      Promise.all(
+        documentIds.map(async (documentId) => [
+          documentId,
+          await repository.findKnowledgeDocumentById(documentId),
+        ] as const),
+      ),
+    ]);
+
+    const existingKnowledgeIds = new Set<string>();
+    for (const [knowledgeId, knowledge] of knowledgeEntries) {
+      if (knowledge) {
+        existingKnowledgeIds.add(knowledgeId);
+      }
+    }
+
+    const documentsById = new Map<string, NonNullable<(typeof documentEntries)[number][1]>>();
+    for (const [documentId, document] of documentEntries) {
+      if (document) {
+        documentsById.set(documentId, document);
+      }
+    }
+
+    return items.filter((item) => {
+      if (!existingKnowledgeIds.has(item.knowledgeId)) {
+        return false;
+      }
+
+      return documentsById.get(item.documentId)?.knowledgeId === item.knowledgeId;
+    });
+  });
+
   return {
     createKnowledge: async (
       { actor }: KnowledgeCommandContext,
@@ -141,11 +196,20 @@ export const createKnowledgeCatalogHandlers = ({
           collectionName,
         });
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        console.warn(
-          `[knowledge-search] failed to cleanup knowledge ${knowledgeId} chunks before delete: ${message}`,
-        );
+        throw new AppError({
+          statusCode: 502,
+          code: "KNOWLEDGE_VECTOR_DELETE_FAILED",
+          message: "知识库向量清理失败，已停止删除，请稍后重试",
+          cause: error,
+          details: {
+            knowledgeId,
+            collectionName,
+            reason: normalizeIndexerErrorMessage(
+              error,
+              "Chroma 知识库向量清理失败",
+            ),
+          },
+        });
       }
 
       await repository.deleteKnowledgeDocumentsByKnowledgeId(knowledgeId);

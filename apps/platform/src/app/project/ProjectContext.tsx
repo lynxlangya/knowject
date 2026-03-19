@@ -4,6 +4,7 @@ import {
   deleteProject as deleteProjectRequest,
   listProjects,
   updateProject as updateProjectRequest,
+  updateProjectResourceBindings as updateProjectResourceBindingsRequest,
   type ProjectResponse,
 } from "@api/projects";
 import {
@@ -248,17 +249,26 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
         return "not_found";
       }
 
-      return updateProject({
-        projectId: input.projectId,
-        name: currentProject.name,
-        description: currentProject.description,
-        knowledgeBaseIds:
-          input.knowledgeBaseIds ?? currentProject.knowledgeBaseIds,
-        agentIds: input.agentIds ?? currentProject.agentIds,
-        skillIds: input.skillIds ?? currentProject.skillIds,
-      });
+      const payload = {
+        ...(input.knowledgeBaseIds
+          ? { knowledgeBaseIds: normalizeBindingIds(input.knowledgeBaseIds) }
+          : {}),
+        ...(input.agentIds ? { agentIds: normalizeBindingIds(input.agentIds) } : {}),
+        ...(input.skillIds ? { skillIds: normalizeBindingIds(input.skillIds) } : {}),
+      };
+
+      if (Object.keys(payload).length === 0) {
+        return "updated";
+      }
+
+      const result = await updateProjectResourceBindingsRequest(
+        input.projectId,
+        payload,
+      );
+      upsertProject(result.project);
+      return "updated";
     },
-    [updateProject],
+    [upsertProject],
   );
 
   const toggleProjectPin = useCallback(

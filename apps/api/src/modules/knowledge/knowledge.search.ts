@@ -73,6 +73,24 @@ export interface KnowledgeSearchService {
   deleteCollection(collectionName: string): Promise<void>;
 }
 
+type KnowledgeSearchResultGuard = (
+  items: KnowledgeSearchHitResponse[],
+) =>
+  | KnowledgeSearchHitResponse[]
+  | Promise<KnowledgeSearchHitResponse[]>;
+
+const knowledgeSearchResultGuardRegistry = new WeakMap<
+  KnowledgeSearchService,
+  KnowledgeSearchResultGuard
+>();
+
+export const registerKnowledgeSearchResultGuard = (
+  searchService: KnowledgeSearchService,
+  guard: KnowledgeSearchResultGuard,
+): void => {
+  knowledgeSearchResultGuardRegistry.set(searchService, guard);
+};
+
 const createServiceUnavailableError = (
   code: string,
   message: string,
@@ -603,7 +621,7 @@ export const createKnowledgeSearchService = ({
     });
   };
 
-  return {
+  const service: KnowledgeSearchService = {
     ensureCollections: async () => {
       // Legacy bootstrap hook: collection 生命周期已下沉到 indexer-py，这里只做健康检查。
       await requestIndexerHealth();
@@ -649,11 +667,24 @@ export const createKnowledgeSearchService = ({
         },
       });
 
-      return mapQueryResults({
+      const result = mapQueryResults({
         query,
         sourceType,
         response,
       });
+      const resultGuard = knowledgeSearchResultGuardRegistry.get(service);
+
+      if (!resultGuard || result.items.length === 0) {
+        return result;
+      }
+
+      const items = await resultGuard(result.items);
+
+      return {
+        ...result,
+        total: items.length,
+        items,
+      };
     },
 
     getDiagnostics: async ({ collectionName }) => {
@@ -720,4 +751,6 @@ export const createKnowledgeSearchService = ({
       await deleteCollectionByName(collectionName);
     },
   };
+
+  return service;
 };

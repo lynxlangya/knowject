@@ -7,6 +7,16 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://127.0.0.1/healthz | grep -q '^ok$'",
+        ]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     networks:
       - edge
       - app
@@ -53,7 +63,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3001/api/health').then(async (response) => { if (!response.ok) { process.exit(1); } const payload = await response.json().catch(() => null); process.exit(payload?.status === 'ok' ? 0 : 1); }).catch(() => process.exit(1));",
+          "fetch('http://127.0.0.1:3001/api/health').then(async (response) => { if (!response.ok) { process.exit(1); } const payload = await response.json().catch(() => null); process.exit(payload?.data?.status === 'up' || payload?.status === 'up' ? 0 : 1); }).catch(() => process.exit(1));",
         ]
       interval: 30s
       timeout: 5s

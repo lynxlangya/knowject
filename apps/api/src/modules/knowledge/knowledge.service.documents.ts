@@ -1,6 +1,7 @@
 import {
   getEffectiveIndexingConfig,
 } from "@config/ai-config.js";
+import { AppError } from "@lib/app-error.js";
 import { normalizeIndexerErrorMessage } from "@lib/http.js";
 import { queueExistingKnowledgeDocument } from "./knowledge.index-orchestrator.js";
 import { resolveNamespaceIndexContext } from "./knowledge.namespace.js";
@@ -73,12 +74,21 @@ export const createKnowledgeDocumentHandlers = ({
           collectionName,
         });
       } catch (error) {
-        console.warn(
-          `[knowledge-search] failed to cleanup document ${documentId} chunks before delete: ${normalizeIndexerErrorMessage(
-            error,
-            "Chroma 文档向量清理失败",
-          )}`,
-        );
+        throw new AppError({
+          statusCode: 502,
+          code: "KNOWLEDGE_DOCUMENT_VECTOR_DELETE_FAILED",
+          message: "文档向量清理失败，已停止删除，请稍后重试",
+          cause: error,
+          details: {
+            knowledgeId,
+            documentId,
+            collectionName,
+            reason: normalizeIndexerErrorMessage(
+              error,
+              "Chroma 文档向量清理失败",
+            ),
+          },
+        });
       }
 
       const deleted = await repository.deleteKnowledgeDocumentById(documentId);

@@ -8,7 +8,7 @@
 
 ## 0.1 Codex 单主源约定
 
-- `.codex/` 是 Knowject 未来唯一的 Codex 协作主目录；`AGENTS.md` 仍是项目级长期指令入口。
+- `.codex/` 是 Knowject 当前唯一的 Codex 协作主目录；`AGENTS.md` 仍是项目级长期指令入口。
 - 项目级 Codex 配置放在 `.codex/config.toml`；正式文档主源在 `.codex/docs/`；上传派生包在 `.codex/packs/`；项目级 Skills 在 `.codex/skills/`。
 - `.agent/` 已废弃，仅保留历史说明与兼容提示；禁止继续在 `.agent/*` 新增主内容、主文档或主配置。
 - 任何结构调整都必须保持单一真相源，避免 `.agent/*` 与 `.codex/*` 并列承担正式维护职责。
@@ -52,10 +52,10 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 ## 2. 模块职责边界
 
 - `apps/platform`：承载登录后产品壳、路由、鉴权状态、项目态页面与全局资产管理页；当前项目主数据、成员 roster、资源绑定，以及全局 `/knowledge`、`/skills`、`/agents` 管理页已接入正式后端，项目资源页中的知识库 / Skill / Agent 元数据已切正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`，成员协作快照仍保留本地补充层；其中 `/settings`、`/knowledge` 与 `/project/:projectId/chat` 页面当前已按“页面编排壳层 + 状态 hooks/controller + 分区组件”分层，项目对话默认发送已切到正式 `messages/stream`。
-- `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`memory` 九组接口；其中 auth、projects、members、memberships、knowledge、skills、agents 已接入正式主链路，`projects` 模块当前已补齐共享 `ConversationTurnService`、provider capability gate 与 SSE `messages/stream` turn orchestration，`skills` 当前支持系统内置 + 自建 + GitHub/URL 导入的正式资产治理、草稿/发布与绑定校验，`agents` 已支持正式 CRUD 与绑定校验，`memory` 保持系统 / 演示接口；`settings` 与 `knowledge` 模块当前已采用 facade + helper submodules 拆分 service / repository 内部职责，对外接口保持不变。
+- `apps/api`：提供 `health`、`auth`、`members`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`memory` 九组接口；其中 auth、projects、members、memberships、knowledge、skills、agents 已接入正式主链路，`projects` 模块当前已补齐共享 `ConversationTurnService`、provider capability gate 与 SSE `messages/stream` turn orchestration，`skills` 当前支持系统内置 + 自建 + GitHub/URL 导入的正式资产治理、草稿/发布与绑定校验，并已收紧到 HTTPS + 受信任 GitHub/raw host + 导入预算限制；`knowledge` 当前已把读侧检索结果回查 Mongo，并在向量清理失败时以 `502` 停止继续删除；`health` public surface 当前只返回最小 `up/down` 状态；`agents` 已支持正式 CRUD 与绑定校验，`memory` 保持系统 / 演示接口；`settings` 与 `knowledge` 模块当前已采用 facade + helper submodules 拆分 service / repository 内部职责，对外接口保持不变。
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
-- `apps/indexer-py`：承载内部 Python 索引控制面，当前采用 FastAPI + uv，已提供 `md / txt` 解析、清洗、分块、embedding，以及文档 / 知识库级 Chroma 写删侧 HTTP 入口。
+- `apps/indexer-py`：承载内部 Python 索引控制面，当前采用 FastAPI + uv，已提供 `md / txt` 解析、清洗、分块、embedding，以及文档 / 知识库级 Chroma 写删侧 HTTP 入口；`/internal/*` 当前支持可选 internal token 校验（仅在设置 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN` 时启用），非 `development` 默认关闭 `/docs`、`/redoc`、`/openapi.json`，并把 `storagePath` 限制在 `KNOWLEDGE_STORAGE_ROOT` 下。
 - `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、`api / indexer-py / platform` 镜像构建、Mongo 初始化与 HTTPS 入口。
 - `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
 - `files`：承载按知识库分类的 Markdown 文档库，当前覆盖全局文档、产品规范、用户研究、市场竞品、项目决策、技术协作、发布运营与独立架构设计八类文档。
@@ -87,6 +87,7 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 
 - 鉴权 token 统一存储在 `localStorage`，键为 `knowject_token`。
 - 项目列表统一由 `apps/platform/src/app/project/ProjectContext.tsx` 管理，运行时主数据来自 `/api/projects`；组件初始化时会一次性清理已退役的 `knowject_projects` 与 `knowject_project_resource_bindings`。
+- 项目资源绑定更新当前通过 `PATCH /api/projects/:projectId` 走 partial patch，只发送调用方明确传入的 `knowledgeBaseIds / agentIds / skillIds`，不再从当前项目快照拼全量 `UpdateProjectRequest`。
 - `apps/platform/src/app/project/project.catalog.ts` 维护成员聚合所需的共享 Mock 档案；项目创建 / 编辑表单的资源选项已经迁到 `useProjectResourceOptions.ts` 运行时拉取正式 `/api/knowledge`、`/api/skills`、`/api/agents`，这里不再承担表单资源事实源。
 - `apps/platform/src/app/project/project.storage.ts` 仅负责 `knowject_project_pins` 置顶偏好的本地持久化。
 - `apps/platform/src/pages/project/projectWorkspaceSnapshot.mock.ts` 负责项目概览补充文案与成员协作快照；它只承载演示补充层，不作为正式成员关系主数据源。
