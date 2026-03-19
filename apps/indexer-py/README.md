@@ -23,7 +23,7 @@
 - `app/domain/indexing/chunking.py`
   - 负责按 `1000 字符 / 200 重叠 / 尽量保留段落边界` 进行分块，并构建 `ChunkRecord`。
 - `app/domain/indexing/embedding_client.py`
-  - 负责 embedding provider 判定、OpenAI-compatible `/embeddings` 请求、本地 deterministic fallback、batching 与 response parse。
+  - 负责 embedding provider 判定、OpenAI-compatible `/embeddings` 请求、本地 deterministic fallback、provider-aware batching 与 response parse；当前会按 provider 适配单次批量上限，其中阿里云 embedding 单次最多发送 `10` 条文本。
 - `app/domain/indexing/chroma_client.py`
   - 负责 Chroma collection cache、find/ensure、文档 / 知识库向量 delete 与 chunk upsert；写删侧在 collection 404 / stale cache 时会自动刷新 cache 并重试一次。
 - `app/domain/indexing/diagnostics.py`
@@ -45,7 +45,7 @@
   - 文档解析
   - 文本清洗
   - 分块
-  - OpenAI-compatible embedding 生成
+  - OpenAI-compatible embedding 生成（含 provider-aware batching / 错误前缀）
   - Chroma `global_docs` 写入 / 删除
   - 结果通过 HTTP 响应交回 Node
 - 当前内部组织：
@@ -120,6 +120,8 @@ Docker Compose 完整编排下会自动构建并启动 `indexer-py` 服务，不
   - 默认 `text-embedding-3-small`
 - `OPENAI_TIMEOUT_MS`
   - 默认 `15000`
+
+当前环境变量仍沿用 `OPENAI_*` 作为 OpenAI-compatible embedding 的基线命名；正式运行时若通过工作区设置切到 `aliyun / zhipu / voyage / custom`，Python indexer 会按 provider 适配请求基地址、错误前缀与单次 batching 上限，不要求改动 Node -> Python 控制面协议。
 
 ## 当前阶段不做
 

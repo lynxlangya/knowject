@@ -17,6 +17,16 @@ DEFAULT_OPENAI_EMBEDDING_MODEL = (
 DEFAULT_OPENAI_TIMEOUT_MS = read_optional_positive_integer("OPENAI_TIMEOUT_MS", 15000)
 DEFAULT_OPENAI_EMBEDDING_BATCH_SIZE = 64
 DEFAULT_LOCAL_EMBEDDING_DIMENSION = 1536
+EMBEDDING_BATCH_SIZE_BY_PROVIDER = {
+    "aliyun": 10,
+}
+EMBEDDING_ERROR_PREFIX_BY_PROVIDER = {
+    "openai": "OpenAI embedding 请求失败",
+    "aliyun": "阿里云 embedding 请求失败",
+    "zhipu": "智谱 embedding 请求失败",
+    "voyage": "Voyage embedding 请求失败",
+    "custom": "兼容 embedding 请求失败",
+}
 
 
 @dataclass(frozen=True)
@@ -125,9 +135,11 @@ class EmbeddingClient:
             raise self.error_factory("embedding apiKey 未配置，无法生成 embedding")
 
         embeddings: list[list[float]] = []
+        batch_size = self.resolve_embedding_batch_size(resolved_config.provider)
+        error_prefix = self.resolve_embedding_error_prefix(resolved_config.provider)
         for batch in self.iter_embedding_batches(
             texts,
-            DEFAULT_OPENAI_EMBEDDING_BATCH_SIZE,
+            batch_size,
         ):
             response = self.request_json(
                 self.build_api_url(resolved_config.base_url, "/embeddings"),
@@ -140,7 +152,7 @@ class EmbeddingClient:
                     "model": resolved_config.model,
                     "input": batch,
                 },
-                error_prefix="OpenAI embedding 请求失败",
+                error_prefix=error_prefix,
             )
             embeddings.extend(
                 self.parse_embeddings_response(response, expected_count=len(batch))
@@ -212,6 +224,18 @@ class EmbeddingClient:
             embeddings.append([float(value) for value in embedding])
 
         return embeddings
+
+    def resolve_embedding_batch_size(self, provider: str) -> int:
+        return EMBEDDING_BATCH_SIZE_BY_PROVIDER.get(
+            provider,
+            DEFAULT_OPENAI_EMBEDDING_BATCH_SIZE,
+        )
+
+    def resolve_embedding_error_prefix(self, provider: str) -> str:
+        return EMBEDDING_ERROR_PREFIX_BY_PROVIDER.get(
+            provider,
+            "Embedding 请求失败",
+        )
 
     def _read_optional_config_string(self, value: Any, field_name: str) -> str | None:
         if value is None:

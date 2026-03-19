@@ -25,7 +25,7 @@ The repository is currently in an active foundation stage: the product shell, au
 - `pnpm verify:index-ops-project-consumption` now bundles the Week 5-6 minimum automated validation across project-knowledge API tests, Python indexer tests, and platform type checks.
 - Docker Compose baselines are available for both local and production-style environments with `platform + api + indexer-py + mongodb + chroma`.
 - MongoDB is the current primary datastore. Chroma now runs behind stable namespace keys such as `global_docs` and `proj_{projectId}_docs`, while the physical collections are versioned and switched through active pointers so embedding model changes do not require a service restart. `global_code` remains a reserved empty namespace.
-- `apps/indexer-py` now provides the Python indexing service used for `md / txt` parsing, cleaning, chunking, OpenAI-compatible embedding generation, and Chroma upsert/delete orchestration.
+- `apps/indexer-py` now provides the Python indexing service used for `md / txt` parsing, cleaning, chunking, OpenAI-compatible embedding generation, provider-aware batching/error handling, and Chroma upsert/delete orchestration.
 
 ## Repository Layout
 
@@ -92,7 +92,7 @@ pnpm dev
 `pnpm dev` now starts `platform + api + indexer-py` together through the workspace, so the default host workflow no longer needs a separate manual indexer process for markdown uploads.
 If you use the host workflow, install `uv` first; `apps/indexer-py` now runs through `uv run`, while Docker-based workflows keep that dependency inside the container.
 
-In `development`, if `OPENAI_API_KEY` is missing but `CHROMA_URL` is available, markdown/txt uploads now fall back to deterministic local embeddings so the upload/index status flow can still run end-to-end. Formal retrieval quality and `/api/knowledge/search` still expect real OpenAI-compatible embedding config.
+In `development`, if `OPENAI_API_KEY` is missing but `CHROMA_URL` is available, markdown/txt uploads now fall back to deterministic local embeddings so the upload/index status flow can still run end-to-end. Formal retrieval quality and `/api/knowledge/search` still expect real compatible embedding config, and the Python indexer now adapts batching/error prefixes to the selected provider (for example, Aliyun embeddings are sent in batches of at most 10 texts).
 
 To verify the GA-06 indexing/retrieval path locally, make sure `.env.local` also provides `CHROMA_URL` and OpenAI-compatible embedding settings.
 

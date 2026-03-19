@@ -125,6 +125,7 @@
   - 当前稳定链路会把 `md / markdown / txt` 推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再统一加回。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
   - `md / markdown / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings，并写入当前 namespace 的 active collection；全局 docs 的 namespace key 是 `global_docs`，实际物理 collection 形如 `global_docs__emb_<fingerprint>`。
+  - Python indexer 当前会按 embedding provider 适配单次 batching 上限与错误前缀；例如阿里云 `/embeddings` 单次最多发送 `10` 条文本，避免大文档分块后触发 provider 侧 `HTTP 400`。
   - 完整 Docker 编排会通过内部 `indexer-py` 服务和共享知识存储卷推进这条链路；默认 `pnpm dev` 也会一并启动本地 `indexer-py`，若单独运行 `pnpm --filter api dev`，仍需额外启动 `pnpm --filter indexer-py dev`。
   - 开发环境下若缺少 `OPENAI_API_KEY`，Node 会把文档记录标记为 `embeddingProvider=local_dev`、`embeddingModel=hash-1536-dev`，Python indexer 会使用 deterministic 本地 embedding 写入 Chroma；Node 侧统一检索也会使用同一套 deterministic 本地 query embedding，保证开发环境上传与检索闭环可用。生产与正式环境仍应使用真实 OpenAI-compatible embedding 配置。
 - `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`
@@ -156,6 +157,7 @@
   - 接收 `query`、可选 `knowledgeId`、可选 `sourceType`、可选 `topK`。
   - 当前默认搜索 `global_docs` namespace；服务端会读取该 namespace 当前 active collection 与 active embedding config 生成 query embedding 并查询 Chroma，而不是直接猜测最新 settings。
   - 若 `knowledgeId` 指向 project scope knowledge，服务端会自动切到对应 `proj_{projectId}_docs` namespace 的 active collection。
+  - query embedding 与上传/重试链路现在都会按 provider 返回对应错误前缀，避免阿里云、智谱、Voyage 等兼容 provider 仍被误报成 `OpenAI embedding 请求失败`。
   - `global_code` 当前只有 collection 预留，没有真实数据导入；若切到 `global_code`，通常返回空结果。
 - `GET /api/skills`
   - 需要 `Authorization: Bearer <token>`。
@@ -310,13 +312,13 @@
   - `KNOWLEDGE_INDEXER_TIMEOUT_MS`
 - 可选 Skill 资产存储变量：
   - `SKILLS_STORAGE_ROOT`
-- 可选 OpenAI embedding 变量：
+- 可选 OpenAI-compatible embedding 基线变量：
   - `OPENAI_API_KEY`
   - `OPENAI_BASE_URL`
   - `OPENAI_EMBEDDING_MODEL`
   - `OPENAI_TIMEOUT_MS`
 - `SETTINGS_ENCRYPTION_KEY` 必须是 64 位十六进制字符串，推荐用 `openssl rand -hex 32` 生成；服务端仅通过它加密 / 解密数据库中的 AI API Key，不会把明文 Key 回显到响应、日志和错误对象。
-- 当前 embedding provider、本地文件存储、Node / Python 触发、Chroma namespace 与统一检索环境契约已经进入代码基线；生产环境仍需要真实 OpenAI 凭证才能完成正式向量化。
+- 当前 embedding provider、本地文件存储、Node / Python 触发、Chroma namespace 与统一检索环境契约已经进入代码基线；生产环境仍需要真实的兼容 provider 凭证才能完成正式向量化，不局限于 OpenAI。
 - 认证和环境的详细实施合同见 [.codex/docs/contracts/auth-contract.md](/Users/langya/Documents/CodeHub/ai/knowject/.codex/docs/contracts/auth-contract.md)。
 
 ## 关键文件
@@ -341,6 +343,7 @@
 - `src/middleware/*`：请求上下文、404、统一错误处理。
 - `../indexer-py/app/main.py`：FastAPI 应用入口、异常处理与路由注册。
 - `../indexer-py/app/domain/indexing/pipeline.py`：`md / txt` 解析、清洗、`1000 / 200` 分块、OpenAI-compatible embedding 与 Chroma upsert/delete 逻辑。
+- `../indexer-py/app/domain/indexing/embedding_client.py`：provider-aware embedding batching、错误前缀与本地 fallback 适配。
 - `../indexer-py/app/core/runtime_env.py`：Python indexer 对仓库根 `.env / .env.local` 的最小环境加载能力。
 - `../indexer-py/README.md`：Python 索引服务目录边界、运行方式与 Node / Python 集成约束说明。
 

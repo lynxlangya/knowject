@@ -437,6 +437,81 @@ test("searchDocuments prefers database embedding settings when configured", asyn
   }
 });
 
+test("searchDocuments reports provider-aware embedding errors for aliyun", async () => {
+  const env = createTestEnv();
+  const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
+  process.env.SETTINGS_ENCRYPTION_KEY = env.settings.encryptionKey;
+
+  const service = createKnowledgeSearchService({
+    env,
+    settingsRepository: {
+      getSettings: async () => ({
+        singleton: "default",
+        embedding: {
+          provider: "aliyun",
+          baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+          model: "text-embedding-v3",
+          apiKeyEncrypted: encryptApiKey("aliyun-embedding-key"),
+          apiKeyHint: "...-key",
+          testedAt: null,
+          testStatus: null,
+        },
+        updatedAt: new Date("2026-03-16T00:00:00.000Z"),
+        updatedBy: "user-1",
+      }),
+    } as never,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+    if (url.endsWith("/collections") && init?.method === "GET") {
+      return new Response(
+        JSON.stringify([{ id: "collection-1", name: "global_docs" }]),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (
+      url === "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings" &&
+      init?.method === "POST"
+    ) {
+      return new Response("", { status: 400 });
+    }
+
+    throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
+  };
+
+  try {
+    await assert.rejects(
+      service.searchDocuments({
+        query: "database embedding",
+        sourceType: "global_docs",
+        topK: 3,
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.message, "阿里云 embedding 请求失败（HTTP 400）");
+        return true;
+      },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
+  }
+});
+
 test("searchDocuments falls back to local development embedding in development without api key", async () => {
   const service = createKnowledgeSearchService({
     env: {

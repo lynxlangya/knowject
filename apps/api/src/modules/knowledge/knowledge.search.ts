@@ -93,6 +93,21 @@ const createGatewayError = (message: string, cause?: unknown): AppError => {
   });
 };
 
+const getEmbeddingErrorPrefix = (provider: EffectiveEmbeddingConfig["provider"]): string => {
+  switch (provider) {
+    case "aliyun":
+      return "阿里云 embedding 请求失败";
+    case "zhipu":
+      return "智谱 embedding 请求失败";
+    case "voyage":
+      return "Voyage embedding 请求失败";
+    case "custom":
+      return "兼容 embedding 请求失败";
+    default:
+      return "OpenAI embedding 请求失败";
+  }
+};
+
 const getCollectionName = (sourceType: KnowledgeSourceType): string => {
   return sourceType === "global_code"
     ? GLOBAL_CODE_COLLECTION_NAME
@@ -403,6 +418,7 @@ export const createKnowledgeSearchService = ({
       );
     }
 
+    const errorPrefix = getEmbeddingErrorPrefix(embeddingConfig.provider);
     let responseBody: unknown = null;
 
     try {
@@ -429,7 +445,7 @@ export const createKnowledgeSearchService = ({
         throw createGatewayError(
           normalizeOpenAiCompatibleErrorMessage(
             responseBody,
-            `OpenAI embedding 请求失败（HTTP ${response.status}）`,
+            `${errorPrefix}（HTTP ${response.status}）`,
           ),
         );
       }
@@ -440,7 +456,7 @@ export const createKnowledgeSearchService = ({
         !("data" in responseBody) ||
         !Array.isArray(responseBody.data)
       ) {
-        throw createGatewayError("OpenAI embedding 响应格式不合法");
+        throw createGatewayError(`${errorPrefix}：响应格式不合法`);
       }
 
       const embeddings = responseBody.data.map((item) => {
@@ -450,7 +466,7 @@ export const createKnowledgeSearchService = ({
           !("embedding" in item) ||
           !Array.isArray(item.embedding)
         ) {
-          throw createGatewayError("OpenAI embedding 响应缺少 embedding");
+          throw createGatewayError(`${errorPrefix}：响应缺少 embedding`);
         }
 
         return item.embedding.map((value: unknown) => Number(value));
@@ -462,7 +478,7 @@ export const createKnowledgeSearchService = ({
         throw error;
       }
 
-      throw createGatewayError("OpenAI embedding 请求失败", error);
+      throw createGatewayError(errorPrefix, error);
     }
   };
 
