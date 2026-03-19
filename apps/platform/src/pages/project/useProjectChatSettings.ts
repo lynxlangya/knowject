@@ -1,7 +1,6 @@
 import { extractApiErrorCode, extractApiErrorMessage } from '@api/error';
 import {
   getSettings,
-  SETTINGS_LLM_PROVIDERS,
   type SettingsAiConfigResponse,
   type SettingsLlmProvider,
 } from '@api/settings';
@@ -10,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 export type ProjectChatIssueCode =
   | 'PROJECT_CONVERSATION_LLM_UNAVAILABLE'
   | 'PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED'
+  | 'PROJECT_CONVERSATION_LLM_STREAM_UNSUPPORTED'
   | 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR';
 
 export interface ProjectChatIssue {
@@ -17,10 +17,6 @@ export interface ProjectChatIssue {
   title: string;
   description: string;
 }
-
-const PROJECT_CHAT_SUPPORTED_LLM_PROVIDERS = new Set<SettingsLlmProvider>(
-  SETTINGS_LLM_PROVIDERS,
-);
 
 export const useProjectChatSettings = (projectId: string) => {
   const [chatLlmSettings, setChatLlmSettings] = useState<
@@ -49,6 +45,14 @@ export const useProjectChatSettings = (projectId: string) => {
         return {
           code,
           title: '当前 LLM Provider 暂不支持项目对话',
+          description,
+        };
+      }
+
+      if (code === 'PROJECT_CONVERSATION_LLM_STREAM_UNSUPPORTED') {
+        return {
+          code,
+          title: '当前 LLM Provider 暂不支持流式项目对话',
           description,
         };
       }
@@ -97,15 +101,6 @@ export const useProjectChatSettings = (projectId: string) => {
           title: '当前未配置可用的对话模型',
           description:
             '请先前往设置页保存并测试 LLM API Key，项目对话才会生成 assistant 回复。',
-        };
-      }
-
-      if (!PROJECT_CHAT_SUPPORTED_LLM_PROVIDERS.has(chatLlmSettings.provider)) {
-        return {
-          code: 'PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED' as const,
-          title: '当前 LLM Provider 暂不支持项目对话',
-          description:
-            '请在设置页切换到兼容 `/chat/completions` 的 Provider 后，再回到项目对话继续测试。',
         };
       }
     }

@@ -11,7 +11,15 @@ import { ProjectChatMarkdown } from './projectChat.markdown';
 export interface ProjectChatBubbleExtraInfo {
   createdAt: string;
   sources: ProjectConversationSourceResponse[];
+  status?: ProjectChatBubbleStatus;
 }
+
+export type ProjectChatBubbleStatus = 'streaming' | 'reconciling';
+
+const PROJECT_CHAT_BUBBLE_STATUS_LABELS: Record<ProjectChatBubbleStatus, string> = {
+  streaming: '生成中',
+  reconciling: '同步中',
+};
 
 const formatMessageTime = (value: string): string => {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -130,7 +138,14 @@ export const ProjectChatAssistantFooter = ({
       {extraInfo.sources.length > 0 ? (
         <ProjectConversationSources sources={extraInfo.sources} />
       ) : null}
-      <BubbleTimestamp createdAt={extraInfo.createdAt} />
+      <div className="flex flex-wrap items-center gap-2">
+        {extraInfo.status ? (
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700">
+            {PROJECT_CHAT_BUBBLE_STATUS_LABELS[extraInfo.status]}
+          </span>
+        ) : null}
+        <BubbleTimestamp createdAt={extraInfo.createdAt} />
+      </div>
     </div>
   );
 };

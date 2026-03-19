@@ -3,6 +3,16 @@ import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 
 export type ProjectRole = 'admin' | 'member';
 export type ProjectConversationMessageRole = 'user' | 'assistant';
+export type ProjectConversationStreamEventType =
+  | 'ack'
+  | 'delta'
+  | 'done'
+  | 'error';
+export type ProjectConversationStreamFinishReason =
+  | 'stop'
+  | 'length'
+  | 'cancelled'
+  | 'unknown';
 
 export interface ProjectResourceBindingDocument {
   knowledgeBaseIds: string[];
@@ -76,6 +86,54 @@ export interface UpdateProjectConversationInput {
 export interface CreateProjectConversationMessageInput {
   content?: unknown;
   clientRequestId?: unknown;
+}
+
+export interface ProjectConversationStreamEventBase {
+  version: 'v1';
+  type: ProjectConversationStreamEventType;
+  sequence: number;
+  conversationId: string;
+  clientRequestId: string;
+}
+
+export interface ProjectConversationStreamAckEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'ack';
+  userMessageId: string;
+  userMessagePersisted: boolean;
+}
+
+export interface ProjectConversationStreamDeltaEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'delta';
+  delta: string;
+}
+
+export interface ProjectConversationStreamDoneEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'done';
+  assistantMessageId: string;
+  assistantMessagePersisted: true;
+  finishReason: ProjectConversationStreamFinishReason;
+}
+
+export interface ProjectConversationStreamErrorEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'error';
+  code: string;
+  message: string;
+  retryable: boolean;
+}
+
+export type ProjectConversationStreamEvent =
+  | ProjectConversationStreamAckEvent
+  | ProjectConversationStreamDeltaEvent
+  | ProjectConversationStreamDoneEvent
+  | ProjectConversationStreamErrorEvent;
+
+export interface ProjectConversationStreamOptions {
+  signal?: AbortSignal;
+  onEvent(event: ProjectConversationStreamEvent): Promise<void> | void;
 }
 
 export interface UpdateProjectInput {

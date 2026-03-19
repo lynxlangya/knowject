@@ -13,6 +13,7 @@ import {
   ProjectChatAssistantFooter,
   ProjectChatAssistantMessage,
   type ProjectChatBubbleExtraInfo,
+  type ProjectChatBubbleStatus,
   ProjectChatUserFooter,
   ProjectChatUserMessage,
 } from './projectChatBubble.components';
@@ -54,8 +55,24 @@ export const buildProjectConversationItems = ({
 
 export const buildProjectChatBubbleItems = (
   messages: ProjectConversationMessageResponse[],
+  options: {
+    conversationId?: string;
+    pendingUserMessage?: {
+      conversationId: string;
+      id: string;
+      content: string;
+      createdAt: string;
+    } | null;
+    draftAssistantMessage?: {
+      conversationId: string;
+      id: string;
+      content: string;
+      createdAt: string;
+      status: ProjectChatBubbleStatus;
+    } | null;
+  } = {},
 ): BubbleItemType[] => {
-  return messages.map((message) => ({
+  const bubbleItems: BubbleItemType[] = messages.map((message) => ({
     key: message.id,
     role: message.role === 'assistant' ? 'ai' : 'user',
     content: message.content,
@@ -64,6 +81,40 @@ export const buildProjectChatBubbleItems = (
       sources: message.sources ?? [],
     } satisfies ProjectChatBubbleExtraInfo,
   }));
+
+  if (
+    options.pendingUserMessage?.conversationId === options.conversationId &&
+    options.pendingUserMessage &&
+    !messages.some((message) => message.id === options.pendingUserMessage?.id)
+  ) {
+    bubbleItems.push({
+      key: options.pendingUserMessage.id,
+      role: 'user',
+      content: options.pendingUserMessage.content,
+      extraInfo: {
+        createdAt: options.pendingUserMessage.createdAt,
+        sources: [],
+      } satisfies ProjectChatBubbleExtraInfo,
+    });
+  }
+
+  if (
+    options.draftAssistantMessage &&
+    options.draftAssistantMessage.conversationId === options.conversationId
+  ) {
+    bubbleItems.push({
+      key: options.draftAssistantMessage.id,
+      role: 'ai',
+      content: options.draftAssistantMessage.content || '正在生成...',
+      extraInfo: {
+        createdAt: options.draftAssistantMessage.createdAt,
+        sources: [],
+        status: options.draftAssistantMessage.status,
+      } satisfies ProjectChatBubbleExtraInfo,
+    });
+  }
+
+  return bubbleItems;
 };
 
 export const buildProjectConversationContextMenuItems = ({

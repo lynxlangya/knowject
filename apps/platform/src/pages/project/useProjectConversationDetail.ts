@@ -20,7 +20,7 @@ interface UseProjectConversationDetailOptions {
   latestConversationTargetRef: MutableRefObject<ProjectConversationTargetRefValue>;
 }
 
-interface SyncConversationAfterFailureOptions {
+interface ReconcileConversationDetailOptions {
   projectId: string;
   conversationId: string;
   previousMessageIds: Set<string>;
@@ -95,13 +95,13 @@ export const useProjectConversationDetail = ({
     (detailLoading ||
       (conversationDetail !== null && currentConversationDetail === null));
 
-  const syncConversationAfterFailure = async ({
+  const reconcileConversationDetail = async ({
     projectId,
     conversationId,
     previousMessageIds,
     submittedContent,
     onRecoveredPersistedUserMessage,
-  }: SyncConversationAfterFailureOptions) => {
+  }: ReconcileConversationDetailOptions) => {
     try {
       const result = await getProjectConversationDetail(projectId, conversationId);
       const recoveredPersistedUserMessage = result.conversation.messages.some(
@@ -146,6 +146,7 @@ export const useProjectConversationDetail = ({
     shouldShowConversationSkeleton,
     setConversationDetail,
     setDetailError,
-    syncConversationAfterFailure,
+    reconcileConversationDetail,
+    syncConversationAfterFailure: reconcileConversationDetail,
   };
 };

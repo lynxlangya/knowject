@@ -1,28 +1,20 @@
 import { getEffectiveLlmConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
 import type { WithId } from "mongodb";
-import { AppError } from "@lib/app-error.js";
-import {
-  buildApiUrl,
-  normalizeOpenAiCompatibleErrorMessage,
-  parseResponseBody,
-} from "@lib/http.js";
 import type {
   KnowledgeCommandContext,
   KnowledgeSearchResponse,
 } from "@modules/knowledge/knowledge.types.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
-import type {
-  EffectiveLlmConfig,
-  SettingsLlmProvider,
-} from "@modules/settings/settings.types.js";
 import { buildDefaultProjectConversationTitle } from "./projects.shared.js";
+import { createProjectConversationProviderAdapter } from "./project-conversation-provider.js";
 import type {
   ProjectConversationDocument,
   ProjectConversationMessageDocument,
   ProjectConversationSourceDocument,
   ProjectDocument,
 } from "./projects.types.js";
+import type { ProjectConversationStreamFinishReason } from "./projects.types.js";
 
 export interface ProjectConversationKnowledgeSearch {
   searchProjectDocuments(
@@ -45,6 +37,18 @@ export interface ProjectConversationRuntime {
     content: string;
     sources: ProjectConversationSourceDocument[];
   }>;
+  streamAssistantReply(input: {
+    actor: KnowledgeCommandContext["actor"];
+    project: WithId<ProjectDocument>;
+    conversation: ProjectConversationDocument;
+    userMessage: ProjectConversationMessageDocument;
+    signal?: AbortSignal;
+    onDelta(delta: string): Promise<void> | void;
+  }): Promise<{
+    content: string;
+    sources: ProjectConversationSourceDocument[];
+    finishReason: ProjectConversationStreamFinishReason;
+  }>;
 }
 
 export const DEFAULT_PROJECT_CONVERSATION_TITLE = "新对话";
@@ -52,91 +56,6 @@ export const DEFAULT_PROJECT_CONVERSATION_TITLE = "新对话";
 const PROJECT_CONVERSATION_RETRIEVAL_TOP_K = 5;
 const PROJECT_CONVERSATION_HISTORY_LIMIT = 6;
 const PROJECT_CONVERSATION_AUTO_TITLE_MAX_LENGTH = 24;
-const CHAT_COMPLETIONS_COMPATIBLE_PROJECT_LLM_PROVIDERS =
-  new Set<SettingsLlmProvider>([
-    "openai",
-    "gemini",
-    "aliyun",
-    "deepseek",
-    "moonshot",
-    "zhipu",
-    "custom",
-  ]);
-
-const createProjectConversationLlmUnavailableError = (): AppError => {
-  return new AppError({
-    statusCode: 503,
-    code: "PROJECT_CONVERSATION_LLM_UNAVAILABLE",
-    message: "当前未配置可用的对话模型，请先完成 LLM 设置",
-  });
-};
-
-const createProjectConversationLlmProviderUnsupportedError = (): AppError => {
-  return new AppError({
-    statusCode: 503,
-    code: "PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED",
-    message: "当前 LLM Provider 暂不支持项目对话",
-  });
-};
-
-const createProjectConversationLlmUpstreamError = (
-  message: string,
-  cause?: unknown,
-): AppError => {
-  return new AppError({
-    statusCode: 502,
-    code: "PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR",
-    message,
-    cause,
-  });
-};
-
-const extractOpenAiCompatibleMessageContent = (body: unknown): string => {
-  if (
-    body &&
-    typeof body === "object" &&
-    "choices" in body &&
-    Array.isArray(body.choices)
-  ) {
-    const firstChoice = body.choices[0];
-
-    if (
-      firstChoice &&
-      typeof firstChoice === "object" &&
-      "message" in firstChoice &&
-      firstChoice.message &&
-      typeof firstChoice.message === "object" &&
-      "content" in firstChoice.message
-    ) {
-      const content = firstChoice.message.content;
-
-      if (typeof content === "string") {
-        return content.trim();
-      }
-
-      if (Array.isArray(content)) {
-        return content
-          .map((item) => {
-            if (
-              item &&
-              typeof item === "object" &&
-              "text" in item &&
-              typeof item.text === "string"
-            ) {
-              return item.text.trim();
-            }
-
-            return "";
-          })
-          .filter(Boolean)
-          .join("\n")
-          .trim();
-      }
-    }
-  }
-
-  return "";
-};
 
 const buildProjectConversationSystemPrompt = (projectName: string): string => {
   return [
@@ -318,78 +237,6 @@ export const shouldAutoGenerateProjectConversationTitle = (
   );
 };
 
-const requestProjectConversationCompletion = async ({
-  llmConfig,
-  messages,
-}: {
-  llmConfig: EffectiveLlmConfig;
-  messages: Array<{
-    role: "system" | "user" | "assistant";
-    content: string;
-  }>;
-}): Promise<string> => {
-  if (
-    !CHAT_COMPLETIONS_COMPATIBLE_PROJECT_LLM_PROVIDERS.has(llmConfig.provider)
-  ) {
-    throw createProjectConversationLlmProviderUnsupportedError();
-  }
-
-  if (!llmConfig.apiKey) {
-    throw createProjectConversationLlmUnavailableError();
-  }
-
-  let responseBody: unknown = null;
-
-  try {
-    const response = await fetch(
-      buildApiUrl(llmConfig.baseUrl, "/chat/completions"),
-      {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-          authorization: `Bearer ${llmConfig.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: llmConfig.model,
-          messages,
-          temperature: 0.2,
-        }),
-        signal: AbortSignal.timeout(llmConfig.requestTimeoutMs),
-      },
-    );
-    responseBody = await parseResponseBody(response);
-
-    if (!response.ok) {
-      throw createProjectConversationLlmUpstreamError(
-        normalizeOpenAiCompatibleErrorMessage(
-          responseBody,
-          `项目对话生成失败（HTTP ${response.status}）`,
-        ),
-      );
-    }
-  } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-
-    throw createProjectConversationLlmUpstreamError(
-      error instanceof Error && error.message.trim()
-        ? error.message
-        : "项目对话生成失败，请稍后重试",
-      error,
-    );
-  }
-
-  const content = extractOpenAiCompatibleMessageContent(responseBody);
-
-  if (!content) {
-    throw createProjectConversationLlmUpstreamError("项目对话模型返回了空内容");
-  }
-
-  return content;
-};
-
 export const createProjectConversationRuntime = ({
   env,
   settingsRepository,
@@ -399,29 +246,44 @@ export const createProjectConversationRuntime = ({
   settingsRepository: SettingsRepository;
   knowledgeSearch: ProjectConversationKnowledgeSearch;
 }): ProjectConversationRuntime => {
-  return {
-    generateAssistantReply: async ({
-      actor,
-      project,
-      conversation,
-      userMessage,
-    }) => {
-      const [retrieval, llmConfig] = await Promise.all([
-        knowledgeSearch.searchProjectDocuments(
-          { actor },
-          project._id.toHexString(),
-          {
-            query: userMessage.content,
-            topK: PROJECT_CONVERSATION_RETRIEVAL_TOP_K,
-          },
-        ),
-        getEffectiveLlmConfig({
-          env,
-          repository: settingsRepository,
-        }),
-      ]);
+  const providerAdapter = createProjectConversationProviderAdapter();
 
-      const messages = [
+  const prepareAssistantReplyContext = async ({
+    actor,
+    project,
+    conversation,
+    userMessage,
+  }: {
+    actor: KnowledgeCommandContext["actor"];
+    project: WithId<ProjectDocument>;
+    conversation: ProjectConversationDocument;
+    userMessage: ProjectConversationMessageDocument;
+  }): Promise<{
+    llmConfig: Awaited<ReturnType<typeof getEffectiveLlmConfig>>;
+    messages: Array<{
+      role: "system" | "user" | "assistant";
+      content: string;
+    }>;
+    sources: ProjectConversationSourceDocument[];
+  }> => {
+    const [retrieval, llmConfig] = await Promise.all([
+      knowledgeSearch.searchProjectDocuments(
+        { actor },
+        project._id.toHexString(),
+        {
+          query: userMessage.content,
+          topK: PROJECT_CONVERSATION_RETRIEVAL_TOP_K,
+        },
+      ),
+      getEffectiveLlmConfig({
+        env,
+        repository: settingsRepository,
+      }),
+    ]);
+
+    return {
+      llmConfig,
+      messages: [
         {
           role: "system" as const,
           content: buildProjectConversationSystemPrompt(project.name),
@@ -434,15 +296,60 @@ export const createProjectConversationRuntime = ({
             retrieval,
           }),
         },
-      ];
-      const content = await requestProjectConversationCompletion({
+      ],
+      sources: toProjectConversationSources(retrieval),
+    };
+  };
+
+  return {
+    generateAssistantReply: async ({
+      actor,
+      project,
+      conversation,
+      userMessage,
+    }) => {
+      const { llmConfig, messages, sources } = await prepareAssistantReplyContext({
+        actor,
+        project,
+        conversation,
+        userMessage,
+      });
+      const content = await providerAdapter.generate({
         llmConfig,
         messages,
       });
 
       return {
         content,
-        sources: toProjectConversationSources(retrieval),
+        sources,
+      };
+    },
+
+    streamAssistantReply: async ({
+      actor,
+      project,
+      conversation,
+      userMessage,
+      signal,
+      onDelta,
+    }) => {
+      const { llmConfig, messages, sources } = await prepareAssistantReplyContext({
+        actor,
+        project,
+        conversation,
+        userMessage,
+      });
+      const streamedReply = await providerAdapter.stream({
+        llmConfig,
+        messages,
+        signal,
+        onDelta,
+      });
+
+      return {
+        content: streamedReply.content,
+        sources,
+        finishReason: streamedReply.finishReason,
       };
     },
   };

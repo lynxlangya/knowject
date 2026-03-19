@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { AppEnv } from '@config/env.js';
+import { AppError } from '@lib/app-error.js';
 import { encryptApiKey } from '@lib/crypto.js';
 import { ObjectId } from 'mongodb';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
@@ -11,6 +12,7 @@ import { createProjectsService } from './projects.service.js';
 import type { ProjectsRepository } from './projects.repository.js';
 import type {
   ProjectConversationDocument,
+  ProjectConversationStreamEvent,
   ProjectConversationSourceDocument,
   ProjectDocument,
 } from './projects.types.js';
@@ -77,27 +79,59 @@ const createSkillBindingValidatorStub = (
   };
 };
 
-const createConversationRuntimeStub = (implementation?: () => Promise<{
+const createDefaultAssistantReply = (): {
   content: string;
   sources: ProjectConversationSourceDocument[];
-}>) => {
+} => {
+  return {
+    content: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+    sources: [
+      {
+        knowledgeId: 'kb-1',
+        documentId: 'doc-1',
+        chunkId: 'chunk-1',
+        chunkIndex: 0,
+        source: 'chat-core.md',
+        snippet: '项目对话已经具备最小消息写链路，并开始接入项目级 merged retrieval。',
+        distance: 0.18,
+      },
+    ],
+  };
+};
+
+const createConversationRuntimeStub = (options?: {
+  generateAssistantReply?: () => Promise<{
+    content: string;
+    sources: ProjectConversationSourceDocument[];
+  }>;
+  streamAssistantReply?: (input: {
+    signal?: AbortSignal;
+    onDelta(delta: string): Promise<void> | void;
+  }) => Promise<{
+    content: string;
+    sources: ProjectConversationSourceDocument[];
+    finishReason: 'stop' | 'length' | 'cancelled' | 'unknown';
+  }>;
+}) => {
   return {
     generateAssistantReply:
-      implementation ??
-      (async () => ({
-        content: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
-        sources: [
-          {
-            knowledgeId: 'kb-1',
-            documentId: 'doc-1',
-            chunkId: 'chunk-1',
-            chunkIndex: 0,
-            source: 'chat-core.md',
-            snippet: '项目对话已经具备最小消息写链路，并开始接入项目级 merged retrieval。',
-            distance: 0.18,
-          },
-        ],
-      })),
+      options?.generateAssistantReply ??
+      (async () => createDefaultAssistantReply()),
+    streamAssistantReply:
+      options?.streamAssistantReply ??
+      (async ({ onDelta }) => {
+        const reply = createDefaultAssistantReply();
+        const deltas = ['当前项目已经具备最小对话写链路，', '并开始接入项目级检索。'];
+
+        for (const delta of deltas) {
+          await onDelta(delta);
+        }
+
+        return {
+          ...reply,
+          finishReason: 'stop',
+        };
+      }),
   };
 };
 
@@ -800,17 +834,19 @@ test('createProjectConversationMessage reuses the persisted user message when re
     repository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
-    conversationRuntime: createConversationRuntimeStub(async () => {
-      runtimeCalls += 1;
+    conversationRuntime: createConversationRuntimeStub({
+      generateAssistantReply: async () => {
+        runtimeCalls += 1;
 
-      if (runtimeCalls === 1) {
-        throw new Error('llm timeout');
-      }
+        if (runtimeCalls === 1) {
+          throw new Error('llm timeout');
+        }
 
-      return {
-        content: '第二次重试后已补齐 assistant 回复。',
-        sources: [],
-      };
+        return {
+          content: '第二次重试后已补齐 assistant 回复。',
+          sources: [],
+        };
+      },
     }),
   });
 
@@ -949,10 +985,12 @@ test('createProjectConversationMessage reuses the persisted user message when as
     repository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
-    conversationRuntime: createConversationRuntimeStub(async () => ({
-      content: 'assistant 已在重试后写回成功。',
-      sources: [],
-    })),
+    conversationRuntime: createConversationRuntimeStub({
+      generateAssistantReply: async () => ({
+        content: 'assistant 已在重试后写回成功。',
+        sources: [],
+      }),
+    }),
   });
 
   await assert.rejects(
@@ -1006,6 +1044,98 @@ test('createProjectConversationMessage reuses the persisted user message when as
   assert.equal(
     retryResult.conversation.messages[1]?.content,
     'assistant 已在重试后写回成功。',
+  );
+});
+
+test('createProjectConversationMessage returns the persisted assistant reply without regenerating it when clientRequestId already resolved', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd79943901d'),
+    name: '对话已完成重试',
+    description: '验证同一 clientRequestId 已完成时不重复生成 assistant',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-retry-resolved',
+        title: '已有会话',
+        messages: [
+          {
+            id: 'msg-user-existing',
+            role: 'user',
+            content: '复用已完成 turn',
+            clientRequestId: 'client-request-3',
+            createdAt: new Date('2026-03-17T10:00:00.000Z'),
+          },
+          {
+            id: 'msg-assistant-existing',
+            role: 'assistant',
+            content: 'assistant 已经存在，不应重复生成。',
+            createdAt: new Date('2026-03-17T10:00:05.000Z'),
+            sources: [],
+          },
+        ],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:05.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:05.000Z'),
+  };
+
+  let runtimeCalls = 0;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      generateAssistantReply: async () => {
+        runtimeCalls += 1;
+
+        return {
+          content: '这条内容不应该出现。',
+          sources: [],
+        };
+      },
+    }),
+  });
+
+  const result = await service.createProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-retry-resolved',
+    {
+      content: '复用已完成 turn',
+      clientRequestId: 'client-request-3',
+    },
+  );
+
+  assert.equal(runtimeCalls, 0);
+  assert.equal(result.conversation.messages.length, 2);
+  assert.equal(
+    result.conversation.messages[1]?.content,
+    'assistant 已经存在，不应重复生成。',
   );
 });
 
@@ -1470,6 +1600,455 @@ test('createProjectConversationMessage materializes the fallback default thread 
   assert.equal(result.conversation.messages[2]?.sources?.[0]?.knowledgeId, 'kb-1');
 });
 
+test('streamProjectConversationMessage emits ack delta done and persists the final assistant reply', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439102'),
+    name: '流式对话',
+    description: '验证流式 turn 主链路',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-streaming',
+        title: '已有会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+  let persistedProject = project;
+  const events: ProjectConversationStreamEvent[] = [];
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === persistedProject._id.toHexString() ? persistedProject : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: [...conversation.messages, message],
+                updatedAt,
+              }
+            : conversation,
+        ),
+        updatedAt,
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub(),
+  });
+
+  await service.streamProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    persistedProject._id.toHexString(),
+    'chat-streaming',
+    {
+      content: '请总结当前项目对话现状',
+      clientRequestId: 'stream-request-1',
+    },
+    {
+      onEvent: async (event) => {
+        events.push(event);
+      },
+    },
+  );
+
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ['ack', 'delta', 'delta', 'done'],
+  );
+  assert.deepEqual(
+    events.map((event) => event.sequence),
+    [1, 2, 3, 4],
+  );
+  assert.equal(events[0]?.clientRequestId, 'stream-request-1');
+  assert.equal(events[0]?.type, 'ack');
+  assert.equal(events[events.length - 1]?.type, 'done');
+
+  const persistedConversation = persistedProject.conversations[0];
+  assert.equal(persistedConversation?.messages.length, 2);
+  assert.equal(persistedConversation?.messages[0]?.role, 'user');
+  assert.equal(persistedConversation?.messages[0]?.clientRequestId, 'stream-request-1');
+  assert.equal(persistedConversation?.messages[1]?.role, 'assistant');
+  assert.equal(
+    persistedConversation?.messages[1]?.content,
+    '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+  );
+});
+
+test('streamProjectConversationMessage emits an error event and skips assistant persistence when upstream fails', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439103'),
+    name: '流式错误',
+    description: '验证流式错误收尾',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-streaming-error',
+        title: '已有会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+  let persistedProject = project;
+  const events: ProjectConversationStreamEvent[] = [];
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === persistedProject._id.toHexString() ? persistedProject : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: [...conversation.messages, message],
+                updatedAt,
+              }
+            : conversation,
+        ),
+        updatedAt,
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      streamAssistantReply: async ({ onDelta }) => {
+        await onDelta('半截回复');
+
+        throw new AppError({
+          statusCode: 502,
+          code: 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR',
+          message: '上游流式响应失败',
+        });
+      },
+    }),
+  });
+
+  await service.streamProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    persistedProject._id.toHexString(),
+    'chat-streaming-error',
+    {
+      content: '请验证流式错误',
+      clientRequestId: 'stream-request-2',
+    },
+    {
+      onEvent: async (event) => {
+        events.push(event);
+      },
+    },
+  );
+
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ['ack', 'delta', 'error'],
+  );
+  const errorEvent = events[2];
+  assert.equal(errorEvent?.type, 'error');
+  if (errorEvent?.type !== 'error') {
+    throw new Error('errorEvent should be a stream error');
+  }
+
+  assert.equal(errorEvent.code, 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR');
+  assert.equal(errorEvent.retryable, true);
+  assert.equal(persistedProject.conversations[0]?.messages.length, 1);
+  assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
+});
+
+test('streamProjectConversationMessage marks setup failures as non-retryable', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439107'),
+    name: '流式配置错误',
+    description: '验证非瞬时错误不会标成 retryable',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-streaming-setup-error',
+        title: '已有会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+  let persistedProject = project;
+  const events: ProjectConversationStreamEvent[] = [];
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === persistedProject._id.toHexString() ? persistedProject : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: [...conversation.messages, message],
+                updatedAt,
+              }
+            : conversation,
+        ),
+        updatedAt,
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      streamAssistantReply: async () => {
+        throw new AppError({
+          statusCode: 503,
+          code: 'PROJECT_CONVERSATION_LLM_UNAVAILABLE',
+          message: '当前未配置可用的对话模型，请先完成 LLM 设置',
+        });
+      },
+    }),
+  });
+
+  await service.streamProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    persistedProject._id.toHexString(),
+    'chat-streaming-setup-error',
+    {
+      content: '请验证配置错误',
+      clientRequestId: 'stream-request-setup-error',
+    },
+    {
+      onEvent: async (event) => {
+        events.push(event);
+      },
+    },
+  );
+
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ['ack', 'error'],
+  );
+  const errorEvent = events[1];
+  assert.equal(errorEvent?.type, 'error');
+  if (errorEvent?.type !== 'error') {
+    throw new Error('errorEvent should be a stream error');
+  }
+
+  assert.equal(errorEvent.code, 'PROJECT_CONVERSATION_LLM_UNAVAILABLE');
+  assert.equal(errorEvent.retryable, false);
+  assert.equal(persistedProject.conversations[0]?.messages.length, 1);
+  assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
+});
+
+test('streamProjectConversationMessage keeps only the persisted user message when the client aborts mid-stream', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439104'),
+    name: '流式取消',
+    description: '验证用户主动取消',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-streaming-cancel',
+        title: '已有会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+  let persistedProject = project;
+  const events: ProjectConversationStreamEvent[] = [];
+  const abortController = new AbortController();
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === persistedProject._id.toHexString() ? persistedProject : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: [...conversation.messages, message],
+                updatedAt,
+              }
+            : conversation,
+        ),
+        updatedAt,
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      streamAssistantReply: async ({ signal, onDelta }) => {
+        await onDelta('先返回一段');
+
+        if (signal?.aborted) {
+          throw new DOMException('Aborted', 'AbortError');
+        }
+
+        return {
+          content: '这段回复不应该被持久化',
+          sources: [],
+          finishReason: 'stop',
+        };
+      },
+    }),
+  });
+
+  await service.streamProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    persistedProject._id.toHexString(),
+    'chat-streaming-cancel',
+    {
+      content: '请验证取消',
+      clientRequestId: 'stream-request-3',
+    },
+    {
+      signal: abortController.signal,
+      onEvent: async (event) => {
+        events.push(event);
+
+        if (event.type === 'delta') {
+          abortController.abort();
+        }
+      },
+    },
+  );
+
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ['ack', 'delta'],
+  );
+  assert.equal(persistedProject.conversations[0]?.messages.length, 1);
+  assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
+});
+
 test('createProjectConversationRuntime uses merged retrieval and returns normalized sources', async () => {
   const projectId = '507f1f77bcf86cd799439099';
   const project: ProjectDocument & {
@@ -1631,6 +2210,194 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('createProjectConversationRuntime streams deltas from an OpenAI-compatible SSE response', async () => {
+  const projectId = '507f1f77bcf86cd799439105';
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId(projectId),
+    name: '流式 runtime',
+    description: '验证 runtime 流式编排',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+  const conversation = {
+    id: 'chat-stream-runtime',
+    title: '流式会话',
+    messages: [
+      {
+        id: 'msg-stream-user',
+        role: 'user' as const,
+        content: '请总结当前流式架构',
+        createdAt: new Date('2026-03-17T09:05:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:05:00.000Z'),
+  };
+  const originalFetch = global.fetch;
+  const encoder = new TextEncoder();
+  const receivedDeltas: string[] = [];
+
+  global.fetch = async () => {
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              'data: {"choices":[{"delta":{"content":"当前项目对话已切到"}}]}\n\n',
+            ),
+          );
+          controller.enqueue(
+            encoder.encode(
+              'data: {"choices":[{"delta":{"content":"统一流式编排。"},"finish_reason":"stop"}]}\n\n',
+            ),
+          );
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'text/event-stream',
+        },
+      },
+    );
+  };
+
+  try {
+    const runtime = createProjectConversationRuntime({
+      env: createTestEnv(),
+      settingsRepository: createSettingsRepositoryStub(),
+      knowledgeSearch: {
+        searchProjectDocuments: async () => ({
+          query: '请总结当前流式架构',
+          sourceType: 'global_docs',
+          total: 1,
+          items: [
+            {
+              knowledgeId: 'kb-1',
+              documentId: 'doc-1',
+              chunkId: 'chunk-1',
+              chunkIndex: 0,
+              type: 'global_docs',
+              source: 'streaming-architecture.md',
+              content: '流式架构要求服务端统一 turn owner，并在 done 后回读服务端真相。',
+              distance: 0.06,
+            },
+          ],
+        }),
+      },
+    });
+
+    const result = await runtime.streamAssistantReply({
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+      project,
+      conversation,
+      userMessage: conversation.messages[0]!,
+      onDelta: async (delta) => {
+        receivedDeltas.push(delta);
+      },
+    });
+
+    assert.deepEqual(receivedDeltas, ['当前项目对话已切到', '统一流式编排。']);
+    assert.equal(result.content, '当前项目对话已切到统一流式编排。');
+    assert.equal(result.finishReason, 'stop');
+    assert.equal(result.sources[0]?.source, 'streaming-architecture.md');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('createProjectConversationRuntime rejects streaming when the provider lacks a supported stream adapter', async () => {
+  await withEncryptionKey(async () => {
+    const runtime = createProjectConversationRuntime({
+      env: createTestEnv(),
+      settingsRepository: createSettingsRepositoryStub({
+        llm: {
+          provider: 'anthropic' as unknown as (typeof SUPPORTED_LLM_PROVIDER_CASES)[number]['provider'],
+          baseUrl: 'https://api.anthropic.com/v1',
+          model: 'claude-sonnet-4-6',
+          apiKey: 'anthropic-api-key',
+        },
+      }),
+      knowledgeSearch: {
+        searchProjectDocuments: async () => ({
+          query: 'stream provider drift',
+          sourceType: 'global_docs',
+          total: 0,
+          items: [],
+        }),
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        runtime.streamAssistantReply({
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+          project: {
+            _id: new ObjectId('507f1f77bcf86cd799439106'),
+            name: 'Anthropic Stream Drift',
+            description: '',
+            ownerId: 'user-1',
+            members: [
+              {
+                userId: 'user-1',
+                role: 'admin',
+                joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+              },
+            ],
+            knowledgeBaseIds: [],
+            agentIds: [],
+            skillIds: [],
+            conversations: [],
+            createdAt: new Date('2026-03-17T00:00:00.000Z'),
+            updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+          },
+          conversation: {
+            id: 'chat-stream-anthropic',
+            title: 'Anthropic Stream',
+            messages: [],
+            createdAt: new Date('2026-03-17T00:00:00.000Z'),
+            updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+          },
+          userMessage: {
+            id: 'msg-stream-anthropic',
+            role: 'user',
+            content: '测试 anthropic stream provider',
+            createdAt: new Date('2026-03-17T00:00:00.000Z'),
+          },
+          onDelta: async () => undefined,
+        }),
+      (error) =>
+        error instanceof AppError &&
+        [
+          'PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED',
+          'PROJECT_CONVERSATION_LLM_STREAM_UNSUPPORTED',
+        ].includes(error.code),
+    );
+  });
 });
 
 test('createProjectConversationRuntime accepts all configured supported providers', async () => {

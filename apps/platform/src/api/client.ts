@@ -8,7 +8,7 @@ const baseClientOptions = {
   dedupe: true,
 } satisfies HttpClientOptions;
 
-const handleUnauthorized = (): void => {
+export const handleUnauthorized = (): void => {
   clearAuthSession();
   if (window.location.pathname !== '/login') {
     window.location.href = '/login';

@@ -47,6 +47,41 @@ import {
   normalizeWorkspaceUpdateInput,
 } from "./settings.service.validation.js";
 
+const OPENAI_GPT_5_MODEL_PATTERN = /^gpt-5(?:$|[-.])/i;
+
+const buildLlmConnectionTestPayload = ({
+  provider,
+  model,
+}: {
+  provider: SettingsLlmProvider;
+  model: string;
+}) => {
+  const basePayload = {
+    model,
+    messages: [
+      {
+        role: "user" as const,
+        content: "test",
+      },
+    ],
+  };
+
+  if (
+    provider === "openai" &&
+    OPENAI_GPT_5_MODEL_PATTERN.test(model.trim())
+  ) {
+    return {
+      ...basePayload,
+      max_completion_tokens: 8,
+    };
+  }
+
+  return {
+    ...basePayload,
+    max_tokens: 8,
+  };
+};
+
 export interface SettingsService {
   getSettings(context: SettingsCommandContext): Promise<SettingsResponse>;
   updateEmbedding(
@@ -349,16 +384,10 @@ export const createSettingsService = ({
         baseUrl,
         apiKey,
         path: "/chat/completions",
-        payload: {
+        payload: buildLlmConnectionTestPayload({
+          provider,
           model,
-          messages: [
-            {
-              role: "user",
-              content: "test",
-            },
-          ],
-          max_tokens: 8,
-        },
+        }),
         timeoutMs: env.openai.requestTimeoutMs,
       });
 

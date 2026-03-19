@@ -140,6 +140,11 @@ test("createApp mounts the root status route and tolerates bootstrap failures", 
       assert.equal(body.data.environment, "test");
       assert.ok(body.data.docs.includes("/api/knowledge/search"));
       assert.ok(body.data.docs.includes("/api/settings"));
+      assert.ok(
+        body.data.docs.includes(
+          "/api/projects/:projectId/conversations/:conversationId/messages/stream",
+        ),
+      );
 
       await delay(0);
     });

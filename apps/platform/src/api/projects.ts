@@ -42,6 +42,16 @@ export interface ProjectConversationListResponse {
 }
 
 export type ProjectConversationMessageRole = "user" | "assistant";
+export type ProjectConversationStreamEventType =
+  | 'ack'
+  | 'delta'
+  | 'done'
+  | 'error';
+export type ProjectConversationStreamFinishReason =
+  | 'stop'
+  | 'length'
+  | 'cancelled'
+  | 'unknown';
 
 export interface ProjectConversationSourceResponse {
   knowledgeId: string;
@@ -83,6 +93,49 @@ export interface CreateProjectConversationMessageRequest {
   content: string;
   clientRequestId?: string;
 }
+
+export interface ProjectConversationStreamEventBase {
+  version: 'v1';
+  type: ProjectConversationStreamEventType;
+  sequence: number;
+  conversationId: string;
+  clientRequestId: string;
+}
+
+export interface ProjectConversationStreamAckEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'ack';
+  userMessageId: string;
+  userMessagePersisted: boolean;
+}
+
+export interface ProjectConversationStreamDeltaEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'delta';
+  delta: string;
+}
+
+export interface ProjectConversationStreamDoneEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'done';
+  assistantMessageId: string;
+  assistantMessagePersisted: true;
+  finishReason: ProjectConversationStreamFinishReason;
+}
+
+export interface ProjectConversationStreamErrorEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'error';
+  code: string;
+  message: string;
+  retryable: boolean;
+}
+
+export type ProjectConversationStreamEvent =
+  | ProjectConversationStreamAckEvent
+  | ProjectConversationStreamDeltaEvent
+  | ProjectConversationStreamDoneEvent
+  | ProjectConversationStreamErrorEvent;
 
 const PROJECT_CHAT_MESSAGE_TIMEOUT_MS = 30000;
 

@@ -1,6 +1,7 @@
 import {
   ArrowUpOutlined,
   PlusOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import { Bubble } from '@ant-design/x';
 import {
@@ -11,7 +12,7 @@ import {
   Skeleton,
   Typography,
 } from 'antd';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PATHS } from '@app/navigation/paths';
 import { KNOWJECT_BRAND } from '@styles/brand';
@@ -28,6 +29,7 @@ import {
   type ProjectConversationTargetRefValue,
   useProjectConversationDetail,
 } from './useProjectConversationDetail';
+import { useProjectConversationTurn } from './useProjectConversationTurn';
 import { useProjectPageContext } from './projectPageContext';
 
 export const ProjectChatPage = () => {
@@ -38,12 +40,17 @@ export const ProjectChatPage = () => {
     projectId: activeProject.id,
     chatId,
   });
+  const [composerValue, setComposerValue] = useState('');
 
   useEffect(() => {
     latestConversationTargetRef.current = {
       projectId: activeProject.id,
       chatId,
     };
+  }, [activeProject.id, chatId]);
+
+  useEffect(() => {
+    setComposerValue('');
   }, [activeProject.id, chatId]);
 
   const {
@@ -62,15 +69,32 @@ export const ProjectChatPage = () => {
     shouldShowConversationSkeleton,
     setConversationDetail,
     setDetailError,
-    syncConversationAfterFailure,
+    reconcileConversationDetail,
   } = useProjectConversationDetail({
     activeProjectId: activeProject.id,
     chatId,
     latestConversationTargetRef,
   });
   const {
-    composerValue,
-    setComposerValue,
+    streamStatus,
+    pendingUserMessage,
+    draftAssistantMessage,
+    isStreaming,
+    turnBusy,
+    handleSendMessage,
+    handleCancelStreaming,
+  } = useProjectConversationTurn({
+    activeProjectId: activeProject.id,
+    chatId,
+    latestConversationTargetRef,
+    conversations,
+    currentConversationDetail,
+    setComposerValue: (value) => setComposerValue(value),
+    setChatRuntimeIssue,
+    buildChatIssueFromError,
+    reconcileConversationDetail,
+  });
+  const {
     renameTargetConversation,
     renameConversationTitleDraft,
     setRenameConversationTitleDraft,
@@ -78,36 +102,38 @@ export const ProjectChatPage = () => {
     renamingConversation,
     createActionLocked,
     conversationActionsLocked,
-    sendActionLocked,
-    canSubmitMessage,
-    sendingMessage,
     handleCreateChat,
-    handleSendMessage,
     handleConversationContextAction,
     handleUpdateConversationTitle,
     handleCancelRenamingConversation,
     handleSelectConversation,
   } = useProjectChatActions({
     activeProjectId: activeProject.id,
-    chatId,
     latestConversationTargetRef,
     conversations,
-    currentConversationDetail,
-    detailLoading,
-    chatSettingsLoading,
-    blockingChatIssue,
+    turnBusy,
     setConversationDetail,
     setDetailError,
     setChatRuntimeIssue,
     buildChatIssueFromError,
-    syncConversationAfterFailure,
   });
+  const sendActionLocked =
+    turnBusy ||
+    detailLoading ||
+    chatSettingsLoading ||
+    blockingChatIssue !== null;
+  const canSubmitMessage = composerValue.trim().length > 0 && !sendActionLocked;
 
   const activeConversation = chatId
     ? conversations.items.find((conversation) => conversation.id === chatId) ?? null
     : null;
   const conversationBubbleItems = buildProjectChatBubbleItems(
     currentConversationDetail?.messages ?? [],
+    {
+      conversationId: chatId,
+      pendingUserMessage,
+      draftAssistantMessage,
+    },
   );
 
   const renderCreateChatButton = ({
@@ -283,7 +309,7 @@ export const ProjectChatPage = () => {
                   }}
                   onSubmit={(event) => {
                     event.preventDefault();
-                    void handleSendMessage();
+                    void handleSendMessage(composerValue);
                   }}
                 >
                   <div className="flex items-end gap-3">
@@ -304,27 +330,41 @@ export const ProjectChatPage = () => {
                           }
 
                           event.preventDefault();
-                          void handleSendMessage();
+                          void handleSendMessage(composerValue);
                         }}
                       />
                     </div>
 
-                    <Button
-                      type="primary"
-                      htmlType="submit"
-                      shape="circle"
-                      aria-label="发送消息"
-                      loading={sendingMessage}
-                      disabled={!canSubmitMessage}
-                      icon={<ArrowUpOutlined />}
-                      className="mb-1 h-11! w-11! shrink-0 border-0!"
-                      style={{
-                        background: canSubmitMessage
-                          ? KNOWJECT_BRAND.primary
-                          : KNOWJECT_BRAND.primarySurfaceStrong,
-                        color: canSubmitMessage ? '#ffffff' : KNOWJECT_BRAND.textMuted,
-                      }}
-                    />
+                    {isStreaming ? (
+                      <Button
+                        htmlType="button"
+                        aria-label="停止生成"
+                        icon={<StopOutlined />}
+                        onClick={handleCancelStreaming}
+                        className="mb-1 h-11! rounded-full! border-slate-200! px-4! text-sm! font-semibold! text-slate-700!"
+                      >
+                        停止生成
+                      </Button>
+                    ) : (
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        shape="circle"
+                        aria-label="发送消息"
+                        loading={streamStatus === 'reconciling'}
+                        disabled={!canSubmitMessage}
+                        icon={<ArrowUpOutlined />}
+                        className="mb-1 h-11! w-11! shrink-0 border-0!"
+                        style={{
+                          background: canSubmitMessage
+                            ? KNOWJECT_BRAND.primary
+                            : KNOWJECT_BRAND.primarySurfaceStrong,
+                          color: canSubmitMessage
+                            ? '#ffffff'
+                            : KNOWJECT_BRAND.textMuted,
+                        }}
+                      />
+                    )}
                   </div>
                 </form>
               </div>

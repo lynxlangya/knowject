@@ -169,6 +169,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/projects/:projectId/conversations',
         '/api/projects/:projectId/conversations/:conversationId',
         '/api/projects/:projectId/conversations/:conversationId/messages',
+        '/api/projects/:projectId/conversations/:conversationId/messages/stream',
         '/api/projects/:projectId/members',
         '/api/projects/:projectId/knowledge',
         '/api/projects/:projectId/knowledge/:knowledgeId',

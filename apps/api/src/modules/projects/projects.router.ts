@@ -1,4 +1,4 @@
-import { Router, type Request } from 'express';
+import { Router, type NextFunction, type Request, type Response } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
 import type { RequestHandler } from 'express';
 import { sendCreated, sendSuccess } from '@lib/api-response.js';
@@ -24,6 +24,54 @@ const getRequiredConversationId = (request: Request): string => {
   return Array.isArray(conversationId)
     ? conversationId[0] ?? ''
     : conversationId ?? '';
+};
+
+const waitForSseDrain = (response: Response): Promise<void> => {
+  if (response.writableEnded || response.destroyed) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      response.off('drain', handleDrain);
+      response.off('close', handleClose);
+      response.off('error', handleError);
+    };
+    const handleDrain = () => {
+      cleanup();
+      resolve();
+    };
+    const handleClose = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = (error: Error) => {
+      cleanup();
+      reject(error);
+    };
+
+    response.on('drain', handleDrain);
+    response.on('close', handleClose);
+    response.on('error', handleError);
+
+    if (response.writableEnded || response.destroyed) {
+      cleanup();
+      resolve();
+    }
+  });
+};
+
+export const writeSseChunk = async (
+  response: Response,
+  chunk: string,
+): Promise<void> => {
+  if (response.writableEnded || response.destroyed) {
+    return;
+  }
+
+  if (!response.write(chunk)) {
+    await waitForSseDrain(response);
+  }
 };
 
 export const createProjectsRouter = (
@@ -150,6 +198,80 @@ export const createProjectsRouter = (
 
       sendCreated(res, result);
     }),
+  );
+
+  projectsRouter.post(
+    '/:projectId/conversations/:conversationId/messages/stream',
+    async (
+      req: Request,
+      res: Response,
+      next: NextFunction,
+    ): Promise<void> => {
+      const abortController = new AbortController();
+      let streamStarted = false;
+      const handleClientDisconnect = () => {
+        if (!res.writableEnded && !abortController.signal.aborted) {
+          abortController.abort();
+        }
+      };
+      const startStream = (): void => {
+        if (streamStarted || res.headersSent) {
+          return;
+        }
+
+        res.status(200);
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+        streamStarted = true;
+      };
+      const writeEvent = async (event: unknown): Promise<void> => {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        startStream();
+        await writeSseChunk(res, `data: ${JSON.stringify(event)}\n\n`);
+      };
+
+      req.on('close', handleClientDisconnect);
+
+      try {
+        await projectsService.streamProjectConversationMessage(
+          {
+            actor: getRequiredAuthUser(req),
+          },
+          getRequiredProjectId(req),
+          getRequiredConversationId(req),
+          req.body as CreateProjectConversationMessageInput,
+          {
+            signal: abortController.signal,
+            onEvent: writeEvent,
+          },
+        );
+      } catch (error) {
+        req.off('close', handleClientDisconnect);
+
+        if (!streamStarted && !abortController.signal.aborted) {
+          next(error);
+          return;
+        }
+
+        if (!res.writableEnded && !res.destroyed) {
+          res.end();
+        }
+
+        return;
+      }
+
+      req.off('close', handleClientDisconnect);
+
+      if (!abortController.signal.aborted && !res.writableEnded && !res.destroyed) {
+        res.end();
+      }
+    },
   );
 
   projectsRouter.patch(

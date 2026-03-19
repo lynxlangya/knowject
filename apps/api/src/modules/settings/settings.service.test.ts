@@ -466,6 +466,8 @@ test('testLlm accepts chat-completions compatible providers', async () => {
       const body = JSON.parse(String(init?.body ?? '{}')) as {
         model?: string;
         messages?: Array<{ role?: string; content?: string }>;
+        max_tokens?: number;
+        max_completion_tokens?: number;
       };
 
       assert.equal(
@@ -480,6 +482,13 @@ test('testLlm accepts chat-completions compatible providers', async () => {
       assert.equal(body.model, activeProviderCase.model);
       assert.equal(body.messages?.[0]?.role, 'user');
       assert.equal(body.messages?.[0]?.content, 'test');
+      if (activeProviderCase.provider === 'openai') {
+        assert.equal(body.max_completion_tokens, 8);
+        assert.equal(body.max_tokens, undefined);
+      } else {
+        assert.equal(body.max_tokens, 8);
+        assert.equal(body.max_completion_tokens, undefined);
+      }
 
       return new Response('{}', {
         status: 200,

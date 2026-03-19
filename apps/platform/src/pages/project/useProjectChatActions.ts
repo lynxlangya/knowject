@@ -1,13 +1,17 @@
 import { App } from 'antd';
-import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import {
+  useEffect,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { extractApiErrorCode, extractApiErrorMessage } from '@api/error';
 import {
   createProjectConversation,
-  createProjectConversationMessage,
   deleteProjectConversation,
   updateProjectConversation,
-  type ProjectConversationDetailResponse,
 } from '@api/projects';
 import { buildProjectChatPath } from '@app/navigation/paths';
 import type { ConversationSummary } from '@app/project/project.types';
@@ -20,15 +24,11 @@ import type { ProjectConversationTargetRefValue } from './useProjectConversation
 
 interface UseProjectChatActionsOptions {
   activeProjectId: string;
-  chatId?: string;
   latestConversationTargetRef: MutableRefObject<ProjectConversationTargetRefValue>;
   conversations: ProjectPageRefreshableListState<ConversationSummary>;
-  currentConversationDetail: ProjectConversationDetailResponse | null;
-  detailLoading: boolean;
-  chatSettingsLoading: boolean;
-  blockingChatIssue: ProjectChatIssue | null;
+  turnBusy: boolean;
   setConversationDetail: Dispatch<
-    SetStateAction<ProjectConversationDetailResponse | null>
+    SetStateAction<import('@api/projects').ProjectConversationDetailResponse | null>
   >;
   setDetailError: Dispatch<SetStateAction<string | null>>;
   setChatRuntimeIssue: Dispatch<SetStateAction<ProjectChatIssue | null>>;
@@ -36,40 +36,20 @@ interface UseProjectChatActionsOptions {
     error: unknown,
     fallback: string,
   ) => ProjectChatIssue | null;
-  syncConversationAfterFailure: (options: {
-    projectId: string;
-    conversationId: string;
-    previousMessageIds: Set<string>;
-    submittedContent: string;
-    onRecoveredPersistedUserMessage?: () => void;
-  }) => Promise<void>;
-}
-
-interface PendingProjectChatSubmission {
-  projectId: string;
-  conversationId: string;
-  content: string;
-  clientRequestId: string;
 }
 
 export const useProjectChatActions = ({
   activeProjectId,
-  chatId,
   latestConversationTargetRef,
   conversations,
-  currentConversationDetail,
-  detailLoading,
-  chatSettingsLoading,
-  blockingChatIssue,
+  turnBusy,
   setConversationDetail,
   setDetailError,
   setChatRuntimeIssue,
   buildChatIssueFromError,
-  syncConversationAfterFailure,
 }: UseProjectChatActionsOptions) => {
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
-  const [composerValue, setComposerValue] = useState('');
   const [renameTargetConversation, setRenameTargetConversation] =
     useState<ConversationSummary | null>(null);
   const [renameConversationTitleDraft, setRenameConversationTitleDraft] =
@@ -77,13 +57,6 @@ export const useProjectChatActions = ({
   const [creatingConversation, setCreatingConversation] = useState(false);
   const [renamingConversation, setRenamingConversation] = useState(false);
   const [deletingConversation, setDeletingConversation] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const pendingSubmissionRef = useRef<PendingProjectChatSubmission | null>(null);
-
-  useEffect(() => {
-    setComposerValue('');
-    pendingSubmissionRef.current = null;
-  }, [activeProjectId, chatId]);
 
   useEffect(() => {
     setRenameTargetConversation(null);
@@ -106,15 +79,9 @@ export const useProjectChatActions = ({
     );
   };
 
-  const createActionLocked = creatingConversation || sendingMessage;
+  const createActionLocked = creatingConversation || turnBusy;
   const conversationActionsLocked =
-    detailLoading || renamingConversation || deletingConversation;
-  const sendActionLocked =
-    sendingMessage ||
-    detailLoading ||
-    chatSettingsLoading ||
-    blockingChatIssue !== null;
-  const canSubmitMessage = composerValue.trim().length > 0 && !sendActionLocked;
+    renamingConversation || deletingConversation;
 
   const handleCreateChat = async () => {
     if (createActionLocked) {
@@ -153,101 +120,6 @@ export const useProjectChatActions = ({
       }
     } finally {
       setCreatingConversation(false);
-    }
-  };
-
-  const handleSendMessage = async () => {
-    if (!chatId) {
-      message.warning('请先选择或新建一个对话线程');
-      return;
-    }
-
-    const nextContent = composerValue.trim();
-
-    if (!nextContent) {
-      message.warning('请输入消息内容');
-      return;
-    }
-
-    if (sendActionLocked) {
-      return;
-    }
-
-    const requestProjectId = activeProjectId;
-    const requestConversationId = chatId;
-    const existingPendingSubmission = pendingSubmissionRef.current;
-    const clientRequestId =
-      existingPendingSubmission &&
-      existingPendingSubmission.projectId === requestProjectId &&
-      existingPendingSubmission.conversationId === requestConversationId &&
-      existingPendingSubmission.content === nextContent
-        ? existingPendingSubmission.clientRequestId
-        : globalThis.crypto.randomUUID();
-    const previousMessageIds = new Set(
-      currentConversationDetail?.messages.map((chatMessage) => chatMessage.id) ?? [],
-    );
-    pendingSubmissionRef.current = {
-      projectId: requestProjectId,
-      conversationId: requestConversationId,
-      content: nextContent,
-      clientRequestId,
-    };
-    setSendingMessage(true);
-
-    try {
-      const result = await createProjectConversationMessage(
-        requestProjectId,
-        requestConversationId,
-        {
-          content: nextContent,
-          clientRequestId,
-        },
-      );
-
-      if (isCurrentConversationTarget(requestProjectId, requestConversationId)) {
-        setChatRuntimeIssue(null);
-        setConversationDetail(result.conversation);
-        setDetailError(null);
-        setComposerValue('');
-      }
-      pendingSubmissionRef.current = null;
-
-      if (isCurrentProject(requestProjectId)) {
-        void conversations.refresh();
-      }
-    } catch (currentError) {
-      console.error(currentError);
-
-      if (isCurrentProject(requestProjectId)) {
-        const nextIssue = buildChatIssueFromError(
-          currentError,
-          '发送消息失败，请稍后重试',
-        );
-
-        if (nextIssue) {
-          setChatRuntimeIssue(nextIssue);
-        } else {
-          message.error(
-            extractApiErrorMessage(currentError, '发送消息失败，请稍后重试'),
-          );
-        }
-      }
-
-      await Promise.allSettled([
-        isCurrentProject(requestProjectId)
-          ? conversations.refresh()
-          : Promise.resolve(),
-        isCurrentConversationTarget(requestProjectId, requestConversationId)
-          ? syncConversationAfterFailure({
-              projectId: requestProjectId,
-              conversationId: requestConversationId,
-              previousMessageIds,
-              submittedContent: nextContent,
-            })
-          : Promise.resolve(),
-      ]);
-    } finally {
-      setSendingMessage(false);
     }
   };
 
@@ -447,21 +319,15 @@ export const useProjectChatActions = ({
   };
 
   return {
-    composerValue,
-    setComposerValue,
     renameTargetConversation,
     renameConversationTitleDraft,
     setRenameConversationTitleDraft,
     creatingConversation,
     renamingConversation,
     deletingConversation,
-    sendingMessage,
     createActionLocked,
     conversationActionsLocked,
-    sendActionLocked,
-    canSubmitMessage,
     handleCreateChat,
-    handleSendMessage,
     handleConversationContextAction,
     handleUpdateConversationTitle,
     handleCancelRenamingConversation,
