@@ -16,8 +16,7 @@
       "@middleware/*": ["src/middleware/*"],
       "@modules/*": ["src/modules/*"],
       "@routes/*": ["src/routes/*"],
-      "@types/*": ["src/types/*"],
-      "@knowject/request-contracts": ["../../packages/request/src/contracts.ts"]
+      "@types/*": ["src/types/*"]
     },
     "allowImportingTsExtensions": false,
     "noEmit": true

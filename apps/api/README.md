@@ -3,6 +3,12 @@
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
 截至 2026-03-17，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话最小写链路、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。
 
+## 当前构建与测试约定
+
+- 模块级测试文件默认与源码同级放置，命名为 `*.test.ts`，便于按模块共定位维护。
+- `pnpm --filter api test` 通过 `node --test --import tsx "src/**/*.test.ts"` 自动发现同级测试文件，不再手写单个文件清单。
+- `pnpm --filter api build` 会显式排除 `src/**/*.test.ts` 与 `src/**/__tests__/**`，避免同级测试文件进入 `dist` 产物。
+
 ## 当前接口
 
 - `GET /api/health`
