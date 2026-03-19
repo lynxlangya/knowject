@@ -20,11 +20,6 @@ const SUPPORTED_LLM_PROVIDER_CASES = [
     model: 'gpt-5.4',
   },
   {
-    provider: 'anthropic' as const,
-    baseUrl: 'https://api.anthropic.com/v1',
-    model: 'claude-sonnet-4-6',
-  },
-  {
     provider: 'gemini' as const,
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     model: 'gemini-2.5-flash',
@@ -520,6 +515,36 @@ test('testLlm accepts chat-completions compatible providers', async () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+});
+
+test('updateLlm rejects anthropic until a provider-specific adapter exists', async () => {
+  await withEncryptionKey(async () => {
+    const service = createSettingsService({
+      env: createTestEnv(),
+      repository: createRepositoryStub(),
+    });
+
+    await assert.rejects(
+      () =>
+        service.updateLlm(
+          {
+            actor: ACTOR,
+          },
+          {
+            provider: 'anthropic',
+            baseUrl: 'https://api.anthropic.com/v1',
+            model: 'claude-sonnet-4-6',
+            apiKey: 'anthropic-api-key',
+          },
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.message, 'provider 不合法');
+        return true;
+      },
+    );
   });
 });
 

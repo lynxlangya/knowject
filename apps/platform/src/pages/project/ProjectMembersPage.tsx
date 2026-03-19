@@ -10,7 +10,7 @@ import {
   Select,
   Typography,
 } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { extractApiErrorMessage } from "@api/error";
 import {
   addProjectMember,
@@ -64,10 +64,21 @@ export const ProjectMembersPage = () => {
   const [candidateOptions, setCandidateOptions] = useState<MemberCandidateOption[]>([]);
   const [candidateSearching, setCandidateSearching] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const candidateRequestIdRef = useRef(0);
+  const currentMemberUsernameSetRef = useRef(new Set<string>());
 
   const currentMemberUsernameSet = useMemo(() => {
     return new Set(activeProject.members.map((member) => member.username));
   }, [activeProject.members]);
+
+  useEffect(() => {
+    currentMemberUsernameSetRef.current = currentMemberUsernameSet;
+    setCandidateOptions((currentOptions) =>
+      currentOptions.filter(
+        (option) => !currentMemberUsernameSet.has(option.username),
+      ),
+    );
+  }, [currentMemberUsernameSet]);
 
   const mapCandidateToOption = (
     candidate: SearchProjectMemberCandidatesResponseItem,
@@ -98,12 +109,21 @@ export const ProjectMembersPage = () => {
   };
 
   const loadMemberCandidates = async (query: string) => {
+    const requestId = candidateRequestIdRef.current + 1;
+    candidateRequestIdRef.current = requestId;
     setCandidateSearching(true);
 
-      try {
+    try {
       const result = await searchProjectMemberCandidates(query);
+      if (candidateRequestIdRef.current !== requestId) {
+        return;
+      }
+
       const availableOptions = result.items
-        .filter((candidate) => !currentMemberUsernameSet.has(candidate.username))
+        .filter(
+          (candidate) =>
+            !currentMemberUsernameSetRef.current.has(candidate.username),
+        )
         .map(mapCandidateToOption);
 
       setCandidateOptions((currentOptions) =>
@@ -115,12 +135,18 @@ export const ProjectMembersPage = () => {
         ),
       );
     } catch (error) {
+      if (candidateRequestIdRef.current !== requestId) {
+        return;
+      }
+
       console.error("[ProjectMembersPage] 加载可添加成员失败:", error);
       message.error(
         extractApiErrorMessage(error, "加载可添加成员失败，请稍后重试"),
       );
     } finally {
-      setCandidateSearching(false);
+      if (candidateRequestIdRef.current === requestId) {
+        setCandidateSearching(false);
+      }
     }
   };
 
@@ -168,6 +194,7 @@ export const ProjectMembersPage = () => {
       form.resetFields();
       form.setFieldsValue({ role: "member", usernames: [] });
       setSearchKeyword("");
+      candidateRequestIdRef.current += 1;
 
       if (failedMessages.length === 0) {
         message.success(
@@ -233,7 +260,7 @@ export const ProjectMembersPage = () => {
       if (result.removedCurrentUser || !result.project) {
         removeProjectSnapshot(activeProject.id);
         message.success("你已退出当前项目");
-        navigate(
+        void navigate(
           nextProject ? buildProjectOverviewPath(nextProject.id) : PATHS.home,
         );
         return;
@@ -286,7 +313,7 @@ export const ProjectMembersPage = () => {
   return (
     <section className="flex min-h-full flex-col gap-4">
       <Card
-        className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+        className="rounded-3xl! border-slate-200! shadow-surface!"
         styles={{ body: { padding: "22px 22px 20px" } }}
       >
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
@@ -303,11 +330,11 @@ export const ProjectMembersPage = () => {
             </Typography.Paragraph>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[620px] xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:min-w-155 xl:grid-cols-4">
             {summaryItems.map((item) => (
               <div
                 key={item.label}
-                className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
+                className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4"
               >
                 <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
                   {item.label}
@@ -329,7 +356,7 @@ export const ProjectMembersPage = () => {
 
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
         <Card
-          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+          className="rounded-3xl! border-slate-200! shadow-surface!"
           styles={{ body: { padding: "20px" } }}
         >
           <div className="flex items-center gap-2">
@@ -437,7 +464,7 @@ export const ProjectMembersPage = () => {
         </Card>
 
         <Card
-          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+          className="rounded-3xl! border-slate-200! shadow-surface!"
           styles={{ body: { padding: "20px" } }}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -472,7 +499,7 @@ export const ProjectMembersPage = () => {
                 return (
                   <article
                     key={member.userId}
-                    className="flex flex-col gap-4 rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4 lg:flex-row lg:items-center lg:justify-between"
+                    className="flex flex-col gap-4 rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4 lg:flex-row lg:items-center lg:justify-between"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -511,7 +538,7 @@ export const ProjectMembersPage = () => {
                           },
                           { value: "admin", label: PROJECT_ROLE_LABELS.admin },
                         ]}
-                        className="min-w-[120px]"
+                        className="min-w-30"
                       />
 
                       <Popconfirm

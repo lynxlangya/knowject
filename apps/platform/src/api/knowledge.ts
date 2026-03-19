@@ -117,6 +117,12 @@ export interface KnowledgeDiagnosticsResponse {
     embeddingProvider: string | null;
     chromaReachable: boolean | null;
     errorMessage: string | null;
+    expected: {
+      supportedFormats: string[];
+      chunkSize: number;
+      chunkOverlap: number;
+      embeddingProvider: string;
+    };
   };
   documents: KnowledgeDiagnosticsDocumentResponse[];
 }

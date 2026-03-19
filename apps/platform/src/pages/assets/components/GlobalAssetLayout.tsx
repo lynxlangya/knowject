@@ -7,6 +7,19 @@ export interface GlobalAssetSummaryItem {
   hint?: ReactNode;
 }
 
+interface GlobalAssetSidebarFilterItemProps {
+  active?: boolean;
+  label: ReactNode;
+  count?: ReactNode;
+  onClick: () => void;
+  ariaPressed?: boolean;
+}
+
+interface GlobalAssetMetaPillProps {
+  children: ReactNode;
+  className?: string;
+}
+
 interface GlobalAssetPageHeaderProps {
   title: string;
   subtitle: string;
@@ -43,11 +56,13 @@ export const GLOBAL_ASSET_PAGE_CLASS_NAME =
 export const GLOBAL_ASSET_CONTENT_GRID_CLASS_NAME =
   'grid min-h-0 flex-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]';
 export const GLOBAL_ASSET_HEADER_CARD_CLASS_NAME =
-  'shrink-0 overflow-hidden rounded-[28px]';
+  'shrink-0 overflow-hidden rounded-hero';
 export const GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME =
-  'rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!';
+  'rounded-3xl! border-slate-200! shadow-surface!';
 export const GLOBAL_ASSET_SUMMARY_CARD_CLASS_NAME =
-  'min-w-[180px] flex-1 rounded-[20px] border px-4 py-4';
+  'min-w-[180px] flex-1 rounded-card border px-4 py-4';
+const GLOBAL_ASSET_META_PILL_CLASS_NAME =
+  'inline-flex items-center rounded-full border px-2.5 py-1 text-caption font-medium';
 
 const GLOBAL_ASSET_HEADER_CARD_STYLE: CSSProperties = {
   borderRadius: 28,
@@ -102,7 +117,7 @@ export const GlobalAssetPageHeader = ({
               className={GLOBAL_ASSET_SUMMARY_CARD_CLASS_NAME}
               style={GLOBAL_ASSET_SUMMARY_CARD_STYLE}
             >
-              <Typography.Text className="text-[13px] font-medium text-slate-500!">
+              <Typography.Text className="text-label font-medium text-slate-500!">
                 {item.label}
               </Typography.Text>
               <Typography.Title
@@ -148,7 +163,7 @@ export const GlobalAssetSidebar = ({
 }: GlobalAssetSidebarProps) => {
   return (
     <Card
-      className="h-full min-h-0 rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+      className="h-full min-h-0 rounded-3xl! border-slate-200! shadow-surface!"
       styles={{
         body: {
           padding: '20px',
@@ -197,7 +212,7 @@ export const GlobalAssetSidebarItem = ({
       type="button"
       aria-pressed={ariaPressed ?? active}
       onClick={onClick}
-      className={`w-full rounded-[16px] border px-3 py-2.5 text-left transition ${
+      className={`w-full rounded-2xl border px-3 py-2.5 text-left transition ${
         active
           ? 'border-emerald-200 bg-emerald-50/70'
           : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white'
@@ -205,5 +220,51 @@ export const GlobalAssetSidebarItem = ({
     >
       {children}
     </button>
+  );
+};
+
+export const GlobalAssetSidebarFilterItem = ({
+  active = false,
+  label,
+  count,
+  onClick,
+  ariaPressed,
+}: GlobalAssetSidebarFilterItemProps) => {
+  return (
+    <GlobalAssetSidebarItem
+      active={active}
+      onClick={onClick}
+      ariaPressed={ariaPressed}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <Typography.Text
+          className={`text-sm font-medium ${
+            active ? 'text-slate-900!' : 'text-slate-600!'
+          }`}
+        >
+          {label}
+        </Typography.Text>
+        {count ? (
+          <Typography.Text className="text-xs text-slate-400">
+            {count}
+          </Typography.Text>
+        ) : null}
+      </div>
+    </GlobalAssetSidebarItem>
+  );
+};
+
+export const GlobalAssetMetaPill = ({
+  children,
+  className,
+}: GlobalAssetMetaPillProps) => {
+  return (
+    <span
+      className={[GLOBAL_ASSET_META_PILL_CLASS_NAME, className]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {children}
+    </span>
   );
 };

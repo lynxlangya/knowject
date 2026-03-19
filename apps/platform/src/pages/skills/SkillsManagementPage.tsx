@@ -42,13 +42,18 @@ import {
 } from '@api/skills';
 import {
   GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME,
+  GlobalAssetMetaPill,
   GlobalAssetPageHeader,
   GlobalAssetPageLayout,
   GlobalAssetSidebar,
-  GlobalAssetSidebarItem,
+  GlobalAssetSidebarFilterItem,
   GlobalAssetSidebarSection,
   type GlobalAssetSummaryItem,
 } from '@pages/assets/components/GlobalAssetLayout';
+import {
+  createGlobalAssetSummaryItem,
+  formatGlobalAssetUpdatedAt,
+} from '@pages/assets/components/globalAsset.shared';
 import {
   buildSkillMarkdownTemplate,
   parseSkillMarkdownPreview,
@@ -65,8 +70,6 @@ type EditorMode = 'create' | 'edit' | null;
 type ImportMode = 'github' | 'url';
 
 const SKILLS_PAGE_SUBTITLE = '让 Skill 成为可治理、可复用、可发布的全局方法资产';
-const META_PILL_CLASS =
-  'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium';
 const editorTabs = [
   { key: 'editor', label: '编辑器' },
   { key: 'preview', label: '预览' },
@@ -75,13 +78,6 @@ const lifecycleOptions = [
   { value: 'draft', label: 'draft · 草稿' },
   { value: 'published', label: 'published · 已发布' },
 ] satisfies Array<{ value: SkillLifecycleStatus; label: string }>;
-
-const updatedAtFormatter = new Intl.DateTimeFormat('zh-CN', {
-  month: 'numeric',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
 
 const SOURCE_META: Record<
   SkillSource,
@@ -173,32 +169,30 @@ const buildSkillSummaryItems = (
   const importedCount = items.filter((item) => item.source === 'imported').length;
 
   return [
-    {
-      label: '技能总数',
-      value: `${items.length} 个`,
-      hint: '当前纳入目录治理的 Skill 资产。',
-    },
-    {
-      label: '已发布',
-      value: `${publishedCount} 个`,
-      hint:
-        draftCount === 0
-          ? '当前没有待整理的草稿。'
-          : `${draftCount} 个仍处于草稿阶段。`,
-    },
-    {
-      label: '已接服务',
-      value: `${availableCount} 个`,
-      hint:
-        contractOnlyCount === 0
-          ? '当前全部 Skill 都已接入运行时。'
-          : `${contractOnlyCount} 个仍是契约预留。`,
-    },
-    {
-      label: '公网导入',
-      value: `${importedCount} 个`,
-      hint: '来自 GitHub 或 URL 的外部 Skill。',
-    },
+    createGlobalAssetSummaryItem(
+      '技能总数',
+      `${items.length} 个`,
+      '当前纳入目录治理的 Skill 资产。',
+    ),
+    createGlobalAssetSummaryItem(
+      '已发布',
+      `${publishedCount} 个`,
+      draftCount === 0
+        ? '当前没有待整理的草稿。'
+        : `${draftCount} 个仍处于草稿阶段。`,
+    ),
+    createGlobalAssetSummaryItem(
+      '已接服务',
+      `${availableCount} 个`,
+      contractOnlyCount === 0
+        ? '当前全部 Skill 都已接入运行时。'
+        : `${contractOnlyCount} 个仍是契约预留。`,
+    ),
+    createGlobalAssetSummaryItem(
+      '公网导入',
+      `${importedCount} 个`,
+      '来自 GitHub 或 URL 的外部 Skill。',
+    ),
   ];
 };
 
@@ -284,8 +278,8 @@ const renderMarkdownPreviewContent = (markdown: string) => {
         />
       ) : null}
 
-      <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 p-5">
-        <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+      <div className="rounded-card-lg border border-slate-200 bg-slate-50/80 p-5">
+        <Typography.Text className="text-caption font-semibold uppercase tracking-[0.16em] text-slate-400">
           SKILL Preview
         </Typography.Text>
         <Typography.Title level={4} className="mb-0! mt-3 text-slate-900!">
@@ -297,10 +291,10 @@ const renderMarkdownPreviewContent = (markdown: string) => {
       </div>
 
       <Card
-        className="rounded-[22px]! border-slate-200!"
+        className="rounded-card-lg! border-slate-200!"
         styles={{ body: { padding: 0 } }}
       >
-        <pre className="max-h-[340px] overflow-auto whitespace-pre-wrap px-5 py-5 text-[13px] leading-6 text-slate-600">
+        <pre className="max-h-85 overflow-auto whitespace-pre-wrap px-5 py-5 text-label leading-6 text-slate-600">
           {preview.body || '这里会显示 frontmatter 之后的正文内容。'}
         </pre>
       </Card>
@@ -644,7 +638,7 @@ export const SkillsManagementPage = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center">
+      <div className="flex min-h-105 items-center justify-center">
         <Spin size="large" />
       </div>
     );
@@ -699,28 +693,15 @@ export const SkillsManagementPage = () => {
           <GlobalAssetSidebar>
             <GlobalAssetSidebarSection>
               {filterGroups.map((group) => (
-                <GlobalAssetSidebarItem
+                <GlobalAssetSidebarFilterItem
                   key={group.key}
                   active={selectedFilter === group.key}
+                  label={group.label}
+                  count={group.count}
                   onClick={() => {
                     setSelectedFilter(group.key);
                   }}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <Typography.Text
-                      className={`text-sm font-medium ${
-                        selectedFilter === group.key
-                          ? 'text-slate-900!'
-                          : 'text-slate-600!'
-                      }`}
-                    >
-                      {group.label}
-                    </Typography.Text>
-                    <Typography.Text className="text-xs text-slate-400">
-                      {group.count}
-                    </Typography.Text>
-                  </div>
-                </GlobalAssetSidebarItem>
+                />
               ))}
             </GlobalAssetSidebarSection>
           </GlobalAssetSidebar>
@@ -753,21 +734,17 @@ export const SkillsManagementPage = () => {
               return (
                 <article
                   key={skill.id}
-                  className={`group flex h-full flex-col rounded-[26px] border border-slate-200 bg-gradient-to-br ${sourceMeta.cardTintClass} p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]`}
+                  className={`group flex h-full flex-col rounded-shell border border-slate-200 bg-linear-to-br ${sourceMeta.cardTintClass} p-5 shadow-card`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`${META_PILL_CLASS} ${sourceMeta.accentClass}`}
-                        >
+                        <GlobalAssetMetaPill className={sourceMeta.accentClass}>
                           {sourceMeta.label}
-                        </span>
-                        <span
-                          className={`${META_PILL_CLASS} ${statusMeta.accentClass}`}
-                        >
+                        </GlobalAssetMetaPill>
+                        <GlobalAssetMetaPill className={statusMeta.accentClass}>
                           {statusMeta.label}
-                        </span>
+                        </GlobalAssetMetaPill>
                       </div>
 
                       <div className="space-y-3">
@@ -775,7 +752,7 @@ export const SkillsManagementPage = () => {
                           {skill.name}
                         </Typography.Title>
                         <Typography.Paragraph
-                          className="mb-0! min-h-[48px] text-sm! leading-6! text-slate-600!"
+                          className="mb-0! min-h-12 text-sm! leading-6! text-slate-600!"
                           ellipsis={{ rows: 2, tooltip: skill.description }}
                         >
                           {skill.description}
@@ -811,7 +788,7 @@ export const SkillsManagementPage = () => {
 
                   <div className="mt-auto pt-5">
                     <div className="border-t border-slate-200/80 pt-4 text-xs text-slate-400">
-                      更新于 {updatedAtFormatter.format(new Date(skill.updatedAt))}
+                      更新于 {formatGlobalAssetUpdatedAt(skill.updatedAt)}
                     </div>
                   </div>
                 </article>
@@ -835,7 +812,7 @@ export const SkillsManagementPage = () => {
         cancelText="取消"
       >
         {editorLoading ? (
-          <div className="flex min-h-[320px] items-center justify-center">
+          <div className="flex min-h-80 items-center justify-center">
             <Spin />
           </div>
         ) : (
@@ -1020,18 +997,16 @@ export const SkillsManagementPage = () => {
           </div>
 
           {importPreview ? (
-            <div className="space-y-4 rounded-[22px] border border-slate-200 bg-slate-50/70 p-5">
+            <div className="space-y-4 rounded-card-lg border border-slate-200 bg-slate-50/70 p-5">
               <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`${META_PILL_CLASS} ${SOURCE_META.imported.accentClass}`}
-                >
+                <GlobalAssetMetaPill className={SOURCE_META.imported.accentClass}>
                   公网导入
-                </span>
-                <span
-                  className={`${META_PILL_CLASS} ${LIFECYCLE_STATUS_META.draft.accentClass}`}
+                </GlobalAssetMetaPill>
+                <GlobalAssetMetaPill
+                  className={LIFECYCLE_STATUS_META.draft.accentClass}
                 >
                   草稿
-                </span>
+                </GlobalAssetMetaPill>
               </div>
 
               <div>
@@ -1043,8 +1018,8 @@ export const SkillsManagementPage = () => {
                 </Typography.Paragraph>
               </div>
 
-              <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
-                <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              <div className="rounded-panel border border-slate-200 bg-white px-4 py-4">
+                <Typography.Text className="text-caption font-semibold uppercase tracking-[0.14em] text-slate-400">
                   来源信息
                 </Typography.Text>
                 <Typography.Paragraph className="mb-0! mt-2 break-all text-sm! text-slate-500!">
@@ -1053,8 +1028,8 @@ export const SkillsManagementPage = () => {
                 </Typography.Paragraph>
               </div>
 
-              <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
-                <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              <div className="rounded-panel border border-slate-200 bg-white px-4 py-4">
+                <Typography.Text className="text-caption font-semibold uppercase tracking-[0.14em] text-slate-400">
                   Bundle 文件
                 </Typography.Text>
                 <div className="mt-3 flex flex-wrap gap-2">

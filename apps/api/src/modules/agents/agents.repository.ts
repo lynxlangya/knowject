@@ -1,17 +1,8 @@
-import { ObjectId, type Collection, type WithId } from 'mongodb';
-import type { MongoDatabaseManager } from '@db/mongo.js';
-import { AGENTS_COLLECTION_NAME } from './agents.shared.js';
-import type { AgentDocument } from './agents.types.js';
-
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
-
-const toObjectId = (value: string): ObjectId | null => {
-  if (!OBJECT_ID_REGEX.test(value)) {
-    return null;
-  }
-
-  return new ObjectId(value);
-};
+import { type Collection, type WithId } from "mongodb";
+import type { MongoDatabaseManager } from "@db/mongo.js";
+import { toObjectId } from "@lib/mongo-id.js";
+import { AGENTS_COLLECTION_NAME } from "./agents.shared.js";
+import type { AgentDocument } from "./agents.types.js";
 
 export class AgentsRepository {
   private agentIndexesEnsured = false;
@@ -19,8 +10,8 @@ export class AgentsRepository {
 
   constructor(private readonly mongo: MongoDatabaseManager) {}
 
-  getPrimaryDataStore(): 'mongodb' {
-    return 'mongodb';
+  getPrimaryDataStore(): "mongodb" {
+    return "mongodb";
   }
 
   async listAgents(): Promise<WithId<AgentDocument>[]> {
@@ -51,7 +42,7 @@ export class AgentsRepository {
   }
 
   async createAgent(
-    document: Omit<AgentDocument, '_id'>,
+    document: Omit<AgentDocument, "_id">,
   ): Promise<WithId<AgentDocument>> {
     const collection = await this.getAgentsCollection();
     const result = await collection.insertOne(document);
@@ -67,13 +58,13 @@ export class AgentsRepository {
     patch: Partial<
       Pick<
         AgentDocument,
-        | 'name'
-        | 'description'
-        | 'systemPrompt'
-        | 'boundSkillIds'
-        | 'boundKnowledgeIds'
-        | 'status'
-        | 'updatedAt'
+        | "name"
+        | "description"
+        | "systemPrompt"
+        | "boundSkillIds"
+        | "boundKnowledgeIds"
+        | "status"
+        | "updatedAt"
       >
     >,
   ): Promise<WithId<AgentDocument> | null> {
@@ -89,7 +80,7 @@ export class AgentsRepository {
         $set: patch,
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
   }
@@ -123,13 +114,19 @@ export class AgentsRepository {
 
     if (!this.ensureAgentIndexesPromise) {
       this.ensureAgentIndexesPromise = Promise.all([
-        collection.createIndex({ name: 1 }, { name: 'agents_name' }),
-        collection.createIndex({ createdBy: 1 }, { name: 'agents_created_by' }),
-        collection.createIndex({ updatedAt: -1 }, { name: 'agents_updated_at_desc' }),
-        collection.createIndex({ boundSkillIds: 1 }, { name: 'agents_bound_skill_ids' }),
+        collection.createIndex({ name: 1 }, { name: "agents_name" }),
+        collection.createIndex({ createdBy: 1 }, { name: "agents_created_by" }),
+        collection.createIndex(
+          { updatedAt: -1 },
+          { name: "agents_updated_at_desc" },
+        ),
+        collection.createIndex(
+          { boundSkillIds: 1 },
+          { name: "agents_bound_skill_ids" },
+        ),
         collection.createIndex(
           { status: 1, updatedAt: -1 },
-          { name: 'agents_status_updated_at_desc' },
+          { name: "agents_status_updated_at_desc" },
         ),
       ])
         .then(() => {

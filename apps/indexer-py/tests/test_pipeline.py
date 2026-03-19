@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from app.domain.indexing import pipeline
+from app.schemas.indexing import DeleteChunksRequestPayload, IndexDocumentRequestPayload
 
 
 class BuildChunksTest(unittest.TestCase):
@@ -172,9 +173,9 @@ class ProcessDocumentTest(unittest.TestCase):
         )
         create_embeddings = Mock(return_value=[[0.1]])
 
-        with patch.object(pipeline, "parse_request", return_value=request), patch.object(
-            pipeline, "parse_document_text", return_value="demo"
-        ), patch.object(pipeline, "clean_text", return_value="demo"), patch.object(
+        with patch.object(pipeline, "parse_document_text", return_value="demo"), patch.object(
+            pipeline, "clean_text", return_value="demo"
+        ), patch.object(
             pipeline, "build_chunks", return_value=["demo chunk"]
         ), patch.object(
             pipeline,
@@ -194,28 +195,27 @@ class ProcessDocumentTest(unittest.TestCase):
             pipeline, "create_embeddings", create_embeddings
         ):
             with self.assertRaisesRegex(pipeline.IndexerError, "Chroma down"):
-                pipeline.process_document({})
+                pipeline.process_document(request)
 
         create_embeddings.assert_not_called()
 
-    def test_parse_request_prefers_explicit_collection_name(self):
-        request = pipeline.parse_request(
-            {
-                "knowledgeId": "knowledge-1",
-                "documentId": "document-1",
-                "sourceType": "global_docs",
-                "collectionName": "proj_project-1_docs",
-                "fileName": "demo.md",
-                "mimeType": "text/markdown",
-                "storagePath": "/tmp/demo.md",
-                "documentVersionHash": "hash-1",
-            }
+    def test_to_domain_request_prefers_explicit_collection_name(self):
+        request = IndexDocumentRequestPayload(
+            knowledge_id="knowledge-1",
+            document_id="document-1",
+            source_type="global_docs",
+            collection_name="proj_project-1_docs",
+            file_name="demo.md",
+            mime_type="text/markdown",
+            storage_path="/tmp/demo.md",
+            document_version_hash="hash-1",
         )
+        domain_request = request.to_domain_request()
 
-        self.assertEqual(request.collection_name, "proj_project-1_docs")
+        self.assertEqual(domain_request.collection_name, "proj_project-1_docs")
 
-    def test_parse_request_accepts_request_level_overrides(self):
-        request = pipeline.parse_request(
+    def test_to_domain_request_accepts_request_level_overrides(self):
+        request = IndexDocumentRequestPayload.model_validate(
             {
                 "knowledgeId": "knowledge-1",
                 "documentId": "document-1",
@@ -238,19 +238,25 @@ class ProcessDocumentTest(unittest.TestCase):
                 },
             }
         )
+        domain_request = request.to_domain_request()
 
-        self.assertEqual(request.embedding_config.provider, "custom")
-        self.assertEqual(request.embedding_config.api_key, "db-key")
-        self.assertEqual(request.embedding_config.base_url, "https://embedding.example.com/v1")
-        self.assertEqual(request.embedding_config.model, "text-embedding-custom")
-        self.assertEqual(request.indexing_config.chunk_size, 860)
-        self.assertEqual(request.indexing_config.chunk_overlap, 120)
-        self.assertEqual(request.indexing_config.supported_types, ("md",))
-        self.assertEqual(request.indexing_config.indexer_timeout_ms, 45000)
+        self.assertEqual(domain_request.embedding_config.provider, "custom")
+        self.assertEqual(domain_request.embedding_config.api_key, "db-key")
+        self.assertEqual(
+            domain_request.embedding_config.base_url,
+            "https://embedding.example.com/v1",
+        )
+        self.assertEqual(domain_request.embedding_config.model, "text-embedding-custom")
+        self.assertEqual(domain_request.indexing_config.chunk_size, 860)
+        self.assertEqual(domain_request.indexing_config.chunk_overlap, 120)
+        self.assertEqual(domain_request.indexing_config.supported_types, ("md",))
+        self.assertEqual(domain_request.indexing_config.indexer_timeout_ms, 45000)
 
     def test_process_document_uses_request_level_overrides(self):
         build_chunks = Mock(return_value=["demo chunk"])
         create_embeddings = Mock(return_value=[[0.1]])
+        delete_document_chunks = Mock(return_value=None)
+        upsert_chunk_records = Mock(return_value=None)
 
         with patch.object(
             pipeline,
@@ -285,13 +291,13 @@ class ProcessDocumentTest(unittest.TestCase):
         ), patch.object(
             pipeline,
             "delete_document_chunks",
-            return_value=None,
+            delete_document_chunks,
         ), patch.object(
             pipeline,
             "upsert_chunk_records",
-            return_value=None,
+            upsert_chunk_records,
         ):
-            pipeline.process_document(
+            request = IndexDocumentRequestPayload.model_validate(
                 {
                     "knowledgeId": "knowledge-1",
                     "documentId": "document-1",
@@ -313,6 +319,9 @@ class ProcessDocumentTest(unittest.TestCase):
                         "indexerTimeoutMs": 45000,
                     },
                 }
+            ).to_domain_request()
+            pipeline.process_document(
+                request
             )
 
         build_chunks.assert_called_once_with("demo", chunk_size=860, overlap=120)
@@ -327,31 +336,37 @@ class ProcessDocumentTest(unittest.TestCase):
                 model="text-embedding-custom",
             ),
         )
+        delete_document_chunks.assert_called_once_with(
+            "global_docs",
+            "document-1",
+        )
+        upsert_chunk_records.assert_called_once_with(
+            "global_docs",
+            [
+                pipeline.ChunkRecord(
+                    chunk_id="document-1:0",
+                    text="demo chunk",
+                    metadata={},
+                )
+            ],
+            [[0.1]],
+        )
 
 
 class DeleteChunksTest(unittest.TestCase):
     def test_delete_document_vectors_uses_document_selector(self):
-        with patch.object(
-            pipeline,
-            "find_collection",
-            return_value={"id": "collection-1", "name": "global_docs"},
-        ), patch.object(pipeline, "request_json", return_value={}) as request_json:
+        client = Mock()
+
+        with patch.object(pipeline, "get_chroma_client", return_value=client):
+            request = DeleteChunksRequestPayload(collection_name="global_docs").to_domain_request()
             response = pipeline.delete_document_vectors(
                 "document-1",
-                {
-                    "collectionName": "global_docs",
-                },
+                request,
             )
 
-        request_json.assert_called_once_with(
-            pipeline.build_chroma_database_url("/collections/collection-1/delete"),
-            method="POST",
-            timeout_ms=pipeline.DEFAULT_CHROMA_TIMEOUT_MS,
-            payload={
-                "where": {
-                    "documentId": "document-1",
-                }
-            },
+        client.delete_chunks_by_where.assert_called_once_with(
+            "global_docs",
+            {"documentId": "document-1"},
             error_prefix="Chroma 文档向量删除失败",
         )
         self.assertEqual(
@@ -364,19 +379,20 @@ class DeleteChunksTest(unittest.TestCase):
         )
 
     def test_delete_knowledge_vectors_noops_when_collection_is_missing(self):
-        with patch.object(
-            pipeline,
-            "find_collection",
-            return_value=None,
-        ), patch.object(pipeline, "request_json") as request_json:
+        client = Mock()
+
+        with patch.object(pipeline, "get_chroma_client", return_value=client):
+            request = DeleteChunksRequestPayload(collection_name="global_docs").to_domain_request()
             response = pipeline.delete_knowledge_vectors(
                 "knowledge-1",
-                {
-                    "collectionName": "global_docs",
-                },
+                request,
             )
 
-        request_json.assert_not_called()
+        client.delete_chunks_by_where.assert_called_once_with(
+            "global_docs",
+            {"knowledgeId": "knowledge-1"},
+            error_prefix="Chroma 知识库向量删除失败",
+        )
         self.assertEqual(
             response,
             {

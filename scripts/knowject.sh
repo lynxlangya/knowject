@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LIB_DIR="$ROOT_DIR/scripts/lib"
 HOST_ENV_FILE="$ROOT_DIR/.env.local"
 HOST_ENV_EXAMPLE="$ROOT_DIR/.env.example"
 LOCAL_ENV_FILE="$ROOT_DIR/.env.docker.local"
@@ -13,296 +14,15 @@ JWT_SECRET_FILE="$SECRETS_DIR/jwt_secret.txt"
 MONGO_ROOT_PASSWORD_FILE="$SECRETS_DIR/mongo_root_password.txt"
 MONGO_APP_PASSWORD_FILE="$SECRETS_DIR/mongo_app_password.txt"
 SETTINGS_ENCRYPTION_KEY_FILE="$SECRETS_DIR/settings_encryption_key.txt"
+DOCKER_MONGODB_URI_FILE="$SECRETS_DIR/mongodb_uri.txt"
 HOST_MONGO_URI_FILE="$SECRETS_DIR/mongodb_uri.local.txt"
 
 cd "$ROOT_DIR"
 
-info() {
-  printf '[knowject] %s\n' "$*"
-}
-
-fail() {
-  printf '[knowject] %s\n' "$*" >&2
-  exit 1
-}
-
-run() {
-  info "执行: $*"
-  "$@"
-}
-
-ensure_command() {
-  command -v "$1" >/dev/null 2>&1 || fail "缺少命令：$1"
-}
-
-ensure_file_from_example() {
-  local target_file="$1"
-  local example_file="$2"
-
-  if [[ -f "$target_file" ]]; then
-    return
-  fi
-
-  cp "$example_file" "$target_file"
-  info "已创建 $(basename "$target_file")，请按需修改其中配置"
-}
-
-ensure_host_env() {
-  ensure_file_from_example "$HOST_ENV_FILE" "$HOST_ENV_EXAMPLE"
-}
-
-read_env_value_from_file() {
-  local file_path="$1"
-  local key="$2"
-  local default_value="${3:-}"
-  local line
-
-  line="$(grep -E "^${key}=" "$file_path" | tail -n 1 || true)"
-
-  if [[ -z "$line" ]]; then
-    printf '%s' "$default_value"
-    return
-  fi
-
-  printf '%s' "${line#*=}"
-}
-
-get_local_web_port() {
-  ensure_local_docker_env
-  read_env_value_from_file "$LOCAL_ENV_FILE" "WEB_PORT" "8080"
-}
-
-get_local_api_published_port() {
-  ensure_local_docker_env
-  read_env_value_from_file "$LOCAL_ENV_FILE" "API_PUBLISHED_PORT" "3001"
-}
-
-get_local_mongo_published_port() {
-  ensure_local_docker_env
-  read_env_value_from_file "$LOCAL_ENV_FILE" "MONGO_PUBLISHED_PORT" "27017"
-}
-
-get_local_chroma_published_port() {
-  ensure_local_docker_env
-  read_env_value_from_file "$LOCAL_ENV_FILE" "CHROMA_PUBLISHED_PORT" "8000"
-}
-
-get_local_chroma_heartbeat_path() {
-  ensure_local_docker_env
-  read_env_value_from_file "$LOCAL_ENV_FILE" "CHROMA_HEARTBEAT_PATH" "/api/v2/heartbeat"
-}
-
-get_host_api_port() {
-  ensure_host_env
-  read_env_value_from_file "$HOST_ENV_FILE" "PORT" "$(get_local_api_published_port)"
-}
-
-get_host_indexer_port() {
-  ensure_host_env
-  read_env_value_from_file "$HOST_ENV_FILE" "KNOWLEDGE_INDEXER_PORT" "8001"
-}
-
-upsert_env_key() {
-  local file_path="$1"
-  local key="$2"
-  local value="$3"
-  local tmp_file
-
-  tmp_file="$(mktemp)"
-
-  if [[ -f "$file_path" ]]; then
-    awk -F= -v key="$key" '$1 != key { print }' "$file_path" >"$tmp_file"
-  fi
-
-  printf '%s=%s\n' "$key" "$value" >>"$tmp_file"
-  mv "$tmp_file" "$file_path"
-}
-
-remove_env_key() {
-  local file_path="$1"
-  local key="$2"
-  local tmp_file
-
-  [[ -f "$file_path" ]] || return
-
-  tmp_file="$(mktemp)"
-  awk -F= -v key="$key" '$1 != key { print }' "$file_path" >"$tmp_file"
-  mv "$tmp_file" "$file_path"
-}
-
-urlencode() {
-  node -p "encodeURIComponent(process.argv[1])" "$1"
-}
-
-sync_missing_env_keys() {
-  local target_file="$1"
-  local example_file="$2"
-
-  require_file "$target_file"
-  require_file "$example_file"
-
-  while IFS= read -r line; do
-    [[ -n "$line" ]] || continue
-    [[ "$line" =~ ^# ]] && continue
-
-    local key="${line%%=*}"
-    [[ -n "$key" ]] || continue
-
-    if ! grep -q "^${key}=" "$target_file"; then
-      printf '\n%s\n' "$line" >>"$target_file"
-      info "已补充 $(basename "$target_file") 缺失配置：$key"
-    fi
-  done <"$example_file"
-}
-
-ensure_local_docker_env() {
-  ensure_file_from_example "$LOCAL_ENV_FILE" "$LOCAL_ENV_EXAMPLE"
-  sync_missing_env_keys "$LOCAL_ENV_FILE" "$LOCAL_ENV_EXAMPLE"
-}
-
-ensure_production_docker_env() {
-  ensure_file_from_example "$PRODUCTION_ENV_FILE" "$PRODUCTION_ENV_EXAMPLE"
-  sync_missing_env_keys "$PRODUCTION_ENV_FILE" "$PRODUCTION_ENV_EXAMPLE"
-}
-
-ensure_local_secrets() {
-  if [[ -s "$JWT_SECRET_FILE" && -s "$MONGO_ROOT_PASSWORD_FILE" && -s "$MONGO_APP_PASSWORD_FILE" && -s "$SETTINGS_ENCRYPTION_KEY_FILE" ]]; then
-    return
-  fi
-
-  ensure_command openssl
-  run bash "$ROOT_DIR/docker/scripts/generate-local-secrets.sh"
-}
-
-require_file() {
-  local file_path="$1"
-  [[ -f "$file_path" ]] || fail "缺少文件：$file_path"
-}
-
-require_secret_files() {
-  require_file "$JWT_SECRET_FILE"
-  require_file "$MONGO_ROOT_PASSWORD_FILE"
-  require_file "$MONGO_APP_PASSWORD_FILE"
-  require_file "$SETTINGS_ENCRYPTION_KEY_FILE"
-}
-
-sync_host_env_with_local_docker() {
-  local api_port mongo_port chroma_port mongo_db mongo_auth_source mongo_user mongo_password jwt_secret mongo_uri settings_encryption_key
-
-  ensure_host_env
-  ensure_local_docker_env
-  ensure_local_secrets
-
-  api_port="$(read_env_value_from_file "$LOCAL_ENV_FILE" "API_PUBLISHED_PORT" "3001")"
-  mongo_port="$(read_env_value_from_file "$LOCAL_ENV_FILE" "MONGO_PUBLISHED_PORT" "27017")"
-  chroma_port="$(read_env_value_from_file "$LOCAL_ENV_FILE" "CHROMA_PUBLISHED_PORT" "8000")"
-  mongo_db="$(read_env_value_from_file "$LOCAL_ENV_FILE" "MONGO_APP_DATABASE" "knowject")"
-  mongo_auth_source="$(read_env_value_from_file "$LOCAL_ENV_FILE" "MONGO_AUTH_SOURCE" "$mongo_db")"
-  mongo_user="$(read_env_value_from_file "$LOCAL_ENV_FILE" "MONGO_APP_USERNAME" "knowject_app")"
-  mongo_password="$(tr -d '\r' <"$MONGO_APP_PASSWORD_FILE" | sed -e 's/[[:space:]]*$//')"
-  jwt_secret="$(tr -d '\r' <"$JWT_SECRET_FILE" | sed -e 's/[[:space:]]*$//')"
-  settings_encryption_key="$(tr -d '\r' <"$SETTINGS_ENCRYPTION_KEY_FILE" | sed -e 's/[[:space:]]*$//')"
-  mongo_uri="mongodb://$(urlencode "$mongo_user"):$(urlencode "$mongo_password")@127.0.0.1:${mongo_port}/${mongo_db}?authSource=$(urlencode "$mongo_auth_source")"
-
-  printf '%s\n' "$mongo_uri" >"$HOST_MONGO_URI_FILE"
-  chmod 600 "$HOST_MONGO_URI_FILE"
-
-  remove_env_key "$HOST_ENV_FILE" "MONGODB_URI"
-  remove_env_key "$HOST_ENV_FILE" "JWT_SECRET"
-  remove_env_key "$HOST_ENV_FILE" "SETTINGS_ENCRYPTION_KEY"
-  upsert_env_key "$HOST_ENV_FILE" "PORT" "$api_port"
-  upsert_env_key "$HOST_ENV_FILE" "MONGODB_URI_FILE" "$HOST_MONGO_URI_FILE"
-  upsert_env_key "$HOST_ENV_FILE" "MONGODB_DB_NAME" "$mongo_db"
-  upsert_env_key "$HOST_ENV_FILE" "JWT_SECRET_FILE" "$JWT_SECRET_FILE"
-  upsert_env_key "$HOST_ENV_FILE" "SETTINGS_ENCRYPTION_KEY_FILE" "$SETTINGS_ENCRYPTION_KEY_FILE"
-  upsert_env_key "$HOST_ENV_FILE" "CHROMA_URL" "http://127.0.0.1:${chroma_port}"
-
-  if [[ -n "$jwt_secret" && -n "$settings_encryption_key" ]]; then
-    info "已同步宿主机开发环境到 Docker 本地 secrets"
-  fi
-}
-
-port_is_listening() {
-  local port="$1"
-  lsof -iTCP:"$port" -sTCP:LISTEN -n -P >/dev/null 2>&1
-}
-
-compose_local() {
-  ensure_command docker
-  ensure_local_docker_env
-  ensure_local_secrets
-
-  docker compose \
-    --env-file "$LOCAL_ENV_FILE" \
-    -f "$ROOT_DIR/compose.yml" \
-    -f "$ROOT_DIR/compose.local.yml" \
-    "$@"
-}
-
-local_service_running() {
-  local service_name="$1"
-
-  compose_local ps --services --status running 2>/dev/null | grep -qx "$service_name"
-}
-
-ensure_local_dev_prerequisites() {
-  ensure_command pnpm
-  ensure_command python3
-  ensure_command uv
-  ensure_host_env
-  ensure_local_docker_env
-  ensure_local_secrets
-}
-
-ensure_host_api_port_available() {
-  local api_port
-  api_port="$(get_host_api_port)"
-
-  if local_service_running api; then
-    fail "检测到 Docker 本地 API 正在运行，请先执行 pnpm docker:local:down，再启动宿主机 API 开发。"
-  fi
-
-  if port_is_listening "$api_port"; then
-    fail "端口 ${api_port} 已被占用，请先停止占用进程后再执行 pnpm dev:up 或 pnpm host:api。"
-  fi
-}
-
-ensure_local_stack_port_available() {
-  local service_name="$1"
-  local port="$2"
-  local hint="$3"
-
-  if local_service_running "$service_name"; then
-    return
-  fi
-
-  if port_is_listening "$port"; then
-    fail "端口 ${port} 已被占用，无法启动 Docker 本地 ${service_name}。请先停止占用进程，或改用 ${hint}。"
-  fi
-}
-
-up_local_dependencies() {
-  local mongo_port chroma_port
-  mongo_port="$(get_local_mongo_published_port)"
-  chroma_port="$(get_local_chroma_published_port)"
-
-  ensure_local_stack_port_available mongo "$mongo_port" "pnpm dev:deps:up"
-  ensure_local_stack_port_available chroma "$chroma_port" "pnpm dev:deps:up"
-  info "启动本地依赖：mongo + chroma"
-  compose_local up -d mongo chroma
-}
-
-compose_production() {
-  ensure_command docker
-  require_file "$PRODUCTION_ENV_FILE"
-  require_secret_files
-
-  docker compose \
-    --env-file "$PRODUCTION_ENV_FILE" \
-    -f "$ROOT_DIR/compose.yml" \
-    -f "$ROOT_DIR/compose.production.yml" \
-    "$@"
-}
+source "$LIB_DIR/knowject-common.sh"
+source "$LIB_DIR/knowject-env.sh"
+source "$LIB_DIR/knowject-compose.sh"
+source "$LIB_DIR/knowject-ports.sh"
 
 print_help() {
   cat <<'EOF'
@@ -447,6 +167,7 @@ case "$command_name" in
   docker:local:init)
     ensure_local_docker_env
     ensure_local_secrets
+    sync_local_docker_api_secrets
     info "本地 Docker 环境已就绪：$LOCAL_ENV_FILE"
     ;;
   docker:local:up)
@@ -494,7 +215,8 @@ case "$command_name" in
     ensure_production_docker_env
     mkdir -p "$SECRETS_DIR"
     info "已准备生产环境模板：$PRODUCTION_ENV_FILE"
-    info "请手动写入 ${JWT_SECRET_FILE}、${MONGO_ROOT_PASSWORD_FILE}、${MONGO_APP_PASSWORD_FILE}"
+    info "请手动写入 ${JWT_SECRET_FILE}、${MONGO_ROOT_PASSWORD_FILE}、${MONGO_APP_PASSWORD_FILE}、${SETTINGS_ENCRYPTION_KEY_FILE}"
+    info "后续 docker:prod:config / up 会按生产 env + mongo_app_password 自动派生 ${DOCKER_MONGODB_URI_FILE}"
     ;;
   docker:prod:up)
     info "启动生产 Docker 环境"

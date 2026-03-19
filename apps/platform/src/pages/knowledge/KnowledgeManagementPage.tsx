@@ -2,9 +2,7 @@ import {
   CloudUploadOutlined,
   DatabaseOutlined,
   DeleteOutlined,
-  DownloadOutlined,
   EditOutlined,
-  EyeOutlined,
   FileTextOutlined,
   MoreOutlined,
   PlusOutlined,
@@ -31,49 +29,27 @@ import {
   Tooltip,
   Typography,
 } from "antd";
-import type { ChangeEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { extractApiErrorMessage } from "@api/error";
 import {
   createKnowledge,
   deleteKnowledge,
-  getKnowledgeDiagnostics,
-  getKnowledgeDetail,
   listKnowledge,
-  rebuildKnowledge,
-  rebuildKnowledgeDocument,
   updateKnowledge,
   uploadKnowledgeDocument,
-  deleteKnowledgeDocument,
-  retryKnowledgeDocument,
-  type KnowledgeDiagnosticsResponse,
   type CreateKnowledgeRequest,
-  type KnowledgeDetailResponse,
   type KnowledgeDocumentResponse,
-  type KnowledgeDocumentStatus,
-  type KnowledgeIndexStatus,
   type KnowledgeSourceType,
   type KnowledgeSummaryResponse,
   type UpdateKnowledgeRequest,
 } from "@api/knowledge";
 import { KnowledgeSourcePickerModal } from "./components/KnowledgeSourcePickerModal";
 import { KnowledgeSearchTab } from "./components/KnowledgeSearchTab";
+import { KnowledgeTextInputModal } from "./components/KnowledgeTextInputModal";
 import {
-  KnowledgeTextInputModal,
-  type KnowledgeTextInputValues,
-} from "./components/KnowledgeTextInputModal";
-import {
-  createTextSourceFile,
   DOCUMENT_UPLOAD_ACCEPT,
-  formatKnowledgeSourceFileIssues,
-  formatKnowledgeSourceLargeFileWarning,
-  formatKnowledgeSourceOverflowMessage,
   KNOWLEDGE_UPLOAD_TOOLTIP,
-  prepareKnowledgeSourceFiles,
-  shouldWarnLargeKnowledgeSourceFile,
-  validateKnowledgeSourceFile,
 } from "./knowledgeUpload.shared";
-import type { MenuProps } from "antd";
 import {
   GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME,
   GlobalAssetPageHeader,
@@ -83,31 +59,33 @@ import {
   GlobalAssetSidebarSection,
   type GlobalAssetSummaryItem,
 } from "@pages/assets/components/GlobalAssetLayout";
+import {
+  buildKnowledgeDetailOverviewStats,
+  buildKnowledgeDocumentActionMenuItems,
+  buildKnowledgeRebuildBlockedReason,
+  formatKnowledgeCompactDate,
+  formatKnowledgeDateTime,
+  getKnowledgeInitials,
+  KNOWLEDGE_DOCUMENT_STATUS_META,
+  KNOWLEDGE_INDEX_STATUS_CLASS,
+  KNOWLEDGE_INDEX_STATUS_META,
+  KNOWLEDGE_REBUILD_TOOLTIP,
+  KNOWLEDGE_SOURCE_CLASS,
+  KNOWLEDGE_SOURCE_TYPE_META,
+  patchKnowledgeDetailDocument,
+  pickNextActiveKnowledgeId,
+  queueKnowledgeDocumentForPending,
+  queueKnowledgeForPending,
+  removeKnowledgeDetailDocument,
+} from "./knowledgeDomain.shared";
+import { useKnowledgeDetailState } from "./useKnowledgeDetailState";
+import { useKnowledgeDocumentActions } from "./useKnowledgeDocumentActions";
+import { useKnowledgeUploadFlow } from "./useKnowledgeUploadFlow";
 
 interface KnowledgeFormValues {
   name: string;
   description?: string;
   sourceType: KnowledgeSourceType;
-}
-
-interface KnowledgeSourceMeta {
-  label: string;
-  color: string;
-}
-
-type UploadFlowStep = "picker" | "text";
-
-interface UploadKnowledgeSourceOptions {
-  manageLoading?: boolean;
-  notifySuccess?: boolean;
-  notifyError?: boolean;
-  refreshAfterUpload?: boolean;
-  showLargeFileWarning?: boolean;
-}
-
-interface UploadKnowledgeSourceResult {
-  success: boolean;
-  reason?: string;
 }
 
 const KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY = "knowledge-batch-upload";
@@ -129,198 +107,7 @@ const formatKnowledgeBatchUploadSuccessMessage = (
 
   return `已上传 ${successCount}/${totalCount} 个文件，正在进入索引队列`;
 };
-
-const dateTimeFormatter = new Intl.DateTimeFormat("zh-CN", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
-const compactDateFormatter = new Intl.DateTimeFormat("zh-CN", {
-  month: "numeric",
-  day: "numeric",
-});
-
-const INDEX_STATUS_META: Record<
-  KnowledgeIndexStatus,
-  { label: string; color: string }
-> = {
-  idle: { label: "待索引", color: "default" },
-  pending: { label: "排队中", color: "gold" },
-  processing: { label: "处理中", color: "processing" },
-  completed: { label: "已完成", color: "success" },
-  failed: { label: "失败", color: "error" },
-};
-
-const KNOWLEDGE_INDEX_STATUS_CLASS: Record<KnowledgeIndexStatus, string> = {
-  idle: "border-slate-200 bg-slate-100 text-slate-600",
-  pending: "border-amber-200 bg-amber-50 text-amber-700",
-  processing: "border-sky-200 bg-sky-50 text-sky-700",
-  completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  failed: "border-rose-200 bg-rose-50 text-rose-700",
-};
-
-const DOCUMENT_STATUS_META: Record<
-  KnowledgeDocumentStatus,
-  { label: string; color: string }
-> = {
-  pending: { label: "待处理", color: "gold" },
-  processing: { label: "处理中", color: "processing" },
-  completed: { label: "已完成", color: "success" },
-  failed: { label: "失败", color: "error" },
-};
-
-const SOURCE_TYPE_META: Record<KnowledgeSourceType, KnowledgeSourceMeta> = {
-  global_docs: {
-    label: "全局文档",
-    color: "blue",
-  },
-  global_code: {
-    label: "全局代码",
-    color: "purple",
-  },
-};
-
-const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {
-  global_docs: "border-slate-200 bg-white text-slate-500",
-  global_code: "border-violet-200 bg-violet-50 text-violet-700",
-};
-
-const MAX_POLLING_ATTEMPTS = 20;
-const POLLING_INTERVAL_MS = 1500;
 const KNOWLEDGE_PAGE_SUBTITLE = "统一索引全局文档，供技能与智能体复用";
-const KNOWLEDGE_REBUILD_TOOLTIP = "重新清理并构建当前知识库下的全部文档向量。";
-
-const formatDateTime = (value: string | null | undefined): string => {
-  if (!value) {
-    return "未记录";
-  }
-
-  return dateTimeFormatter.format(new Date(value));
-};
-
-const formatCompactDate = (value: string | null | undefined): string => {
-  if (!value) {
-    return "未记录";
-  }
-
-  return compactDateFormatter.format(new Date(value));
-};
-
-const getKnowledgeInitials = (name: string): string => {
-  const trimmed = name.trim();
-
-  if (!trimmed) {
-    return "知";
-  }
-
-  if (/^[a-z0-9]/i.test(trimmed)) {
-    return trimmed.slice(0, 2).toUpperCase();
-  }
-
-  return trimmed[0] ?? "知";
-};
-
-const pickNextActiveKnowledgeId = (
-  items: KnowledgeSummaryResponse[],
-  preferredId: string | null,
-  currentId: string | null,
-): string | null => {
-  if (preferredId && items.some((item) => item.id === preferredId)) {
-    return preferredId;
-  }
-
-  if (currentId && items.some((item) => item.id === currentId)) {
-    return currentId;
-  }
-
-  return items[0]?.id ?? null;
-};
-
-const hasProcessingDocuments = (
-  knowledge: KnowledgeDetailResponse | null,
-): boolean => {
-  return (
-    knowledge?.documents.some(
-      (document) =>
-        document.status === "pending" || document.status === "processing",
-    ) ?? false
-  );
-};
-
-const resolveKnowledgeIndexStatus = (
-  documents: Array<Pick<KnowledgeDocumentResponse, "status">>,
-): KnowledgeIndexStatus => {
-  if (documents.length === 0) {
-    return "idle";
-  }
-
-  if (documents.some((document) => document.status === "processing")) {
-    return "processing";
-  }
-
-  if (documents.some((document) => document.status === "pending")) {
-    return "pending";
-  }
-
-  if (documents.some((document) => document.status === "failed")) {
-    return "failed";
-  }
-
-  if (documents.every((document) => document.status === "completed")) {
-    return "completed";
-  }
-
-  return "idle";
-};
-
-const patchDocumentInKnowledgeDetail = (
-  knowledge: KnowledgeDetailResponse,
-  documentId: string,
-  patch: Partial<KnowledgeDocumentResponse>,
-): KnowledgeDetailResponse => {
-  const documents = knowledge.documents.map((document) =>
-    document.id === documentId
-      ? {
-          ...document,
-          ...patch,
-        }
-      : document,
-  );
-
-  return {
-    ...knowledge,
-    documents,
-    indexStatus: resolveKnowledgeIndexStatus(documents),
-    updatedAt: new Date().toISOString(),
-  };
-};
-
-const removeDocumentFromKnowledgeDetail = (
-  knowledge: KnowledgeDetailResponse,
-  documentId: string,
-): KnowledgeDetailResponse => {
-  const targetDocument = knowledge.documents.find(
-    (document) => document.id === documentId,
-  );
-  const documents = knowledge.documents.filter(
-    (document) => document.id !== documentId,
-  );
-
-  return {
-    ...knowledge,
-    documents,
-    documentCount: Math.max(
-      knowledge.documentCount - (targetDocument ? 1 : 0),
-      0,
-    ),
-    chunkCount: Math.max(
-      knowledge.chunkCount - (targetDocument?.chunkCount ?? 0),
-      0,
-    ),
-    indexStatus: resolveKnowledgeIndexStatus(documents),
-    updatedAt: new Date().toISOString(),
-  };
-};
 
 const toKnowledgePayload = (
   values: KnowledgeFormValues,
@@ -391,70 +178,6 @@ const buildKnowledgeStats = (
   ];
 };
 
-const buildKnowledgeDetailOverviewStats = (
-  knowledge: KnowledgeDetailResponse,
-) => {
-  return [
-    {
-      label: "文档数量",
-      value: `${knowledge.documentCount}`,
-      emphasis: "number" as const,
-    },
-    {
-      label: "最近更新",
-      value: formatDateTime(knowledge.updatedAt),
-      emphasis: "time" as const,
-    },
-  ];
-};
-
-const queueDocumentForPending = (
-  document: KnowledgeDocumentResponse,
-): KnowledgeDocumentResponse => {
-  return {
-    ...document,
-    status: "pending",
-    errorMessage: null,
-    processedAt: null,
-    updatedAt: new Date().toISOString(),
-  };
-};
-
-const queueKnowledgeForPending = (
-  knowledge: KnowledgeDetailResponse,
-): KnowledgeDetailResponse => {
-  const documents = knowledge.documents.map(queueDocumentForPending);
-
-  return {
-    ...knowledge,
-    documents,
-    indexStatus: resolveKnowledgeIndexStatus(documents),
-    updatedAt: new Date().toISOString(),
-  };
-};
-
-const buildKnowledgeRebuildBlockedReason = (
-  knowledge: KnowledgeDetailResponse | null,
-): string | null => {
-  if (!knowledge) {
-    return "请先选择一个知识库";
-  }
-
-  if (knowledge.documents.length === 0) {
-    return "当前知识库没有可重建文档";
-  }
-
-  if (
-    knowledge.documents.some(
-      (document) =>
-        document.status === "pending" || document.status === "processing",
-    )
-  ) {
-    return "当前仍有文档在排队或处理中，暂不允许整库重建";
-  }
-
-  return null;
-};
 
 export const KnowledgeManagementPage = () => {
   const { message, modal } = App.useApp();
@@ -462,7 +185,6 @@ export const KnowledgeManagementPage = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isFirstLoadRef = useRef(true);
   const preferredActiveIdRef = useRef<string | null>(null);
-  const pollingAttemptsRef = useRef<Record<string, number>>({});
   const [items, setItems] = useState<KnowledgeSummaryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -471,53 +193,48 @@ export const KnowledgeManagementPage = () => {
     null,
   );
   const [activeTabKey, setActiveTabKey] = useState("documents");
-  const [activeKnowledge, setActiveKnowledge] =
-    useState<KnowledgeDetailResponse | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [activeDiagnostics, setActiveDiagnostics] =
-    useState<KnowledgeDiagnosticsResponse | null>(null);
-  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
-  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
   const [listReloadToken, setListReloadToken] = useState(0);
-  const [detailReloadToken, setDetailReloadToken] = useState(0);
-  const [diagnosticsReloadToken, setDiagnosticsReloadToken] = useState(0);
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [modalSubmitting, setModalSubmitting] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadFlowStep, setUploadFlowStep] = useState<UploadFlowStep | null>(
-    null,
-  );
   const [deletingKnowledgeId, setDeletingKnowledgeId] = useState<string | null>(
-    null,
-  );
-  const [retryingDocumentId, setRetryingDocumentId] = useState<string | null>(
-    null,
-  );
-  const [rebuildingDocumentId, setRebuildingDocumentId] = useState<
-    string | null
-  >(null);
-  const [rebuildingKnowledgeId, setRebuildingKnowledgeId] = useState<
-    string | null
-  >(null);
-  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(
     null,
   );
 
   const stats = buildKnowledgeStats(items);
   const activeSummary =
     items.find((knowledge) => knowledge.id === activeKnowledgeId) ?? null;
+  const reloadKnowledgeList = (preferredId?: string | null) => {
+    preferredActiveIdRef.current = preferredId ?? null;
+    setListReloadToken((value) => value + 1);
+  };
+  const {
+    detail: activeKnowledge,
+    setDetail: setActiveKnowledge,
+    detailLoading,
+    detailError,
+    diagnostics: activeDiagnostics,
+    diagnosticsLoading,
+    diagnosticsError,
+    refreshDetail: reloadKnowledgeDetail,
+    refreshDiagnostics: reloadKnowledgeDiagnostics,
+    refreshKnowledgeState,
+    shouldPoll,
+    pollingStopped,
+    resetPollingAttempts,
+  } = useKnowledgeDetailState({
+    knowledgeId: activeKnowledgeId,
+    autoPoll: true,
+    onPollTick: (knowledgeId) => {
+      preferredActiveIdRef.current = knowledgeId;
+      reloadKnowledgeList(knowledgeId);
+    },
+  });
   const activeSourceMeta = activeKnowledge
-    ? SOURCE_TYPE_META[activeKnowledge.sourceType]
+    ? KNOWLEDGE_SOURCE_TYPE_META[activeKnowledge.sourceType]
     : null;
   const activeOverviewStats = activeKnowledge
     ? buildKnowledgeDetailOverviewStats(activeKnowledge)
     : [];
-  const shouldPoll = hasProcessingDocuments(activeKnowledge);
-  const pollingAttempts = activeKnowledgeId
-    ? (pollingAttemptsRef.current[activeKnowledgeId] ?? 0)
-    : 0;
-  const pollingStopped = shouldPoll && pollingAttempts >= MAX_POLLING_ATTEMPTS;
   const knowledgeRebuildBlockedReason =
     buildKnowledgeRebuildBlockedReason(activeKnowledge);
   const activeDiagnosticsDocumentMap = new Map(
@@ -591,162 +308,6 @@ export const KnowledgeManagementPage = () => {
     setActiveTabKey("documents");
   }, [activeKnowledgeId]);
 
-  useEffect(() => {
-    if (!activeKnowledgeId) {
-      setActiveKnowledge(null);
-      setDetailError(null);
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadKnowledgeDetail = async () => {
-      setDetailLoading(true);
-
-      try {
-        const result = await getKnowledgeDetail(activeKnowledgeId);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setActiveKnowledge(result.knowledge);
-        setDetailError(null);
-      } catch (currentError) {
-        if (!isMounted) {
-          return;
-        }
-
-        console.error(
-          "[KnowledgeManagement] 加载知识库详情失败:",
-          currentError,
-        );
-        setActiveKnowledge(null);
-        setDetailError(
-          extractApiErrorMessage(
-            currentError,
-            "加载知识库详情失败，请稍后重试",
-          ),
-        );
-      } finally {
-        if (isMounted) {
-          setDetailLoading(false);
-        }
-      }
-    };
-
-    void loadKnowledgeDetail();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeKnowledgeId, detailReloadToken]);
-
-  useEffect(() => {
-    if (!activeKnowledgeId) {
-      setActiveDiagnostics(null);
-      setDiagnosticsError(null);
-      setDiagnosticsLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadKnowledgeDiagnostics = async () => {
-      setDiagnosticsLoading(true);
-
-      try {
-        const result = await getKnowledgeDiagnostics(activeKnowledgeId);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setActiveDiagnostics(result);
-        setDiagnosticsError(null);
-      } catch (currentError) {
-        if (!isMounted) {
-          return;
-        }
-
-        console.error(
-          "[KnowledgeManagement] 加载知识库诊断失败:",
-          currentError,
-        );
-        setActiveDiagnostics(null);
-        setDiagnosticsError(
-          extractApiErrorMessage(
-            currentError,
-            "加载知识库诊断失败，请稍后重试",
-          ),
-        );
-      } finally {
-        if (isMounted) {
-          setDiagnosticsLoading(false);
-        }
-      }
-    };
-
-    void loadKnowledgeDiagnostics();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeKnowledgeId, diagnosticsReloadToken]);
-
-  useEffect(() => {
-    if (!activeKnowledgeId) {
-      return;
-    }
-
-    if (!shouldPoll) {
-      pollingAttemptsRef.current[activeKnowledgeId] = 0;
-      return;
-    }
-
-    if (detailLoading) {
-      return;
-    }
-
-    const attempts = pollingAttemptsRef.current[activeKnowledgeId] ?? 0;
-
-    if (attempts >= MAX_POLLING_ATTEMPTS) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      pollingAttemptsRef.current[activeKnowledgeId] = attempts + 1;
-      setDetailReloadToken((value) => value + 1);
-      preferredActiveIdRef.current = activeKnowledgeId;
-      setListReloadToken((value) => value + 1);
-    }, POLLING_INTERVAL_MS);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [activeKnowledgeId, detailLoading, shouldPoll]);
-
-  const reloadKnowledgeList = (preferredId?: string | null) => {
-    preferredActiveIdRef.current = preferredId ?? null;
-    setListReloadToken((value) => value + 1);
-  };
-
-  const reloadKnowledgeDetail = () => {
-    setDetailReloadToken((value) => value + 1);
-  };
-
-  const reloadKnowledgeDiagnostics = () => {
-    setDiagnosticsReloadToken((value) => value + 1);
-  };
-
-  const resetPollingAttempts = (knowledgeId?: string | null) => {
-    if (!knowledgeId) {
-      return;
-    }
-
-    pollingAttemptsRef.current[knowledgeId] = 0;
-  };
-
   const openCreateModal = () => {
     form.setFieldsValue({
       name: "",
@@ -775,10 +336,6 @@ export const KnowledgeManagementPage = () => {
     form.resetFields();
   };
 
-  const closeUploadFlow = () => {
-    setUploadFlowStep(null);
-  };
-
   const handleSubmitKnowledge = async (values: KnowledgeFormValues) => {
     setModalSubmitting(true);
 
@@ -788,7 +345,7 @@ export const KnowledgeManagementPage = () => {
           toKnowledgePayload(values, "create") as CreateKnowledgeRequest,
         );
 
-        pollingAttemptsRef.current[result.knowledge.id] = 0;
+        resetPollingAttempts(result.knowledge.id);
         message.success("知识库已创建");
         closeModal();
         reloadKnowledgeList(result.knowledge.id);
@@ -842,9 +399,8 @@ export const KnowledgeManagementPage = () => {
 
       await deleteKnowledge(activeKnowledgeId);
 
-      delete pollingAttemptsRef.current[activeKnowledgeId];
+      resetPollingAttempts(activeKnowledgeId);
       setActiveKnowledge(null);
-      setDetailError(null);
       message.success("知识库已删除");
       reloadKnowledgeList(nextCandidateId);
     } catch (currentError) {
@@ -857,249 +413,8 @@ export const KnowledgeManagementPage = () => {
     }
   };
 
-  const openUploadFlow = () => {
-    if (!activeKnowledge) {
-      message.info("请先选择一个知识库");
-      return;
-    }
-
-    if (activeKnowledge.sourceType !== "global_docs") {
-      message.info("global_code 目前只冻结命名空间，暂不支持真实导入");
-      return;
-    }
-
-    setUploadFlowStep("picker");
-  };
-
-  const uploadKnowledgeSource = async (
-    file: File,
-    options?: UploadKnowledgeSourceOptions,
-  ): Promise<UploadKnowledgeSourceResult> => {
-    const notifyError = options?.notifyError !== false;
-
-    if (!activeKnowledgeId || !activeKnowledge) {
-      const reason = "请先选择一个知识库";
-
-      if (notifyError) {
-        message.info(reason);
-      }
-
-      return {
-        success: false,
-        reason,
-      };
-    }
-
-    if (activeKnowledge.sourceType !== "global_docs") {
-      const reason = "global_code 目前只冻结命名空间，暂不支持真实导入";
-
-      if (notifyError) {
-        message.info(reason);
-      }
-
-      return {
-        success: false,
-        reason,
-      };
-    }
-
-    const validationError = validateKnowledgeSourceFile(file);
-
-    if (validationError) {
-      if (notifyError) {
-        message.error(validationError);
-      }
-
-      return {
-        success: false,
-        reason: validationError,
-      };
-    }
-
-    if (
-      options?.showLargeFileWarning !== false &&
-      shouldWarnLargeKnowledgeSourceFile(file)
-    ) {
-      message.warning("文件超过 20 MB，建议按主题拆分上传，索引更快也更稳");
-    }
-
-    const manageLoading = options?.manageLoading !== false;
-
-    if (manageLoading) {
-      setUploading(true);
-    }
-
-    try {
-      await uploadKnowledgeDocument(activeKnowledgeId, file);
-
-      if (options?.notifySuccess !== false) {
-        message.success("文档已上传，正在进入索引队列");
-      }
-
-      if (options?.refreshAfterUpload !== false) {
-        refreshDocumentStatus(activeKnowledgeId, {
-          reloadDiagnostics: true,
-        });
-      }
-
-      return {
-        success: true,
-      };
-    } catch (currentError) {
-      const errorMessage = extractApiErrorMessage(
-        currentError,
-        "上传文档失败，请稍后重试",
-      );
-
-      console.error("[KnowledgeManagement] 上传文档失败:", currentError);
-
-      if (notifyError) {
-        message.error(errorMessage);
-      }
-
-      return {
-        success: false,
-        reason: errorMessage,
-      };
-    } finally {
-      if (manageLoading) {
-        setUploading(false);
-      }
-    }
-  };
-
   const triggerDocumentUpload = () => {
     fileInputRef.current?.click();
-  };
-
-  const handleSelectedFiles = async (files: File[]) => {
-    if (files.length === 0) {
-      return;
-    }
-
-    const { acceptedFiles, fileIssues, overflowCount, largeFileCount } =
-      prepareKnowledgeSourceFiles(files);
-
-    if (overflowCount > 0) {
-      message.warning(formatKnowledgeSourceOverflowMessage(overflowCount));
-    }
-
-    if (fileIssues.length > 0) {
-      message.warning(
-        `已跳过 ${fileIssues.length} 个文件：${formatKnowledgeSourceFileIssues(fileIssues)}`,
-      );
-    }
-
-    if (acceptedFiles.length === 0) {
-      return;
-    }
-
-    if (largeFileCount > 0) {
-      message.warning(formatKnowledgeSourceLargeFileWarning(largeFileCount));
-    }
-
-    closeUploadFlow();
-
-    if (acceptedFiles.length === 1) {
-      await uploadKnowledgeSource(acceptedFiles[0], {
-        showLargeFileWarning: false,
-      });
-      return;
-    }
-
-    const failedFiles: Array<{ fileName: string; reason: string }> = [];
-    let successCount = 0;
-
-    setUploading(true);
-
-    try {
-      for (const [index, file] of acceptedFiles.entries()) {
-        message.open({
-          key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
-          type: "loading",
-          content: formatKnowledgeBatchUploadProgress(
-            index + 1,
-            acceptedFiles.length,
-          ),
-          duration: 0,
-        });
-
-        const result = await uploadKnowledgeSource(file, {
-          manageLoading: false,
-          notifySuccess: false,
-          notifyError: false,
-          refreshAfterUpload: false,
-          showLargeFileWarning: false,
-        });
-
-        if (result.success) {
-          successCount += 1;
-          continue;
-        }
-
-        failedFiles.push({
-          fileName: file.name,
-          reason: result.reason ?? "上传失败，请稍后重试",
-        });
-      }
-    } finally {
-      setUploading(false);
-    }
-
-    if (successCount > 0 && activeKnowledgeId) {
-      refreshDocumentStatus(activeKnowledgeId, {
-        reloadDiagnostics: true,
-      });
-    }
-
-    if (successCount > 0) {
-      message.open({
-        key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
-        type: failedFiles.length === 0 ? "success" : "warning",
-        content: formatKnowledgeBatchUploadSuccessMessage(
-          successCount,
-          acceptedFiles.length,
-        ),
-        duration: 4,
-      });
-    } else {
-      message.open({
-        key: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
-        type: "error",
-        content: "所选文件上传失败，请稍后重试",
-        duration: 4,
-      });
-    }
-
-    if (failedFiles.length > 0) {
-      message.error(
-        `上传失败的文件：${formatKnowledgeSourceFileIssues(failedFiles)}`,
-      );
-    }
-  };
-
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
-
-    if (files.length === 0) {
-      return;
-    }
-
-    await handleSelectedFiles(files);
-  };
-
-  const handleOpenTextInput = () => {
-    setUploadFlowStep("text");
-  };
-
-  const handleBackToSourcePicker = () => {
-    setUploadFlowStep("picker");
-  };
-
-  const handleSubmitTextSource = async (values: KnowledgeTextInputValues) => {
-    closeUploadFlow();
-    await uploadKnowledgeSource(createTextSourceFile(values));
   };
 
   const patchActiveKnowledgeDocument = (
@@ -1111,7 +426,7 @@ export const KnowledgeManagementPage = () => {
         return current;
       }
 
-      return patchDocumentInKnowledgeDetail(current, documentId, patch);
+      return patchKnowledgeDetailDocument(current, documentId, patch);
     });
   };
 
@@ -1137,16 +452,8 @@ export const KnowledgeManagementPage = () => {
         return current;
       }
 
-      return removeDocumentFromKnowledgeDetail(current, documentId);
+      return removeKnowledgeDetailDocument(current, documentId);
     });
-  };
-
-  const isDocumentBusy = (documentId: string): boolean => {
-    return (
-      retryingDocumentId === documentId ||
-      rebuildingDocumentId === documentId ||
-      deletingDocumentId === documentId
-    );
   };
 
   const refreshDocumentStatus = (
@@ -1157,91 +464,126 @@ export const KnowledgeManagementPage = () => {
   ) => {
     resetPollingAttempts(knowledgeId);
     reloadKnowledgeList(knowledgeId);
-    reloadKnowledgeDetail();
-
-    if (options?.reloadDiagnostics) {
-      reloadKnowledgeDiagnostics();
-    }
+    refreshKnowledgeState({
+      reloadDiagnostics: options?.reloadDiagnostics,
+    });
   };
 
-  const handleRetryDocument = async (document: KnowledgeDocumentResponse) => {
-    if (!activeKnowledgeId) {
-      message.info("请先选择一个知识库");
-      return;
-    }
+  const patchKnowledgeSummaryAfterDelete = (
+    knowledgeId: string,
+    document: KnowledgeDocumentResponse,
+  ) => {
+    setItems((current) =>
+      current.map((knowledge) =>
+        knowledge.id === knowledgeId
+          ? {
+              ...knowledge,
+              documentCount: Math.max(knowledge.documentCount - 1, 0),
+              chunkCount: Math.max(knowledge.chunkCount - document.chunkCount, 0),
+              updatedAt: new Date().toISOString(),
+            }
+          : knowledge,
+      ),
+    );
+  };
 
-    setRetryingDocumentId(document.id);
-
-    try {
-      await retryKnowledgeDocument(activeKnowledgeId, document.id);
-
-      patchActiveKnowledgeDocument(document.id, {
-        status: "pending",
-        errorMessage: null,
-        processedAt: null,
-        updatedAt: new Date().toISOString(),
-      });
-      patchKnowledgeSummary(activeKnowledgeId, {
-        indexStatus: "pending",
-        updatedAt: new Date().toISOString(),
-      });
-      resetPollingAttempts(activeKnowledgeId);
-      message.success(
-        document.status === "completed"
-          ? "文档已进入重新索引队列"
-          : "文档已重新进入索引队列",
-      );
-      refreshDocumentStatus(activeKnowledgeId, {
+  const {
+    uploadFlowStep,
+    uploadingKnowledgeId,
+    textUploadSubmitting,
+    openUploadFlow,
+    closeUploadFlow,
+    openTextInput: handleOpenTextInput,
+    backToSourcePicker: handleBackToSourcePicker,
+    handleSelectedFiles,
+    handleFileChange,
+    submitTextSource: handleSubmitTextSource,
+  } = useKnowledgeUploadFlow({
+    message,
+    batchUploadMessageKey: KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY,
+    formatBatchUploadProgress: formatKnowledgeBatchUploadProgress,
+    formatBatchUploadSuccessMessage: formatKnowledgeBatchUploadSuccessMessage,
+    uploadDocument: async (knowledgeId, file) => {
+      await uploadKnowledgeDocument(knowledgeId, file);
+    },
+    refreshAfterUpload: (knowledgeId) => {
+      refreshDocumentStatus(knowledgeId, {
         reloadDiagnostics: true,
       });
-    } catch (currentError) {
-      console.error("[KnowledgeManagement] 重试文档索引失败:", currentError);
-      message.error(
-        extractApiErrorMessage(
-          currentError,
-          document.status === "completed"
-            ? "重新索引失败，请稍后重试"
-            : "重试索引失败，请稍后重试",
-        ),
-      );
-    } finally {
-      setRetryingDocumentId(null);
-    }
-  };
+    },
+    successMessage: "文档已上传，正在进入索引队列",
+    uploadErrorMessage: "上传文档失败，请稍后重试",
+    closeTextInputOnSubmit: "before",
+    getUploadUnavailableReason: (knowledgeId) => {
+      const targetKnowledge =
+        activeKnowledge?.id === knowledgeId
+          ? activeKnowledge
+          : items.find((knowledge) => knowledge.id === knowledgeId) ?? null;
 
-  const handleRebuildDocument = async (document: KnowledgeDocumentResponse) => {
-    if (!activeKnowledgeId) {
-      message.info("请先选择一个知识库");
-      return;
-    }
+      if (!targetKnowledge) {
+        return "请先选择一个知识库";
+      }
 
-    setRebuildingDocumentId(document.id);
+      if (targetKnowledge.sourceType !== "global_docs") {
+        return "global_code 目前只冻结命名空间，暂不支持真实导入";
+      }
 
-    try {
-      await rebuildKnowledgeDocument(activeKnowledgeId, document.id);
+      return null;
+    },
+    extractErrorMessage: extractApiErrorMessage,
+  });
+  const uploading = uploadingKnowledgeId === activeKnowledgeId;
 
+  const {
+    retryingDocumentId,
+    rebuildingKnowledgeId,
+    isDocumentBusy,
+    retryDocument: handleRetryDocument,
+    rebuildDocument: handleRebuildDocument,
+    rebuildKnowledgeDocuments,
+    deleteDocument: handleDeleteDocument,
+  } = useKnowledgeDocumentActions({
+    message,
+    extractErrorMessage: extractApiErrorMessage,
+    onRefreshKnowledgeState: refreshDocumentStatus,
+    onRetryQueued: (knowledgeId, document) => {
       patchActiveKnowledgeDocument(
         document.id,
-        queueDocumentForPending(document),
+        queueKnowledgeDocumentForPending(document),
       );
-      patchKnowledgeSummary(activeKnowledgeId, {
+      patchKnowledgeSummary(knowledgeId, {
         indexStatus: "pending",
         updatedAt: new Date().toISOString(),
       });
-      resetPollingAttempts(activeKnowledgeId);
-      message.success("文档已进入重建队列");
-      refreshDocumentStatus(activeKnowledgeId, {
-        reloadDiagnostics: true,
-      });
-    } catch (currentError) {
-      console.error("[KnowledgeManagement] 重建文档索引失败:", currentError);
-      message.error(
-        extractApiErrorMessage(currentError, "重建文档索引失败，请稍后重试"),
+    },
+    onRebuildDocumentQueued: (knowledgeId, document) => {
+      patchActiveKnowledgeDocument(
+        document.id,
+        queueKnowledgeDocumentForPending(document),
       );
-    } finally {
-      setRebuildingDocumentId(null);
-    }
-  };
+      patchKnowledgeSummary(knowledgeId, {
+        indexStatus: "pending",
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    onRebuildKnowledgeQueued: (knowledgeId) => {
+      setActiveKnowledge((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return queueKnowledgeForPending(current);
+      });
+      patchKnowledgeSummary(knowledgeId, {
+        indexStatus: "pending",
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    onDocumentDeleted: (knowledgeId, document) => {
+      removeActiveKnowledgeDocument(document.id);
+      patchKnowledgeSummaryAfterDelete(knowledgeId, document);
+    },
+  });
 
   const handleRebuildKnowledge = async () => {
     if (!activeKnowledgeId || !activeKnowledge) {
@@ -1254,69 +596,7 @@ export const KnowledgeManagementPage = () => {
       return;
     }
 
-    setRebuildingKnowledgeId(activeKnowledgeId);
-
-    try {
-      await rebuildKnowledge(activeKnowledgeId);
-
-      setActiveKnowledge((current) => {
-        if (!current) {
-          return current;
-        }
-
-        return queueKnowledgeForPending(current);
-      });
-      patchKnowledgeSummary(activeKnowledgeId, {
-        indexStatus: "pending",
-        updatedAt: new Date().toISOString(),
-      });
-      resetPollingAttempts(activeKnowledgeId);
-      message.success("知识库已进入重建队列");
-      refreshDocumentStatus(activeKnowledgeId, {
-        reloadDiagnostics: true,
-      });
-    } catch (currentError) {
-      console.error("[KnowledgeManagement] 重建知识库失败:", currentError);
-      message.error(
-        extractApiErrorMessage(currentError, "重建知识库失败，请稍后重试"),
-      );
-    } finally {
-      setRebuildingKnowledgeId(null);
-    }
-  };
-
-  const handleDeleteDocument = async (document: KnowledgeDocumentResponse) => {
-    if (!activeKnowledgeId) {
-      message.info("请先选择一个知识库");
-      return;
-    }
-
-    setDeletingDocumentId(document.id);
-
-    try {
-      await deleteKnowledgeDocument(activeKnowledgeId, document.id);
-
-      removeActiveKnowledgeDocument(document.id);
-      patchKnowledgeSummary(activeKnowledgeId, {
-        documentCount: Math.max((activeSummary?.documentCount ?? 1) - 1, 0),
-        chunkCount: Math.max(
-          (activeSummary?.chunkCount ?? 0) - document.chunkCount,
-          0,
-        ),
-        updatedAt: new Date().toISOString(),
-      });
-      message.success("文档已删除");
-      refreshDocumentStatus(activeKnowledgeId, {
-        reloadDiagnostics: true,
-      });
-    } catch (currentError) {
-      console.error("[KnowledgeManagement] 删除文档失败:", currentError);
-      message.error(
-        extractApiErrorMessage(currentError, "删除文档失败，请稍后重试"),
-      );
-    } finally {
-      setDeletingDocumentId(null);
-    }
+    await rebuildKnowledgeDocuments(activeKnowledgeId);
   };
 
   const confirmDeleteDocument = (document: KnowledgeDocumentResponse) => {
@@ -1336,80 +616,6 @@ export const KnowledgeManagementPage = () => {
         await handleDeleteDocument(document);
       },
     });
-  };
-
-  const buildDocumentActionMenuItems = (
-    document: KnowledgeDocumentResponse,
-  ): NonNullable<MenuProps["items"]> => {
-    const busy = isDocumentBusy(document.id);
-
-    const commonItems: NonNullable<MenuProps["items"]> = [
-      {
-        key: "preview",
-        icon: <EyeOutlined />,
-        label: "预览",
-      },
-      {
-        key: "download",
-        icon: <DownloadOutlined />,
-        label: "下载",
-      },
-      {
-        type: "divider",
-      },
-    ];
-
-    if (document.status === "pending" || document.status === "processing") {
-      return [
-        ...commonItems,
-        {
-          key: "refresh",
-          icon: <ReloadOutlined />,
-          label: "刷新状态",
-          disabled: busy,
-        },
-        {
-          type: "divider",
-        },
-        {
-          key: "delete",
-          icon: <DeleteOutlined />,
-          label: "删除文档",
-          danger: true,
-          disabled: busy,
-        },
-      ];
-    }
-
-    return [
-      ...commonItems,
-      ...(document.status === "failed"
-        ? [
-            {
-              key: "retry",
-              icon: <ReloadOutlined />,
-              label: "重试索引",
-              disabled: busy,
-            },
-          ]
-        : []),
-      {
-        key: "rebuild",
-        icon: <ToolOutlined />,
-        label: "重建索引",
-        disabled: busy,
-      },
-      {
-        type: "divider",
-      },
-      {
-        key: "delete",
-        icon: <DeleteOutlined />,
-        label: "删除文档",
-        danger: true,
-        disabled: busy,
-      },
-    ];
   };
 
   const handleDocumentMenuAction = (
@@ -1447,7 +653,7 @@ export const KnowledgeManagementPage = () => {
   };
 
   const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
-    const statusMeta = DOCUMENT_STATUS_META[document.status];
+    const statusMeta = KNOWLEDGE_DOCUMENT_STATUS_META[document.status];
     const indexedAt = document.lastIndexedAt ?? document.processedAt;
     const busy = isDocumentBusy(document.id);
     const documentDiagnostics =
@@ -1456,14 +662,14 @@ export const KnowledgeManagementPage = () => {
     return (
       <article
         key={document.id}
-        className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4"
+        className="rounded-card border border-slate-200 bg-slate-50/80 p-4"
       >
         <div className="flex items-start justify-between gap-3">
           <Tooltip
             title={
               <div className="space-y-1 text-xs">
                 <div>格式：{document.mimeType}</div>
-                <div>索引完成：{formatDateTime(indexedAt)}</div>
+                <div>索引完成：{formatKnowledgeDateTime(indexedAt)}</div>
                 <div>分块数量：{document.chunkCount}</div>
               </div>
             }
@@ -1488,7 +694,7 @@ export const KnowledgeManagementPage = () => {
             trigger={["click"]}
             placement="bottomRight"
             menu={{
-              items: buildDocumentActionMenuItems(document),
+              items: buildKnowledgeDocumentActionMenuItems(document, busy),
               onClick: ({ key }) => handleDocumentMenuAction(document, key),
             }}
           >
@@ -1503,8 +709,8 @@ export const KnowledgeManagementPage = () => {
         </div>
 
         <Typography.Text className="mt-3 block text-xs text-slate-500">
-          上传于 {formatDateTime(document.uploadedAt)} · 最近索引{" "}
-          {formatDateTime(indexedAt)}
+          上传于 {formatKnowledgeDateTime(document.uploadedAt)} · 最近索引{" "}
+          {formatKnowledgeDateTime(indexedAt)}
         </Typography.Text>
 
         {document.errorMessage ? (
@@ -1615,10 +821,11 @@ export const KnowledgeManagementPage = () => {
             <GlobalAssetSidebarSection>
               {items.map((knowledge) => {
                 const indexStatusMeta =
-                  INDEX_STATUS_META[knowledge.indexStatus];
-                const sourceTypeMeta = SOURCE_TYPE_META[knowledge.sourceType];
+                  KNOWLEDGE_INDEX_STATUS_META[knowledge.indexStatus];
+                const sourceTypeMeta =
+                  KNOWLEDGE_SOURCE_TYPE_META[knowledge.sourceType];
                 const isActive = knowledge.id === activeKnowledgeId;
-                const compactMeta = `${knowledge.documentCount} 份文档 · ${formatCompactDate(
+                const compactMeta = `${knowledge.documentCount} 份文档 · ${formatKnowledgeCompactDate(
                   knowledge.updatedAt,
                 )} 更新`;
 
@@ -1627,7 +834,7 @@ export const KnowledgeManagementPage = () => {
                     key={knowledge.id}
                     active={isActive}
                     onClick={() => {
-                      pollingAttemptsRef.current[knowledge.id] = 0;
+                      resetPollingAttempts(knowledge.id);
                       setActiveKnowledgeId(knowledge.id);
                     }}
                   >
@@ -1642,7 +849,7 @@ export const KnowledgeManagementPage = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <Typography.Text
-                            className={`truncate text-[13px] font-semibold ${
+                            className={`truncate text-label font-semibold ${
                               isActive ? "text-slate-900!" : "text-slate-800!"
                             }`}
                           >
@@ -1660,7 +867,7 @@ export const KnowledgeManagementPage = () => {
                           </span>
                         </div>
 
-                        <Typography.Text className="mt-1 block truncate text-[11px] text-slate-500">
+                        <Typography.Text className="mt-1 block truncate text-caption text-slate-500">
                           {compactMeta}
                         </Typography.Text>
                       </div>
@@ -1674,7 +881,7 @@ export const KnowledgeManagementPage = () => {
       }
     >
       <Card
-        className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+        className="rounded-3xl! border-slate-200! shadow-surface!"
         styles={{ body: { padding: "20px" } }}
       >
         {!activeKnowledgeId ? (
@@ -1705,9 +912,11 @@ export const KnowledgeManagementPage = () => {
                     </Tag>
                   ) : null}
                   <Tag
-                    color={INDEX_STATUS_META[activeKnowledge.indexStatus].color}
+                    color={
+                      KNOWLEDGE_INDEX_STATUS_META[activeKnowledge.indexStatus].color
+                    }
                   >
-                    {INDEX_STATUS_META[activeKnowledge.indexStatus].label}
+                    {KNOWLEDGE_INDEX_STATUS_META[activeKnowledge.indexStatus].label}
                   </Tag>
                 </div>
                 <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
@@ -1728,7 +937,7 @@ export const KnowledgeManagementPage = () => {
                       icon={<CloudUploadOutlined />}
                       loading={uploading}
                       disabled={activeKnowledge.sourceType !== "global_docs"}
-                      onClick={openUploadFlow}
+                      onClick={() => openUploadFlow(activeKnowledge.id)}
                     >
                       上传文档
                     </Button>
@@ -1759,17 +968,17 @@ export const KnowledgeManagementPage = () => {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+            <div className="overflow-hidden rounded-card-lg border border-slate-200 bg-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
               <div className="grid gap-px bg-slate-200 md:grid-cols-2">
                 {activeOverviewStats.map((item) => (
                   <div key={item.label} className="bg-slate-50/75 px-4 py-4">
-                    <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                    <Typography.Text className="text-caption font-medium uppercase tracking-[0.14em] text-slate-400">
                       {item.label}
                     </Typography.Text>
                     <Typography.Text
                       className={`mt-3 block text-slate-800 ${
                         item.emphasis === "number"
-                          ? "text-[30px] font-semibold leading-none tracking-tight"
+                          ? "text-3xl font-semibold leading-none tracking-tight"
                           : "text-lg font-semibold leading-7"
                       }`}
                     >
@@ -1833,7 +1042,7 @@ export const KnowledgeManagementPage = () => {
                                 type="primary"
                                 icon={<CloudUploadOutlined />}
                                 loading={uploading}
-                                onClick={openUploadFlow}
+                                onClick={() => openUploadFlow(activeKnowledge.id)}
                               >
                                 上传第一份文档
                               </Button>
@@ -1852,7 +1061,7 @@ export const KnowledgeManagementPage = () => {
                   key: "ops",
                   label: "运维",
                   children: (
-                    <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white/90 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
+                    <section className="overflow-hidden rounded-card-lg border border-slate-200 bg-white/90 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
                       <div className="flex flex-col gap-4 border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(241,245,249,0.88))] px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
                           <div className="flex items-center gap-2">
@@ -1950,9 +1159,9 @@ export const KnowledgeManagementPage = () => {
                               ].map((item) => (
                                 <div
                                   key={item.label}
-                                  className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-4"
+                                  className="rounded-panel border border-slate-200 bg-slate-50/80 px-4 py-4"
                                 >
-                                  <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                                  <Typography.Text className="text-caption font-medium uppercase tracking-[0.14em] text-slate-400">
                                     {item.label}
                                   </Typography.Text>
                                   <Typography.Text
@@ -2100,7 +1309,7 @@ export const KnowledgeManagementPage = () => {
 
       <KnowledgeTextInputModal
         open={uploadFlowStep === "text"}
-        submitting={uploading}
+        submitting={textUploadSubmitting}
         onBack={handleBackToSourcePicker}
         onCancel={closeUploadFlow}
         onSubmit={(values) => {

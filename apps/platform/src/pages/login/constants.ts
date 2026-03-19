@@ -66,7 +66,7 @@ export const FLOW_MASK_IMAGE =
 export const LOGIN_FORM_CLASS_NAME = [
   'w-full',
   '[&_.ant-form-item]:mb-[18px]',
-  '[&_.ant-form-item-label>label]:text-[13px]',
+  '[&_.ant-form-item-label>label]:text-label',
   '[&_.ant-form-item-label>label]:font-semibold',
   '[&_.ant-form-item-label>label]:text-slate-700',
   '[&_.ant-form-item-explain-error]:text-xs',

@@ -232,8 +232,14 @@ export const buildKnowledgeEmbeddingFingerprint = (
 export const buildVersionedKnowledgeCollectionName = (
   namespaceKey: string,
   fingerprint: string,
+  options?: {
+    suffix?: string;
+  },
 ): string => {
-  return `${namespaceKey}__emb_${fingerprint.slice(0, 12)}`;
+  const baseName = `${namespaceKey}__emb_${fingerprint.slice(0, 12)}`;
+  const normalizedSuffix = options?.suffix?.trim();
+
+  return normalizedSuffix ? `${baseName}__${normalizedSuffix}` : baseName;
 };
 
 export const toKnowledgeEmbeddingMetadata = (

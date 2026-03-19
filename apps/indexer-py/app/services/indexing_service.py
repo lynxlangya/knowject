@@ -16,7 +16,7 @@ class IndexingService:
         self,
         payload: IndexDocumentRequestPayload,
     ) -> IndexDocumentSuccessResponse:
-        result = pipeline.process_document(payload.model_dump(by_alias=True))
+        result = pipeline.process_document(payload.to_domain_request())
         return IndexDocumentSuccessResponse.model_validate(result)
 
     def rebuild_document(
@@ -40,7 +40,7 @@ class IndexingService:
     ) -> DeleteDocumentChunksSuccessResponse:
         result = pipeline.delete_document_vectors(
             document_id,
-            payload.model_dump(by_alias=True),
+            payload.to_domain_request(),
         )
         return DeleteDocumentChunksSuccessResponse.model_validate(result)
 
@@ -51,7 +51,7 @@ class IndexingService:
     ) -> DeleteKnowledgeChunksSuccessResponse:
         result = pipeline.delete_knowledge_vectors(
             knowledge_id,
-            payload.model_dump(by_alias=True),
+            payload.to_domain_request(),
         )
         return DeleteKnowledgeChunksSuccessResponse.model_validate(result)
 

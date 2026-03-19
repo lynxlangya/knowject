@@ -23,6 +23,7 @@ import type {
   ProjectSummary,
   ToggleProjectPinResult,
   UpdateProjectInput,
+  UpdateProjectResourceBindingsInput,
   UpdateProjectResult,
 } from "./project.types";
 import { ProjectContext } from "./projectContext.shared";
@@ -235,6 +236,31 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
     [upsertProject],
   );
 
+  const updateProjectResourceBindings = useCallback(
+    async (
+      input: UpdateProjectResourceBindingsInput,
+    ): Promise<UpdateProjectResult> => {
+      const currentProject = projectsRef.current.find(
+        (project) => project.id === input.projectId,
+      );
+
+      if (!currentProject) {
+        return "not_found";
+      }
+
+      return updateProject({
+        projectId: input.projectId,
+        name: currentProject.name,
+        description: currentProject.description,
+        knowledgeBaseIds:
+          input.knowledgeBaseIds ?? currentProject.knowledgeBaseIds,
+        agentIds: input.agentIds ?? currentProject.agentIds,
+        skillIds: input.skillIds ?? currentProject.skillIds,
+      });
+    },
+    [updateProject],
+  );
+
   const toggleProjectPin = useCallback(
     (projectId: string): ToggleProjectPinResult => {
       const currentProjects = projectsRef.current;
@@ -347,6 +373,7 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
       error,
       addProject,
       updateProject,
+      updateProjectResourceBindings,
       toggleProjectPin,
       deleteProject,
       removeProjectSnapshot,
@@ -360,6 +387,7 @@ export const ProjectProvider = ({ children }: ProjectProviderProps) => {
     error,
     addProject,
     updateProject,
+    updateProjectResourceBindings,
     toggleProjectPin,
     deleteProject,
     removeProjectSnapshot,

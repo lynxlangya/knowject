@@ -177,11 +177,13 @@ export const createProjectConversation = ({
 export const createProjectConversationMessage = ({
   role,
   content,
+  clientRequestId,
   sources,
   createdAt = new Date(),
 }: {
   role: ProjectConversationMessageRole;
   content: string;
+  clientRequestId?: string;
   sources?: ProjectConversationSourceDocument[];
   createdAt?: Date;
 }): ProjectConversationMessageDocument => {
@@ -190,6 +192,7 @@ export const createProjectConversationMessage = ({
     role,
     content,
     createdAt,
+    ...(clientRequestId !== undefined ? { clientRequestId } : {}),
     ...(sources !== undefined ? { sources } : {}),
   };
 };

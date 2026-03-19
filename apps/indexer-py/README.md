@@ -16,16 +16,25 @@
   - `GET /internal/v1/index/diagnostics`：返回当前 chunk 配置、embedding provider 和 Chroma 可达性诊断。
   - 继续兼容旧入口 `POST /internal/index-documents`，用于开发态 / 滚动重启期间的平滑过渡。
   - `/docs`、`/redoc`、`/openapi.json`：内部文档与 schema 入口。
+- `app/domain/indexing/runtime_config.py`
+  - 负责 chunk size / overlap、supported types、`indexerTimeoutMs` 的默认值、请求级 override 与校验；`chunkOverlap=0` 现在会按显式配置生效，不再被默认值静默覆盖。
+- `app/domain/indexing/parser.py`
+  - 负责 `md / txt` 解析、文本清洗和 parser 识别。
+- `app/domain/indexing/chunking.py`
+  - 负责按 `1000 字符 / 200 重叠 / 尽量保留段落边界` 进行分块，并构建 `ChunkRecord`。
+- `app/domain/indexing/embedding_client.py`
+  - 负责 embedding provider 判定、OpenAI-compatible `/embeddings` 请求、本地 deterministic fallback、batching 与 response parse。
+- `app/domain/indexing/chroma_client.py`
+  - 负责 Chroma collection cache、find/ensure、文档 / 知识库向量 delete 与 chunk upsert；写删侧在 collection 404 / stale cache 时会自动刷新 cache 并重试一次。
+- `app/domain/indexing/diagnostics.py`
+  - 负责 indexer 运行配置与 Chroma 可达性诊断聚合；`embeddingProvider / chunkSize / chunkOverlap / supportedFormats` 返回的是 Python indexer 当前运行时实际值，而不是 Node 侧期望配置。
 - `app/domain/indexing/pipeline.py`
-  - 负责 `md / txt` 解析。
-  - 负责文本清洗。
-  - 负责按 `1000 字符 / 200 重叠 / 尽量保留段落边界` 进行分块。
-  - 负责通过 OpenAI-compatible `/embeddings` 接口生成向量。
-  - 在 `development` 且缺少 `OPENAI_API_KEY` 时，退化为 deterministic 本地 embedding，保证上传 / 索引状态链路可验证。
-  - 负责把 `global_docs` chunk upsert 到 Chroma，并在同一 `documentId` 重建前先删除旧向量，避免重复累积。
-  - 对 `pdf` 明确返回失败信息，不假装支持。
+  - 负责把 parser / chunking / embedding / Chroma / diagnostics 组装成统一 orchestration façade。
+  - 保留 `process_document()`、delete / diagnostics 入口和兼容 wrapper，供 schema、service 与 route 层稳定调用。
 - `app/core/runtime_env.py`
   - 负责读取仓库根 `.env` / `.env.local`，让 Python indexer 与 `apps/api` 共用本地环境契约。
+- `app/core/config.py`
+  - 负责暴露健康检查所需的 app metadata，并复用 `runtime_config.py` 中的默认 chunk 配置。
 - `app/services/indexing_service.py`
   - 负责路由层和索引 domain 之间的最小服务编排。
 
@@ -39,6 +48,9 @@
   - OpenAI-compatible embedding 生成
   - Chroma `global_docs` 写入 / 删除
   - 结果通过 HTTP 响应交回 Node
+- 当前内部组织：
+  - `pipeline.py` 已退回 orchestration 层。
+  - parser / chunker / embedding / Chroma / diagnostics / runtime config 均已拆成独立模块，便于单测与后续 provider / parser 扩展。
 - 当前不负责内容：
   - 不对外暴露前端直连 API
   - 不写 MongoDB 业务主状态

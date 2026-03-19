@@ -34,7 +34,7 @@ const renderAssetGroups = (assets: MemberAssetSummary) => {
         return (
           <div
             key={groupKey}
-            className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-4"
+            className="rounded-card border border-slate-200 bg-slate-50/70 p-4"
           >
             <div className="flex items-center justify-between gap-3">
               <Typography.Title level={5} className="mb-0! text-slate-800!">
@@ -54,13 +54,13 @@ const renderAssetGroups = (assets: MemberAssetSummary) => {
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[16px] border border-white bg-white px-3 py-3"
+                    className="rounded-2xl border border-white bg-white px-3 py-3"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <Typography.Text className="text-sm font-medium text-slate-700">
                         {item.name}
                       </Typography.Text>
-                      <Typography.Text className="text-[11px] text-slate-400">
+                      <Typography.Text className="text-caption text-slate-400">
                         {item.updatedAt}
                       </Typography.Text>
                     </div>
@@ -141,7 +141,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
           </div>
         </div>
 
-        <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-[420px]">
+        <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-105">
           {[
             {
               label: '首次协作',
@@ -162,7 +162,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
           ].map((item) => (
             <div
               key={item.label}
-              className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4"
+              className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4"
             >
               <Typography.Text className="text-xs uppercase tracking-[0.14em] text-slate-400">
                 {item.label}
@@ -184,7 +184,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                 label: '概览',
                 children: (
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-                    <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
                         当前关注
                       </Typography.Title>
@@ -210,7 +210,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                       </div>
                     </div>
 
-                    <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
                         最近动作
                       </Typography.Title>
@@ -240,7 +240,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                     {member.projects.map((project) => (
                       <article
                         key={project.id}
-                        className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-5"
+                        className="rounded-card border border-slate-200 bg-slate-50/70 p-5"
                       >
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                           <div className="min-w-0 flex-1">
@@ -272,7 +272,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                             </Typography.Paragraph>
                           </div>
 
-                          <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[340px]">
+                          <div className="grid gap-3 sm:grid-cols-3 xl:min-w-85">
                             {[
                               {
                                 label: '知识库',
@@ -289,9 +289,9 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                             ].map((item) => (
                               <div
                                 key={item.label}
-                                className="rounded-[16px] border border-white bg-white px-3 py-3"
+                                className="rounded-2xl border border-white bg-white px-3 py-3"
                               >
-                                <Typography.Text className="text-[11px] uppercase tracking-[0.14em] text-slate-400">
+                                <Typography.Text className="text-caption uppercase tracking-[0.14em] text-slate-400">
                                   {item.label}
                                 </Typography.Text>
                                 <Typography.Paragraph className="mb-0! mt-2 text-sm! font-medium text-slate-700!">
@@ -324,12 +324,12 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                 label: '权限',
                 children: (
                   <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-                    <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
                         权限摘要
                       </Typography.Title>
                       <div className="mt-4 flex flex-col gap-3">
-                        <div className="rounded-[16px] border border-white bg-white px-4 py-3">
+                        <div className="rounded-2xl border border-white bg-white px-4 py-3">
                           <Typography.Text className="text-xs text-slate-400">
                             可管理项目
                           </Typography.Text>
@@ -337,7 +337,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                             {member.adminProjectCount} 个
                           </Typography.Paragraph>
                         </div>
-                        <div className="rounded-[16px] border border-white bg-white px-4 py-3">
+                        <div className="rounded-2xl border border-white bg-white px-4 py-3">
                           <Typography.Text className="text-xs text-slate-400">
                             协作成员项目
                           </Typography.Text>
@@ -351,7 +351,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                       </div>
                     </div>
 
-                    <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
                         项目访问范围
                       </Typography.Title>
@@ -365,7 +365,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                           {member.projects.map((project) => (
                             <div
                               key={project.id}
-                              className="flex flex-col gap-3 rounded-[16px] border border-white bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                              className="flex flex-col gap-3 rounded-2xl border border-white bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
                             >
                               <div>
                                 <Typography.Text className="text-sm font-medium text-slate-700">
@@ -397,7 +397,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
           />
 
           {adminProjects.length > 0 ? (
-            <div className="rounded-[20px] border border-amber-200 bg-amber-50/60 p-4">
+            <div className="rounded-card border border-amber-200 bg-amber-50/60 p-4">
               <Typography.Text className="text-sm font-medium text-amber-800">
                 该成员当前在 {adminProjects.length} 个可见项目中具备管理员权限，需要重点关注成员配置与权限变更带来的协作影响。
               </Typography.Text>

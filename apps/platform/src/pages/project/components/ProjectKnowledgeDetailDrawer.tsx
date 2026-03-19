@@ -1,8 +1,6 @@
 import {
   CloudUploadOutlined,
   DeleteOutlined,
-  DownloadOutlined,
-  EyeOutlined,
   FileTextOutlined,
   LinkOutlined,
   MoreOutlined,
@@ -29,8 +27,14 @@ import {
   Typography,
 } from "antd";
 import type { MenuProps } from "antd";
-import { useEffect, useState } from "react";
 import type { ProjectResourceItem } from "@app/project/project.types";
+import {
+  buildKnowledgeDocumentActionMenuItems,
+  buildKnowledgeDetailOverviewStats,
+  formatKnowledgeDateTime,
+  KNOWLEDGE_DOCUMENT_STATUS_META,
+  KNOWLEDGE_INDEX_STATUS_META,
+} from "@pages/knowledge/knowledgeDomain.shared";
 import { KnowledgeSearchTab } from "@pages/knowledge/components/KnowledgeSearchTab";
 
 interface ProjectKnowledgeDetailDrawerProps {
@@ -61,67 +65,6 @@ interface ProjectKnowledgeDetailDrawerProps {
   onDeleteDocument: (document: KnowledgeDocumentResponse) => void;
 }
 
-const INDEX_STATUS_META = {
-  idle: {
-    color: "default",
-    label: "待索引",
-  },
-  pending: {
-    color: "gold",
-    label: "排队中",
-  },
-  processing: {
-    color: "processing",
-    label: "处理中",
-  },
-  completed: {
-    color: "success",
-    label: "已完成",
-  },
-  failed: {
-    color: "error",
-    label: "失败",
-  },
-} as const;
-
-const DOCUMENT_STATUS_META = {
-  pending: {
-    color: "gold",
-    label: "排队中",
-  },
-  processing: {
-    color: "processing",
-    label: "处理中",
-  },
-  completed: {
-    color: "success",
-    label: "已完成",
-  },
-  failed: {
-    color: "error",
-    label: "失败",
-  },
-} as const;
-
-const formatDateTime = (value: string | null) => {
-  if (!value) {
-    return "未记录";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "未记录";
-  }
-
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
-
 export const ProjectKnowledgeDetailDrawer = ({
   open,
   knowledgeItem,
@@ -150,88 +93,15 @@ export const ProjectKnowledgeDetailDrawer = ({
   onDeleteDocument,
 }: ProjectKnowledgeDetailDrawerProps) => {
   const { message } = App.useApp();
-  const [activeTabKey, setActiveTabKey] = useState("documents");
   const readOnlyGlobal = knowledgeItem?.source === "global";
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setActiveTabKey("documents");
-  }, [knowledgeItem?.id, open]);
 
   const buildDocumentActionMenuItems = (
     document: KnowledgeDocumentResponse,
   ): NonNullable<MenuProps["items"]> => {
-    const busy = isDocumentBusy(document.id);
-    const commonItems: NonNullable<MenuProps["items"]> = [
-      {
-        key: "preview",
-        icon: <EyeOutlined />,
-        label: "预览",
-      },
-      {
-        key: "download",
-        icon: <DownloadOutlined />,
-        label: "下载",
-      },
-      {
-        type: "divider",
-      },
-    ];
-
-    if (document.status === "pending" || document.status === "processing") {
-      return [
-        ...commonItems,
-        {
-          key: "refresh",
-          icon: <ReloadOutlined />,
-          label: "刷新状态",
-          disabled: busy,
-        },
-        {
-          type: "divider",
-        },
-        {
-          key: "delete",
-          icon: <DeleteOutlined />,
-          label: "删除文档",
-          danger: true,
-          disabled: busy,
-        },
-      ];
-    }
-
-    return [
-      ...commonItems,
-      ...(document.status === "failed"
-        ? [
-            {
-              key: "retry",
-              icon: <ReloadOutlined />,
-              label: "重试索引",
-              disabled: busy,
-            },
-          ]
-        : []),
-      {
-        key: "rebuild",
-        icon: <ToolOutlined />,
-        label: "重建索引",
-        disabled: busy,
-      },
-      {
-        type: "divider",
-      },
-      {
-        key: "delete",
-        icon: <DeleteOutlined />,
-        label: "删除文档",
-        danger: true,
-        disabled: busy,
-      },
-    ];
+    return buildKnowledgeDocumentActionMenuItems(
+      document,
+      isDocumentBusy(document.id),
+    );
   };
 
   const handleDocumentMenuAction = (
@@ -269,7 +139,7 @@ export const ProjectKnowledgeDetailDrawer = ({
   };
 
   const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
-    const statusMeta = DOCUMENT_STATUS_META[document.status];
+    const statusMeta = KNOWLEDGE_DOCUMENT_STATUS_META[document.status];
     const busy = isDocumentBusy(document.id);
     const diagnosticsDocument = diagnostics?.documents.find(
       (item) => item.id === document.id,
@@ -278,17 +148,17 @@ export const ProjectKnowledgeDetailDrawer = ({
     return (
       <article
         key={document.id}
-        className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4"
+        className="rounded-card border border-slate-200 bg-slate-50/80 p-4"
       >
         <div className="flex items-start justify-between gap-3">
           <Tooltip
             title={
               <div className="space-y-1 text-xs">
                 <div>格式：{document.mimeType}</div>
-                <div>上传时间：{formatDateTime(document.uploadedAt)}</div>
+                <div>上传时间：{formatKnowledgeDateTime(document.uploadedAt)}</div>
                 <div>
                   最近索引：
-                  {formatDateTime(
+                  {formatKnowledgeDateTime(
                     document.lastIndexedAt ?? document.processedAt,
                   )}
                 </div>
@@ -333,8 +203,8 @@ export const ProjectKnowledgeDetailDrawer = ({
         </div>
 
         <Typography.Text className="mt-3 block text-xs text-slate-500">
-          上传于 {formatDateTime(document.uploadedAt)} · 最近索引{" "}
-          {formatDateTime(document.lastIndexedAt ?? document.processedAt)}
+          上传于 {formatKnowledgeDateTime(document.uploadedAt)} · 最近索引{" "}
+          {formatKnowledgeDateTime(document.lastIndexedAt ?? document.processedAt)}
         </Typography.Text>
 
         {document.errorMessage ? (
@@ -461,13 +331,13 @@ export const ProjectKnowledgeDetailDrawer = ({
         />
       ) : knowledge ? (
         <div className="space-y-5">
-          <section className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] p-5">
+          <section className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] p-5">
             <div className="flex flex-wrap items-center gap-2">
               <Tag color={readOnlyGlobal ? "blue" : "green"}>
                 {readOnlyGlobal ? "全局绑定" : "项目私有"}
               </Tag>
-              <Tag color={INDEX_STATUS_META[knowledge.indexStatus].color}>
-                {INDEX_STATUS_META[knowledge.indexStatus].label}
+              <Tag color={KNOWLEDGE_INDEX_STATUS_META[knowledge.indexStatus].color}>
+                {KNOWLEDGE_INDEX_STATUS_META[knowledge.indexStatus].label}
               </Tag>
             </div>
 
@@ -476,39 +346,24 @@ export const ProjectKnowledgeDetailDrawer = ({
             </Typography.Paragraph>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[18px] border border-white/70 bg-white/80 px-4 py-3">
-                <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
-                  文档
-                </Typography.Text>
-                <Typography.Title
-                  level={4}
-                  className="mb-0! mt-2 text-slate-800!"
+              {buildKnowledgeDetailOverviewStats(knowledge, {
+                includeChunkCount: true,
+              }).map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-panel border border-white/70 bg-white/80 px-4 py-3"
                 >
-                  {knowledge.documents.length}
-                </Typography.Title>
-              </div>
-              <div className="rounded-[18px] border border-white/70 bg-white/80 px-4 py-3">
-                <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
-                  分块
-                </Typography.Text>
-                <Typography.Title
-                  level={4}
-                  className="mb-0! mt-2 text-slate-800!"
-                >
-                  {knowledge.chunkCount}
-                </Typography.Title>
-              </div>
-              <div className="rounded-[18px] border border-white/70 bg-white/80 px-4 py-3">
-                <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
-                  最近更新
-                </Typography.Text>
-                <Typography.Title
-                  level={5}
-                  className="mb-0! mt-2 text-slate-800!"
-                >
-                  {formatDateTime(knowledge.updatedAt)}
-                </Typography.Title>
-              </div>
+                  <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                    {item.label}
+                  </Typography.Text>
+                  <Typography.Title
+                    level={item.emphasis === "number" ? 4 : 5}
+                    className="mb-0! mt-2 text-slate-800!"
+                  >
+                    {item.value}
+                  </Typography.Title>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -522,8 +377,8 @@ export const ProjectKnowledgeDetailDrawer = ({
           ) : null}
 
           <Tabs
-            activeKey={activeTabKey}
-            onChange={setActiveTabKey}
+            key={knowledgeItem.id}
+            defaultActiveKey="documents"
             items={[
               {
                 key: "documents",
@@ -577,7 +432,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                 ) : diagnostics ? (
                   <div className="space-y-4">
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+                      <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4">
                         <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
                           Collection
                         </Typography.Text>
@@ -591,7 +446,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                           {diagnostics.expectedCollectionName}
                         </Typography.Paragraph>
                       </div>
-                      <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+                      <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4">
                         <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
                           Indexer
                         </Typography.Text>
@@ -607,7 +462,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                           {diagnostics.indexer.service ?? "未返回服务名"}
                         </Typography.Paragraph>
                       </div>
-                      <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+                      <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4">
                         <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
                           异常文档
                         </Typography.Text>
@@ -643,7 +498,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                       />
                     ) : null}
 
-                    <div className="rounded-[20px] border border-slate-200 bg-white p-4">
+                    <div className="rounded-card border border-slate-200 bg-white p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <FileTextOutlined className="text-slate-400" />
@@ -664,7 +519,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                           diagnostics.documents.map((document) => (
                             <div
                               key={document.id}
-                              className="rounded-[18px] border border-slate-200 bg-slate-50/70 px-4 py-3"
+                              className="rounded-panel border border-slate-200 bg-slate-50/70 px-4 py-3"
                             >
                               <div className="flex flex-wrap items-center gap-2">
                                 <Typography.Text className="font-medium text-slate-800!">
@@ -672,10 +527,10 @@ export const ProjectKnowledgeDetailDrawer = ({
                                 </Typography.Text>
                                 <Tag
                                   color={
-                                    DOCUMENT_STATUS_META[document.status].color
+                                    KNOWLEDGE_DOCUMENT_STATUS_META[document.status].color
                                   }
                                 >
-                                  {DOCUMENT_STATUS_META[document.status].label}
+                                  {KNOWLEDGE_DOCUMENT_STATUS_META[document.status].label}
                                 </Tag>
                                 {document.missingStorage ? (
                                   <Tag color="error">原文件缺失</Tag>
@@ -686,8 +541,8 @@ export const ProjectKnowledgeDetailDrawer = ({
                               </div>
                               <Typography.Text className="mt-2 block text-xs text-slate-500">
                                 最近索引：
-                                {formatDateTime(document.lastIndexedAt)} ·
-                                更新时间：{formatDateTime(document.updatedAt)}
+                                {formatKnowledgeDateTime(document.lastIndexedAt)} ·
+                                更新时间：{formatKnowledgeDateTime(document.updatedAt)}
                               </Typography.Text>
                               {document.errorMessage ? (
                                 <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-rose-500!">

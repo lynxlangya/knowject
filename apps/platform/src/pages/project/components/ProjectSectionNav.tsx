@@ -43,7 +43,7 @@ export const ProjectSectionNav = ({
               key={item.key}
               type="button"
               className={[
-                'group relative flex min-w-[148px] flex-1 flex-col gap-1 border-b-2 border-transparent px-4 pb-3 pt-2 text-left transition-[color,border-color] duration-200 ease-out',
+                'group relative flex min-w-37 flex-1 flex-col gap-1 border-b-2 border-transparent px-4 pb-3 pt-2 text-left transition-colors duration-200 ease-out',
                 active
                   ? 'font-semibold'
                   : 'text-slate-500 hover:text-slate-700 hover:border-slate-300',
@@ -52,8 +52,8 @@ export const ProjectSectionNav = ({
               aria-current={active ? 'page' : undefined}
               onClick={() => onSelect(item.key)}
             >
-              <span className="text-[15px] leading-6">{item.label}</span>
-              <span className="text-[11px] leading-5 text-slate-400 transition-colors duration-200 group-hover:text-slate-500">
+              <span className="text-body leading-6">{item.label}</span>
+              <span className="text-caption leading-5 text-slate-400 transition-colors duration-200 group-hover:text-slate-500">
                 {item.description}
               </span>
             </button>

@@ -129,11 +129,6 @@ const LLM_PROVIDER_PRESETS: Record<
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-5.4',
   },
-  anthropic: {
-    label: 'Anthropic',
-    baseUrl: 'https://api.anthropic.com/v1',
-    model: 'claude-sonnet-4-6',
-  },
   gemini: {
     label: 'Gemini',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
@@ -1255,7 +1250,7 @@ export const SettingsPage = () => {
 
                   <SectionBlock
                     title="对话模型（LLM）"
-                    description="当前设置会直接驱动项目对话 MVP。各 Provider 统一走兼容 `/chat/completions` 协议，先跑通最小可用链路。"
+                    description="当前设置会直接驱动项目对话 MVP。当前仅保留已验证的 `/chat/completions` 兼容 Provider，先确保设置页、在线测试与项目对话运行时语义一致。"
                     extra={
                       <Space size={8} wrap>
                         <Tag color={SOURCE_META[settings.llm.source].color}>

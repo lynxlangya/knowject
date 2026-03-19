@@ -37,13 +37,19 @@ import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import type { MenuProps } from 'antd';
 import {
   GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME,
+  GlobalAssetMetaPill,
   GlobalAssetPageHeader,
   GlobalAssetPageLayout,
   GlobalAssetSidebar,
+  GlobalAssetSidebarFilterItem,
   GlobalAssetSidebarItem,
   GlobalAssetSidebarSection,
   type GlobalAssetSummaryItem,
 } from '@pages/assets/components/GlobalAssetLayout';
+import {
+  createGlobalAssetSummaryItem,
+  formatGlobalAssetUpdatedAt,
+} from '@pages/assets/components/globalAsset.shared';
 
 type ModalMode = 'create' | 'edit' | null;
 type AgentSidebarFilter = 'all' | 'recent' | 'active' | 'disabled';
@@ -71,12 +77,6 @@ const AGENT_STATUS_META: Record<
   },
 };
 
-const updatedAtFormatter = new Intl.DateTimeFormat('zh-CN', {
-  month: 'numeric',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-});
 const AGENTS_PAGE_SUBTITLE = '复用角色与流程，项目内绑定执行';
 
 const sortAgentsByUpdatedAt = (items: AgentResponse[]): AgentResponse[] => {
@@ -272,35 +272,32 @@ export const AgentsManagementPage = () => {
     );
 
     return [
-      {
-        label: '智能体总数',
-        value: `${items.length} 个`,
-        hint: '当前目录中的全局智能体配置数量。',
-      },
-      {
-        label: '启用中',
-        value: `${activeCount} 个`,
-        hint:
-          disabledCount === 0
-            ? '当前没有停用中的智能体。'
-            : `${disabledCount} 个当前处于停用状态。`,
-      },
-      {
-        label: '已绑知识库',
-        value: `${knowledgeBoundCount} 个`,
-        hint:
-          knowledgeBindingTotal === 0
-            ? '当前还没有智能体接入知识库。'
-            : `累计 ${knowledgeBindingTotal} 条知识库绑定。`,
-      },
-      {
-        label: '已绑 Skill',
-        value: `${skillBoundCount} 个`,
-        hint:
-          skillBindingTotal === 0
-            ? '当前还没有智能体接入 Skill。'
-            : `累计 ${skillBindingTotal} 条 Skill 绑定。`,
-      },
+      createGlobalAssetSummaryItem(
+        '智能体总数',
+        `${items.length} 个`,
+        '当前目录中的全局智能体配置数量。',
+      ),
+      createGlobalAssetSummaryItem(
+        '启用中',
+        `${activeCount} 个`,
+        disabledCount === 0
+          ? '当前没有停用中的智能体。'
+          : `${disabledCount} 个当前处于停用状态。`,
+      ),
+      createGlobalAssetSummaryItem(
+        '已绑知识库',
+        `${knowledgeBoundCount} 个`,
+        knowledgeBindingTotal === 0
+          ? '当前还没有智能体接入知识库。'
+          : `累计 ${knowledgeBindingTotal} 条知识库绑定。`,
+      ),
+      createGlobalAssetSummaryItem(
+        '已绑 Skill',
+        `${skillBoundCount} 个`,
+        skillBindingTotal === 0
+          ? '当前还没有智能体接入 Skill。'
+          : `累计 ${skillBindingTotal} 条 Skill 绑定。`,
+      ),
     ] satisfies GlobalAssetSummaryItem[];
   }, [items]);
   const filteredAgents = filterAgents(items, selectedFilter);
@@ -540,7 +537,7 @@ export const AgentsManagementPage = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center">
+      <div className="flex min-h-105 items-center justify-center">
         <Spin size="large" />
       </div>
     );
@@ -604,28 +601,15 @@ export const AgentsManagementPage = () => {
         >
           <GlobalAssetSidebarSection title="分组浏览">
             {agentFilters.map((filter) => (
-              <GlobalAssetSidebarItem
+              <GlobalAssetSidebarFilterItem
                 key={filter.key}
                 active={selectedFilter === filter.key}
+                label={filter.label}
+                count={filter.count}
                 onClick={() => {
                   setSelectedFilter(filter.key);
                 }}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <Typography.Text
-                    className={`text-sm font-medium ${
-                      selectedFilter === filter.key
-                        ? 'text-slate-900!'
-                        : 'text-slate-600!'
-                    }`}
-                  >
-                    {filter.label}
-                  </Typography.Text>
-                  <Typography.Text className="text-xs text-slate-400">
-                    {filter.count}
-                  </Typography.Text>
-                </div>
-              </GlobalAssetSidebarItem>
+              />
             ))}
           </GlobalAssetSidebarSection>
 
@@ -659,13 +643,13 @@ export const AgentsManagementPage = () => {
                         >
                           {agent.name}
                         </Typography.Text>
-                        <Typography.Text className="text-[11px] text-slate-400">
+                        <Typography.Text className="text-caption text-slate-400">
                           {statusMeta.label}
                         </Typography.Text>
                       </div>
-                      <Typography.Text className="block text-[11px] text-slate-500">
+                      <Typography.Text className="block text-caption text-slate-500">
                         最近更新：
-                        {updatedAtFormatter.format(new Date(agent.updatedAt))}
+                        {formatGlobalAssetUpdatedAt(agent.updatedAt)}
                       </Typography.Text>
                     </div>
                   </GlobalAssetSidebarItem>
@@ -714,7 +698,7 @@ export const AgentsManagementPage = () => {
                 ref={(node) => {
                   agentCardRefs.current[agent.id] = node;
                 }}
-                className={`group rounded-[24px] border bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)] transition ${
+                className={`group rounded-3xl border bg-white p-5 shadow-float transition ${
                   isHighlighted
                     ? 'border-emerald-300 bg-emerald-50/40 shadow-[0_18px_36px_rgba(16,185,129,0.12)]'
                     : 'border-slate-200'
@@ -767,17 +751,17 @@ export const AgentsManagementPage = () => {
                   </Typography.Text>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-slate-600">
-                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium">
+                <div className="mt-4 flex flex-wrap gap-2 text-caption text-slate-600">
+                  <GlobalAssetMetaPill className="border-slate-200 bg-slate-50 text-slate-600">
                     知识库：{agent.boundKnowledgeIds.length}
-                  </span>
-                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium">
+                  </GlobalAssetMetaPill>
+                  <GlobalAssetMetaPill className="border-slate-200 bg-slate-50 text-slate-600">
                     Skill：{agent.boundSkillIds.length}
-                  </span>
-                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium">
+                  </GlobalAssetMetaPill>
+                  <GlobalAssetMetaPill className="border-slate-200 bg-slate-50 text-slate-600">
                     最近更新：
-                    {updatedAtFormatter.format(new Date(agent.updatedAt))}
-                  </span>
+                    {formatGlobalAssetUpdatedAt(agent.updatedAt)}
+                  </GlobalAssetMetaPill>
                 </div>
               </article>
             );

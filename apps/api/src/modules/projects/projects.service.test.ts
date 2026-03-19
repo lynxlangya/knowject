@@ -6,7 +6,8 @@ import { ObjectId } from 'mongodb';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { SettingsRepository } from '@modules/settings/settings.repository.js';
 import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
-import { createProjectConversationRuntime, createProjectsService } from './projects.service.js';
+import { createProjectConversationRuntime } from './project-conversation-runtime.js';
+import { createProjectsService } from './projects.service.js';
 import type { ProjectsRepository } from './projects.repository.js';
 import type {
   ProjectConversationDocument,
@@ -21,11 +22,6 @@ const SUPPORTED_LLM_PROVIDER_CASES = [
     provider: 'openai' as const,
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-5.4',
-  },
-  {
-    provider: 'anthropic' as const,
-    baseUrl: 'https://api.anthropic.com/v1',
-    model: 'claude-sonnet-4-6',
   },
   {
     provider: 'gemini' as const,
@@ -732,6 +728,287 @@ test('createProjectConversationMessage keeps a concurrent manual rename when aut
   assert.equal(result.conversation.title, '人工改名后的标题');
 });
 
+test('createProjectConversationMessage reuses the persisted user message when retrying after assistant generation fails', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd79943901b'),
+    name: '对话失败重试',
+    description: '验证 assistant 生成失败后的幂等重试',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-retry-runtime',
+        title: '已有会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+  let appendCalls = 0;
+  let runtimeCalls = 0;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString()
+        ? {
+            ...project,
+            conversations: [persistedConversation],
+            updatedAt: persistedConversation.updatedAt,
+            _id: project._id,
+          }
+        : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      appendCalls += 1;
+      assert.equal(conversationId, 'chat-retry-runtime');
+      persistedConversation = {
+        ...persistedConversation,
+        messages: [...persistedConversation.messages, message],
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub(async () => {
+      runtimeCalls += 1;
+
+      if (runtimeCalls === 1) {
+        throw new Error('llm timeout');
+      }
+
+      return {
+        content: '第二次重试后已补齐 assistant 回复。',
+        sources: [],
+      };
+    }),
+  });
+
+  await assert.rejects(
+    () =>
+      service.createProjectConversationMessage(
+        {
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+        },
+        project._id.toHexString(),
+        'chat-retry-runtime',
+        {
+          content: '先验证幂等重试',
+          clientRequestId: 'client-request-1',
+        },
+      ),
+    (error) => error instanceof Error && /llm timeout/.test(error.message),
+  );
+
+  assert.equal(persistedConversation.messages.length, 1);
+  assert.equal(persistedConversation.messages[0]?.role, 'user');
+  assert.equal(
+    persistedConversation.messages[0]?.clientRequestId,
+    'client-request-1',
+  );
+
+  const retryResult = await service.createProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-retry-runtime',
+    {
+      content: '先验证幂等重试',
+      clientRequestId: 'client-request-1',
+    },
+  );
+
+  assert.equal(runtimeCalls, 2);
+  assert.equal(appendCalls, 2);
+  assert.equal(persistedConversation.messages.length, 2);
+  assert.equal(
+    persistedConversation.messages.filter((message) => message.role === 'user')
+      .length,
+    1,
+  );
+  assert.equal(
+    retryResult.conversation.messages[1]?.content,
+    '第二次重试后已补齐 assistant 回复。',
+  );
+});
+
+test('createProjectConversationMessage reuses the persisted user message when assistant persistence fails', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd79943901c'),
+    name: '对话持久化重试',
+    description: '验证 assistant 落库失败后的幂等重试',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-retry-persist',
+        title: '已有会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+  let appendCalls = 0;
+  let assistantPersistAttempts = 0;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString()
+        ? {
+            ...project,
+            conversations: [persistedConversation],
+            updatedAt: persistedConversation.updatedAt,
+            _id: project._id,
+          }
+        : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      appendCalls += 1;
+      assert.equal(conversationId, 'chat-retry-persist');
+
+      if (message.role === 'assistant') {
+        assistantPersistAttempts += 1;
+        if (assistantPersistAttempts === 1) {
+          throw new Error('mongo write failed');
+        }
+      }
+
+      persistedConversation = {
+        ...persistedConversation,
+        messages: [...persistedConversation.messages, message],
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub(async () => ({
+      content: 'assistant 已在重试后写回成功。',
+      sources: [],
+    })),
+  });
+
+  await assert.rejects(
+    () =>
+      service.createProjectConversationMessage(
+        {
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+        },
+        project._id.toHexString(),
+        'chat-retry-persist',
+        {
+          content: '先验证 assistant 落库失败',
+          clientRequestId: 'client-request-2',
+        },
+      ),
+    (error) => error instanceof Error && /mongo write failed/.test(error.message),
+  );
+
+  assert.equal(persistedConversation.messages.length, 1);
+  assert.equal(
+    persistedConversation.messages[0]?.clientRequestId,
+    'client-request-2',
+  );
+
+  const retryResult = await service.createProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-retry-persist',
+    {
+      content: '先验证 assistant 落库失败',
+      clientRequestId: 'client-request-2',
+    },
+  );
+
+  assert.equal(appendCalls, 3);
+  assert.equal(assistantPersistAttempts, 2);
+  assert.equal(
+    persistedConversation.messages.filter((message) => message.role === 'user')
+      .length,
+    1,
+  );
+  assert.equal(retryResult.conversation.messages.length, 2);
+  assert.equal(
+    retryResult.conversation.messages[1]?.content,
+    'assistant 已在重试后写回成功。',
+  );
+});
+
 test('updateProjectConversation updates the current thread title', async () => {
   const project: ProjectDocument & {
     _id: NonNullable<ProjectDocument['_id']>;
@@ -1165,7 +1442,7 @@ test('createProjectConversationMessage materializes the fallback default thread 
   );
 
   assert.equal(materializeCalls, 1);
-  assert.equal(appendCalls, 3);
+  assert.equal(appendCalls, 2);
   assert.equal(titleUpdateCalls, 1);
   assert.notEqual(persistedConversation, null);
   if (!persistedConversation) {
@@ -1356,7 +1633,7 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
   }
 });
 
-test('createProjectConversationRuntime accepts all configured chat-completions providers', async () => {
+test('createProjectConversationRuntime accepts all configured supported providers', async () => {
   await withEncryptionKey(async () => {
     const projectId = '507f1f77bcf86cd799439100';
     const project: ProjectDocument & {
@@ -1493,6 +1770,75 @@ test('createProjectConversationRuntime accepts all configured chat-completions p
     } finally {
       global.fetch = originalFetch;
     }
+  });
+});
+
+test('createProjectConversationRuntime rejects anthropic until a provider-specific adapter exists', async () => {
+  await withEncryptionKey(async () => {
+    const runtime = createProjectConversationRuntime({
+      env: createTestEnv(),
+      settingsRepository: createSettingsRepositoryStub({
+        llm: {
+          provider: 'anthropic' as unknown as (typeof SUPPORTED_LLM_PROVIDER_CASES)[number]['provider'],
+          baseUrl: 'https://api.anthropic.com/v1',
+          model: 'claude-sonnet-4-6',
+          apiKey: 'anthropic-api-key',
+        },
+      }),
+      knowledgeSearch: {
+        searchProjectDocuments: async () => ({
+          query: 'provider drift',
+          sourceType: 'global_docs',
+          total: 0,
+          items: [],
+        }),
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        runtime.generateAssistantReply({
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+          project: {
+            _id: new ObjectId('507f1f77bcf86cd799439101'),
+            name: 'Anthropic Drift',
+            description: '',
+            ownerId: 'user-1',
+            members: [
+              {
+                userId: 'user-1',
+                role: 'admin',
+                joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+              },
+            ],
+            knowledgeBaseIds: [],
+            agentIds: [],
+            skillIds: [],
+            conversations: [],
+            createdAt: new Date('2026-03-17T00:00:00.000Z'),
+            updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+          },
+          conversation: {
+            id: 'chat-anthropic',
+            title: 'Anthropic 检查',
+            messages: [],
+            createdAt: new Date('2026-03-17T00:00:00.000Z'),
+            updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+          },
+          userMessage: {
+            id: 'msg-anthropic',
+            role: 'user',
+            content: '测试 anthropic provider',
+            createdAt: new Date('2026-03-17T00:00:00.000Z'),
+          },
+        }),
+      (error) =>
+        error instanceof Error &&
+        error.message === '当前 LLM Provider 暂不支持项目对话',
+    );
   });
 });
 

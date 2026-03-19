@@ -38,11 +38,11 @@ export const LoginFormPanel = ({
         <div className="mb-6">
           <Typography.Title
             level={2}
-            className="m-0! text-[52px]! font-[780]! leading-[1.04]! tracking-[-0.02em]! text-slate-900! max-[1199px]:text-[46px]! max-[960px]:text-[38px]! max-[560px]:text-[30px]!"
+            className="m-0! text-display-lg! font-[780]! leading-[1.04]! tracking-[-0.02em]! text-slate-900! max-[1199px]:text-[46px]! max-[960px]:text-[38px]! max-[560px]:text-3xl!"
           >
             {isRegisterMode ? '创建账号' : '欢迎回来'}
           </Typography.Title>
-          <Typography.Paragraph className="mb-0! mt-2.5! text-[15px]! text-slate-500!">
+          <Typography.Paragraph className="mb-0! mt-2.5! text-body! text-slate-500!">
             {isRegisterMode ? '创建你的第一个知项账号并直接进入系统' : '请输入用户名和密码以继续'}
           </Typography.Paragraph>
           <div className="mt-3 inline-flex items-center gap-2 text-sm text-slate-500">
@@ -153,7 +153,7 @@ export const LoginFormPanel = ({
             <Button
               type="primary"
               htmlType="submit"
-              className="h-14! rounded-[28px]! border-none! text-base! font-bold! tracking-[0.01em]! transition-all! duration-200! hover:-translate-y-px! active:translate-y-0!"
+              className="h-14! rounded-hero! border-none! text-base! font-bold! tracking-[0.01em]! transition-all! duration-200! hover:-translate-y-px! active:translate-y-0!"
               style={{
                 backgroundImage: KNOWJECT_BRAND.navGradient,
                 boxShadow: `0 8px 20px ${KNOWJECT_BRAND.primaryGlow}, inset 0 0 0 1px rgba(255,255,255,0.34)`,

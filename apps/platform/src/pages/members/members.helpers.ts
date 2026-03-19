@@ -15,7 +15,7 @@ import type {
   ProjectMemberStatus,
   ProjectSummary,
 } from '@app/project/project.types';
-import { getProjectMembers } from '@pages/project/project.mock';
+import { getProjectMembers } from '@pages/project/projectWorkspaceSnapshot.mock';
 import type {
   MemberAssetSummary,
   MemberFiltersState,

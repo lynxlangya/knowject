@@ -7,6 +7,7 @@ import type {
   ProjectSummary,
   ToggleProjectPinResult,
   UpdateProjectInput,
+  UpdateProjectResourceBindingsInput,
   UpdateProjectResult,
 } from "./project.types";
 
@@ -16,6 +17,9 @@ export interface ProjectContextValue {
   error: string | null;
   addProject: (input: CreateProjectInput) => Promise<AddProjectResult>;
   updateProject: (input: UpdateProjectInput) => Promise<UpdateProjectResult>;
+  updateProjectResourceBindings: (
+    input: UpdateProjectResourceBindingsInput,
+  ) => Promise<UpdateProjectResult>;
   toggleProjectPin: (projectId: string) => ToggleProjectPinResult;
   deleteProject: (projectId: string) => Promise<DeleteProjectResult>;
   removeProjectSnapshot: (projectId: string) => void;

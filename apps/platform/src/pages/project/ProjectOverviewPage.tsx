@@ -6,7 +6,7 @@ import {
   buildProjectResourcesPath,
 } from '@app/navigation/paths';
 import { useProjectPageContext } from './projectPageContext';
-import { getRecentProjectResources } from './project.mock';
+import { getRecentProjectResources } from './projectResourceMappers';
 
 const formatConversationUpdatedAt = (value: string): string => {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -22,44 +22,41 @@ export const ProjectOverviewPage = () => {
   const {
     activeProject,
     conversations,
-    conversationsError,
-    knowledgeCatalog,
-    projectKnowledgeCatalog,
-    agentsCatalog,
-    skillsCatalog,
+    globalAssetCatalogs,
+    projectKnowledge,
   } = useProjectPageContext();
-  const recentConversations = conversations.slice(0, 3);
+  const recentConversations = conversations.items.slice(0, 3);
   const recentResources = getRecentProjectResources(activeProject, {
-    knowledgeCatalog,
-    projectKnowledgeCatalog,
-    agentsCatalog,
-    skillsCatalog,
+    knowledgeCatalog: globalAssetCatalogs.knowledge.items,
+    projectKnowledgeCatalog: projectKnowledge.items,
+    agentsCatalog: globalAssetCatalogs.agents.items,
+    skillsCatalog: globalAssetCatalogs.skills.items,
   });
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex flex-col gap-3">
-        {conversationsError ? (
+        {conversations.error ? (
           <Alert
             type="warning"
             showIcon
             message="项目上下文加载部分失败"
-            description={conversationsError}
+            description={conversations.error}
           />
         ) : null}
 
         <Card
-          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+          className="rounded-3xl! border-slate-200! shadow-surface!"
           styles={{ body: { padding: '0' } }}
         >
           <div className="border-b border-slate-100 px-5 py-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="mb-2 flex items-center gap-2">
-                  <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  <Typography.Text className="text-caption font-semibold uppercase tracking-[0.16em] text-slate-400">
                     项目对话
                   </Typography.Text>
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-caption font-medium text-slate-500">
                     最近 {recentConversations.length} 条
                   </span>
                 </div>
@@ -81,7 +78,7 @@ export const ProjectOverviewPage = () => {
 
           {recentConversations.length > 0 ? (
             <div className="px-4 py-4">
-              <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
+              <div className="overflow-hidden rounded-card-lg border border-slate-200 bg-white">
                 {recentConversations.map((conversation) => (
                   <button
                     key={conversation.id}
@@ -98,19 +95,19 @@ export const ProjectOverviewPage = () => {
                             className="h-2 w-2 rounded-full bg-slate-300 transition-colors duration-200 group-hover:bg-emerald-400"
                             aria-hidden="true"
                           />
-                          <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                          <Typography.Text className="text-caption font-semibold uppercase tracking-[0.16em] text-slate-400">
                             最近活跃
                           </Typography.Text>
                         </div>
-                        <Typography.Text className="block truncate text-[15px] font-semibold text-slate-800">
+                        <Typography.Text className="block truncate text-body font-semibold text-slate-800">
                           {conversation.title}
                         </Typography.Text>
                       </div>
-                      <span className="shrink-0 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                      <span className="shrink-0 rounded-full bg-slate-50 px-2.5 py-1 text-caption font-medium text-slate-500">
                         {formatConversationUpdatedAt(conversation.updatedAt)}
                       </span>
                     </div>
-                    <Typography.Paragraph className="mb-0! text-[13px]! leading-6! text-slate-500! [display:-webkit-box] overflow-hidden [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                    <Typography.Paragraph className="mb-0! text-label! leading-6! text-slate-500! [display:-webkit-box] overflow-hidden [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                       {conversation.preview}
                     </Typography.Paragraph>
                   </button>
@@ -119,7 +116,7 @@ export const ProjectOverviewPage = () => {
             </div>
           ) : (
             <div className="px-4 py-4">
-              <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/40 px-6 py-10">
+              <div className="rounded-card-lg border border-dashed border-slate-200 bg-slate-50/40 px-6 py-10">
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前暂无对话" />
               </div>
             </div>
@@ -127,7 +124,7 @@ export const ProjectOverviewPage = () => {
         </Card>
 
         <Card
-          className="rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+          className="rounded-3xl! border-slate-200! shadow-surface!"
           styles={{ body: { padding: '20px 20px 20px' } }}
         >
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -147,7 +144,7 @@ export const ProjectOverviewPage = () => {
               {recentResources.map((resource) => (
                 <article
                   key={resource.id}
-                  className="rounded-[20px] border border-slate-200 bg-slate-50/55 px-4 py-4"
+                  className="rounded-card border border-slate-200 bg-slate-50/55 px-4 py-4"
                 >
                   <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
                     {resource.type}
@@ -168,7 +165,7 @@ export const ProjectOverviewPage = () => {
       </div>
 
       <Card
-        className="self-start rounded-[24px]! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+        className="self-start rounded-3xl! border-slate-200! shadow-surface!"
         styles={{ body: { padding: '20px 20px 20px' } }}
       >
         <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -186,7 +183,7 @@ export const ProjectOverviewPage = () => {
             block
             type="primary"
             size="large"
-            className="h-12! rounded-[18px]! text-base! font-semibold!"
+            className="h-12! rounded-panel! text-base! font-semibold!"
             onClick={() =>
               navigate(buildProjectChatPath(activeProject.id, recentConversations[0]?.id))
             }
@@ -196,7 +193,7 @@ export const ProjectOverviewPage = () => {
           <Button
             block
             size="large"
-            className="h-12! rounded-[18px]! text-base! font-medium!"
+            className="h-12! rounded-panel! text-base! font-medium!"
             onClick={() => navigate(buildProjectResourcesPath(activeProject.id))}
           >
             引入资源
@@ -204,7 +201,7 @@ export const ProjectOverviewPage = () => {
           <Button
             block
             size="large"
-            className="h-12! rounded-[18px]! text-base! font-medium!"
+            className="h-12! rounded-panel! text-base! font-medium!"
             onClick={() => navigate(buildProjectMembersPath(activeProject.id))}
           >
             查看成员

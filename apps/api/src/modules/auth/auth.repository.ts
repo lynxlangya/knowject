@@ -3,9 +3,10 @@ import {
   ObjectId,
   type Collection,
   type WithId,
-} from 'mongodb';
-import type { MongoDatabaseManager } from '@db/mongo.js';
-import type { AuthUserDocument, AuthUserProfile } from './auth.types.js';
+} from "mongodb";
+import type { MongoDatabaseManager } from "@db/mongo.js";
+import { toObjectId } from "@lib/mongo-id.js";
+import type { AuthUserDocument, AuthUserProfile } from "./auth.types.js";
 
 interface CreateUserRecordInput {
   username: string;
@@ -13,16 +14,7 @@ interface CreateUserRecordInput {
   passwordHash: string;
 }
 
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 const REGEX_ESCAPE_PATTERN = /[.*+?^${}()|[\]\\]/g;
-
-const toObjectId = (value: string): ObjectId | null => {
-  if (!OBJECT_ID_REGEX.test(value)) {
-    return null;
-  }
-
-  return new ObjectId(value);
-};
 
 const toAuthUserProfile = (user: WithId<AuthUserDocument>): AuthUserProfile => {
   return {
@@ -33,7 +25,7 @@ const toAuthUserProfile = (user: WithId<AuthUserDocument>): AuthUserProfile => {
 };
 
 const escapeRegex = (value: string): string => {
-  return value.replace(REGEX_ESCAPE_PATTERN, '\\$&');
+  return value.replace(REGEX_ESCAPE_PATTERN, "\\$&");
 };
 
 export const isDuplicateUsernameError = (error: unknown): boolean => {
@@ -46,7 +38,9 @@ export class AuthRepository {
 
   constructor(private readonly mongo: MongoDatabaseManager) {}
 
-  async findByUsername(username: string): Promise<WithId<AuthUserDocument> | null> {
+  async findByUsername(
+    username: string,
+  ): Promise<WithId<AuthUserDocument> | null> {
     const collection = await this.getCollection();
     return collection.findOne({ username });
   }
@@ -66,7 +60,10 @@ export class AuthRepository {
     return users.map(toAuthUserProfile);
   }
 
-  async searchProfiles(query: string, limit: number): Promise<AuthUserProfile[]> {
+  async searchProfiles(
+    query: string,
+    limit: number,
+  ): Promise<AuthUserProfile[]> {
     const collection = await this.getCollection();
     const normalizedLimit = Math.min(Math.max(limit, 1), 20);
     const normalizedQuery = query.trim();
@@ -74,8 +71,10 @@ export class AuthRepository {
     const filter = normalizedQuery
       ? {
           $or: [
-            { username: { $regex: escapeRegex(normalizedQuery), $options: 'i' } },
-            { name: { $regex: escapeRegex(normalizedQuery), $options: 'i' } },
+            {
+              username: { $regex: escapeRegex(normalizedQuery), $options: "i" },
+            },
+            { name: { $regex: escapeRegex(normalizedQuery), $options: "i" } },
           ],
         }
       : {};
@@ -89,10 +88,12 @@ export class AuthRepository {
     return users.map(toAuthUserProfile);
   }
 
-  async createUser(input: CreateUserRecordInput): Promise<WithId<AuthUserDocument>> {
+  async createUser(
+    input: CreateUserRecordInput,
+  ): Promise<WithId<AuthUserDocument>> {
     const collection = await this.getCollection();
     const now = new Date();
-    const document: Omit<AuthUserDocument, '_id'> = {
+    const document: Omit<AuthUserDocument, "_id"> = {
       username: input.username,
       name: input.name,
       passwordHash: input.passwordHash,
@@ -110,19 +111,24 @@ export class AuthRepository {
 
   private async getCollection(): Promise<Collection<AuthUserDocument>> {
     await this.mongo.connect();
-    const collection = this.mongo.getDb().collection<AuthUserDocument>('users');
+    const collection = this.mongo.getDb().collection<AuthUserDocument>("users");
     await this.ensureIndexes(collection);
     return collection;
   }
 
-  private async ensureIndexes(collection: Collection<AuthUserDocument>): Promise<void> {
+  private async ensureIndexes(
+    collection: Collection<AuthUserDocument>,
+  ): Promise<void> {
     if (this.indexesEnsured) {
       return;
     }
 
     if (!this.ensureIndexesPromise) {
       this.ensureIndexesPromise = collection
-        .createIndex({ username: 1 }, { unique: true, name: 'users_username_unique' })
+        .createIndex(
+          { username: 1 },
+          { unique: true, name: "users_username_unique" },
+        )
         .then(() => {
           this.indexesEnsured = true;
         })

@@ -1,17 +1,7 @@
-import type { Request, Response } from 'express';
+import type { Request, Response } from "express";
+import type { ApiEnvelope, ApiMeta } from "@knowject/request-contracts";
 
-export interface ApiMeta {
-  requestId: string;
-  timestamp: string;
-  details?: unknown;
-}
-
-export interface ApiEnvelope<T> {
-  code: string;
-  message: string;
-  data: T;
-  meta: ApiMeta;
-}
+export type { ApiEnvelope, ApiMeta } from "@knowject/request-contracts";
 
 interface CreateApiEnvelopeOptions<T> {
   code: string;
@@ -32,7 +22,10 @@ const createApiMeta = ({
   requestId,
   timestamp = new Date().toISOString(),
   details,
-}: Omit<CreateApiEnvelopeOptions<unknown>, 'code' | 'message' | 'data'>): ApiMeta => {
+}: Omit<
+  CreateApiEnvelopeOptions<unknown>,
+  "code" | "message" | "data"
+>): ApiMeta => {
   if (details === undefined) {
     return {
       requestId,
@@ -68,11 +61,11 @@ export const createApiEnvelope = <T>({
 };
 
 const getSuccessCode = (statusCode: number): string => {
-  return statusCode === 201 ? 'CREATED' : 'SUCCESS';
+  return statusCode === 201 ? "CREATED" : "SUCCESS";
 };
 
 const getSuccessMessage = (statusCode: number): string => {
-  return statusCode === 201 ? '创建成功' : '请求成功';
+  return statusCode === 201 ? "创建成功" : "请求成功";
 };
 
 export const sendSuccess = <T>(
@@ -95,7 +88,7 @@ export const sendSuccess = <T>(
 export const sendCreated = <T>(
   response: Response,
   data: T,
-  options: Omit<SendSuccessOptions, 'statusCode'> = {},
+  options: Omit<SendSuccessOptions, "statusCode"> = {},
 ): Response<ApiEnvelope<T>> => {
   return sendSuccess(response, data, {
     ...options,

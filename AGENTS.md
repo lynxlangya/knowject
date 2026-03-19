@@ -29,7 +29,7 @@ docker/
   platform/  前端容器构建与 Nginx 入口
   mongo/     MongoDB 初始化脚本
   caddy/     线上 HTTPS 入口
-scripts/     常用命令统一入口
+scripts/     常用命令统一入口与 shell helper
 files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设计文档）
 .codex/
   config.toml       项目级 Codex 配置
@@ -87,9 +87,10 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 
 - 鉴权 token 统一存储在 `localStorage`，键为 `knowject_token`。
 - 项目列表统一由 `apps/platform/src/app/project/ProjectContext.tsx` 管理，运行时主数据来自 `/api/projects`；组件初始化时会一次性清理已退役的 `knowject_projects` 与 `knowject_project_resource_bindings`。
-- `apps/platform/src/app/project/project.catalog.ts` 维护成员聚合所需的共享 Mock 档案，以及项目创建 / 编辑表单仍在使用的演示资源选项；不再作为项目资源页的 agent 展示事实源。
+- `apps/platform/src/app/project/project.catalog.ts` 维护成员聚合所需的共享 Mock 档案；项目创建 / 编辑表单的资源选项已经迁到 `useProjectResourceOptions.ts` 运行时拉取正式 `/api/knowledge`、`/api/skills`、`/api/agents`，这里不再承担表单资源事实源。
 - `apps/platform/src/app/project/project.storage.ts` 仅负责 `knowject_project_pins` 置顶偏好的本地持久化。
-- `apps/platform/src/pages/project/project.mock.ts` 负责项目概览、资源展示映射与成员协作快照；知识库 / Skill / Agent 元数据优先来自正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`，未知资源 ID 会渲染占位项而不是静默丢失。
+- `apps/platform/src/pages/project/projectWorkspaceSnapshot.mock.ts` 负责项目概览补充文案与成员协作快照；它只承载演示补充层，不作为正式成员关系主数据源。
+- `apps/platform/src/pages/project/projectResourceMappers.ts` 负责项目资源展示映射；知识库 / Skill / Agent 元数据优先来自正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`，未知资源 ID 会渲染占位项而不是静默丢失。
 - 项目资源数据当前由“项目绑定的全局资产 + 项目私有知识”共同组成；知识库、Skill 与 Agent 元数据优先来自正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`。
 - `apps/api` 已经承载 auth、项目主数据、成员关系、知识库、Skill 资产治理与 Agent 配置正式接口；当前仍保留演示性质的部分主要是 `memory` 与项目概览 / 资源相关的前端 Mock 补充数据。
 

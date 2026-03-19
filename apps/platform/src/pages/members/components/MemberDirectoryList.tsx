@@ -24,7 +24,7 @@ export const MemberDirectoryList = ({
 }: MemberDirectoryListProps) => {
   if (members.length === 0) {
     return (
-      <div className="flex min-h-[320px] items-center justify-center">
+      <div className="flex min-h-80 items-center justify-center">
         <Empty description="没有符合条件的成员" />
       </div>
     );
@@ -46,7 +46,7 @@ export const MemberDirectoryList = ({
             key={member.id}
             type="button"
             onClick={() => onSelect(member.id)}
-            className={`w-full rounded-[16px] border px-3 py-2.5 text-left transition ${
+            className={`w-full rounded-2xl border px-3 py-2.5 text-left transition ${
               isActive
                 ? 'border-emerald-200 bg-emerald-50/70'
                 : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white'
@@ -63,7 +63,7 @@ export const MemberDirectoryList = ({
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Typography.Text className="truncate text-[13px] font-semibold text-slate-800">
+                  <Typography.Text className="truncate text-label font-semibold text-slate-800">
                     {member.name}
                   </Typography.Text>
                   {member.isCurrentUser ? (
@@ -78,7 +78,7 @@ export const MemberDirectoryList = ({
                   </span>
                 </div>
 
-                <Typography.Text className="mt-1 block truncate text-[11px] text-slate-500">
+                <Typography.Text className="mt-1 block truncate text-caption text-slate-500">
                   @{member.username} · {compactMeta}
                 </Typography.Text>
               </div>

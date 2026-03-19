@@ -6,7 +6,8 @@ import {
 } from '@ant-design/icons';
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
 import { Button, Empty, Form, Input, Modal, Pagination, Tag, Typography } from 'antd';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { KNOWLEDGE_INDEX_STATUS_META } from '@pages/knowledge/knowledgeDomain.shared';
 
 export interface ProjectKnowledgeFormValues {
   name: string;
@@ -31,29 +32,6 @@ interface ProjectKnowledgeAccessModalProps {
   onOpenGlobalManagement: () => void;
 }
 
-const INDEX_STATUS_META = {
-  idle: {
-    color: 'default',
-    label: '待索引',
-  },
-  pending: {
-    color: 'gold',
-    label: '排队中',
-  },
-  processing: {
-    color: 'processing',
-    label: '处理中',
-  },
-  completed: {
-    color: 'success',
-    label: '已完成',
-  },
-  failed: {
-    color: 'error',
-    label: '失败',
-  },
-} as const;
-
 const GLOBAL_KNOWLEDGE_PAGE_SIZE = 4;
 
 export const ProjectKnowledgeAccessModal = ({
@@ -75,20 +53,15 @@ export const ProjectKnowledgeAccessModal = ({
   const [selectedGlobalKnowledgeIds, setSelectedGlobalKnowledgeIds] = useState<string[]>([]);
   const [form] = Form.useForm<ProjectKnowledgeFormValues>();
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setMode(initialMode);
+  const resetTransientState = (
+    nextMode: ProjectKnowledgeAccessMode = initialMode,
+  ) => {
+    form.resetFields();
     setGlobalSearchValue('');
     setGlobalKnowledgePage(1);
     setSelectedGlobalKnowledgeIds([]);
-    form.setFieldsValue({
-      name: '',
-      description: '',
-    });
-  }, [form, initialMode, open]);
+    setMode(nextMode);
+  };
 
   const availableGlobalKnowledge = knowledgeCatalog.filter(
     (knowledge) => !boundKnowledgeIds.includes(knowledge.id),
@@ -108,9 +81,13 @@ export const ProjectKnowledgeAccessModal = ({
     1,
     Math.ceil(filteredGlobalKnowledge.length / GLOBAL_KNOWLEDGE_PAGE_SIZE),
   );
+  const currentGlobalKnowledgePage = Math.min(
+    globalKnowledgePage,
+    totalGlobalKnowledgePages,
+  );
   const pagedGlobalKnowledge = filteredGlobalKnowledge.slice(
-    (globalKnowledgePage - 1) * GLOBAL_KNOWLEDGE_PAGE_SIZE,
-    globalKnowledgePage * GLOBAL_KNOWLEDGE_PAGE_SIZE,
+    (currentGlobalKnowledgePage - 1) * GLOBAL_KNOWLEDGE_PAGE_SIZE,
+    currentGlobalKnowledgePage * GLOBAL_KNOWLEDGE_PAGE_SIZE,
   );
   const isGlobalMode = mode === 'global';
   const confirmLoading = isGlobalMode ? binding : creating;
@@ -158,12 +135,6 @@ export const ProjectKnowledgeAccessModal = ({
     });
   };
 
-  useEffect(() => {
-    if (globalKnowledgePage > totalGlobalKnowledgePages) {
-      setGlobalKnowledgePage(totalGlobalKnowledgePages);
-    }
-  }, [globalKnowledgePage, totalGlobalKnowledgePages]);
-
   const handleConfirm = () => {
     if (isGlobalMode) {
       void onBindGlobalKnowledge(selectedGlobalKnowledgeIds);
@@ -178,6 +149,11 @@ export const ProjectKnowledgeAccessModal = ({
       title="接入知识库"
       open={open}
       onCancel={onCancel}
+      afterOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          resetTransientState(initialMode);
+        }
+      }}
       onOk={handleConfirm}
       okText={isGlobalMode ? '绑定到当前项目' : '创建并继续上传'}
       cancelText="取消"
@@ -190,9 +166,9 @@ export const ProjectKnowledgeAccessModal = ({
       styles={{ body: { paddingTop: 12 } }}
     >
       <div className="space-y-6">
-        <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.9))] p-4">
+        <div className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.9))] p-4">
           <div className="flex flex-col gap-2">
-            <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400!">
+            <Typography.Text className="text-caption font-semibold uppercase tracking-[0.24em] text-slate-400!">
               接入方式
             </Typography.Text>
             <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-600!">
@@ -211,7 +187,7 @@ export const ProjectKnowledgeAccessModal = ({
                   aria-pressed={selected}
                   onClick={() => setMode(option.value)}
                   className={[
-                    'group rounded-[22px] border px-4 py-3.5 text-left transition',
+                    'group rounded-card-lg border px-4 py-3.5 text-left transition',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2',
                     selected
                       ? option.accentClassName.wrapper
@@ -221,7 +197,7 @@ export const ProjectKnowledgeAccessModal = ({
                   <div className="flex items-start justify-between gap-3">
                     <span
                       className={[
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border text-[18px] transition',
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-lg transition',
                         selected
                           ? option.accentClassName.icon
                           : 'border-slate-200 bg-slate-50 text-slate-500',
@@ -243,17 +219,17 @@ export const ProjectKnowledgeAccessModal = ({
                   </div>
 
                   <div className="mt-3 space-y-1.5">
-                    <Typography.Title level={5} className="mb-0! text-[18px]! text-slate-800!">
+                    <Typography.Title level={5} className="mb-0! text-lg! text-slate-800!">
                       {option.title}
                     </Typography.Title>
-                    <Typography.Paragraph className="mb-0! text-[13px]! leading-5! text-slate-500!">
+                    <Typography.Paragraph className="mb-0! text-label! leading-5! text-slate-500!">
                       {option.description}
                     </Typography.Paragraph>
                   </div>
 
                   <div
                     className={[
-                      'mt-3 rounded-[16px] border px-3.5 py-2 text-xs leading-5 transition',
+                      'mt-3 rounded-2xl border px-3.5 py-2 text-xs leading-5 transition',
                       selected
                         ? option.accentClassName.badge
                         : 'border-slate-200 bg-slate-50 text-slate-500',
@@ -276,7 +252,7 @@ export const ProjectKnowledgeAccessModal = ({
 
         {isGlobalMode ? (
           <div className="space-y-4">
-            <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white p-5">
+            <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <Typography.Title level={5} className="mb-1! text-slate-800!">
@@ -311,13 +287,13 @@ export const ProjectKnowledgeAccessModal = ({
             </div>
 
             {knowledgeCatalogLoading ? (
-              <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
+              <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
                 <Typography.Paragraph className="mb-0! text-center text-sm! text-slate-500!">
                   正在加载可接入的全局知识库...
                 </Typography.Paragraph>
               </div>
             ) : availableGlobalKnowledge.length === 0 ? (
-              <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
+              <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
                 <Empty
                   description="当前没有可新增绑定的全局知识库。"
                 >
@@ -325,7 +301,7 @@ export const ProjectKnowledgeAccessModal = ({
                 </Empty>
               </div>
             ) : filteredGlobalKnowledge.length === 0 ? (
-              <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
+              <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
                 <Empty description="没有匹配的全局知识库，试试换个关键词。" />
               </div>
             ) : (
@@ -333,7 +309,7 @@ export const ProjectKnowledgeAccessModal = ({
                 <div className="grid gap-3 md:grid-cols-2">
                   {pagedGlobalKnowledge.map((knowledge) => {
                     const selected = selectedGlobalKnowledgeIds.includes(knowledge.id);
-                    const statusMeta = INDEX_STATUS_META[knowledge.indexStatus];
+                    const statusMeta = KNOWLEDGE_INDEX_STATUS_META[knowledge.indexStatus];
 
                     return (
                       <button
@@ -341,7 +317,7 @@ export const ProjectKnowledgeAccessModal = ({
                         type="button"
                         onClick={() => handleToggleGlobalKnowledge(knowledge.id)}
                         className={[
-                          'group rounded-[24px] border p-4 text-left transition',
+                          'group rounded-3xl border p-4 text-left transition',
                           selected
                             ? 'border-sky-300 bg-sky-50/70 shadow-[0_14px_28px_rgba(14,116,144,0.08)]'
                             : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_14px_28px_rgba(15,23,42,0.06)]',
@@ -386,7 +362,7 @@ export const ProjectKnowledgeAccessModal = ({
                   <div className="flex justify-center border-t border-slate-100 pt-3">
                     <Pagination
                       size="small"
-                      current={globalKnowledgePage}
+                      current={currentGlobalKnowledgePage}
                       pageSize={GLOBAL_KNOWLEDGE_PAGE_SIZE}
                       total={filteredGlobalKnowledge.length}
                       showSizeChanger={false}
@@ -399,9 +375,9 @@ export const ProjectKnowledgeAccessModal = ({
             )}
           </div>
         ) : (
-          <div className="space-y-4 rounded-[24px] border border-slate-200 bg-white p-5">
+          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5">
             <div className="flex items-start gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border border-emerald-100 bg-emerald-50 text-[20px] text-emerald-600">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-panel border border-emerald-100 bg-emerald-50 text-xl text-emerald-600">
                 <FolderAddOutlined />
               </span>
               <div className="min-w-0">
@@ -417,6 +393,10 @@ export const ProjectKnowledgeAccessModal = ({
             <Form<ProjectKnowledgeFormValues>
               form={form}
               layout="vertical"
+              initialValues={{
+                name: '',
+                description: '',
+              }}
               onFinish={(values) => void onCreateProjectKnowledge(values)}
             >
               <Form.Item
@@ -440,14 +420,14 @@ export const ProjectKnowledgeAccessModal = ({
                 />
               </Form.Item>
 
-              <div className="rounded-[20px] border border-dashed border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-700">
+              <div className="rounded-card border border-dashed border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-700">
                 创建成功后会直接弹出上传来源面板，继续完成文档导入。
               </div>
             </Form>
           </div>
         )}
 
-        <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-3 text-xs leading-6 text-slate-500">
+        <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-3 text-xs leading-6 text-slate-500">
           <DatabaseOutlined className="mr-2 text-slate-400" />
           全局知识适合跨项目复用；项目私有知识适合当前项目的执行手册、会议纪要、里程碑资料和上下文沉淀。
         </div>

@@ -30,12 +30,7 @@ services:
       PORT: "3001"
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
-      MONGO_HOST: mongo
-      MONGO_PORT: "27017"
-      MONGO_APP_DATABASE: ${MONGO_APP_DATABASE:-knowject}
-      MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE:-knowject}
-      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:-knowject_app}
-      MONGO_APP_PASSWORD_FILE: /run/secrets/mongo_app_password
+      MONGODB_URI_FILE: /run/secrets/mongodb_uri
       MONGODB_DB_NAME: ${MONGODB_DB_NAME:-knowject}
       JWT_SECRET_FILE: /run/secrets/jwt_secret
       SETTINGS_ENCRYPTION_KEY_FILE: /run/secrets/settings_encryption_key
@@ -70,6 +65,7 @@ services:
     restart: unless-stopped
     secrets:
       - jwt_secret
+      - mongodb_uri
       - mongo_app_password
       - settings_encryption_key
     volumes:
@@ -171,6 +167,8 @@ volumes:
 secrets:
   jwt_secret:
     file: ./docker/secrets/jwt_secret.txt
+  mongodb_uri:
+    file: ./docker/secrets/mongodb_uri.txt
   mongo_root_password:
     file: ./docker/secrets/mongo_root_password.txt
   mongo_app_password:

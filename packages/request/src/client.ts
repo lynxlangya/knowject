@@ -1,29 +1,15 @@
 import axios, {
-  type AxiosError,
   type AxiosInstance,
   type AxiosRequestConfig,
   type AxiosResponse,
   type InternalAxiosRequestConfig,
-} from 'axios';
-import { RequestDeduper } from './dedupe';
-import { ApiError, type HttpClientOptions } from './types';
-
-interface ApiErrorResponseBody {
-  code?: string;
-  message?: string;
-  data?: unknown;
-  meta?: {
-    requestId?: string;
-    timestamp?: string;
-    details?: unknown;
-  };
-  error?: {
-    message?: string;
-    code?: string;
-    details?: unknown;
-  };
-  detail?: unknown;
-}
+} from "axios";
+import { RequestDeduper } from "./dedupe";
+import {
+  ApiError,
+  extractApiErrorPayload,
+  type HttpClientOptions,
+} from "./types";
 
 export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
   const {
@@ -40,7 +26,7 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
     baseURL,
     timeout,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
   });
 
@@ -57,7 +43,7 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
     // Add x-request-id
     const requestId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     if (config.headers) {
-      config.headers['x-request-id'] = requestId;
+      config.headers["x-request-id"] = requestId;
     }
     // Store for error handling usage
     config._requestId = requestId;
@@ -72,25 +58,26 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
       return response;
     },
     (error: unknown) => {
-      const axiosError = error as AxiosError<ApiErrorResponseBody>;
-      const config = axiosError.config as InternalAxiosRequestConfig | undefined;
+      const axiosError = error as {
+        config?: InternalAxiosRequestConfig;
+        response?: AxiosResponse<unknown>;
+        message?: string;
+      };
+      const config = axiosError.config as
+        | InternalAxiosRequestConfig
+        | undefined;
       const response = axiosError.response as
-        | AxiosResponse<ApiErrorResponseBody>
+        | AxiosResponse<unknown>
         | undefined;
 
-      const requestId = response?.data?.meta?.requestId || config?._requestId;
       const status = response?.status || 0;
-      const message =
-        response?.data?.message ||
-        response?.data?.error?.message ||
-        axiosError.message ||
-        'Unknown Error';
-      const code = response?.data?.code || response?.data?.error?.code;
-      const detail =
-        response?.data?.meta?.details ??
-        response?.data?.error?.details ??
-        response?.data?.detail ??
-        response?.data;
+      const { message, code, detail, requestId } = extractApiErrorPayload(
+        response?.data,
+        {
+          message: axiosError.message || "Unknown Error",
+          requestId: config?._requestId,
+        },
+      );
 
       // Handle 401
       if (status === 401 && onUnauthorized) {
@@ -98,15 +85,15 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
       }
 
       throw new ApiError(message, status, code, detail, requestId);
-    }
+    },
   );
 
   // Wrap methods to support dedupe "recording"
   if (dedupe && deduper) {
-    const originalGet = instance.get.bind(instance) as AxiosInstance['get'];
+    const originalGet = instance.get.bind(instance) as AxiosInstance["get"];
     instance.get = (<T = unknown, R = AxiosResponse<T>, D = unknown>(
       url: string,
-      config?: AxiosRequestConfig<D>
+      config?: AxiosRequestConfig<D>,
     ): Promise<R> => {
       // We can't easily hook into the promise creation *after* the interceptor but *before* the request starts in a clean way via just wrapping `instance.get`.
       // However, since we set `adapter` in the interceptor if a request exists, we handle the "hit" case.
@@ -114,7 +101,7 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
       // The clean way is to let axios run, and if it's a new request, we capture the promise returned by `instance.request`.
 
       // Re-implementation of dedupe logic using wrapper to capture the promise
-      const method = 'GET';
+      const method = "GET";
       const params = config?.params;
       const key = deduper.getKey(method, url, params);
 
@@ -126,7 +113,7 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
       const promise = originalGet<T, R, D>(url, config);
       deduper.add(key, promise as Promise<unknown>);
       return promise;
-    }) as AxiosInstance['get'];
+    }) as AxiosInstance["get"];
   }
 
   return instance;

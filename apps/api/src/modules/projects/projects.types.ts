@@ -21,6 +21,7 @@ export interface ProjectConversationMessageDocument {
   role: ProjectConversationMessageRole;
   content: string;
   createdAt: Date;
+  clientRequestId?: string;
   sources?: ProjectConversationSourceDocument[];
 }
 
@@ -74,6 +75,7 @@ export interface UpdateProjectConversationInput {
 
 export interface CreateProjectConversationMessageInput {
   content?: unknown;
+  clientRequestId?: unknown;
 }
 
 export interface UpdateProjectInput {

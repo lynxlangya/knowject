@@ -81,7 +81,7 @@ export const ProjectResourceGroup = ({
     <article
       key={item.id}
       className={[
-        'rounded-[20px] border border-slate-200 bg-slate-50/55 p-4 shadow-[0_4px_16px_rgba(15,23,42,0.02)] transition',
+        'rounded-card border border-slate-200 bg-slate-50/55 p-4 shadow-[0_4px_16px_rgba(15,23,42,0.02)] transition',
         onItemClick
           ? 'cursor-pointer hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_12px_24px_rgba(15,23,42,0.06)]'
           : '',
@@ -160,7 +160,7 @@ export const ProjectResourceGroup = ({
   return (
     <section
       className={[
-        'rounded-[24px] border bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.035)] transition-colors',
+        'rounded-3xl border bg-white p-5 shadow-surface transition-colors',
         highlighted ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200',
       ].join(' ')}
     >
@@ -214,7 +214,7 @@ export const ProjectResourceGroup = ({
             </div>
           )
         ) : (
-          <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/50 px-4 py-8">
+          <div className="rounded-card border border-dashed border-slate-200 bg-slate-50/50 px-4 py-8">
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={`当前项目尚未接入${group.title}`}

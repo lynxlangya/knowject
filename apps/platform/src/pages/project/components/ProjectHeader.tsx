@@ -25,7 +25,7 @@ export const ProjectHeader = ({
   const activeMembers = members.filter((member) => member.isActive);
   const visibleMembers = activeMembers.slice(0, 5);
   const hiddenMemberCount = Math.max(activeMembers.length - visibleMembers.length, 0);
-  const statLabelClassName = 'text-[12px] font-semibold leading-none text-slate-600';
+  const statLabelClassName = 'text-xs font-semibold leading-none text-slate-600';
   const statItems = [
     { label: '知识库', value: stats.knowledgeCount },
     { label: '技能', value: stats.skillCount },
@@ -34,11 +34,11 @@ export const ProjectHeader = ({
   ];
 
   return (
-    <section className="overflow-hidden rounded-[28px] border border-slate-200/90 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.045)]">
+    <section className="overflow-hidden rounded-hero border border-slate-200/90 bg-white shadow-[0_14px_32px_rgba(15,23,42,0.045)]">
       <div className="flex flex-col gap-5 bg-[linear-gradient(145deg,rgba(246,249,253,0.98),rgba(237,244,255,0.92))] px-6 py-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-1 items-start gap-4">
           <div
-            className="flex h-16 w-16 items-center justify-center rounded-[20px] border text-2xl font-semibold text-white"
+            className="flex h-16 w-16 items-center justify-center rounded-card border text-2xl font-semibold text-white"
             style={{
               borderColor: KNOWJECT_BRAND.primaryBorder,
               backgroundImage: KNOWJECT_BRAND.heroGradient,
@@ -57,7 +57,7 @@ export const ProjectHeader = ({
           </div>
         </div>
 
-        <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-[312px] lg:shrink-0">
+        <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-78 lg:shrink-0">
           <div className="rounded-[14px] border border-white/80 bg-white/78 px-3.5 py-2.5 shadow-[0_8px_18px_rgba(148,163,184,0.08)] backdrop-blur sm:col-span-2">
             <Typography.Text className={statLabelClassName}>
               活跃成员
@@ -92,12 +92,12 @@ export const ProjectHeader = ({
           {statItems.map((item) => (
             <div
               key={item.label}
-              className="flex h-10 items-center justify-between rounded-[12px] border border-white/80 bg-white/70 px-3 py-1.5 shadow-[0_6px_14px_rgba(148,163,184,0.06)] backdrop-blur"
+              className="flex h-10 items-center justify-between rounded-xl border border-white/80 bg-white/70 px-3 py-1.5 shadow-[0_6px_14px_rgba(148,163,184,0.06)] backdrop-blur"
             >
               <span className={statLabelClassName}>
                 {item.label}
               </span>
-              <span className="text-[20px] font-semibold leading-none text-slate-800">
+              <span className="text-xl font-semibold leading-none text-slate-800">
                 {item.value}
               </span>
             </div>

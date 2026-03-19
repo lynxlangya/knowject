@@ -7,7 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "node dist/server.js",
-    "test": "node --test --import tsx src/lib/api-response.test.ts src/lib/crypto.test.ts src/modules/knowledge/knowledge.shared.test.ts src/modules/knowledge/knowledge.search.test.ts src/modules/knowledge/knowledge.service.test.ts src/modules/settings/settings.service.test.ts src/modules/skills/skills.service.test.ts src/modules/agents/agents.service.test.ts src/modules/projects/projects.service.test.ts",
+    "test": "node --test --import tsx src/app/create-app.test.ts src/lib/api-response.test.ts src/lib/crypto.test.ts src/lib/http.test.ts src/lib/mongo-id.test.ts src/lib/mutation-input.test.ts src/modules/knowledge/knowledge.shared.test.ts src/modules/knowledge/knowledge.namespace.test.ts src/modules/knowledge/knowledge.visibility.test.ts src/modules/knowledge/knowledge.search.test.ts src/modules/knowledge/knowledge.project-search.test.ts src/modules/knowledge/knowledge.service.test.ts src/modules/settings/settings.service.test.ts src/modules/skills/skills.service.test.ts src/modules/agents/agents.service.test.ts src/modules/projects/projects.service.test.ts",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {

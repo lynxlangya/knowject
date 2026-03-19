@@ -81,6 +81,7 @@ export interface UpdateProjectConversationRequest {
 
 export interface CreateProjectConversationMessageRequest {
   content: string;
+  clientRequestId?: string;
 }
 
 const PROJECT_CHAT_MESSAGE_TIMEOUT_MS = 30000;

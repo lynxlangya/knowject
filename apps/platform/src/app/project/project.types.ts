@@ -140,6 +140,13 @@ export interface UpdateProjectInput extends CreateProjectInput {
   projectId: string;
 }
 
+export interface UpdateProjectResourceBindingsInput {
+  projectId: string;
+  knowledgeBaseIds?: string[];
+  agentIds?: string[];
+  skillIds?: string[];
+}
+
 export type ChatMessageRole = "user" | "assistant";
 
 export interface ChatMessage {

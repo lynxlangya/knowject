@@ -23,11 +23,16 @@ file_env() {
   fi
 }
 
-for required_name in JWT_SECRET SETTINGS_ENCRYPTION_KEY MONGODB_URI MONGO_APP_USERNAME MONGO_APP_PASSWORD MONGO_APP_DATABASE MONGO_HOST MONGO_PORT MONGO_AUTH_SOURCE MONGODB_DB_NAME; do
+for required_name in JWT_SECRET SETTINGS_ENCRYPTION_KEY MONGODB_URI MONGODB_DB_NAME; do
   file_env "$required_name"
 done
 
 if [[ -z "${MONGODB_URI:-}" ]]; then
+  echo "[start-api] MONGODB_URI is unset; falling back to legacy MONGO_* contract" >&2
+  for legacy_name in MONGO_APP_USERNAME MONGO_APP_PASSWORD MONGO_APP_DATABASE MONGO_HOST MONGO_PORT MONGO_AUTH_SOURCE; do
+    file_env "$legacy_name"
+  done
+
   : "${MONGO_APP_USERNAME:?MONGO_APP_USERNAME is required when MONGODB_URI is unset}"
   : "${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required when MONGODB_URI is unset}"
   : "${MONGO_APP_DATABASE:?MONGO_APP_DATABASE is required when MONGODB_URI is unset}"
@@ -42,5 +47,10 @@ if [[ -z "${MONGODB_URI:-}" ]]; then
 
   export MONGODB_URI="mongodb://${encoded_username}:${encoded_password}@${MONGO_HOST}:${MONGO_PORT}/${MONGO_APP_DATABASE}?authSource=${MONGO_AUTH_SOURCE}"
 fi
+
+: "${JWT_SECRET:?JWT_SECRET or JWT_SECRET_FILE is required}"
+: "${SETTINGS_ENCRYPTION_KEY:?SETTINGS_ENCRYPTION_KEY or SETTINGS_ENCRYPTION_KEY_FILE is required}"
+: "${MONGODB_URI:?MONGODB_URI or MONGODB_URI_FILE is required}"
+: "${MONGODB_DB_NAME:?MONGODB_DB_NAME is required}"
 
 exec node /workspace/apps/api/dist/server.js

@@ -18,7 +18,7 @@ export const GlobalAssetManagementPage = ({
 
   return (
     <section className="space-y-4">
-      <Card className="mb-5! rounded-[24px]! border-slate-200! shadow-[0_12px_30px_rgba(15,23,42,0.04)]!">
+      <Card className="mb-5! rounded-3xl! border-slate-200! shadow-float!">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -46,7 +46,7 @@ export const GlobalAssetManagementPage = ({
         {assets.map((asset) => (
           <article
             key={asset.id}
-            className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.04)]"
+            className="rounded-3xl border border-slate-200 bg-white p-5 shadow-float"
           >
             <div className="flex flex-wrap items-center gap-2">
               <Typography.Title level={4} className="mb-0! text-slate-900!">

@@ -1,13 +1,14 @@
-import { AppError } from '@lib/app-error.js';
+import { AppError } from "@lib/app-error.js";
+import { readMutationInput } from "@lib/mutation-input.js";
 import {
   createRequiredFieldError,
   createValidationAppError,
   readOptionalStringField,
-} from '@lib/validation.js';
-import type { KnowledgeRepository } from '@modules/knowledge/knowledge.repository.js';
-import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
-import type { AgentsRepository } from './agents.repository.js';
-import { toAgentResponse } from './agents.shared.js';
+} from "@lib/validation.js";
+import type { KnowledgeRepository } from "@modules/knowledge/knowledge.repository.js";
+import type { SkillBindingValidator } from "@modules/skills/skills.binding.js";
+import type { AgentsRepository } from "./agents.repository.js";
+import { toAgentResponse } from "./agents.shared.js";
 import type {
   AgentDetailEnvelope,
   AgentDocument,
@@ -16,8 +17,8 @@ import type {
   AgentsListResponse,
   CreateAgentInput,
   UpdateAgentInput,
-} from './agents.types.js';
-import { DEFAULT_AGENT_MODEL } from './agents.types.js';
+} from "./agents.types.js";
+import { DEFAULT_AGENT_MODEL } from "./agents.types.js";
 
 export interface AgentsService {
   listAgents(context: AgentsCommandContext): Promise<AgentsListResponse>;
@@ -40,14 +41,14 @@ export interface AgentsService {
 const createAgentNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
-    code: 'AGENT_NOT_FOUND',
-    message: '智能体不存在',
+    code: "AGENT_NOT_FOUND",
+    message: "智能体不存在",
   });
 };
 
 const readOptionalStringArrayField = (
   value: unknown,
-  field: 'boundSkillIds' | 'boundKnowledgeIds',
+  field: "boundSkillIds" | "boundKnowledgeIds",
 ): string[] | undefined => {
   if (value === undefined) {
     return undefined;
@@ -60,7 +61,7 @@ const readOptionalStringArrayField = (
   }
 
   const normalizedValues = value
-    .filter((item): item is string => typeof item === 'string')
+    .filter((item): item is string => typeof item === "string")
     .map((item) => item.trim())
     .filter(Boolean);
 
@@ -75,64 +76,61 @@ const readOptionalStringArrayField = (
 
 const readOptionalAgentStatus = (
   value: unknown,
-): AgentDocument['status'] | undefined => {
+): AgentDocument["status"] | undefined => {
   if (value === undefined) {
     return undefined;
   }
 
-  if (value === 'active' || value === 'disabled') {
+  if (value === "active" || value === "disabled") {
     return value;
   }
 
-  throw createValidationAppError('status 不合法', {
-    status: 'status 只能为 active 或 disabled',
+  throw createValidationAppError("status 不合法", {
+    status: "status 只能为 active 或 disabled",
   });
-};
-
-const readAgentMutationInput = <T extends CreateAgentInput | UpdateAgentInput>(
-  input: T,
-): T => {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw createValidationAppError('请求体必须为对象', {
-      body: '请求体必须为对象',
-    });
-  }
-
-  return input;
 };
 
 const validateCreateAgentInput = (
   input: CreateAgentInput,
   actorId: string,
-): Omit<AgentDocument, '_id'> => {
-  const normalizedInput = readAgentMutationInput(input);
-  const name = readOptionalStringField(normalizedInput.name, 'name');
-  const description = readOptionalStringField(normalizedInput.description, 'description');
+): Omit<AgentDocument, "_id"> => {
+  const normalizedInput = readMutationInput(input);
+  const name = readOptionalStringField(normalizedInput.name, "name");
+  const description = readOptionalStringField(
+    normalizedInput.description,
+    "description",
+  );
   const systemPrompt = readOptionalStringField(
     normalizedInput.systemPrompt,
-    'systemPrompt',
+    "systemPrompt",
   );
   const boundSkillIds =
-    readOptionalStringArrayField(normalizedInput.boundSkillIds, 'boundSkillIds') ?? [];
+    readOptionalStringArrayField(
+      normalizedInput.boundSkillIds,
+      "boundSkillIds",
+    ) ?? [];
   const boundKnowledgeIds =
-    readOptionalStringArrayField(normalizedInput.boundKnowledgeIds, 'boundKnowledgeIds') ?? [];
-  const status = readOptionalAgentStatus(normalizedInput.status) ?? 'active';
+    readOptionalStringArrayField(
+      normalizedInput.boundKnowledgeIds,
+      "boundKnowledgeIds",
+    ) ?? [];
+  const status = readOptionalAgentStatus(normalizedInput.status) ?? "active";
 
   if (!name) {
-    throw createValidationAppError('请输入智能体名称', {
-      name: '请输入智能体名称',
+    throw createValidationAppError("请输入智能体名称", {
+      name: "请输入智能体名称",
     });
   }
 
   if (!systemPrompt) {
-    throw new AppError(createRequiredFieldError('systemPrompt'));
+    throw new AppError(createRequiredFieldError("systemPrompt"));
   }
 
   const now = new Date();
 
   return {
     name,
-    description: description ?? '',
+    description: description ?? "",
     systemPrompt,
     boundSkillIds,
     boundKnowledgeIds,
@@ -149,23 +147,31 @@ const validateUpdateAgentInput = (
 ): Partial<
   Pick<
     AgentDocument,
-    'name' | 'description' | 'systemPrompt' | 'boundSkillIds' | 'boundKnowledgeIds' | 'status'
+    | "name"
+    | "description"
+    | "systemPrompt"
+    | "boundSkillIds"
+    | "boundKnowledgeIds"
+    | "status"
   >
 > => {
-  const normalizedInput = readAgentMutationInput(input);
-  const name = readOptionalStringField(normalizedInput.name, 'name');
-  const description = readOptionalStringField(normalizedInput.description, 'description');
+  const normalizedInput = readMutationInput(input);
+  const name = readOptionalStringField(normalizedInput.name, "name");
+  const description = readOptionalStringField(
+    normalizedInput.description,
+    "description",
+  );
   const systemPrompt = readOptionalStringField(
     normalizedInput.systemPrompt,
-    'systemPrompt',
+    "systemPrompt",
   );
   const boundSkillIds = readOptionalStringArrayField(
     normalizedInput.boundSkillIds,
-    'boundSkillIds',
+    "boundSkillIds",
   );
   const boundKnowledgeIds = readOptionalStringArrayField(
     normalizedInput.boundKnowledgeIds,
-    'boundKnowledgeIds',
+    "boundKnowledgeIds",
   );
   const status = readOptionalAgentStatus(normalizedInput.status);
 
@@ -177,31 +183,31 @@ const validateUpdateAgentInput = (
     boundKnowledgeIds === undefined &&
     status === undefined
   ) {
-    throw createValidationAppError('至少需要提供一个可更新字段', {
-      name: '至少需要提供一个可更新字段',
-      description: '至少需要提供一个可更新字段',
-      systemPrompt: '至少需要提供一个可更新字段',
-      boundSkillIds: '至少需要提供一个可更新字段',
-      boundKnowledgeIds: '至少需要提供一个可更新字段',
-      status: '至少需要提供一个可更新字段',
+    throw createValidationAppError("至少需要提供一个可更新字段", {
+      name: "至少需要提供一个可更新字段",
+      description: "至少需要提供一个可更新字段",
+      systemPrompt: "至少需要提供一个可更新字段",
+      boundSkillIds: "至少需要提供一个可更新字段",
+      boundKnowledgeIds: "至少需要提供一个可更新字段",
+      status: "至少需要提供一个可更新字段",
     });
   }
 
   if (normalizedInput.name !== undefined && !name) {
-    throw createValidationAppError('请输入智能体名称', {
-      name: '请输入智能体名称',
+    throw createValidationAppError("请输入智能体名称", {
+      name: "请输入智能体名称",
     });
   }
 
   if (normalizedInput.systemPrompt !== undefined && !systemPrompt) {
-    throw createValidationAppError('请输入 systemPrompt', {
-      systemPrompt: '请输入 systemPrompt',
+    throw createValidationAppError("请输入 systemPrompt", {
+      systemPrompt: "请输入 systemPrompt",
     });
   }
 
   return {
     ...(name !== undefined ? { name } : {}),
-    ...(description !== undefined ? { description: description ?? '' } : {}),
+    ...(description !== undefined ? { description: description ?? "" } : {}),
     ...(systemPrompt !== undefined ? { systemPrompt } : {}),
     ...(boundSkillIds !== undefined ? { boundSkillIds } : {}),
     ...(boundKnowledgeIds !== undefined ? { boundKnowledgeIds } : {}),
@@ -210,23 +216,28 @@ const validateUpdateAgentInput = (
 };
 
 const applyAgentPatch = (
-  currentAgent: AgentDocument & { _id: NonNullable<AgentDocument['_id']> },
+  currentAgent: AgentDocument & { _id: NonNullable<AgentDocument["_id"]> },
   patch: Partial<
     Pick<
       AgentDocument,
-      'name' | 'description' | 'systemPrompt' | 'boundSkillIds' | 'boundKnowledgeIds' | 'status'
+      | "name"
+      | "description"
+      | "systemPrompt"
+      | "boundSkillIds"
+      | "boundKnowledgeIds"
+      | "status"
     >
   >,
 ): Partial<
   Pick<
     AgentDocument,
-    | 'name'
-    | 'description'
-    | 'systemPrompt'
-    | 'boundSkillIds'
-    | 'boundKnowledgeIds'
-    | 'status'
-    | 'updatedAt'
+    | "name"
+    | "description"
+    | "systemPrompt"
+    | "boundSkillIds"
+    | "boundKnowledgeIds"
+    | "status"
+    | "updatedAt"
   >
 > => {
   return {
@@ -234,7 +245,8 @@ const applyAgentPatch = (
     description: patch.description ?? currentAgent.description,
     systemPrompt: patch.systemPrompt ?? currentAgent.systemPrompt,
     boundSkillIds: patch.boundSkillIds ?? currentAgent.boundSkillIds,
-    boundKnowledgeIds: patch.boundKnowledgeIds ?? currentAgent.boundKnowledgeIds,
+    boundKnowledgeIds:
+      patch.boundKnowledgeIds ?? currentAgent.boundKnowledgeIds,
     status: patch.status ?? currentAgent.status,
     updatedAt: new Date(),
   };
@@ -246,16 +258,19 @@ const validateBoundKnowledgeIds = async (
 ): Promise<void> => {
   const checks = await Promise.all(
     knowledgeIds.map(async (knowledgeId) => {
-      const knowledge = await knowledgeRepository.findKnowledgeById(knowledgeId);
+      const knowledge =
+        await knowledgeRepository.findKnowledgeById(knowledgeId);
       return knowledge ? null : knowledgeId;
     }),
   );
 
-  const invalidKnowledgeIds = checks.filter((knowledgeId): knowledgeId is string => !!knowledgeId);
+  const invalidKnowledgeIds = checks.filter(
+    (knowledgeId): knowledgeId is string => !!knowledgeId,
+  );
 
   if (invalidKnowledgeIds.length > 0) {
-    throw createValidationAppError('存在未注册的知识库绑定', {
-      boundKnowledgeIds: `以下知识库不存在：${invalidKnowledgeIds.join(', ')}`,
+    throw createValidationAppError("存在未注册的知识库绑定", {
+      boundKnowledgeIds: `以下知识库不存在：${invalidKnowledgeIds.join(", ")}`,
     });
   }
 };
@@ -293,10 +308,16 @@ export const createAgentsService = ({
     createAgent: async ({ actor }, input) => {
       const document = validateCreateAgentInput(input, actor.id);
 
-      await skillBindingValidator.assertBindableSkillIds(document.boundSkillIds, {
-        fieldName: 'boundSkillIds',
-      });
-      await validateBoundKnowledgeIds(knowledgeRepository, document.boundKnowledgeIds);
+      await skillBindingValidator.assertBindableSkillIds(
+        document.boundSkillIds,
+        {
+          fieldName: "boundSkillIds",
+        },
+      );
+      await validateBoundKnowledgeIds(
+        knowledgeRepository,
+        document.boundKnowledgeIds,
+      );
 
       const agent = await repository.createAgent(document);
 
@@ -314,13 +335,19 @@ export const createAgentsService = ({
       const patch = validateUpdateAgentInput(input);
 
       if (patch.boundSkillIds !== undefined) {
-        await skillBindingValidator.assertBindableSkillIds(patch.boundSkillIds, {
-          fieldName: 'boundSkillIds',
-        });
+        await skillBindingValidator.assertBindableSkillIds(
+          patch.boundSkillIds,
+          {
+            fieldName: "boundSkillIds",
+          },
+        );
       }
 
       if (patch.boundKnowledgeIds !== undefined) {
-        await validateBoundKnowledgeIds(knowledgeRepository, patch.boundKnowledgeIds);
+        await validateBoundKnowledgeIds(
+          knowledgeRepository,
+          patch.boundKnowledgeIds,
+        );
       }
 
       const nextAgent = applyAgentPatch(currentAgent, patch);

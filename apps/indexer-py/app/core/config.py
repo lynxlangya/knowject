@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 
-from app.domain.indexing.pipeline import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
+from app.domain.indexing.runtime_config import DEFAULT_CHUNK_OVERLAP, DEFAULT_CHUNK_SIZE
 
 
 @dataclass(frozen=True)

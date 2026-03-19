@@ -8,25 +8,35 @@ import type {
   ProjectWorkspaceSnapshot,
 } from '@app/project/project.types';
 
+export interface ProjectPageListState<TItem> {
+  items: TItem[];
+  loading: boolean;
+  error: string | null;
+}
+
+export interface ProjectPageRefreshableListState<TItem>
+  extends ProjectPageListState<TItem> {
+  refresh: () => void | Promise<void>;
+}
+
+export interface ProjectPageGlobalAssetCatalogs {
+  knowledge: ProjectPageListState<KnowledgeSummaryResponse>;
+  agents: ProjectPageListState<AgentResponse>;
+  skills: ProjectPageListState<SkillSummaryResponse>;
+}
+
+export interface ProjectPageKnowledgeCatalogState
+  extends ProjectPageRefreshableListState<KnowledgeSummaryResponse> {
+  shouldPoll: boolean;
+  pollingAttempts: number;
+  pollingStopped: boolean;
+}
+
 export interface ProjectPageContextValue extends ProjectWorkspaceSnapshot {
   activeProject: ProjectSummary;
-  conversations: ConversationSummary[];
-  conversationsLoading: boolean;
-  conversationsError: string | null;
-  refreshConversations: () => Promise<void>;
-  knowledgeCatalog: KnowledgeSummaryResponse[];
-  knowledgeCatalogLoading: boolean;
-  knowledgeCatalogError: string | null;
-  projectKnowledgeCatalog: KnowledgeSummaryResponse[];
-  projectKnowledgeLoading: boolean;
-  projectKnowledgeError: string | null;
-  refreshProjectKnowledge: () => void;
-  agentsCatalog: AgentResponse[];
-  agentsCatalogLoading: boolean;
-  agentsCatalogError: string | null;
-  skillsCatalog: SkillSummaryResponse[];
-  skillsCatalogLoading: boolean;
-  skillsCatalogError: string | null;
+  conversations: ProjectPageRefreshableListState<ConversationSummary>;
+  globalAssetCatalogs: ProjectPageGlobalAssetCatalogs;
+  projectKnowledge: ProjectPageKnowledgeCatalogState;
 }
 
 export const useProjectPageContext = (): ProjectPageContextValue => {

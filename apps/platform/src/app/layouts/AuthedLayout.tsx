@@ -23,11 +23,11 @@ export const AuthedLayout = () => {
 
   const handleLogout = () => {
     clearAuthSession();
-    navigate(PATHS.login, { replace: true });
+    void navigate(PATHS.login, { replace: true });
   };
 
   const handleNavigate = (path: string) => {
-    navigate(path);
+    void navigate(path);
   };
 
   const selectedKey = getMenuSelectedKey(location.pathname);

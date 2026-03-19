@@ -1,21 +1,12 @@
-import { ObjectId, type Collection, type WithId } from 'mongodb';
-import type { MongoDatabaseManager } from '@db/mongo.js';
-import { SKILLS_COLLECTION_NAME } from './skills.shared.js';
+import { ObjectId, type Collection, type WithId } from "mongodb";
+import type { MongoDatabaseManager } from "@db/mongo.js";
+import { toObjectId } from "@lib/mongo-id.js";
+import { SKILLS_COLLECTION_NAME } from "./skills.shared.js";
 import type {
   SkillDocument,
   SkillLifecycleStatus,
   SkillSource,
-} from './skills.types.js';
-
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
-
-const toObjectId = (value: string): ObjectId | null => {
-  if (!OBJECT_ID_REGEX.test(value)) {
-    return null;
-  }
-
-  return new ObjectId(value);
-};
+} from "./skills.types.js";
 
 export class SkillsRepository {
   private skillIndexesEnsured = false;
@@ -23,8 +14,8 @@ export class SkillsRepository {
 
   constructor(private readonly mongo: MongoDatabaseManager) {}
 
-  getPrimaryDataStore(): 'mongodb' {
-    return 'mongodb';
+  getPrimaryDataStore(): "mongodb" {
+    return "mongodb";
   }
 
   async ensureMetadataModel(): Promise<void> {
@@ -40,7 +31,9 @@ export class SkillsRepository {
     return collection
       .find({
         ...(filters?.source ? { source: filters.source } : {}),
-        ...(filters?.lifecycleStatus ? { lifecycleStatus: filters.lifecycleStatus } : {}),
+        ...(filters?.lifecycleStatus
+          ? { lifecycleStatus: filters.lifecycleStatus }
+          : {}),
       })
       .sort({
         updatedAt: -1,
@@ -78,7 +71,7 @@ export class SkillsRepository {
   }
 
   async createSkill(
-    document: SkillDocument & { _id: NonNullable<SkillDocument['_id']> },
+    document: SkillDocument & { _id: NonNullable<SkillDocument["_id"]> },
   ): Promise<WithId<SkillDocument>> {
     const collection = await this.getSkillsCollection();
     await collection.insertOne(document);
@@ -90,16 +83,16 @@ export class SkillsRepository {
     patch: Partial<
       Pick<
         SkillDocument,
-        | 'name'
-        | 'slug'
-        | 'description'
-        | 'lifecycleStatus'
-        | 'skillMarkdown'
-        | 'markdownExcerpt'
-        | 'bundleFiles'
-        | 'importProvenance'
-        | 'publishedAt'
-        | 'updatedAt'
+        | "name"
+        | "slug"
+        | "description"
+        | "lifecycleStatus"
+        | "skillMarkdown"
+        | "markdownExcerpt"
+        | "bundleFiles"
+        | "importProvenance"
+        | "publishedAt"
+        | "updatedAt"
       >
     >,
   ): Promise<WithId<SkillDocument> | null> {
@@ -115,7 +108,7 @@ export class SkillsRepository {
         $set: patch,
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
   }
@@ -140,20 +133,28 @@ export class SkillsRepository {
     return collection;
   }
 
-  private async ensureSkillIndexes(collection: Collection<SkillDocument>): Promise<void> {
+  private async ensureSkillIndexes(
+    collection: Collection<SkillDocument>,
+  ): Promise<void> {
     if (this.skillIndexesEnsured) {
       return;
     }
 
     if (!this.ensureSkillIndexesPromise) {
       this.ensureSkillIndexesPromise = Promise.all([
-        collection.createIndex({ slug: 1 }, { name: 'skills_slug_unique', unique: true }),
-        collection.createIndex({ source: 1, updatedAt: -1 }, { name: 'skills_source_updated_at_desc' }),
+        collection.createIndex(
+          { slug: 1 },
+          { name: "skills_slug_unique", unique: true },
+        ),
+        collection.createIndex(
+          { source: 1, updatedAt: -1 },
+          { name: "skills_source_updated_at_desc" },
+        ),
         collection.createIndex(
           { lifecycleStatus: 1, updatedAt: -1 },
-          { name: 'skills_lifecycle_status_updated_at_desc' },
+          { name: "skills_lifecycle_status_updated_at_desc" },
         ),
-        collection.createIndex({ createdBy: 1 }, { name: 'skills_created_by' }),
+        collection.createIndex({ createdBy: 1 }, { name: "skills_created_by" }),
       ])
         .then(() => {
           this.skillIndexesEnsured = true;

@@ -1,20 +1,11 @@
-import { ObjectId, type Collection, type WithId } from 'mongodb';
-import type { MongoDatabaseManager } from '@db/mongo.js';
+import { type Collection, type WithId } from "mongodb";
+import type { MongoDatabaseManager } from "@db/mongo.js";
+import { toObjectId } from "@lib/mongo-id.js";
 import type {
   ProjectConversationDocument,
   ProjectConversationMessageDocument,
   ProjectDocument,
-} from './projects.types.js';
-
-const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
-
-const toObjectId = (value: string): ObjectId | null => {
-  if (!OBJECT_ID_REGEX.test(value)) {
-    return null;
-  }
-
-  return new ObjectId(value);
-};
+} from "./projects.types.js";
 
 interface UpdateProjectConversationTitleOptions {
   expectedCurrentTitle?: string;
@@ -31,7 +22,7 @@ export class ProjectsRepository {
 
     return collection
       .find({
-        'members.userId': userId,
+        "members.userId": userId,
       })
       .sort({
         updatedAt: -1,
@@ -55,7 +46,9 @@ export class ProjectsRepository {
     return collection.countDocuments({ skillIds: skillId });
   }
 
-  async createProject(document: Omit<ProjectDocument, '_id'>): Promise<WithId<ProjectDocument>> {
+  async createProject(
+    document: Omit<ProjectDocument, "_id">,
+  ): Promise<WithId<ProjectDocument>> {
     const collection = await this.getCollection();
     const result = await collection.insertOne(document);
 
@@ -70,12 +63,12 @@ export class ProjectsRepository {
     input: Partial<
       Pick<
         ProjectDocument,
-        | 'name'
-        | 'description'
-        | 'knowledgeBaseIds'
-        | 'agentIds'
-        | 'skillIds'
-        | 'updatedAt'
+        | "name"
+        | "description"
+        | "knowledgeBaseIds"
+        | "agentIds"
+        | "skillIds"
+        | "updatedAt"
       >
     >,
   ): Promise<WithId<ProjectDocument> | null> {
@@ -91,7 +84,7 @@ export class ProjectsRepository {
         $set: input,
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
 
@@ -100,7 +93,7 @@ export class ProjectsRepository {
 
   async replaceProjectMembers(
     projectId: string,
-    members: ProjectDocument['members'],
+    members: ProjectDocument["members"],
     updatedAt: Date,
   ): Promise<WithId<ProjectDocument> | null> {
     const objectId = toObjectId(projectId);
@@ -118,7 +111,7 @@ export class ProjectsRepository {
         },
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
 
@@ -150,7 +143,7 @@ export class ProjectsRepository {
         },
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
 
@@ -171,7 +164,7 @@ export class ProjectsRepository {
     const result = await collection.findOneAndUpdate(
       {
         _id: objectId,
-        'conversations.0': {
+        "conversations.0": {
           $exists: false,
         },
       },
@@ -184,7 +177,7 @@ export class ProjectsRepository {
         },
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
 
@@ -206,19 +199,19 @@ export class ProjectsRepository {
     const result = await collection.findOneAndUpdate(
       {
         _id: objectId,
-        'conversations.id': conversationId,
+        "conversations.id": conversationId,
       },
       {
         $push: {
-          'conversations.$.messages': message,
+          "conversations.$.messages": message,
         },
         $set: {
-          'conversations.$.updatedAt': updatedAt,
+          "conversations.$.updatedAt": updatedAt,
           updatedAt,
         },
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
 
@@ -251,17 +244,17 @@ export class ProjectsRepository {
           }
         : {
             _id: objectId,
-            'conversations.id': conversationId,
+            "conversations.id": conversationId,
           },
       {
         $set: {
-          'conversations.$.title': title,
-          'conversations.$.updatedAt': updatedAt,
+          "conversations.$.title": title,
+          "conversations.$.updatedAt": updatedAt,
           updatedAt,
         },
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
 
@@ -282,8 +275,8 @@ export class ProjectsRepository {
     const result = await collection.findOneAndUpdate(
       {
         _id: objectId,
-        'conversations.id': conversationId,
-        'conversations.1': {
+        "conversations.id": conversationId,
+        "conversations.1": {
           $exists: true,
         },
       },
@@ -298,7 +291,7 @@ export class ProjectsRepository {
         },
       },
       {
-        returnDocument: 'after',
+        returnDocument: "after",
       },
     );
 
@@ -319,21 +312,32 @@ export class ProjectsRepository {
 
   private async getCollection(): Promise<Collection<ProjectDocument>> {
     await this.mongo.connect();
-    const collection = this.mongo.getDb().collection<ProjectDocument>('projects');
+    const collection = this.mongo
+      .getDb()
+      .collection<ProjectDocument>("projects");
     await this.ensureIndexes(collection);
     return collection;
   }
 
-  private async ensureIndexes(collection: Collection<ProjectDocument>): Promise<void> {
+  private async ensureIndexes(
+    collection: Collection<ProjectDocument>,
+  ): Promise<void> {
     if (this.indexesEnsured) {
       return;
     }
 
     if (!this.ensureIndexesPromise) {
       this.ensureIndexesPromise = Promise.all([
-        collection.createIndex({ 'members.userId': 1 }, { name: 'projects_members_user_id' }),
-        collection.createIndex({ ownerId: 1 }, { name: 'projects_owner_id' }),
-        collection.createIndex({ skillIds: 1 }, { name: 'projects_skill_ids' }),
+        collection.createIndex(
+          { "members.userId": 1 },
+          { name: "projects_members_user_id" },
+        ),
+        collection.createIndex(
+          { "members.userId": 1, updatedAt: -1 },
+          { name: "projects_members_user_id_updated_at_desc" },
+        ),
+        collection.createIndex({ ownerId: 1 }, { name: "projects_owner_id" }),
+        collection.createIndex({ skillIds: 1 }, { name: "projects_skill_ids" }),
       ])
         .then(() => {
           this.indexesEnsured = true;

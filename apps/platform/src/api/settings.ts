@@ -12,7 +12,6 @@ export const SETTINGS_EMBEDDING_PROVIDERS = [
 ] as const;
 export const SETTINGS_LLM_PROVIDERS = [
   'openai',
-  'anthropic',
   'gemini',
   'aliyun',
   'deepseek',

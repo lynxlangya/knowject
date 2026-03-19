@@ -231,7 +231,7 @@ export const MembersPage = () => {
   if (error) {
     return (
       <section className={GLOBAL_ASSET_PAGE_CLASS_NAME}>
-        <Card className="rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!">
+        <Card className="rounded-3xl! border-slate-200! shadow-surface!">
           <Typography.Title level={4} className="text-slate-800!">
             成员
           </Typography.Title>
@@ -292,7 +292,7 @@ export const MembersPage = () => {
 
       {members.length === 0 ? (
         <Card
-          className="min-h-0 rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+          className="min-h-0 rounded-3xl! border-slate-200! shadow-surface!"
           styles={{
             body: {
               height: contentAreaHeight ? `${contentAreaHeight}px` : '100%',
@@ -314,7 +314,7 @@ export const MembersPage = () => {
           }}
         >
           <Card
-            className="h-full min-h-0 rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+            className="h-full min-h-0 rounded-3xl! border-slate-200! shadow-surface!"
             styles={{
               body: {
                 padding: '20px',
@@ -355,7 +355,7 @@ export const MembersPage = () => {
           </Card>
 
           <Card
-            className="h-full min-h-0 rounded-3xl! border-slate-200! shadow-[0_8px_24px_rgba(15,23,42,0.035)]!"
+            className="h-full min-h-0 rounded-3xl! border-slate-200! shadow-surface!"
             styles={{
               body: {
                 padding: '20px',

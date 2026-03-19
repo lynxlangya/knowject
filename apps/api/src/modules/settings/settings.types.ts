@@ -5,7 +5,6 @@ export const SETTINGS_SINGLETON_ID = 'default';
 export const SETTINGS_EMBEDDING_PROVIDERS = ['openai', 'aliyun', 'zhipu', 'voyage', 'custom'] as const;
 export const SETTINGS_LLM_PROVIDERS = [
   'openai',
-  'anthropic',
   'gemini',
   'aliyun',
   'deepseek',

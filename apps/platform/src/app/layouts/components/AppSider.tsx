@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { isApiError } from "@knowject/request";
 import {
   DeleteOutlined,
@@ -14,20 +14,14 @@ import {
 import {
   App,
   Dropdown,
-  Form,
-  Input,
   Layout,
   Menu,
-  Modal,
   Popover,
-  Select,
   Skeleton,
   Typography,
 } from "antd";
 import type { MenuProps } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
-import { listKnowledge } from "@api/knowledge";
-import { listSkills } from "@api/skills";
 import { KNOWJECT_BRAND } from "@styles/brand";
 import { getMenuPath, menuItems } from "@app/navigation/menu";
 import {
@@ -36,13 +30,13 @@ import {
   getProjectIdFromPathname,
 } from "@app/navigation/paths";
 import { getAuthUser } from "@app/auth/user";
-import {
-  GLOBAL_AGENT_OPTIONS,
-  GLOBAL_KNOWLEDGE_OPTIONS,
-} from "@app/project/project.catalog";
 import type { ProjectSummary } from "@app/project/project.types";
 import { useProjectContext } from "@app/project/useProjectContext";
 import { SIDER_WIDTH } from "@app/layouts/layout.constants";
+import {
+  ProjectFormModal,
+  type ProjectFormValues,
+} from "./ProjectFormModal";
 
 const { Sider } = Layout;
 
@@ -52,51 +46,12 @@ export interface AppSiderProps {
   onLogout: () => void;
 }
 
-interface ProjectFormValues {
-  name: string;
-  description?: string;
-  knowledgeBaseIds?: string[];
-  agentIds?: string[];
-  skillIds?: string[];
-}
-
-const toProjectFormValues = (project: ProjectSummary): ProjectFormValues => ({
-  name: project.name,
-  description: project.description,
-  knowledgeBaseIds: project.knowledgeBaseIds,
-  agentIds: project.agentIds,
-  skillIds: project.skillIds,
-});
-
-const resolveBoundResourceOptions = (
-  selectedIds: string[],
-  baseOptions: Array<{ value: string; label: string }>,
-): Array<{ value: string; label: string }> => {
-  const optionMap = new Map(
-    baseOptions.map((option) => [option.value, option] as const),
-  );
-
-  selectedIds.forEach((resourceId) => {
-    if (optionMap.has(resourceId)) {
-      return;
-    }
-
-    optionMap.set(resourceId, {
-      value: resourceId,
-      label: `未知资源（${resourceId}）`,
-    });
-  });
-
-  return Array.from(optionMap.values());
-};
-
 export const AppSider = ({
   selectedKey,
   onNavigate,
   onLogout,
 }: AppSiderProps) => {
   const { message, modal } = App.useApp();
-  const [form] = Form.useForm<ProjectFormValues>();
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -111,14 +66,6 @@ export const AppSider = ({
   } = useProjectContext();
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectSubmitting, setProjectSubmitting] = useState(false);
-  const [knowledgeOptionsLoading, setKnowledgeOptionsLoading] = useState(false);
-  const [skillOptionsLoading, setSkillOptionsLoading] = useState(false);
-  const [knowledgeOptions, setKnowledgeOptions] = useState<
-    Array<{ value: string; label: string }>
-  >([]);
-  const [skillOptions, setSkillOptions] = useState<
-    Array<{ value: string; label: string }>
-  >([]);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [actionMenuOpenProjectId, setActionMenuOpenProjectId] = useState<
     string | null
@@ -126,14 +73,9 @@ export const AppSider = ({
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const activeProjectId = getProjectIdFromPathname(location.pathname);
   const authUser = getAuthUser();
-  const selectedKnowledgeIds = Form.useWatch("knowledgeBaseIds", form) ?? [];
-  const selectedAgentIds = Form.useWatch("agentIds", form) ?? [];
-  const selectedSkillIds = Form.useWatch("skillIds", form) ?? [];
   const editingProject = editingProjectId
     ? (projects.find((project) => project.id === editingProjectId) ?? null)
     : null;
-
-  const isEditing = editingProject !== null;
   const accountPrimary =
     authUser?.username || authUser?.name || "current@knowject.ai";
   const accountSecondary =
@@ -145,133 +87,13 @@ export const AppSider = ({
     .charAt(0)
     .toUpperCase();
 
-  useEffect(() => {
-    if (!projectModalOpen) {
-      return;
-    }
-
-    if (editingProject) {
-      form.setFieldsValue(toProjectFormValues(editingProject));
-      return;
-    }
-
-    form.resetFields();
-  }, [editingProject, form, projectModalOpen]);
-
-  useEffect(() => {
-    if (!projectModalOpen) {
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadProjectResourceOptions = async () => {
-      setKnowledgeOptionsLoading(true);
-      setSkillOptionsLoading(true);
-
-      try {
-        const [knowledgeResult, skillResult] = await Promise.allSettled([
-          listKnowledge(),
-          listSkills({ bindable: true }),
-        ]);
-        if (!isMounted) {
-          return;
-        }
-
-        if (knowledgeResult.status === "fulfilled") {
-          setKnowledgeOptions(
-            knowledgeResult.value.items.map((item) => ({
-              value: item.id,
-              label: item.name,
-            })),
-          );
-        } else {
-          console.error(knowledgeResult.reason);
-          setKnowledgeOptions([]);
-        }
-
-        if (skillResult.status === "fulfilled") {
-          setSkillOptions(
-            skillResult.value.items.map((item) => ({
-              value: item.id,
-              label:
-                item.runtimeStatus === "available"
-                  ? `${item.name} · 已接服务`
-                  : `${item.name} · 契约预留`,
-            })),
-          );
-        } else {
-          console.error(skillResult.reason);
-          setSkillOptions([]);
-        }
-      } catch (loadError) {
-        if (!isMounted) {
-          return;
-        }
-
-        console.error(loadError);
-        setKnowledgeOptions([]);
-        setSkillOptions([]);
-      } finally {
-        if (isMounted) {
-          setKnowledgeOptionsLoading(false);
-          setSkillOptionsLoading(false);
-        }
-      }
-    };
-
-    void loadProjectResourceOptions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [projectModalOpen]);
-
-  const resolvedKnowledgeOptions = (() => {
-    const optionMap = new Map(
-      knowledgeOptions.map((option) => [option.value, option] as const),
-    );
-
-    selectedKnowledgeIds.forEach((knowledgeId) => {
-      if (optionMap.has(knowledgeId)) {
-        return;
-      }
-
-      const matchedProject = projects.find((project) =>
-        project.knowledgeBaseIds.includes(knowledgeId),
-      );
-      const fallbackLabel =
-        GLOBAL_KNOWLEDGE_OPTIONS.find((option) => option.value === knowledgeId)
-          ?.label ??
-        (matchedProject?.knowledgeBaseIds.includes(knowledgeId)
-          ? knowledgeId
-          : knowledgeId);
-
-      optionMap.set(knowledgeId, {
-        value: knowledgeId,
-        label: fallbackLabel,
-      });
-    });
-
-    return Array.from(optionMap.values());
-  })();
-  const resolvedAgentOptions = resolveBoundResourceOptions(
-    selectedAgentIds,
-    GLOBAL_AGENT_OPTIONS,
-  );
-  const resolvedSkillOptions = resolveBoundResourceOptions(
-    selectedSkillIds,
-    skillOptions,
-  );
-
   const handleOpenProject = (projectId: string) => {
-    navigate(buildProjectOverviewPath(projectId));
+    void navigate(buildProjectOverviewPath(projectId));
   };
 
   const handleOpenProjectModal = () => {
     setEditingProjectId(null);
     setActionMenuOpenProjectId(null);
-    form.resetFields();
     setProjectModalOpen(true);
   };
 
@@ -284,7 +106,6 @@ export const AppSider = ({
   const handleCloseProjectModal = () => {
     setProjectModalOpen(false);
     setEditingProjectId(null);
-    form.resetFields();
   };
 
   const handleSubmitProject = async (values: ProjectFormValues) => {
@@ -396,11 +217,11 @@ export const AppSider = ({
             }
 
             if (remainingProjects[0]) {
-              navigate(buildProjectOverviewPath(remainingProjects[0].id));
+              void navigate(buildProjectOverviewPath(remainingProjects[0].id));
               return;
             }
 
-            navigate(PATHS.home);
+            void navigate(PATHS.home);
           } catch (deleteError) {
             console.error(deleteError);
             message.error(
@@ -465,10 +286,10 @@ export const AppSider = ({
   };
 
   const accountPanelContent = (
-    <div className="w-68 rounded-[20px] p-2">
+    <div className="w-68 rounded-card p-2">
       <div className="flex items-center gap-3 rounded-2xl px-2.5 py-2">
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] text-[14px] font-semibold text-white"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] text-sm font-semibold text-white"
           style={{
             backgroundImage: KNOWJECT_BRAND.heroGradient,
             boxShadow: `0 8px 14px ${KNOWJECT_BRAND.primaryGlow}`,
@@ -477,10 +298,10 @@ export const AppSider = ({
           {accountAvatar}
         </div>
         <div className="min-w-0">
-          <Typography.Text className="block truncate text-[13px] font-semibold text-slate-800">
+          <Typography.Text className="block truncate text-label font-semibold text-slate-800">
             {accountPrimary}
           </Typography.Text>
-          <Typography.Text className="block truncate text-[11px] text-slate-500">
+          <Typography.Text className="block truncate text-caption text-slate-500">
             {accountSecondary}
           </Typography.Text>
         </div>
@@ -496,8 +317,8 @@ export const AppSider = ({
           onNavigate(PATHS.settings);
         }}
       >
-        <SettingOutlined className="text-[15px]" />
-        <span className="text-[14px] font-medium">设置</span>
+        <SettingOutlined className="text-body" />
+        <span className="text-sm font-medium">设置</span>
       </button>
 
       <div className="mx-2 my-1.5 h-px bg-slate-200/80" />
@@ -510,8 +331,8 @@ export const AppSider = ({
           onLogout();
         }}
       >
-        <LogoutOutlined className="text-[15px]" />
-        <span className="text-[14px] font-medium">退出登录</span>
+        <LogoutOutlined className="text-body" />
+        <span className="text-sm font-medium">退出登录</span>
       </button>
     </div>
   );
@@ -528,7 +349,7 @@ export const AppSider = ({
     >
       <div className="flex h-full flex-col px-4 py-4">
         <div
-          className="rounded-[26px] border px-4 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.035)]"
+          className="rounded-shell border px-4 py-5 shadow-[0_10px_24px_rgba(15,23,42,0.035)]"
           style={{
             borderColor: "rgba(255,255,255,0.72)",
             background: KNOWJECT_BRAND.shellSurfaceStrong,
@@ -544,7 +365,7 @@ export const AppSider = ({
         </div>
 
         <div
-          className="mt-4 rounded-[26px] border p-2"
+          className="mt-4 rounded-shell border p-2"
           style={{
             borderColor: "rgba(255,255,255,0.68)",
             background: KNOWJECT_BRAND.shellSurface,
@@ -566,16 +387,16 @@ export const AppSider = ({
               "[&_.ant-menu-item]:mx-0",
               "[&_.ant-menu-item]:my-1",
               "[&_.ant-menu-item]:px-3",
-              "[&_.ant-menu-item]:text-[14px]",
+              "[&_.ant-menu-item]:text-sm",
               "[&_.ant-menu-item]:font-medium",
               "[&_.ant-menu-item_.ant-menu-title-content]:tracking-[0.01em]",
-              "[&_.ant-menu-item_.anticon]:text-[15px]",
+              "[&_.ant-menu-item_.anticon]:text-body",
             ].join(" ")}
           />
         </div>
 
         <div
-          className="mt-4 mb-3.5 flex min-h-0 flex-1 flex-col rounded-[26px] border p-3"
+          className="mt-4 mb-3.5 flex min-h-0 flex-1 flex-col rounded-shell border p-3"
           style={{
             borderColor: "rgba(255,255,255,0.68)",
             background: KNOWJECT_BRAND.shellSurface,
@@ -619,7 +440,7 @@ export const AppSider = ({
               </div>
             ) : projects.length === 0 ? (
               <div
-                className="rounded-[20px] border px-3 py-4"
+                className="rounded-card border px-3 py-4"
                 style={{
                   borderColor: "rgba(226,232,240,0.96)",
                   background: "rgba(255,255,255,0.88)",
@@ -627,17 +448,17 @@ export const AppSider = ({
               >
                 <div className="flex flex-col gap-3">
                   <div>
-                    <Typography.Text className="block text-[13px] font-semibold text-slate-800">
+                    <Typography.Text className="block text-label font-semibold text-slate-800">
                       还没有项目
                     </Typography.Text>
-                    <Typography.Text className="mt-1 block text-[12px] leading-5 text-slate-500">
+                    <Typography.Text className="mt-1 block text-xs leading-5 text-slate-500">
                       新建一个项目后，概览、资源、成员和对话会出现在这里。
                     </Typography.Text>
                   </div>
 
                   <button
                     type="button"
-                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[12px] border text-[12px] font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
+                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
                     style={{
                       borderColor: "rgba(203,213,225,0.88)",
                       background: "rgba(248,250,252,0.96)",
@@ -653,7 +474,7 @@ export const AppSider = ({
               <div className="space-y-1.5">
                 {error ? (
                   <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2">
-                    <Typography.Text className="text-[11px] leading-5 text-amber-700">
+                    <Typography.Text className="text-caption leading-5 text-amber-700">
                       项目列表最近一次同步失败，当前显示本地已加载结果。
                     </Typography.Text>
                   </div>
@@ -667,7 +488,7 @@ export const AppSider = ({
                       <button
                         type="button"
                         className={[
-                          "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 pr-14 text-left text-[13px] transition-all duration-200",
+                          "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 pr-14 text-left text-label transition-all duration-200",
                           active
                             ? "text-slate-900"
                             : "text-slate-600 hover:-translate-y-px hover:text-slate-900",
@@ -687,7 +508,7 @@ export const AppSider = ({
                       >
                         <span
                           className={[
-                            "flex h-8 w-8 shrink-0 items-center justify-center text-[12px] font-semibold",
+                            "flex h-8 w-8 shrink-0 items-center justify-center text-xs font-semibold",
                             active || project.isPinned
                               ? "rounded-[14px] border text-white"
                               : "rounded-xl bg-slate-200/90 text-slate-600",
@@ -783,80 +604,19 @@ export const AppSider = ({
               boxShadow: "0 10px 24px rgba(15,42,38,0.03)",
             }}
           >
-            <SettingOutlined className="shrink-0 text-[16px] text-slate-500" />
-            <span className="text-[13px] font-semibold">设置</span>
+            <SettingOutlined className="shrink-0 text-base text-slate-500" />
+            <span className="text-label font-semibold">设置</span>
           </button>
         </Popover>
       </div>
 
-      <Modal
-        title={isEditing ? "编辑项目" : "创建项目"}
+      <ProjectFormModal
         open={projectModalOpen}
+        submitting={projectSubmitting}
+        editingProject={editingProject}
         onCancel={handleCloseProjectModal}
-        onOk={() => form.submit()}
-        okText={isEditing ? "保存修改" : "创建项目"}
-        cancelText="取消"
-        destroyOnHidden
-        confirmLoading={projectSubmitting}
-      >
-        <Form<ProjectFormValues>
-          form={form}
-          layout="vertical"
-          onFinish={(values) => void handleSubmitProject(values)}
-        >
-          <Form.Item
-            name="name"
-            label="项目名称"
-            rules={[
-              { required: true, whitespace: true, message: "请输入项目名称" },
-            ]}
-          >
-            <Input maxLength={40} placeholder="例如：移动端应用重构" />
-          </Form.Item>
-
-          <Form.Item name="description" label="项目说明">
-            <Input.TextArea
-              maxLength={160}
-              showCount
-              autoSize={{ minRows: 3, maxRows: 5 }}
-              placeholder="补充项目目标、当前阶段或协作重点"
-            />
-          </Form.Item>
-
-          <Form.Item name="knowledgeBaseIds" label="选择现有知识库">
-            <Select
-              mode="multiple"
-              allowClear
-              placeholder="可选"
-              loading={knowledgeOptionsLoading}
-              options={resolvedKnowledgeOptions}
-              notFoundContent={
-                knowledgeOptionsLoading ? "加载中..." : "暂无可选知识库"
-              }
-            />
-          </Form.Item>
-
-          <Form.Item name="agentIds" label="智能体">
-            <Select
-              mode="multiple"
-              allowClear
-              placeholder="可选"
-              options={resolvedAgentOptions}
-            />
-          </Form.Item>
-
-          <Form.Item name="skillIds" label="技能">
-            <Select
-              mode="multiple"
-              allowClear
-              placeholder="可选"
-              loading={skillOptionsLoading}
-              options={resolvedSkillOptions}
-              notFoundContent={skillOptionsLoading ? "加载中..." : "暂无可选 Skill"}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onSubmit={handleSubmitProject}
+      />
     </Sider>
   );
 };

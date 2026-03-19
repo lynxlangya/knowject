@@ -1,21 +1,25 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { ObjectId } from 'mongodb';
-import type { AppEnv } from '@config/env.js';
-import { AppError } from '@lib/app-error.js';
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { ObjectId } from "mongodb";
+import type { AppEnv } from "@config/env.js";
+import { AppError } from "@lib/app-error.js";
+import { readMutationInput } from "@lib/mutation-input.js";
 import {
   createRequiredFieldError,
   createValidationAppError,
   readOptionalStringField,
-} from '@lib/validation.js';
-import { resolveImportedSkillBundle } from './skills.import.js';
+} from "@lib/validation.js";
+import { resolveImportedSkillBundle } from "./skills.import.js";
 import {
   mergeSkillMarkdownMetadata,
   parseSkillMarkdown,
   type ParsedSkillMarkdown,
-} from './skills.markdown.js';
-import { findRegisteredSkillById, listRegisteredSkills } from './skills.registry.js';
-import type { SkillsRepository } from './skills.repository.js';
+} from "./skills.markdown.js";
+import {
+  findRegisteredSkillById,
+  listRegisteredSkills,
+} from "./skills.registry.js";
+import type { SkillsRepository } from "./skills.repository.js";
 import {
   SKILL_ENTRY_FILE_NAME,
   createSkillInUseError,
@@ -29,7 +33,7 @@ import {
   normalizeSkillsListFilters,
   toSkillDetailResponse,
   toSkillSummaryResponse,
-} from './skills.shared.js';
+} from "./skills.shared.js";
 import type {
   CreateSkillInput,
   ImportSkillInput,
@@ -43,7 +47,7 @@ import type {
   SkillsCommandContext,
   SkillsListResponse,
   UpdateSkillInput,
-} from './skills.types.js';
+} from "./skills.types.js";
 
 interface SkillBundleContentFile {
   path: string;
@@ -87,7 +91,7 @@ export interface SkillsService {
 
 const sortSkillItems = <
   T extends {
-    source: 'system' | 'custom' | 'imported';
+    source: "system" | "custom" | "imported";
     updatedAt: string;
     createdAt: string;
   },
@@ -102,7 +106,9 @@ const sortSkillItems = <
       return updatedAtDelta;
     }
 
-    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+    return (
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
+    );
   });
 };
 
@@ -117,27 +123,13 @@ const readOptionalLifecycleStatus = (
     return undefined;
   }
 
-  if (value === 'draft' || value === 'published') {
+  if (value === "draft" || value === "published") {
     return value;
   }
 
-  throw createValidationAppError('lifecycleStatus 不合法', {
-    lifecycleStatus: 'lifecycleStatus 只能为 draft 或 published',
+  throw createValidationAppError("lifecycleStatus 不合法", {
+    lifecycleStatus: "lifecycleStatus 只能为 draft 或 published",
   });
-};
-
-const readSkillMutationInput = <
-  T extends CreateSkillInput | UpdateSkillInput | ImportSkillInput,
->(
-  input: T,
-): T => {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw createValidationAppError('请求体必须为对象', {
-      body: '请求体必须为对象',
-    });
-  }
-
-  return input;
 };
 
 const readOptionalSkillMarkdown = (value: unknown): string | undefined => {
@@ -145,9 +137,9 @@ const readOptionalSkillMarkdown = (value: unknown): string | undefined => {
     return undefined;
   }
 
-  if (typeof value !== 'string') {
-    throw createValidationAppError('skillMarkdown 必须为字符串', {
-      skillMarkdown: 'skillMarkdown 必须为字符串',
+  if (typeof value !== "string") {
+    throw createValidationAppError("skillMarkdown 必须为字符串", {
+      skillMarkdown: "skillMarkdown 必须为字符串",
     });
   }
 
@@ -168,7 +160,7 @@ const prepareSkillMarkdown = ({
   const sourceMarkdown = nextMarkdown ?? baseMarkdown;
 
   if (!sourceMarkdown) {
-    throw new AppError(createRequiredFieldError('skillMarkdown'));
+    throw new AppError(createRequiredFieldError("skillMarkdown"));
   }
 
   if (name === undefined && description === undefined) {
@@ -181,11 +173,18 @@ const prepareSkillMarkdown = ({
   });
 };
 
-const validateCreateSkillInput = (input: CreateSkillInput): ParsedSkillMarkdown => {
-  const normalizedInput = readSkillMutationInput(input);
-  const skillMarkdown = readOptionalSkillMarkdown(normalizedInput.skillMarkdown);
-  const name = readOptionalStringField(normalizedInput.name, 'name');
-  const description = readOptionalStringField(normalizedInput.description, 'description');
+const validateCreateSkillInput = (
+  input: CreateSkillInput,
+): ParsedSkillMarkdown => {
+  const normalizedInput = readMutationInput(input);
+  const skillMarkdown = readOptionalSkillMarkdown(
+    normalizedInput.skillMarkdown,
+  );
+  const name = readOptionalStringField(normalizedInput.name, "name");
+  const description = readOptionalStringField(
+    normalizedInput.description,
+    "description",
+  );
 
   return prepareSkillMarkdown({
     nextMarkdown: skillMarkdown,
@@ -201,11 +200,18 @@ const validateUpdateSkillInput = (
   lifecycleStatus?: SkillLifecycleStatus;
   parsedSkill: ParsedSkillMarkdown;
 } => {
-  const normalizedInput = readSkillMutationInput(input);
-  const skillMarkdown = readOptionalSkillMarkdown(normalizedInput.skillMarkdown);
-  const name = readOptionalStringField(normalizedInput.name, 'name');
-  const description = readOptionalStringField(normalizedInput.description, 'description');
-  const lifecycleStatus = readOptionalLifecycleStatus(normalizedInput.lifecycleStatus);
+  const normalizedInput = readMutationInput(input);
+  const skillMarkdown = readOptionalSkillMarkdown(
+    normalizedInput.skillMarkdown,
+  );
+  const name = readOptionalStringField(normalizedInput.name, "name");
+  const description = readOptionalStringField(
+    normalizedInput.description,
+    "description",
+  );
+  const lifecycleStatus = readOptionalLifecycleStatus(
+    normalizedInput.lifecycleStatus,
+  );
 
   if (
     skillMarkdown === undefined &&
@@ -213,11 +219,11 @@ const validateUpdateSkillInput = (
     description === undefined &&
     lifecycleStatus === undefined
   ) {
-    throw createValidationAppError('至少需要提供一个可更新字段', {
-      skillMarkdown: '至少需要提供一个可更新字段',
-      name: '至少需要提供一个可更新字段',
-      description: '至少需要提供一个可更新字段',
-      lifecycleStatus: '至少需要提供一个可更新字段',
+    throw createValidationAppError("至少需要提供一个可更新字段", {
+      skillMarkdown: "至少需要提供一个可更新字段",
+      name: "至少需要提供一个可更新字段",
+      description: "至少需要提供一个可更新字段",
+      lifecycleStatus: "至少需要提供一个可更新字段",
     });
   }
 
@@ -243,8 +249,10 @@ const mapBundleFiles = (
   }));
 };
 
-const buildManualBundleFiles = (skillMarkdown: string): SkillBundleContentFile[] => {
-  const content = Buffer.from(skillMarkdown, 'utf8');
+const buildManualBundleFiles = (
+  skillMarkdown: string,
+): SkillBundleContentFile[] => {
+  const content = Buffer.from(skillMarkdown, "utf8");
 
   return [
     {
@@ -262,19 +270,22 @@ const upsertSkillEntryFile = (
   file: SkillBundleContentFile;
   bundleFiles: SkillBundleFileRecord[];
 } => {
-  const content = Buffer.from(skillMarkdown, 'utf8');
+  const content = Buffer.from(skillMarkdown, "utf8");
   const nextEntryFile = {
     path: SKILL_ENTRY_FILE_NAME,
     content,
     size: content.length,
   };
-  const filteredFiles = existingFiles.filter((file) => file.path !== SKILL_ENTRY_FILE_NAME);
+  const filteredFiles = existingFiles.filter(
+    (file) => file.path !== SKILL_ENTRY_FILE_NAME,
+  );
 
   return {
     file: nextEntryFile,
-    bundleFiles: [...filteredFiles, { path: SKILL_ENTRY_FILE_NAME, size: content.length }].sort(
-      (left, right) => left.path.localeCompare(right.path),
-    ),
+    bundleFiles: [
+      ...filteredFiles,
+      { path: SKILL_ENTRY_FILE_NAME, size: content.length },
+    ].sort((left, right) => left.path.localeCompare(right.path)),
   };
 };
 
@@ -309,8 +320,14 @@ const writeSkillBundleFiles = async (
   );
 };
 
-const deleteSkillBundleFiles = async (env: AppEnv, storagePath: string): Promise<void> => {
-  await rm(join(env.skills.storageRoot, storagePath), { recursive: true, force: true });
+const deleteSkillBundleFiles = async (
+  env: AppEnv,
+  storagePath: string,
+): Promise<void> => {
+  await rm(join(env.skills.storageRoot, storagePath), {
+    recursive: true,
+    force: true,
+  });
 };
 
 const buildPersistedSkillDocument = ({
@@ -324,12 +341,12 @@ const buildPersistedSkillDocument = ({
 }: {
   skillId: ObjectId;
   actorId: string;
-  source: 'custom' | 'imported';
-  origin: 'manual' | 'github' | 'url';
+  source: "custom" | "imported";
+  origin: "manual" | "github" | "url";
   parsedSkill: ParsedSkillMarkdown;
   bundleFiles: SkillBundleContentFile[];
-  importProvenance: SkillDocument['importProvenance'];
-}): SkillDocument & { _id: NonNullable<SkillDocument['_id']> } => {
+  importProvenance: SkillDocument["importProvenance"];
+}): SkillDocument & { _id: NonNullable<SkillDocument["_id"]> } => {
   const now = new Date();
 
   return {
@@ -337,13 +354,13 @@ const buildPersistedSkillDocument = ({
     name: parsedSkill.name,
     slug: buildSkillSlug(parsedSkill.name),
     description: parsedSkill.description,
-    type: 'markdown_bundle',
+    type: "markdown_bundle",
     source,
     origin,
     handler: null,
     parametersSchema: null,
-    runtimeStatus: 'contract_only',
-    lifecycleStatus: 'draft',
+    runtimeStatus: "contract_only",
+    lifecycleStatus: "draft",
     skillMarkdown: parsedSkill.skillMarkdown,
     markdownExcerpt: buildSkillMarkdownExcerpt(
       parsedSkill.skillMarkdown,
@@ -360,7 +377,7 @@ const buildPersistedSkillDocument = ({
 };
 
 const ensureUniqueSkillSlug = async (
-  repository: Pick<SkillsRepository, 'findSkillBySlug'>,
+  repository: Pick<SkillsRepository, "findSkillBySlug">,
   slug: string,
   excludeSkillId?: string,
 ): Promise<void> => {
@@ -375,19 +392,19 @@ const ensureUniqueSkillSlug = async (
   }
 };
 
-const buildSkillListMeta = (): SkillsListResponse['meta'] => {
+const buildSkillListMeta = (): SkillsListResponse["meta"] => {
   return {
-    module: 'skills',
-    stage: 'GA-09',
-    registry: 'hybrid',
+    module: "skills",
+    stage: "GA-09",
+    registry: "hybrid",
     builtinOnly: false,
     boundaries: {
-      businessRuntime: 'node-express',
-      registryStore: 'mongodb+fs',
-      knowledgeAccess: 'service-layer-only',
-      execution: 'service-linked-or-contract-only',
-      import: 'github-or-raw-url',
-      authoring: 'skill-markdown',
+      businessRuntime: "node-express",
+      registryStore: "mongodb+fs",
+      knowledgeAccess: "service-layer-only",
+      execution: "service-linked-or-contract-only",
+      import: "github-or-raw-url",
+      authoring: "skill-markdown",
     },
   };
 };
@@ -407,7 +424,7 @@ const assertSkillNotInUse = async ({
   usageLookup,
 }: {
   skillId: string;
-  action: 'delete' | 'unpublish';
+  action: "delete" | "unpublish";
   usageLookup: SkillUsageLookup;
 }): Promise<void> => {
   const counts = await usageLookup.countManagedSkillReferences(skillId);
@@ -438,9 +455,11 @@ export const createSkillsService = ({
     listSkills: async (_context, input = {}) => {
       const filters = normalizeSkillsListFilters(input);
       const builtinSkills =
-        !filters.source || filters.source === 'system' ? listRegisteredSkills() : [];
+        !filters.source || filters.source === "system"
+          ? listRegisteredSkills()
+          : [];
       const storedSkills =
-        filters.source === 'system'
+        filters.source === "system"
           ? []
           : await repository.listSkills({
               ...(filters.source ? { source: filters.source } : {}),
@@ -449,9 +468,10 @@ export const createSkillsService = ({
                 : {}),
             });
       const items = sortSkillItems(
-        [...builtinSkills, ...storedSkills.map((skill) => toSkillSummaryResponse(skill))].filter(
-          (skill) => matchesSkillFilters(skill, filters),
-        ),
+        [
+          ...builtinSkills,
+          ...storedSkills.map((skill) => toSkillSummaryResponse(skill)),
+        ].filter((skill) => matchesSkillFilters(skill, filters)),
       );
 
       return {
@@ -489,8 +509,8 @@ export const createSkillsService = ({
       const document = buildPersistedSkillDocument({
         skillId,
         actorId: actor.id,
-        source: 'custom',
-        origin: 'manual',
+        source: "custom",
+        origin: "manual",
         parsedSkill,
         bundleFiles,
         importProvenance: null,
@@ -515,8 +535,9 @@ export const createSkillsService = ({
     },
 
     importSkill: async ({ actor }, input) => {
-      const normalizedInput = readSkillMutationInput(input);
-      const { bundle, dryRun } = await resolveImportedSkillBundle(normalizedInput);
+      const normalizedInput = readMutationInput(input);
+      const { bundle, dryRun } =
+        await resolveImportedSkillBundle(normalizedInput);
       const parsedSkill = parseSkillMarkdown(bundle.skillMarkdown);
       const bundleFiles = bundle.bundleFiles.map((file) => ({
         path: assertSafeBundleRelativePath(file.path),
@@ -527,13 +548,13 @@ export const createSkillsService = ({
       if (dryRun) {
         return {
           preview: {
-            source: 'imported',
+            source: "imported",
             origin: bundle.origin,
-            type: 'markdown_bundle',
+            type: "markdown_bundle",
             name: parsedSkill.name,
             description: parsedSkill.description,
-            runtimeStatus: 'contract_only',
-            lifecycleStatus: 'draft',
+            runtimeStatus: "contract_only",
+            lifecycleStatus: "draft",
             bindable: false,
             markdownExcerpt: buildSkillMarkdownExcerpt(
               parsedSkill.skillMarkdown,
@@ -551,7 +572,7 @@ export const createSkillsService = ({
       const document = buildPersistedSkillDocument({
         skillId,
         actorId: actor.id,
-        source: 'imported',
+        source: "imported",
         origin: bundle.origin,
         parsedSkill,
         bundleFiles,
@@ -596,22 +617,23 @@ export const createSkillsService = ({
       );
       const nextSlug = buildSkillSlug(parsedSkill.name);
       await ensureUniqueSkillSlug(repository, nextSlug, normalizedSkillId);
-      const nextLifecycleStatus = lifecycleStatus ?? currentSkill.lifecycleStatus;
+      const nextLifecycleStatus =
+        lifecycleStatus ?? currentSkill.lifecycleStatus;
 
       if (
-        currentSkill.lifecycleStatus === 'published' &&
-        nextLifecycleStatus === 'draft'
+        currentSkill.lifecycleStatus === "published" &&
+        nextLifecycleStatus === "draft"
       ) {
         await assertSkillNotInUse({
           skillId: normalizedSkillId,
-          action: 'unpublish',
+          action: "unpublish",
           usageLookup,
         });
       }
 
       const nextPublishedAt =
-        nextLifecycleStatus === 'published'
-          ? currentSkill.publishedAt ?? new Date()
+        nextLifecycleStatus === "published"
+          ? (currentSkill.publishedAt ?? new Date())
           : null;
       const { file: nextSkillEntryFile, bundleFiles } = upsertSkillEntryFile(
         currentSkill.bundleFiles,
@@ -637,7 +659,9 @@ export const createSkillsService = ({
       }
 
       await ensureSkillsStorageRoot(env);
-      await writeSkillBundleFiles(env, currentSkill.storagePath, [nextSkillEntryFile]);
+      await writeSkillBundleFiles(env, currentSkill.storagePath, [
+        nextSkillEntryFile,
+      ]);
 
       return {
         skill: toSkillDetailResponse(updatedSkill),
@@ -660,7 +684,7 @@ export const createSkillsService = ({
 
       await assertSkillNotInUse({
         skillId: normalizedSkillId,
-        action: 'delete',
+        action: "delete",
         usageLookup,
       });
 

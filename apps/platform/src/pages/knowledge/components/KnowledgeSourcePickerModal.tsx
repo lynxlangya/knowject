@@ -33,9 +33,9 @@ const SourceActionCard = ({
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-h-30 items-center gap-4 rounded-[24px] border border-slate-200 bg-slate-50/90 px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_16px_32px_rgba(15,23,42,0.08)]"
+      className="group flex min-h-30 items-center gap-4 rounded-3xl border border-slate-200 bg-slate-50/90 px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_16px_32px_rgba(15,23,42,0.08)]"
     >
-      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-[22px] text-slate-600 transition group-hover:border-emerald-200 group-hover:text-emerald-600">
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-panel border border-slate-200 bg-white text-[22px] text-slate-600 transition group-hover:border-emerald-200 group-hover:text-emerald-600">
         {icon}
       </span>
 
@@ -141,7 +141,7 @@ export const KnowledgeSourcePickerModal = ({
         >
           <div className="absolute inset-x-8 top-5 h-px bg-[linear-gradient(90deg,rgba(148,163,184,0),rgba(148,163,184,0.42),rgba(148,163,184,0))]" />
           <div
-            className={`flex h-18 w-18 items-center justify-center rounded-[24px] border text-[32px] transition ${
+            className={`flex h-18 w-18 items-center justify-center rounded-3xl border text-display-sm transition ${
               dragActive
                 ? 'border-emerald-300 bg-white text-emerald-600 shadow-[0_14px_30px_rgba(16,185,129,0.16)]'
                 : 'border-slate-200 bg-white/90 text-slate-500'

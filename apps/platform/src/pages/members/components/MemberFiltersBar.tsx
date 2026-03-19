@@ -19,7 +19,7 @@ export const MemberFiltersBar = ({
   onChange,
 }: MemberFiltersBarProps) => {
   return (
-    <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-surface">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <Typography.Title level={5} className="mb-1! text-slate-800!">

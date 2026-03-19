@@ -102,7 +102,7 @@ export const KnowledgeSearchTab = ({
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        <div className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
+        <div className="overflow-hidden rounded-panel border border-slate-200 bg-white shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
           <div className="flex items-center p-1">
             <Input
               size="large"
@@ -146,14 +146,14 @@ export const KnowledgeSearchTab = ({
           <Alert type="error" showIcon message="检索失败，请稍后重试" />
         </div>
       ) : status === "empty" ? (
-        <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/50 py-8">
+        <div className="rounded-card border border-dashed border-slate-200 bg-slate-50/50 py-8">
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description="未找到相关内容，可检查文档是否已完成索引"
           />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
+        <div className="overflow-hidden rounded-card border border-slate-200 bg-white shadow-surface">
           <div className="px-4 py-2">
             {items.map((item, index) => (
               <Fragment key={item.chunkId}>

@@ -1,7 +1,15 @@
 import { createHash } from "node:crypto";
-import { getEffectiveEmbeddingConfig, getEffectiveIndexingConfig } from "@config/ai-config.js";
+import {
+  getEffectiveEmbeddingConfig,
+  getEffectiveIndexingConfig,
+} from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
 import { AppError } from "@lib/app-error.js";
+import {
+  buildApiUrl,
+  normalizeOpenAiCompatibleErrorMessage,
+  parseResponseBody,
+} from "@lib/http.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type { EffectiveEmbeddingConfig } from "@modules/settings/settings.types.js";
 import type {
@@ -83,30 +91,6 @@ const createGatewayError = (message: string, cause?: unknown): AppError => {
     message,
     cause,
   });
-};
-
-const normalizeOpenAiErrorMessage = (
-  body: unknown,
-  fallback: string,
-): string => {
-  if (
-    body &&
-    typeof body === "object" &&
-    "error" in body &&
-    body.error &&
-    typeof body.error === "object" &&
-    "message" in body.error &&
-    typeof body.error.message === "string"
-  ) {
-    return body.error.message;
-  }
-
-  return fallback;
-};
-
-const buildApiUrl = (baseUrl: string, path: string): string => {
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  return new URL(path.replace(/^\//, ""), normalizedBase).toString();
 };
 
 const getCollectionName = (sourceType: KnowledgeSourceType): string => {
@@ -235,15 +219,7 @@ export const createKnowledgeSearchService = ({
         },
       );
 
-      const text = await response.text();
-
-      if (text) {
-        try {
-          responseBody = JSON.parse(text);
-        } catch {
-          responseBody = text;
-        }
-      }
+      responseBody = await parseResponseBody(response);
 
       if (!response.ok) {
         throw createGatewayError(
@@ -317,15 +293,7 @@ export const createKnowledgeSearchService = ({
         },
       );
 
-      const text = await response.text();
-
-      if (text) {
-        try {
-          responseBody = JSON.parse(text);
-        } catch {
-          responseBody = text;
-        }
-      }
+      responseBody = await parseResponseBody(response);
 
       if (!response.ok) {
         throw createGatewayError(
@@ -360,19 +328,22 @@ export const createKnowledgeSearchService = ({
     });
 
     try {
-      const response = await fetch(buildApiUrl(env.knowledge.indexerUrl, path), {
-        method,
-        headers: {
-          accept: "application/json",
-          ...(body
-            ? {
-                "content-type": "application/json",
-              }
-            : {}),
+      const response = await fetch(
+        buildApiUrl(env.knowledge.indexerUrl, path),
+        {
+          method,
+          headers: {
+            accept: "application/json",
+            ...(body
+              ? {
+                  "content-type": "application/json",
+                }
+              : {}),
+          },
+          body: body ? JSON.stringify(body) : undefined,
+          signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
         },
-        body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
-      });
+      );
 
       const text = await response.text();
 
@@ -452,18 +423,11 @@ export const createKnowledgeSearchService = ({
         },
       );
 
-      const text = await response.text();
-      if (text) {
-        try {
-          responseBody = JSON.parse(text);
-        } catch {
-          responseBody = text;
-        }
-      }
+      responseBody = await parseResponseBody(response);
 
       if (!response.ok) {
         throw createGatewayError(
-          normalizeOpenAiErrorMessage(
+          normalizeOpenAiCompatibleErrorMessage(
             responseBody,
             `OpenAI embedding 请求失败（HTTP ${response.status}）`,
           ),
@@ -567,7 +531,9 @@ export const createKnowledgeSearchService = ({
     });
   };
 
-  const deleteCollectionByName = async (collectionName: string): Promise<void> => {
+  const deleteCollectionByName = async (
+    collectionName: string,
+  ): Promise<void> => {
     const collection = await getExistingCollection(collectionName, {
       bypassCache: true,
     });

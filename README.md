@@ -15,11 +15,11 @@ The repository is currently in an active foundation stage: the product shell, au
 - Project lists, project basics, member rosters, project resource bindings, project conversation summaries/details, and the global members overview already use `/api/projects*` and `/api/members`.
 - `knowject_project_resource_bindings` now remains only as a one-time migration source for historical local data; runtime resource bindings are persisted on project documents.
 - Project overview still uses local display supplements for member collaboration snapshots and some fallback copy, while project-bound resource metadata now comes from formal backend catalogs and project-private knowledge summaries.
-- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; `/skills` already supports native `SKILL.md` authoring, GitHub/raw URL import, preview, and draft/publish lifecycle management, and project-side resource cards now consume the same formal catalogs while `/project/:projectId/resources` supports both global knowledge binding and project-private knowledge maintenance through a unified access flow and detail drawer.
-- `/settings` is now wired to formal backend settings APIs for embedding, LLM, indexing, and workspace metadata. API keys are encrypted server-side, the LLM presets cover `openai / anthropic / gemini / aliyun / deepseek / moonshot / zhipu / custom`, and saved LLM config now directly drives the project chat MVP.
-- `GET /api/projects/:projectId/conversations` and `GET /api/projects/:projectId/conversations/:conversationId` provide the current project chat read-side, while `POST /api/projects/:projectId/conversations`, `PATCH /api/projects/:projectId/conversations/:conversationId`, `DELETE /api/projects/:projectId/conversations/:conversationId`, and `POST /api/projects/:projectId/conversations/:conversationId/messages` now provide the Week 7-8 backend write/runtime baseline for creating threads, renaming/deleting threads, appending user messages, running project-level merged retrieval, generating assistant replies, and returning source citations. The project chat page now consumes this formal write path for create/send plus inline title editing, delete-thread controls, minimal source rendering, and `/api/settings`-driven runtime guidance when the configured LLM is missing or unavailable. Richer citation UX and `SSE` remain pending.
+- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; `/skills` already supports native `SKILL.md` authoring, GitHub/raw URL import, preview, and draft/publish lifecycle management, project-side resource cards consume the same formal catalogs, and project create/edit forms now also load Agent options from `/api/agents` instead of local mock-only choices.
+- `/settings` is now wired to formal backend settings APIs for embedding, LLM, indexing, and workspace metadata. API keys are encrypted server-side, the verified chat-completions provider presets cover `openai / gemini / aliyun / deepseek / moonshot / zhipu / custom`, and saved LLM config now directly drives the project chat MVP.
+- `GET /api/projects/:projectId/conversations` and `GET /api/projects/:projectId/conversations/:conversationId` provide the current project chat read-side, while `POST /api/projects/:projectId/conversations`, `PATCH /api/projects/:projectId/conversations/:conversationId`, `DELETE /api/projects/:projectId/conversations/:conversationId`, and `POST /api/projects/:projectId/conversations/:conversationId/messages` now provide the Week 7-8 backend write/runtime baseline for creating threads, renaming/deleting threads, appending user messages, running project-level merged retrieval, generating assistant replies, and returning source citations. Message writes now accept an optional `clientRequestId` so retries can reuse the same persisted user message after assistant generation or persistence fails. The project chat page now consumes this formal write path for create/send plus inline title editing, delete-thread controls, minimal source rendering, and `/api/settings`-driven runtime guidance when the configured LLM is missing or unavailable. Richer citation UX and `SSE` remain pending.
 - `GET /api/projects/:projectId/knowledge`, `GET /api/projects/:projectId/knowledge/:knowledgeId`, `POST /api/projects/:projectId/knowledge`, and `POST /api/projects/:projectId/knowledge/:knowledgeId/documents` now provide the Week 5-6 project-private knowledge write-side baseline without writing back into `projects.knowledgeBaseIds`.
-- `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`, `POST /api/knowledge/:knowledgeId/documents/:documentId/rebuild`, `POST /api/knowledge/:knowledgeId/rebuild`, `GET /api/knowledge/:knowledgeId/diagnostics`, `DELETE /api/knowledge/:knowledgeId/documents/:documentId`, and `POST /api/knowledge/search` are available end-to-end for the current GA-07 knowledge flow.
+- `GET /api/knowledge`, `POST /api/knowledge`, `PATCH /api/knowledge/:knowledgeId`, `DELETE /api/knowledge/:knowledgeId`, `POST /api/knowledge/:knowledgeId/documents`, `POST /api/knowledge/:knowledgeId/documents/:documentId/retry`, `POST /api/knowledge/:knowledgeId/documents/:documentId/rebuild`, `POST /api/knowledge/:knowledgeId/rebuild`, `GET /api/knowledge/:knowledgeId/diagnostics`, `DELETE /api/knowledge/:knowledgeId/documents/:documentId`, and `POST /api/knowledge/search` are available end-to-end for the current GA-07 knowledge flow. Namespace rebuilds now always write into a staged/versioned collection before switching the active pointer, and diagnostics expose the indexer runtime actual values separately from the workspace-expected config.
 - JSON API responses now share the same envelope contract: `code`, `message`, `data`, and `meta`; frontend API wrappers unwrap `data` before UI consumption.
 - `pnpm verify:global-assets-foundation` now bundles the Week 3-4 minimum automated validation across API tests, Python indexer tests, and platform type checks.
 - `pnpm verify:index-ops-project-consumption` now bundles the Week 5-6 minimum automated validation across project-knowledge API tests, Python indexer tests, and platform type checks.
@@ -38,7 +38,7 @@ packages/
   request/    Shared HTTP client package (@knowject/request)
   ui/         Shared UI package (@knowject/ui)
 docker/       Compose files, image builds, reverse proxy, init scripts
-scripts/      Reusable command entrypoints
+scripts/      Reusable command entrypoints and shell helpers
 .codex/       Codex workspace (config, docs, packs, skills)
 .agent/       Legacy compatibility notes only (deprecated)
 ```
@@ -103,7 +103,7 @@ pnpm dev:init
 pnpm dev:up
 ```
 
-`pnpm dev:init` / `pnpm dev:up` now also sync `SETTINGS_ENCRYPTION_KEY_FILE` into `.env.local` together with the existing MongoDB / JWT file-based secrets, so old local checkouts do not need a manual settings-key repair step before the API boots.
+`pnpm dev:init` / `pnpm dev:up` now sync the canonical host secret trio `MONGODB_URI_FILE` / `JWT_SECRET_FILE` / `SETTINGS_ENCRYPTION_KEY_FILE` into `.env.local`, and also derive Docker's internal `docker/secrets/mongodb_uri.txt` from `.env.docker.local` plus `mongo_app_password.txt`, so host and container API boot paths no longer drift on Mongo credentials.
 
 ### Useful commands
 
@@ -137,7 +137,7 @@ pnpm knowject:help
 - [Migration Guide](./.codex/MIGRATION.md)
 - [Documentation Index](./.codex/docs/README.md)
 - [Current Architecture Facts](./.codex/docs/current/architecture.md)
-- [Docker Usage](./.codex/docs/current/docker-usage.md)
+- [Docker Current Usage](./.codex/docs/current/docker-usage.md)
 - [Docker Operation Checklist](./.codex/docs/current/docker-operation-checklist.md)
 - [Auth and Environment Contract](./.codex/docs/contracts/auth-contract.md)
 - [Chroma Decision Record](./.codex/docs/contracts/chroma-decision.md)
@@ -146,7 +146,7 @@ pnpm knowject:help
 - [ChatGPT Projects Pack](./.codex/packs/chatgpt-projects/README.md)
 - [Platform README](./apps/platform/README.md)
 - [API README](./apps/api/README.md)
-- [Docker README](./docker/README.md)
+- [Docker Command Portal](./docker/README.md)
 
 ## Contributing
 

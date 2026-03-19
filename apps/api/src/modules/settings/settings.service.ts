@@ -1,10 +1,17 @@
-import { AppError } from '@lib/app-error.js';
-import { encryptApiKey, maskApiKey, decryptApiKey } from '@lib/crypto.js';
+import { AppError } from "@lib/app-error.js";
+import { encryptApiKey, maskApiKey, decryptApiKey } from "@lib/crypto.js";
+import {
+  buildApiUrl,
+  normalizeIndexerErrorMessage,
+  normalizeOpenAiCompatibleErrorMessage,
+  parseResponseBody,
+} from "@lib/http.js";
+import { readMutationInput } from "@lib/mutation-input.js";
 import {
   createValidationAppError,
   readOptionalStringField,
-} from '@lib/validation.js';
-import type { AppEnv } from '@config/env.js';
+} from "@lib/validation.js";
+import type { AppEnv } from "@config/env.js";
 import {
   getDefaultWorkspaceSettings,
   getEffectiveIndexingConfig,
@@ -12,8 +19,8 @@ import {
   getEnvironmentIndexingSettings,
   getEnvironmentLlmSettings,
   getSettingsResponseFromDocument,
-} from '@config/ai-config.js';
-import type { SettingsRepository } from './settings.repository.js';
+} from "@config/ai-config.js";
+import type { SettingsRepository } from "./settings.repository.js";
 import {
   SETTINGS_EMBEDDING_PROVIDERS,
   SETTINGS_INDEXING_SUPPORTED_TYPES,
@@ -35,17 +42,16 @@ import {
   type WorkspaceAiConfigDocument,
   type WorkspaceIndexingConfigDocument,
   type WorkspaceInfoDocument,
-} from './settings.types.js';
+} from "./settings.types.js";
 
 const CHAT_COMPLETIONS_COMPATIBLE_LLM_PROVIDERS = new Set<SettingsLlmProvider>([
-  'openai',
-  'anthropic',
-  'gemini',
-  'aliyun',
-  'deepseek',
-  'moonshot',
-  'zhipu',
-  'custom',
+  "openai",
+  "gemini",
+  "aliyun",
+  "deepseek",
+  "moonshot",
+  "zhipu",
+  "custom",
 ]);
 
 const INDEXING_CHUNK_SIZE_MIN = 200;
@@ -86,55 +92,40 @@ export interface SettingsService {
   ): Promise<SettingsConnectionTestResponse>;
 }
 
-const buildApiUrl = (baseUrl: string, path: string): string => {
-  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return new URL(path.replace(/^\//, ''), normalizedBaseUrl).toString();
-};
-
 const createUnsupportedLlmProviderError = (): AppError => {
   return new AppError({
     statusCode: 400,
-    code: 'SETTINGS_LLM_TEST_PROVIDER_UNSUPPORTED',
-    message: '当前 provider 暂不支持在线测试',
+    code: "SETTINGS_LLM_TEST_PROVIDER_UNSUPPORTED",
+    message: "当前 provider 暂不支持在线测试",
   });
 };
 
 const createMissingApiKeyError = (): AppError => {
   return new AppError({
     statusCode: 400,
-    code: 'SETTINGS_API_KEY_REQUIRED',
-    message: 'API Key 未配置，请先输入或保存后再测试',
+    code: "SETTINGS_API_KEY_REQUIRED",
+    message: "API Key 未配置，请先输入或保存后再测试",
   });
 };
 
 const createApiKeyReentryRequiredError = (): AppError => {
   return new AppError({
     statusCode: 400,
-    code: 'SETTINGS_API_KEY_REENTRY_REQUIRED',
-    message: '切换 Provider 或 Base URL 后，请重新输入新的 API Key',
+    code: "SETTINGS_API_KEY_REENTRY_REQUIRED",
+    message: "切换 Provider 或 Base URL 后，请重新输入新的 API Key",
   });
-};
-
-const createSettingsMutationInput = <T>(input: T): T & Record<string, unknown> => {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw createValidationAppError('请求体必须为对象', {
-      body: '请求体必须为对象',
-    });
-  }
-
-  return input as T & Record<string, unknown>;
 };
 
 const readOptionalProvider = <TProvider extends string>(
   value: unknown,
-  field: 'provider',
+  field: "provider",
   allowedValues: readonly TProvider[],
 ): TProvider | undefined => {
   if (value === undefined) {
     return undefined;
   }
 
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     throw createValidationAppError(`${field} 不合法`, {
       [field]: `${field} 不合法`,
     });
@@ -153,7 +144,7 @@ const readOptionalProvider = <TProvider extends string>(
 
 const readOptionalNonEmptyString = (
   value: unknown,
-  field: 'baseUrl' | 'model' | 'name',
+  field: "baseUrl" | "model" | "name",
 ): string | undefined => {
   const normalizedValue = readOptionalStringField(value, field);
 
@@ -171,9 +162,9 @@ const readOptionalApiKey = (value: unknown): string | undefined => {
     return undefined;
   }
 
-  if (typeof value !== 'string') {
-    throw createValidationAppError('apiKey 必须为字符串', {
-      apiKey: 'apiKey 必须为字符串',
+  if (typeof value !== "string") {
+    throw createValidationAppError("apiKey 必须为字符串", {
+      apiKey: "apiKey 必须为字符串",
     });
   }
 
@@ -183,7 +174,7 @@ const readOptionalApiKey = (value: unknown): string | undefined => {
 
 const readRequiredIntegerInRange = (
   value: unknown,
-  field: 'chunkSize' | 'chunkOverlap' | 'indexerTimeoutMs',
+  field: "chunkSize" | "chunkOverlap" | "indexerTimeoutMs",
   range: {
     min: number;
     max?: number;
@@ -193,7 +184,7 @@ const readRequiredIntegerInRange = (
     return undefined;
   }
 
-  if (typeof value !== 'number' || !Number.isInteger(value)) {
+  if (typeof value !== "number" || !Number.isInteger(value)) {
     throw createValidationAppError(`${field} 必须为整数`, {
       [field]: `${field} 必须为整数`,
     });
@@ -214,27 +205,27 @@ const readOptionalSupportedTypes = (value: unknown): string[] | undefined => {
   }
 
   if (!Array.isArray(value)) {
-    throw createValidationAppError('supportedTypes 必须为字符串数组', {
-      supportedTypes: 'supportedTypes 必须为字符串数组',
+    throw createValidationAppError("supportedTypes 必须为字符串数组", {
+      supportedTypes: "supportedTypes 必须为字符串数组",
     });
   }
 
   const normalizedValues = value
-    .filter((item): item is string => typeof item === 'string')
+    .filter((item): item is string => typeof item === "string")
     .map((item) => item.trim())
     .filter(Boolean);
 
   if (normalizedValues.length !== value.length) {
-    throw createValidationAppError('supportedTypes 必须为字符串数组', {
-      supportedTypes: 'supportedTypes 必须为字符串数组',
+    throw createValidationAppError("supportedTypes 必须为字符串数组", {
+      supportedTypes: "supportedTypes 必须为字符串数组",
     });
   }
 
   const deduplicatedValues = Array.from(new Set(normalizedValues));
 
   if (deduplicatedValues.length === 0) {
-    throw createValidationAppError('supportedTypes 至少需要保留一种文件类型', {
-      supportedTypes: 'supportedTypes 至少需要保留一种文件类型',
+    throw createValidationAppError("supportedTypes 至少需要保留一种文件类型", {
+      supportedTypes: "supportedTypes 至少需要保留一种文件类型",
     });
   }
 
@@ -246,23 +237,25 @@ const readOptionalSupportedTypes = (value: unknown): string[] | undefined => {
         ),
     )
   ) {
-    throw createValidationAppError('supportedTypes 只支持 md、txt', {
-      supportedTypes: 'supportedTypes 只支持 md、txt',
+    throw createValidationAppError("supportedTypes 只支持 md、txt", {
+      supportedTypes: "supportedTypes 只支持 md、txt",
     });
   }
 
   return deduplicatedValues;
 };
 
-const readOptionalWorkspaceDescription = (value: unknown): string | undefined => {
-  const normalizedValue = readOptionalStringField(value, 'description');
+const readOptionalWorkspaceDescription = (
+  value: unknown,
+): string | undefined => {
+  const normalizedValue = readOptionalStringField(value, "description");
 
   if (
     normalizedValue !== undefined &&
     normalizedValue.length > WORKSPACE_DESCRIPTION_MAX_LENGTH
   ) {
-    throw createValidationAppError('description 长度不能超过 200', {
-      description: 'description 长度不能超过 200',
+    throw createValidationAppError("description 长度不能超过 200", {
+      description: "description 长度不能超过 200",
     });
   }
 
@@ -270,44 +263,48 @@ const readOptionalWorkspaceDescription = (value: unknown): string | undefined =>
 };
 
 const normalizeEmbeddingUpdateInput = (input: UpdateEmbeddingSettingsInput) => {
-  const normalizedInput = createSettingsMutationInput(input);
+  const normalizedInput = readMutationInput(input);
 
   return {
     provider: readOptionalProvider(
       normalizedInput.provider,
-      'provider',
+      "provider",
       SETTINGS_EMBEDDING_PROVIDERS,
     ),
-    baseUrl: readOptionalNonEmptyString(normalizedInput.baseUrl, 'baseUrl'),
-    model: readOptionalNonEmptyString(normalizedInput.model, 'model'),
+    baseUrl: readOptionalNonEmptyString(normalizedInput.baseUrl, "baseUrl"),
+    model: readOptionalNonEmptyString(normalizedInput.model, "model"),
     apiKey: readOptionalApiKey(normalizedInput.apiKey),
   };
 };
 
 const normalizeLlmUpdateInput = (input: UpdateLlmSettingsInput) => {
-  const normalizedInput = createSettingsMutationInput(input);
+  const normalizedInput = readMutationInput(input);
 
   return {
     provider: readOptionalProvider(
       normalizedInput.provider,
-      'provider',
+      "provider",
       SETTINGS_LLM_PROVIDERS,
     ),
-    baseUrl: readOptionalNonEmptyString(normalizedInput.baseUrl, 'baseUrl'),
-    model: readOptionalNonEmptyString(normalizedInput.model, 'model'),
+    baseUrl: readOptionalNonEmptyString(normalizedInput.baseUrl, "baseUrl"),
+    model: readOptionalNonEmptyString(normalizedInput.model, "model"),
     apiKey: readOptionalApiKey(normalizedInput.apiKey),
   };
 };
 
 const normalizeIndexingUpdateInput = (input: UpdateIndexingSettingsInput) => {
-  const normalizedInput = createSettingsMutationInput(input);
-  const chunkSize = readRequiredIntegerInRange(normalizedInput.chunkSize, 'chunkSize', {
-    min: INDEXING_CHUNK_SIZE_MIN,
-    max: INDEXING_CHUNK_SIZE_MAX,
-  });
+  const normalizedInput = readMutationInput(input);
+  const chunkSize = readRequiredIntegerInRange(
+    normalizedInput.chunkSize,
+    "chunkSize",
+    {
+      min: INDEXING_CHUNK_SIZE_MIN,
+      max: INDEXING_CHUNK_SIZE_MAX,
+    },
+  );
   const chunkOverlap = readRequiredIntegerInRange(
     normalizedInput.chunkOverlap,
-    'chunkOverlap',
+    "chunkOverlap",
     {
       min: INDEXING_CHUNK_OVERLAP_MIN,
       max: INDEXING_CHUNK_OVERLAP_MAX,
@@ -319,8 +316,8 @@ const normalizeIndexingUpdateInput = (input: UpdateIndexingSettingsInput) => {
     chunkOverlap !== undefined &&
     chunkOverlap >= chunkSize
   ) {
-    throw createValidationAppError('chunkOverlap 必须小于 chunkSize', {
-      chunkOverlap: 'chunkOverlap 必须小于 chunkSize',
+    throw createValidationAppError("chunkOverlap 必须小于 chunkSize", {
+      chunkOverlap: "chunkOverlap 必须小于 chunkSize",
     });
   }
 
@@ -330,7 +327,7 @@ const normalizeIndexingUpdateInput = (input: UpdateIndexingSettingsInput) => {
     supportedTypes: readOptionalSupportedTypes(normalizedInput.supportedTypes),
     indexerTimeoutMs: readRequiredIntegerInRange(
       normalizedInput.indexerTimeoutMs,
-      'indexerTimeoutMs',
+      "indexerTimeoutMs",
       {
         min: 1,
       },
@@ -339,14 +336,16 @@ const normalizeIndexingUpdateInput = (input: UpdateIndexingSettingsInput) => {
 };
 
 const normalizeWorkspaceUpdateInput = (input: UpdateWorkspaceSettingsInput) => {
-  const normalizedInput = createSettingsMutationInput(input);
-  const name = readOptionalNonEmptyString(normalizedInput.name, 'name');
-  const description = readOptionalWorkspaceDescription(normalizedInput.description);
+  const normalizedInput = readMutationInput(input);
+  const name = readOptionalNonEmptyString(normalizedInput.name, "name");
+  const description = readOptionalWorkspaceDescription(
+    normalizedInput.description,
+  );
 
   if (name === undefined && description === undefined) {
-    throw createValidationAppError('至少需要提供一个可更新字段', {
-      name: '至少需要提供一个可更新字段',
-      description: '至少需要提供一个可更新字段',
+    throw createValidationAppError("至少需要提供一个可更新字段", {
+      name: "至少需要提供一个可更新字段",
+      description: "至少需要提供一个可更新字段",
     });
   }
 
@@ -357,15 +356,15 @@ const normalizeWorkspaceUpdateInput = (input: UpdateWorkspaceSettingsInput) => {
 };
 
 const normalizeConnectionTestInput = (input: TestSettingsConnectionInput) => {
-  const normalizedInput = createSettingsMutationInput(input);
+  const normalizedInput = readMutationInput(input);
 
   return {
     provider:
-      typeof normalizedInput.provider === 'string'
+      typeof normalizedInput.provider === "string"
         ? normalizedInput.provider.trim()
         : undefined,
-    baseUrl: readOptionalNonEmptyString(normalizedInput.baseUrl, 'baseUrl'),
-    model: readOptionalNonEmptyString(normalizedInput.model, 'model'),
+    baseUrl: readOptionalNonEmptyString(normalizedInput.baseUrl, "baseUrl"),
+    model: readOptionalNonEmptyString(normalizedInput.model, "model"),
     apiKey: readOptionalApiKey(normalizedInput.apiKey),
     hasOverrides:
       normalizedInput.provider !== undefined ||
@@ -375,13 +374,15 @@ const normalizeConnectionTestInput = (input: TestSettingsConnectionInput) => {
   };
 };
 
-const normalizeIndexingConnectionTestInput = (input: TestIndexingConnectionInput) => {
-  const normalizedInput = createSettingsMutationInput(input);
+const normalizeIndexingConnectionTestInput = (
+  input: TestIndexingConnectionInput,
+) => {
+  const normalizedInput = readMutationInput(input);
 
   return {
     indexerTimeoutMs: readRequiredIntegerInRange(
       normalizedInput.indexerTimeoutMs,
-      'indexerTimeoutMs',
+      "indexerTimeoutMs",
       {
         min: 1,
       },
@@ -402,11 +403,13 @@ const buildEmbeddingSection = ({
   const baseUrl = input.baseUrl ?? current?.baseUrl ?? fallback.baseUrl;
   const model = input.model ?? current?.model ?? fallback.model;
   const apiKeyUpdated = input.apiKey !== undefined;
-  const nextApiKey = input.apiKey ?? '';
+  const nextApiKey = input.apiKey ?? "";
   const apiKeyEncrypted = apiKeyUpdated
     ? encryptApiKey(nextApiKey)
-    : current?.apiKeyEncrypted ?? '';
-  const apiKeyHint = apiKeyUpdated ? maskApiKey(nextApiKey) : current?.apiKeyHint ?? '';
+    : (current?.apiKeyEncrypted ?? "");
+  const apiKeyHint = apiKeyUpdated
+    ? maskApiKey(nextApiKey)
+    : (current?.apiKeyHint ?? "");
   const configChanged =
     apiKeyUpdated ||
     provider !== current?.provider ||
@@ -419,8 +422,8 @@ const buildEmbeddingSection = ({
     model,
     apiKeyEncrypted,
     apiKeyHint,
-    testedAt: configChanged ? null : current?.testedAt ?? null,
-    testStatus: configChanged ? null : current?.testStatus ?? null,
+    testedAt: configChanged ? null : (current?.testedAt ?? null),
+    testStatus: configChanged ? null : (current?.testStatus ?? null),
   };
 };
 
@@ -437,11 +440,13 @@ const buildLlmSection = ({
   const baseUrl = input.baseUrl ?? current?.baseUrl ?? fallback.baseUrl;
   const model = input.model ?? current?.model ?? fallback.model;
   const apiKeyUpdated = input.apiKey !== undefined;
-  const nextApiKey = input.apiKey ?? '';
+  const nextApiKey = input.apiKey ?? "";
   const apiKeyEncrypted = apiKeyUpdated
     ? encryptApiKey(nextApiKey)
-    : current?.apiKeyEncrypted ?? '';
-  const apiKeyHint = apiKeyUpdated ? maskApiKey(nextApiKey) : current?.apiKeyHint ?? '';
+    : (current?.apiKeyEncrypted ?? "");
+  const apiKeyHint = apiKeyUpdated
+    ? maskApiKey(nextApiKey)
+    : (current?.apiKeyHint ?? "");
   const configChanged =
     apiKeyUpdated ||
     provider !== current?.provider ||
@@ -454,8 +459,8 @@ const buildLlmSection = ({
     model,
     apiKeyEncrypted,
     apiKeyHint,
-    testedAt: configChanged ? null : current?.testedAt ?? null,
-    testStatus: configChanged ? null : current?.testStatus ?? null,
+    testedAt: configChanged ? null : (current?.testedAt ?? null),
+    testStatus: configChanged ? null : (current?.testStatus ?? null),
   };
 };
 
@@ -469,20 +474,27 @@ const buildIndexingSection = ({
   input: ReturnType<typeof normalizeIndexingUpdateInput>;
 }): WorkspaceIndexingConfigDocument => {
   const chunkSize = input.chunkSize ?? current?.chunkSize ?? fallback.chunkSize;
-  const chunkOverlap = input.chunkOverlap ?? current?.chunkOverlap ?? fallback.chunkOverlap;
+  const chunkOverlap =
+    input.chunkOverlap ?? current?.chunkOverlap ?? fallback.chunkOverlap;
 
   if (chunkOverlap >= chunkSize) {
-    throw createValidationAppError('chunkOverlap 必须小于 chunkSize', {
-      chunkOverlap: 'chunkOverlap 必须小于 chunkSize',
+    throw createValidationAppError("chunkOverlap 必须小于 chunkSize", {
+      chunkOverlap: "chunkOverlap 必须小于 chunkSize",
     });
   }
 
   return {
     chunkSize,
     chunkOverlap,
-    supportedTypes: [...(input.supportedTypes ?? current?.supportedTypes ?? fallback.supportedTypes)],
+    supportedTypes: [
+      ...(input.supportedTypes ??
+        current?.supportedTypes ??
+        fallback.supportedTypes),
+    ],
     indexerTimeoutMs:
-      input.indexerTimeoutMs ?? current?.indexerTimeoutMs ?? fallback.indexerTimeoutMs,
+      input.indexerTimeoutMs ??
+      current?.indexerTimeoutMs ??
+      fallback.indexerTimeoutMs,
   };
 };
 
@@ -497,79 +509,13 @@ const buildWorkspaceSection = ({
 
   return {
     name: input.name ?? current?.name ?? fallback.name,
-    description: input.description ?? current?.description ?? fallback.description,
+    description:
+      input.description ?? current?.description ?? fallback.description,
   };
 };
 
-const normalizeOpenAiCompatibleErrorMessage = (
-  responseBody: unknown,
-  fallbackMessage: string,
-): string => {
-  if (
-    responseBody &&
-    typeof responseBody === 'object' &&
-    'error' in responseBody &&
-    responseBody.error &&
-    typeof responseBody.error === 'object' &&
-    'message' in responseBody.error &&
-    typeof responseBody.error.message === 'string'
-  ) {
-    return responseBody.error.message;
-  }
-
-  if (
-    responseBody &&
-    typeof responseBody === 'object' &&
-    'message' in responseBody &&
-    typeof responseBody.message === 'string'
-  ) {
-    return responseBody.message;
-  }
-
-  return fallbackMessage;
-};
-
-const parseResponseBody = async (response: Response): Promise<unknown> => {
-  const rawBody = await response.text();
-
-  if (!rawBody) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawBody);
-  } catch {
-    return rawBody;
-  }
-};
-
-const normalizeIndexerErrorMessage = (
-  responseBody: unknown,
-  fallbackMessage: string,
-): string => {
-  if (
-    responseBody &&
-    typeof responseBody === 'object' &&
-    'errorMessage' in responseBody &&
-    typeof responseBody.errorMessage === 'string'
-  ) {
-    return responseBody.errorMessage;
-  }
-
-  if (
-    responseBody &&
-    typeof responseBody === 'object' &&
-    'message' in responseBody &&
-    typeof responseBody.message === 'string'
-  ) {
-    return responseBody.message;
-  }
-
-  return fallbackMessage;
-};
-
 interface IndexerDiagnosticsResponseBody {
-  status: 'ok' | 'degraded';
+  status: "ok" | "degraded";
   service: string;
   chunkSize: number;
   chunkOverlap: number;
@@ -582,28 +528,28 @@ interface IndexerDiagnosticsResponseBody {
 const isIndexerDiagnosticsResponseBody = (
   value: unknown,
 ): value is IndexerDiagnosticsResponseBody => {
-  if (value === null || typeof value !== 'object') {
+  if (value === null || typeof value !== "object") {
     return false;
   }
 
   return (
-    'status' in value &&
-    (value.status === 'ok' || value.status === 'degraded') &&
-    'service' in value &&
-    typeof value.service === 'string' &&
-    'chunkSize' in value &&
-    typeof value.chunkSize === 'number' &&
-    'chunkOverlap' in value &&
-    typeof value.chunkOverlap === 'number' &&
-    'supportedFormats' in value &&
+    "status" in value &&
+    (value.status === "ok" || value.status === "degraded") &&
+    "service" in value &&
+    typeof value.service === "string" &&
+    "chunkSize" in value &&
+    typeof value.chunkSize === "number" &&
+    "chunkOverlap" in value &&
+    typeof value.chunkOverlap === "number" &&
+    "supportedFormats" in value &&
     Array.isArray(value.supportedFormats) &&
-    value.supportedFormats.every((item) => typeof item === 'string') &&
-    'embeddingProvider' in value &&
-    typeof value.embeddingProvider === 'string' &&
-    'chromaReachable' in value &&
-    typeof value.chromaReachable === 'boolean' &&
-    'errorMessage' in value &&
-    (value.errorMessage === null || typeof value.errorMessage === 'string')
+    value.supportedFormats.every((item) => typeof item === "string") &&
+    "embeddingProvider" in value &&
+    typeof value.embeddingProvider === "string" &&
+    "chromaReachable" in value &&
+    typeof value.chromaReachable === "boolean" &&
+    "errorMessage" in value &&
+    (value.errorMessage === null || typeof value.errorMessage === "string")
   );
 };
 
@@ -612,7 +558,7 @@ const createUnreachableIndexingTestResponse = (
 ): SettingsIndexingConnectionTestResponse => {
   return {
     success: false,
-    indexerStatus: 'unreachable',
+    indexerStatus: "unreachable",
     error,
     service: null,
     supportedFormats: [],
@@ -640,11 +586,11 @@ const testOpenAiCompatibleRequest = async ({
 
   try {
     const response = await fetch(buildApiUrl(baseUrl, path), {
-      method: 'POST',
+      method: "POST",
       headers: {
-        accept: 'application/json',
+        accept: "application/json",
         authorization: `Bearer ${apiKey}`,
-        'content-type': 'application/json',
+        "content-type": "application/json",
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(timeoutMs),
@@ -668,7 +614,7 @@ const testOpenAiCompatibleRequest = async ({
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : '连接测试失败',
+      error: error instanceof Error ? error.message : "连接测试失败",
     };
   }
 };
@@ -684,11 +630,11 @@ const testIndexingRequest = async ({
 
   try {
     const response = await fetch(
-      buildApiUrl(env.knowledge.indexerUrl, '/internal/v1/index/diagnostics'),
+      buildApiUrl(env.knowledge.indexerUrl, "/internal/v1/index/diagnostics"),
       {
-        method: 'GET',
+        method: "GET",
         headers: {
-          accept: 'application/json',
+          accept: "application/json",
         },
         signal: AbortSignal.timeout(timeoutMs),
       },
@@ -698,7 +644,7 @@ const testIndexingRequest = async ({
     if (!response.ok) {
       if (response.status === 404) {
         return createUnreachableIndexingTestResponse(
-          '当前 Python indexer 不支持 diagnostics 接口，请先升级服务',
+          "当前 Python indexer 不支持 diagnostics 接口，请先升级服务",
         );
       }
 
@@ -712,12 +658,12 @@ const testIndexingRequest = async ({
 
     if (!isIndexerDiagnosticsResponseBody(responseBody)) {
       return createUnreachableIndexingTestResponse(
-        'Python indexer diagnostics 响应不合法',
+        "Python indexer diagnostics 响应不合法",
       );
     }
 
     const success =
-      responseBody.status === 'ok' && responseBody.chromaReachable === true;
+      responseBody.status === "ok" && responseBody.chromaReachable === true;
 
     return {
       success,
@@ -729,8 +675,8 @@ const testIndexingRequest = async ({
             error:
               responseBody.errorMessage ??
               (responseBody.chromaReachable
-                ? 'Python indexer 当前处于降级状态'
-                : 'Python indexer 可达，但 Chroma 不可达'),
+                ? "Python indexer 当前处于降级状态"
+                : "Python indexer 可达，但 Chroma 不可达"),
           }),
       service: responseBody.service,
       supportedFormats: [...responseBody.supportedFormats],
@@ -741,7 +687,7 @@ const testIndexingRequest = async ({
     };
   } catch (error) {
     return createUnreachableIndexingTestResponse(
-      error instanceof Error ? error.message : '索引链路测试失败',
+      error instanceof Error ? error.message : "索引链路测试失败",
     );
   }
 };
@@ -792,9 +738,13 @@ export const createSettingsService = ({
       const currentEmbedding = currentSettings?.embedding;
       const fallbackEmbedding = getEnvironmentEmbeddingSettings(env);
       const nextProvider =
-        normalizedInput.provider ?? currentEmbedding?.provider ?? fallbackEmbedding.provider;
+        normalizedInput.provider ??
+        currentEmbedding?.provider ??
+        fallbackEmbedding.provider;
       const nextBaseUrl =
-        normalizedInput.baseUrl ?? currentEmbedding?.baseUrl ?? fallbackEmbedding.baseUrl;
+        normalizedInput.baseUrl ??
+        currentEmbedding?.baseUrl ??
+        fallbackEmbedding.baseUrl;
 
       if (normalizedInput.apiKey === undefined) {
         if (!currentEmbedding?.apiKeyEncrypted) {
@@ -834,7 +784,9 @@ export const createSettingsService = ({
       const currentLlm = currentSettings?.llm;
       const fallbackLlm = getEnvironmentLlmSettings(env);
       const nextProvider =
-        normalizedInput.provider ?? currentLlm?.provider ?? fallbackLlm.provider;
+        normalizedInput.provider ??
+        currentLlm?.provider ??
+        fallbackLlm.provider;
       const nextBaseUrl =
         normalizedInput.baseUrl ?? currentLlm?.baseUrl ?? fallbackLlm.baseUrl;
 
@@ -914,8 +866,10 @@ export const createSettingsService = ({
         (normalizedInput.provider as SettingsEmbeddingProvider | undefined) ??
         currentSection?.provider ??
         fallback.provider;
-      const baseUrl = normalizedInput.baseUrl ?? currentSection?.baseUrl ?? fallback.baseUrl;
-      const model = normalizedInput.model ?? currentSection?.model ?? fallback.model;
+      const baseUrl =
+        normalizedInput.baseUrl ?? currentSection?.baseUrl ?? fallback.baseUrl;
+      const model =
+        normalizedInput.model ?? currentSection?.model ?? fallback.model;
 
       if (
         normalizedInput.apiKey === undefined &&
@@ -943,24 +897,28 @@ export const createSettingsService = ({
       const result = await testOpenAiCompatibleRequest({
         baseUrl,
         apiKey,
-        path: '/embeddings',
+        path: "/embeddings",
         payload: {
           model,
-          input: ['test'],
+          input: ["test"],
         },
         timeoutMs: env.openai.requestTimeoutMs,
       });
 
-      if (shouldPersistTestStatus(currentSection, normalizedInput.hasOverrides)) {
+      if (
+        shouldPersistTestStatus(currentSection, normalizedInput.hasOverrides)
+      ) {
         await repository.upsertSettings({
           embedding: {
             provider,
             baseUrl,
             model,
-            apiKeyEncrypted: currentSection?.apiKeyEncrypted ?? '',
-            apiKeyHint: currentSection?.apiKeyHint ?? '',
-            testedAt: result.success ? new Date() : currentSection?.testedAt ?? null,
-            testStatus: result.success ? 'ok' : 'failed',
+            apiKeyEncrypted: currentSection?.apiKeyEncrypted ?? "",
+            apiKeyHint: currentSection?.apiKeyHint ?? "",
+            testedAt: result.success
+              ? new Date()
+              : (currentSection?.testedAt ?? null),
+            testStatus: result.success ? "ok" : "failed",
           },
           updatedAt: new Date(),
           updatedBy: actor.id,
@@ -980,7 +938,8 @@ export const createSettingsService = ({
       return testIndexingRequest({
         env,
         timeoutMs:
-          normalizedInput.indexerTimeoutMs ?? effectiveIndexingConfig.indexerTimeoutMs,
+          normalizedInput.indexerTimeoutMs ??
+          effectiveIndexingConfig.indexerTimeoutMs,
       });
     },
 
@@ -998,8 +957,10 @@ export const createSettingsService = ({
         throw createUnsupportedLlmProviderError();
       }
 
-      const baseUrl = normalizedInput.baseUrl ?? currentSection?.baseUrl ?? fallback.baseUrl;
-      const model = normalizedInput.model ?? currentSection?.model ?? fallback.model;
+      const baseUrl =
+        normalizedInput.baseUrl ?? currentSection?.baseUrl ?? fallback.baseUrl;
+      const model =
+        normalizedInput.model ?? currentSection?.model ?? fallback.model;
 
       if (
         normalizedInput.apiKey === undefined &&
@@ -1027,13 +988,13 @@ export const createSettingsService = ({
       const result = await testOpenAiCompatibleRequest({
         baseUrl,
         apiKey,
-        path: '/chat/completions',
+        path: "/chat/completions",
         payload: {
           model,
           messages: [
             {
-              role: 'user',
-              content: 'test',
+              role: "user",
+              content: "test",
             },
           ],
           max_tokens: 1,
@@ -1041,16 +1002,20 @@ export const createSettingsService = ({
         timeoutMs: env.openai.requestTimeoutMs,
       });
 
-      if (shouldPersistTestStatus(currentSection, normalizedInput.hasOverrides)) {
+      if (
+        shouldPersistTestStatus(currentSection, normalizedInput.hasOverrides)
+      ) {
         await repository.upsertSettings({
           llm: {
             provider,
             baseUrl,
             model,
-            apiKeyEncrypted: currentSection?.apiKeyEncrypted ?? '',
-            apiKeyHint: currentSection?.apiKeyHint ?? '',
-            testedAt: result.success ? new Date() : currentSection?.testedAt ?? null,
-            testStatus: result.success ? 'ok' : 'failed',
+            apiKeyEncrypted: currentSection?.apiKeyEncrypted ?? "",
+            apiKeyHint: currentSection?.apiKeyHint ?? "",
+            testedAt: result.success
+              ? new Date()
+              : (currentSection?.testedAt ?? null),
+            testStatus: result.success ? "ok" : "failed",
           },
           updatedAt: new Date(),
           updatedBy: actor.id,
