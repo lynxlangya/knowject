@@ -228,6 +228,10 @@ export const shouldAutoGenerateProjectConversationTitle = (
   conversation: ProjectConversationDocument,
   projectName: string,
 ): boolean => {
+  if (conversation.titleOrigin !== undefined) {
+    return conversation.titleOrigin === 'default';
+  }
+
   const normalizedTitle = conversation.title.trim();
 
   return (
@@ -235,6 +239,17 @@ export const shouldAutoGenerateProjectConversationTitle = (
     normalizedTitle === DEFAULT_PROJECT_CONVERSATION_TITLE ||
     normalizedTitle === buildDefaultProjectConversationTitle(projectName)
   );
+};
+
+export const shouldRefreshProjectConversationAutoTitle = (
+  conversation: ProjectConversationDocument,
+  projectName: string,
+): boolean => {
+  if (conversation.titleOrigin !== undefined) {
+    return conversation.titleOrigin !== 'manual';
+  }
+
+  return shouldAutoGenerateProjectConversationTitle(conversation, projectName);
 };
 
 export const createProjectConversationRuntime = ({

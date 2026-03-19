@@ -88,6 +88,7 @@ const validateCreateProjectConversationInput = (
   input: CreateProjectConversationInput,
 ): {
   title: string;
+  titleOrigin: "default" | "manual";
 } => {
   const normalizedInput = readMutationInput(input, {
     allowUndefined: true,
@@ -96,6 +97,7 @@ const validateCreateProjectConversationInput = (
 
   return {
     title: title || DEFAULT_PROJECT_CONVERSATION_TITLE,
+    titleOrigin: title ? "manual" : "default",
   };
 };
 
@@ -150,10 +152,11 @@ export const createProjectConversationService = ({
 
     createProjectConversation: async ({ actor }, projectId, input) => {
       const project = await requireVisibleProject(repository, projectId, actor);
-      const { title } = validateCreateProjectConversationInput(input);
+      const { title, titleOrigin } = validateCreateProjectConversationInput(input);
       const now = new Date();
       const conversation = createProjectConversation({
         title,
+        titleOrigin,
         createdAt: now,
       });
       const updatedProject = await repository.appendProjectConversation(
@@ -198,6 +201,9 @@ export const createProjectConversationService = ({
         conversationId,
         title,
         now,
+        {
+          titleOrigin: "manual",
+        },
       );
 
       if (
@@ -218,6 +224,9 @@ export const createProjectConversationService = ({
           conversationId,
           title,
           now,
+          {
+            titleOrigin: "manual",
+          },
         );
       }
 

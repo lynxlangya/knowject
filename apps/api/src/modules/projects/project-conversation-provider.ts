@@ -185,6 +185,49 @@ const createProjectConversationRequestSignal = (
   return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
 };
 
+const createProjectConversationStreamTimeoutController = ({
+  timeoutMs,
+  signal,
+}: {
+  timeoutMs: number;
+  signal?: AbortSignal;
+}): {
+  signal: AbortSignal;
+  arm(): void;
+  clear(): void;
+  didTimeout(): boolean;
+} => {
+  const timeoutAbortController = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  let timedOut = false;
+
+  const clear = (): void => {
+    if (timeoutId === null) {
+      return;
+    }
+
+    clearTimeout(timeoutId);
+    timeoutId = null;
+  };
+
+  const arm = (): void => {
+    clear();
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      timeoutAbortController.abort();
+    }, timeoutMs);
+  };
+
+  return {
+    signal: signal
+      ? AbortSignal.any([signal, timeoutAbortController.signal])
+      : timeoutAbortController.signal,
+    arm,
+    clear,
+    didTimeout: () => timedOut,
+  };
+};
+
 const isAbortError = (error: unknown): boolean => {
   return error instanceof Error && error.name === "AbortError";
 };
@@ -214,11 +257,13 @@ const createOpenAiCompatibleRequestInit = ({
   messages,
   stream = false,
   signal,
+  applyRequestTimeout = true,
 }: {
   llmConfig: EffectiveLlmConfig;
   messages: ProjectConversationProviderChatMessage[];
   stream?: boolean;
   signal?: AbortSignal;
+  applyRequestTimeout?: boolean;
 }): RequestInit => {
   return {
     method: "POST",
@@ -233,10 +278,12 @@ const createOpenAiCompatibleRequestInit = ({
       temperature: 0.2,
       ...(stream ? { stream: true } : {}),
     }),
-    signal: createProjectConversationRequestSignal(
-      llmConfig.requestTimeoutMs,
-      signal,
-    ),
+    signal: applyRequestTimeout
+      ? createProjectConversationRequestSignal(
+          llmConfig.requestTimeoutMs,
+          signal,
+        )
+      : signal,
   };
 };
 
@@ -330,21 +377,36 @@ export const createProjectConversationProviderAdapter =
           requireStreaming: true,
         });
 
+        const timeoutController = createProjectConversationStreamTimeoutController({
+          timeoutMs: llmConfig.requestTimeoutMs,
+          signal,
+        });
         let response: Response;
 
         try {
+          timeoutController.arm();
           response = await fetch(
             buildApiUrl(llmConfig.baseUrl, "/chat/completions"),
             createOpenAiCompatibleRequestInit({
               llmConfig,
               messages,
               stream: true,
-              signal,
+              signal: timeoutController.signal,
+              applyRequestTimeout: false,
             }),
           );
+          timeoutController.clear();
         } catch (error) {
+          timeoutController.clear();
           if (isAbortError(error) && signal?.aborted) {
             throw error;
+          }
+
+          if (timeoutController.didTimeout()) {
+            throw createProjectConversationLlmUpstreamError(
+              `项目对话流式生成超时（${llmConfig.requestTimeoutMs}ms 内未收到新内容）`,
+              error,
+            );
           }
 
           throw createProjectConversationLlmUpstreamError(
@@ -377,10 +439,13 @@ export const createProjectConversationProviderAdapter =
         let buffer = "";
         let content = "";
         let finishReason: ProjectConversationStreamFinishReason = "unknown";
+        let receivedDoneSignal = false;
 
         try {
-          while (true) {
+          while (!receivedDoneSignal) {
+            timeoutController.arm();
             const { done, value } = await reader.read();
+            timeoutController.clear();
 
             if (done) {
               break;
@@ -404,6 +469,7 @@ export const createProjectConversationProviderAdapter =
 
               if (payload === "[DONE]") {
                 buffer = "";
+                receivedDoneSignal = true;
                 break;
               }
 
@@ -433,9 +499,11 @@ export const createProjectConversationProviderAdapter =
             }
           }
 
-          const trailingPayload = readSseDataPayload(
-            `${buffer}${decoder.decode()}`.replace(/\r\n/g, "\n"),
-          );
+          const trailingPayload = receivedDoneSignal
+            ? null
+            : readSseDataPayload(
+                `${buffer}${decoder.decode()}`.replace(/\r\n/g, "\n"),
+              );
 
           if (trailingPayload && trailingPayload !== "[DONE]") {
             let body: unknown;
@@ -461,8 +529,16 @@ export const createProjectConversationProviderAdapter =
             }
           }
         } catch (error) {
+          timeoutController.clear();
           if (isAbortError(error) && signal?.aborted) {
             throw error;
+          }
+
+          if (timeoutController.didTimeout()) {
+            throw createProjectConversationLlmUpstreamError(
+              `项目对话流式生成超时（${llmConfig.requestTimeoutMs}ms 内未收到新内容）`,
+              error,
+            );
           }
 
           if (error instanceof AppError) {
@@ -476,6 +552,7 @@ export const createProjectConversationProviderAdapter =
             error,
           );
         } finally {
+          timeoutController.clear();
           reader.releaseLock();
         }
 

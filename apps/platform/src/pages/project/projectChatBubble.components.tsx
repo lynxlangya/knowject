@@ -5,13 +5,25 @@ import {
   RedoOutlined,
 } from '@ant-design/icons';
 import { Popover, Typography } from 'antd';
+import type { MouseEvent } from 'react';
 import type { ProjectConversationSourceResponse } from '@api/projects';
 import { ProjectChatMarkdown } from './projectChat.markdown';
+
+export interface ProjectChatUserBubbleActions {
+  editing: boolean;
+  disabled: boolean;
+  onRetry: () => void;
+  onEditStart: () => void;
+  onEditConfirm: (content: string) => void;
+  onEditCancel: () => void;
+  onCopy: () => void;
+}
 
 export interface ProjectChatBubbleExtraInfo {
   createdAt: string;
   sources: ProjectConversationSourceResponse[];
   status?: ProjectChatBubbleStatus;
+  userActions?: ProjectChatUserBubbleActions;
 }
 
 export type ProjectChatBubbleStatus = 'streaming' | 'reconciling';
@@ -159,6 +171,29 @@ export const ProjectChatUserFooter = ({
     return null;
   }
 
+  if (!extraInfo.userActions) {
+    return (
+      <div className="mt-1.5 flex h-6 items-center justify-end pr-0.5">
+        <BubbleTimestamp createdAt={extraInfo.createdAt} />
+      </div>
+    );
+  }
+
+  const { userActions } = extraInfo;
+  const handleActionClick = (
+    event: MouseEvent<HTMLButtonElement>,
+    action: () => void,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (userActions.disabled) {
+      return;
+    }
+
+    action();
+  };
+
   return (
     <div className="mt-1.5 h-6">
       <div className="invisible flex h-full items-center justify-end gap-1 pr-0.5 text-slate-400 opacity-0 transition-opacity duration-200 group-hover:visible group-hover:opacity-100">
@@ -167,24 +202,29 @@ export const ProjectChatUserFooter = ({
         <button
           type="button"
           aria-label="重新发起请求"
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600"
-          onClick={(event) => event.preventDefault()}
+          disabled={userActions.disabled}
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
+          onClick={(event) => handleActionClick(event, userActions.onRetry)}
         >
           <RedoOutlined className="text-xs" />
         </button>
         <button
           type="button"
           aria-label="编辑消息"
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600"
-          onClick={(event) => event.preventDefault()}
+          disabled={userActions.disabled}
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
+          onClick={(event) =>
+            handleActionClick(event, userActions.onEditStart)
+          }
         >
           <EditOutlined className="text-xs" />
         </button>
         <button
           type="button"
           aria-label="复制消息"
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600"
-          onClick={(event) => event.preventDefault()}
+          disabled={userActions.disabled}
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
+          onClick={(event) => handleActionClick(event, userActions.onCopy)}
         >
           <CopyOutlined className="text-xs" />
         </button>

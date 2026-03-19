@@ -3,6 +3,7 @@ import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 
 export type ProjectRole = 'admin' | 'member';
 export type ProjectConversationMessageRole = 'user' | 'assistant';
+export type ProjectConversationTitleOrigin = 'default' | 'auto' | 'manual';
 export type ProjectConversationStreamEventType =
   | 'ack'
   | 'delta'
@@ -48,6 +49,7 @@ export interface ProjectConversationSourceDocument {
 export interface ProjectConversationDocument {
   id: string;
   title: string;
+  titleOrigin?: ProjectConversationTitleOrigin;
   messages: ProjectConversationMessageDocument[];
   createdAt: Date;
   updatedAt: Date;
@@ -86,6 +88,7 @@ export interface UpdateProjectConversationInput {
 export interface CreateProjectConversationMessageInput {
   content?: unknown;
   clientRequestId?: unknown;
+  targetUserMessageId?: unknown;
 }
 
 export interface ProjectConversationStreamEventBase {

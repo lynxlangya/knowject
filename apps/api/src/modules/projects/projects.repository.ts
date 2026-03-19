@@ -4,11 +4,19 @@ import { toObjectId } from "@lib/mongo-id.js";
 import type {
   ProjectConversationDocument,
   ProjectConversationMessageDocument,
+  ProjectConversationTitleOrigin,
   ProjectDocument,
 } from "./projects.types.js";
 
 interface UpdateProjectConversationTitleOptions {
   expectedCurrentTitle?: string;
+  titleOrigin?: ProjectConversationTitleOrigin;
+}
+
+interface ReplaceProjectConversationMessagesOptions {
+  title?: string;
+  titleOrigin?: ProjectConversationTitleOrigin | null;
+  expectedCurrentUpdatedAt?: Date;
 }
 
 export class ProjectsRepository {
@@ -249,10 +257,81 @@ export class ProjectsRepository {
       {
         $set: {
           "conversations.$.title": title,
+          ...(options?.titleOrigin !== undefined
+            ? {
+                "conversations.$.titleOrigin": options.titleOrigin,
+              }
+            : {}),
           "conversations.$.updatedAt": updatedAt,
           updatedAt,
         },
       },
+      {
+        returnDocument: "after",
+      },
+    );
+
+    return result;
+  }
+
+  async replaceProjectConversationMessages(
+    projectId: string,
+    conversationId: string,
+    messages: ProjectConversationMessageDocument[],
+    updatedAt: Date,
+    options?: ReplaceProjectConversationMessagesOptions,
+  ): Promise<WithId<ProjectDocument> | null> {
+    const objectId = toObjectId(projectId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getCollection();
+    const updateQuery =
+      options?.expectedCurrentUpdatedAt !== undefined
+        ? {
+            _id: objectId,
+            conversations: {
+              $elemMatch: {
+                id: conversationId,
+                updatedAt: options.expectedCurrentUpdatedAt,
+              },
+            },
+          }
+        : {
+            _id: objectId,
+            "conversations.id": conversationId,
+          };
+    const updateDocument: {
+      $set: Record<string, unknown>;
+      $unset?: Record<string, "" | 1 | true>;
+    } = {
+      $set: {
+        "conversations.$.messages": messages,
+        ...(options?.title !== undefined
+          ? {
+              "conversations.$.title": options.title,
+            }
+          : {}),
+        ...(options?.titleOrigin !== undefined && options.titleOrigin !== null
+          ? {
+              "conversations.$.titleOrigin": options.titleOrigin,
+            }
+          : {}),
+        "conversations.$.updatedAt": updatedAt,
+        updatedAt,
+      },
+    };
+
+    if (options?.titleOrigin === null) {
+      updateDocument.$unset = {
+        "conversations.$.titleOrigin": "",
+      };
+    }
+
+    const result = await collection.findOneAndUpdate(
+      updateQuery,
+      updateDocument,
       {
         returnDocument: "after",
       },

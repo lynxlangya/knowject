@@ -52,14 +52,14 @@
   - 服务端会拒绝删除最后一个可见线程，避免对话区删空后又回落默认线程。
 - `POST /api/projects/:projectId/conversations/:conversationId/messages`
   - 需要 `Authorization: Bearer <token>`。
-  - 接收 `content` 与可选 `clientRequestId`，向当前对话追加一条 user message，随后执行项目级 merged retrieval，并基于当前 effective LLM config 生成 assistant 回复。
+  - 接收 `content`、可选 `clientRequestId` 与可选 `targetUserMessageId`；默认行为是向当前对话追加一条 user message，若传入 `targetUserMessageId`，则会在当前线程内重放 / 编辑这条历史 user message，并裁掉它之后的所有 turn 再重新生成 assistant。
   - merged retrieval 当前只覆盖“项目绑定的全局 docs + 当前项目私有 docs”；assistant 消息会返回最小 `sources` 引用数组。
-  - 当当前线程标题仍是默认值（如“新对话”或默认上下文标题）时，服务端会基于首条 user message 自动生成更接近 ChatGPT 风格的短标题。
-  - 当前实现会先持久化 user message，再尝试生成 assistant；若 assistant 生成失败，接口会返回 `5xx`，但前端应在重试时复用同一个 `clientRequestId`，服务端会复用已落库的 user message，避免线程重复写脏。
+  - 当当前线程标题仍是默认值或自动标题时，服务端会基于裁剪后线程中的首条 user message 自动生成更接近 ChatGPT 风格的短标题；手动改过的标题不会被覆盖。
+  - 当前实现会先持久化或重写目标 user message，再尝试生成 assistant；若 assistant 生成失败，接口会返回 `5xx`，但前端应在重试时复用同一个 `clientRequestId`，服务端会复用已落库的目标 user message，避免线程重复写脏。
 - `POST /api/projects/:projectId/conversations/:conversationId/messages/stream`
   - 需要 `Authorization: Bearer <token>`。
-  - 接收 `content` 与必填 `clientRequestId`，返回 `text/event-stream`。
-  - 服务端沿用与同步消息写接口相同的 turn owner：先校验输入与会话可见性，再持久化或复用 user message，随后执行项目级 merged retrieval，并通过当前 effective LLM config 发起上游流式生成。
+  - 接收 `content`、必填 `clientRequestId` 与可选 `targetUserMessageId`，返回 `text/event-stream`。
+  - 服务端沿用与同步消息写接口相同的 turn owner：先校验输入与会话可见性，再持久化 / 复用 / 重写目标 user message；若存在 `targetUserMessageId`，会先裁掉该消息后的所有 turn，再执行项目级 merged retrieval，并通过当前 effective LLM config 发起上游流式生成。
   - 业务事件固定为 `ack / delta / done / error` 四类；其中 `ack` 只会在 user message 已持久化或成功复用后发出，`done` 只会在 assistant 消息完成落库后发出。
   - 浏览器断开或客户端主动取消时，服务端会中止上游 LLM 请求、停止输出事件，并且不把半截 assistant 内容写成正式消息；线程最终真相应以后续 detail/list 回读为准。
 - `PATCH /api/projects/:projectId`

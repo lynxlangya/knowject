@@ -13,6 +13,7 @@ import type {
   ProjectConversationSourceDocument,
   ProjectConversationSourceResponse,
   ProjectConversationSummaryResponse,
+  ProjectConversationTitleOrigin,
   ProjectDocument,
   ProjectMemberDocument,
   ProjectResponse,
@@ -146,6 +147,7 @@ export const createDefaultProjectConversation = (
   return {
     id: 'chat-default',
     title: buildDefaultProjectConversationTitle(project.name),
+    titleOrigin: 'default',
     messages: buildDefaultConversationMessages(project.name),
     createdAt: now,
     updatedAt: now,
@@ -160,14 +162,17 @@ export const buildDefaultProjectConversationTitle = (
 
 export const createProjectConversation = ({
   title,
+  titleOrigin = 'manual',
   createdAt = new Date(),
 }: {
   title: string;
+  titleOrigin?: ProjectConversationTitleOrigin;
   createdAt?: Date;
 }): ProjectConversationDocument => {
   return {
     id: `chat-${randomUUID()}`,
     title,
+    titleOrigin,
     messages: [],
     createdAt,
     updatedAt: createdAt,

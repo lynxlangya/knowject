@@ -19,6 +19,7 @@ import {
   createProjectConversationAutoTitle,
   type ProjectConversationRuntime,
   shouldAutoGenerateProjectConversationTitle,
+  shouldRefreshProjectConversationAutoTitle,
 } from "./project-conversation-runtime.js";
 import type {
   CreateProjectConversationMessageInput,
@@ -42,6 +43,11 @@ export interface PersistedProjectConversationAssistantReply {
   assistantMessageId: string;
 }
 
+interface PreparedProjectConversationReplayRestoreState {
+  conversation: ProjectConversationDocument;
+  replayUpdatedAt: Date;
+}
+
 export interface PreparedProjectConversationTurn {
   projectId: string;
   project: WithId<ProjectDocument>;
@@ -50,6 +56,7 @@ export interface PreparedProjectConversationTurn {
   userMessage: ProjectConversationMessageDocument;
   clientRequestId?: string;
   existingAssistantMessage: ProjectConversationMessageDocument | null;
+  replayRestoreState?: PreparedProjectConversationReplayRestoreState;
 }
 
 export interface ProjectConversationTurnService {
@@ -89,6 +96,7 @@ const validateCreateProjectConversationMessageInput = (
 ): {
   content: string;
   clientRequestId?: string;
+  targetUserMessageId?: string;
 } => {
   const normalizedInput = readMutationInput(input, {
     allowUndefined: true,
@@ -97,6 +105,10 @@ const validateCreateProjectConversationMessageInput = (
   const clientRequestId = readOptionalStringField(
     normalizedInput.clientRequestId,
     "clientRequestId",
+  );
+  const targetUserMessageId = readOptionalStringField(
+    normalizedInput.targetUserMessageId,
+    "targetUserMessageId",
   );
 
   if (!content) {
@@ -114,6 +126,7 @@ const validateCreateProjectConversationMessageInput = (
   return {
     content,
     clientRequestId,
+    targetUserMessageId,
   };
 };
 
@@ -213,6 +226,83 @@ const findProjectConversationRetryState = (
   };
 };
 
+const createProjectConversationReplayTargetError = (): AppError => {
+  return createValidationAppError(
+    "targetUserMessageId 必须指向当前会话中的用户消息",
+    {
+      targetUserMessageId: "targetUserMessageId 必须指向当前会话中的用户消息",
+    },
+  );
+};
+
+const createReplayUserMessage = ({
+  message,
+  content,
+  clientRequestId,
+}: {
+  message: ProjectConversationMessageDocument;
+  content: string;
+  clientRequestId?: string;
+}): ProjectConversationMessageDocument => {
+  const nextMessage: ProjectConversationMessageDocument = {
+    ...message,
+    content,
+  };
+
+  if (clientRequestId !== undefined) {
+    nextMessage.clientRequestId = clientRequestId;
+  } else {
+    delete nextMessage.clientRequestId;
+  }
+
+  return nextMessage;
+};
+
+const buildReplayConversationMessages = ({
+  conversation,
+  targetUserMessageId,
+  content,
+  clientRequestId,
+}: {
+  conversation: ProjectConversationDocument;
+  targetUserMessageId: string;
+  content: string;
+  clientRequestId?: string;
+}): {
+  messages: ProjectConversationMessageDocument[];
+  userMessage: ProjectConversationMessageDocument;
+} => {
+  const targetUserMessageIndex = conversation.messages.findIndex(
+    (message) => message.id === targetUserMessageId,
+  );
+
+  if (targetUserMessageIndex < 0) {
+    throw createProjectConversationReplayTargetError();
+  }
+
+  const targetUserMessage = conversation.messages[targetUserMessageIndex];
+
+  if (!targetUserMessage || targetUserMessage.role !== "user") {
+    throw createProjectConversationReplayTargetError();
+  }
+
+  const userMessage = createReplayUserMessage({
+    message: targetUserMessage,
+    content,
+    clientRequestId,
+  });
+  const messages = conversation.messages
+    .slice(0, targetUserMessageIndex + 1)
+    .map((message, index) =>
+      index === targetUserMessageIndex ? userMessage : message,
+    );
+
+  return {
+    messages,
+    userMessage,
+  };
+};
+
 export const getRequiredPersistedConversation = (
   project: Pick<ProjectDocument, "name" | "conversations">,
   conversationId: string,
@@ -237,6 +327,33 @@ export const throwConversationPersistenceTargetError = async (
   }
 
   throw createProjectConversationNotFoundError();
+};
+
+const restorePreparedReplayConversation = async (
+  repository: ProjectsRepository,
+  preparedTurn: PreparedProjectConversationTurn,
+): Promise<void> => {
+  if (!preparedTurn.replayRestoreState) {
+    return;
+  }
+
+  const { conversation, replayUpdatedAt } = preparedTurn.replayRestoreState;
+
+  try {
+    await repository.replaceProjectConversationMessages(
+      preparedTurn.projectId,
+      preparedTurn.conversationId,
+      conversation.messages,
+      new Date(),
+      {
+        title: conversation.title,
+        titleOrigin: conversation.titleOrigin ?? null,
+        expectedCurrentUpdatedAt: replayUpdatedAt,
+      },
+    );
+  } catch (error) {
+    console.error("failed to restore replay conversation", error);
+  }
 };
 
 const ensurePersistedConversationProject = async ({
@@ -328,7 +445,7 @@ export const createProjectConversationTurnService = ({
       options,
     ) => {
       const project = await requireVisibleProject(repository, projectId, actor);
-      const { content, clientRequestId } =
+      const { content, clientRequestId, targetUserMessageId } =
         validateCreateProjectConversationMessageInput(input, options);
       const persistedProjectId = project._id.toHexString();
 
@@ -345,20 +462,80 @@ export const createProjectConversationTurnService = ({
       const existingRetryState = clientRequestId
         ? findProjectConversationRetryState(userConversation, clientRequestId)
         : null;
+      const reusableRetryState =
+        existingRetryState &&
+        existingRetryState.userMessage.content === content &&
+        (!targetUserMessageId ||
+          existingRetryState.userMessage.id === targetUserMessageId)
+          ? existingRetryState
+          : null;
 
-      if (existingRetryState?.assistantMessage) {
+      if (reusableRetryState?.assistantMessage) {
         return {
           projectId: persistedProjectId,
           project: ensuredConversationProject,
           conversationId,
           conversation: userConversation,
-          userMessage: existingRetryState.userMessage,
+          userMessage: reusableRetryState.userMessage,
           clientRequestId,
-          existingAssistantMessage: existingRetryState.assistantMessage,
+          existingAssistantMessage: reusableRetryState.assistantMessage,
         };
       }
 
-      let userMessage = existingRetryState?.userMessage ?? null;
+      let userMessage = reusableRetryState?.userMessage ?? null;
+      let replayRestoreState: PreparedProjectConversationReplayRestoreState | undefined;
+
+      if (targetUserMessageId && !userMessage) {
+        const originalConversation = userConversation;
+        const replayedConversation = buildReplayConversationMessages({
+          conversation: userConversation,
+          targetUserMessageId,
+          content,
+          clientRequestId,
+        });
+        const shouldRefreshTitle = shouldRefreshProjectConversationAutoTitle(
+          userConversation,
+          ensuredConversationProject.name,
+        );
+        const firstUserMessage =
+          replayedConversation.messages.find(
+            (message) => message.role === "user",
+          ) ?? replayedConversation.userMessage;
+        const nextTitle = shouldRefreshTitle
+          ? createProjectConversationAutoTitle(firstUserMessage.content)
+          : undefined;
+        const replayUpdatedAt = new Date();
+        const projectWithReplay =
+          await repository.replaceProjectConversationMessages(
+            persistedProjectId,
+            conversationId,
+            replayedConversation.messages,
+            replayUpdatedAt,
+            {
+              ...(nextTitle !== undefined ? { title: nextTitle } : {}),
+              ...(shouldRefreshTitle ? { titleOrigin: "auto" as const } : {}),
+            },
+          );
+
+        ensuredConversationProject =
+          projectWithReplay ??
+          (await throwConversationPersistenceTargetError(
+            repository,
+            persistedProjectId,
+          ));
+        userConversation = getRequiredPersistedConversation(
+          ensuredConversationProject,
+          conversationId,
+        );
+        userMessage =
+          userConversation.messages.find(
+            (message) => message.id === replayedConversation.userMessage.id,
+          ) ?? null;
+        replayRestoreState = {
+          conversation: originalConversation,
+          replayUpdatedAt,
+        };
+      }
 
       if (!userMessage) {
         const userMessageCreatedAt = new Date();
@@ -400,6 +577,7 @@ export const createProjectConversationTurnService = ({
       }
 
       if (
+        !targetUserMessageId &&
         shouldAutoGenerateProjectConversationTitle(
           userConversation,
           ensuredConversationProject.name,
@@ -418,6 +596,7 @@ export const createProjectConversationTurnService = ({
               titleUpdatedAt,
               {
                 expectedCurrentTitle,
+                titleOrigin: "auto",
               },
             );
 
@@ -473,6 +652,7 @@ export const createProjectConversationTurnService = ({
           userMessage: retryState.userMessage,
           clientRequestId,
           existingAssistantMessage: retryState.assistantMessage,
+          replayRestoreState,
         };
       }
 
@@ -484,6 +664,7 @@ export const createProjectConversationTurnService = ({
         userMessage,
         clientRequestId,
         existingAssistantMessage: null,
+        replayRestoreState,
       };
     },
 
@@ -564,19 +745,24 @@ export const createProjectConversationTurnService = ({
         );
       }
 
-      const assistantReply = await conversationRuntime.generateAssistantReply({
-        actor: context.actor,
-        project: preparedTurn.project,
-        conversation: preparedTurn.conversation,
-        userMessage: preparedTurn.userMessage,
-      });
+      try {
+        const assistantReply = await conversationRuntime.generateAssistantReply({
+          actor: context.actor,
+          project: preparedTurn.project,
+          conversation: preparedTurn.conversation,
+          userMessage: preparedTurn.userMessage,
+        });
 
-      const persistedAssistantReply = await turnService.persistAssistantReply(
-        preparedTurn,
-        assistantReply,
-      );
+        const persistedAssistantReply = await turnService.persistAssistantReply(
+          preparedTurn,
+          assistantReply,
+        );
 
-      return persistedAssistantReply.detail;
+        return persistedAssistantReply.detail;
+      } catch (error) {
+        await restorePreparedReplayConversation(repository, preparedTurn);
+        throw error;
+      }
     },
 
     createStreamingTurn: async (
@@ -608,6 +794,7 @@ export const createProjectConversationTurnService = ({
       }
 
       let sequence = 0;
+      let assistantPersisted = false;
       const emitEvent = async (
         event:
           | Omit<ProjectConversationStreamEvent, "version" | "sequence" | "conversationId" | "clientRequestId">
@@ -665,6 +852,7 @@ export const createProjectConversationTurnService = ({
         });
 
         if (signal?.aborted || streamReply.finishReason === "cancelled") {
+          await restorePreparedReplayConversation(repository, preparedTurn);
           return;
         }
 
@@ -675,6 +863,7 @@ export const createProjectConversationTurnService = ({
             sources: streamReply.sources,
           },
         );
+        assistantPersisted = true;
 
         await emitEvent({
           type: "done",
@@ -683,6 +872,10 @@ export const createProjectConversationTurnService = ({
           finishReason: streamReply.finishReason,
         });
       } catch (error) {
+        if (!assistantPersisted) {
+          await restorePreparedReplayConversation(repository, preparedTurn);
+        }
+
         if (signal?.aborted || isAbortError(error)) {
           return;
         }

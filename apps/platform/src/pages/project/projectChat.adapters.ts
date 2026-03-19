@@ -14,6 +14,7 @@ import {
   ProjectChatAssistantMessage,
   type ProjectChatBubbleExtraInfo,
   type ProjectChatBubbleStatus,
+  type ProjectChatUserBubbleActions,
   ProjectChatUserFooter,
   ProjectChatUserMessage,
 } from './projectChatBubble.components';
@@ -70,6 +71,9 @@ export const buildProjectChatBubbleItems = (
       createdAt: string;
       status: ProjectChatBubbleStatus;
     } | null;
+    getUserMessageActions?: (
+      message: ProjectConversationMessageResponse,
+    ) => ProjectChatUserBubbleActions | null;
   } = {},
 ): BubbleItemType[] => {
   const bubbleItems: BubbleItemType[] = messages.map((message) => ({
@@ -79,6 +83,12 @@ export const buildProjectChatBubbleItems = (
     extraInfo: {
       createdAt: message.createdAt,
       sources: message.sources ?? [],
+      ...(message.role === 'user'
+        ? {
+            userActions:
+              options.getUserMessageActions?.(message) ?? undefined,
+          }
+        : {}),
     } satisfies ProjectChatBubbleExtraInfo,
   }));
 
@@ -175,23 +185,37 @@ export const PROJECT_CHAT_BUBBLE_ROLES: BubbleListProps['role'] = {
         extraInfo: info.extraInfo as ProjectChatBubbleExtraInfo | undefined,
       }),
   },
-  user: {
-    placement: 'end',
-    variant: 'borderless',
-    rootClassName:
-      'group mb-0! w-fit min-w-[16rem] max-w-[calc(100%-0.5rem)] sm:max-w-[64rem]',
-    styles: {
-      content: USER_BUBBLE_STYLE,
-    },
-    contentRender: (content) =>
-      createElement(ProjectChatUserMessage, {
-        content: String(content),
-      }),
-    footerPlacement: 'outer-end',
-    footer: (_content, info) =>
-      createElement(ProjectChatUserFooter, {
-        extraInfo: info.extraInfo as ProjectChatBubbleExtraInfo | undefined,
-      }),
+  user: (item) => {
+    const extraInfo = item.extraInfo as ProjectChatBubbleExtraInfo | undefined;
+    const userActions = extraInfo?.userActions;
+
+    return {
+      placement: 'end',
+      variant: 'borderless',
+      rootClassName:
+        'group mb-0! w-fit min-w-[16rem] max-w-[calc(100%-0.5rem)] sm:max-w-[64rem]',
+      styles: {
+        content: USER_BUBBLE_STYLE,
+      },
+      contentRender: (content) =>
+        createElement(ProjectChatUserMessage, {
+          content: String(content),
+        }),
+      editable: userActions
+        ? {
+            editing: userActions.editing,
+            okText: '保存并重跑',
+            cancelText: '取消',
+          }
+        : false,
+      onEditConfirm: userActions?.onEditConfirm,
+      onEditCancel: userActions?.onEditCancel,
+      footerPlacement: 'outer-end',
+      footer: (_content, info) =>
+        createElement(ProjectChatUserFooter, {
+          extraInfo: info.extraInfo as ProjectChatBubbleExtraInfo | undefined,
+        }),
+    };
   },
 };
 

@@ -23,7 +23,9 @@ import {
   PROJECT_CHAT_BUBBLE_LIST_STYLES,
   PROJECT_CHAT_BUBBLE_ROLES,
 } from './projectChat.adapters';
+import { buildOptimisticProjectConversationMessages } from './useProjectConversationTurn.helpers';
 import { useProjectChatActions } from './useProjectChatActions';
+import { useProjectChatUserMessageActions } from './useProjectChatUserMessageActions';
 import { useProjectChatSettings } from './useProjectChatSettings';
 import {
   type ProjectConversationTargetRefValue,
@@ -77,6 +79,7 @@ export const ProjectChatPage = () => {
   });
   const {
     streamStatus,
+    activeReplay,
     pendingUserMessage,
     draftAssistantMessage,
     isStreaming,
@@ -93,6 +96,14 @@ export const ProjectChatPage = () => {
     setChatRuntimeIssue,
     buildChatIssueFromError,
     reconcileConversationDetail,
+  });
+  const {
+    messageActionLocked,
+    getUserMessageActionHandlers,
+  } = useProjectChatUserMessageActions({
+    currentConversationDetail,
+    turnBusy,
+    handleSendMessage,
   });
   const {
     renameTargetConversation,
@@ -119,6 +130,7 @@ export const ProjectChatPage = () => {
   });
   const sendActionLocked =
     turnBusy ||
+    messageActionLocked ||
     detailLoading ||
     chatSettingsLoading ||
     blockingChatIssue !== null;
@@ -127,12 +139,21 @@ export const ProjectChatPage = () => {
   const activeConversation = chatId
     ? conversations.items.find((conversation) => conversation.id === chatId) ?? null
     : null;
+  const displayMessages = buildOptimisticProjectConversationMessages({
+    messages: currentConversationDetail?.messages ?? [],
+    replay:
+      activeReplay && activeReplay.conversationId === chatId
+        ? activeReplay
+        : null,
+  });
   const conversationBubbleItems = buildProjectChatBubbleItems(
-    currentConversationDetail?.messages ?? [],
+    displayMessages,
     {
       conversationId: chatId,
       pendingUserMessage,
       draftAssistantMessage,
+      getUserMessageActions: (chatMessage) =>
+        getUserMessageActionHandlers(chatMessage.id),
     },
   );
 

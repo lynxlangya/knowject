@@ -3,9 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
-  type Dispatch,
   type MutableRefObject,
-  type SetStateAction,
 } from 'react';
 import { ApiError } from '@knowject/request';
 import { extractApiErrorMessage } from '@api/error';
@@ -16,6 +14,7 @@ import type { ProjectPageRefreshableListState } from './projectPageContext';
 import {
   reconcilePendingProjectConversationTurnSubmission,
   resolvePendingProjectConversationClientRequestId,
+  type OptimisticProjectConversationReplay,
   type PendingProjectConversationTurnSubmission,
 } from './useProjectConversationTurn.helpers';
 import type { ProjectChatIssue } from './useProjectChatSettings';
@@ -42,14 +41,19 @@ interface ProjectConversationDraftAssistantMessage {
   status: Extract<ProjectConversationStreamStatus, 'streaming' | 'reconciling'>;
 }
 
+interface ProjectConversationOptimisticReplayState
+  extends OptimisticProjectConversationReplay {
+  conversationId: string;
+}
+
 interface UseProjectConversationTurnOptions {
   activeProjectId: string;
   chatId?: string;
   latestConversationTargetRef: MutableRefObject<ProjectConversationTargetRefValue>;
   conversations: ProjectPageRefreshableListState<ConversationSummary>;
   currentConversationDetail: ProjectConversationDetailResponse | null;
-  setComposerValue: Dispatch<SetStateAction<string>>;
-  setChatRuntimeIssue: Dispatch<SetStateAction<ProjectChatIssue | null>>;
+  setComposerValue: (value: string) => void;
+  setChatRuntimeIssue: (issue: ProjectChatIssue | null) => void;
   buildChatIssueFromError: (
     error: unknown,
     fallback: string,
@@ -92,6 +96,8 @@ export const useProjectConversationTurn = ({
     useState<ProjectConversationDraftUserMessage | null>(null);
   const [draftAssistantMessage, setDraftAssistantMessage] =
     useState<ProjectConversationDraftAssistantMessage | null>(null);
+  const [activeReplay, setActiveReplay] =
+    useState<ProjectConversationOptimisticReplayState | null>(null);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
   const activeTurnRef = useRef<PendingProjectConversationTurnSubmission | null>(null);
   const pendingSubmissionRef =
@@ -120,6 +126,7 @@ export const useProjectConversationTurn = ({
     activeTurnRef.current = null;
     activeAbortControllerRef.current = null;
     clearDraftMessages();
+    setActiveReplay(null);
     setActiveClientRequestId(null);
     setActiveUserMessageId(null);
     setStreamError(null);
@@ -130,6 +137,12 @@ export const useProjectConversationTurn = ({
   const clearDraftMessages = () => {
     setPendingUserMessage(null);
     setDraftAssistantMessage(null);
+  };
+
+  const applyOptimisticReplay = (
+    replay: ProjectConversationOptimisticReplayState | null,
+  ) => {
+    setActiveReplay(replay);
   };
 
   const resetTurnState = ({
@@ -214,10 +227,16 @@ export const useProjectConversationTurn = ({
       clearDraftMessages();
       resetTurnState();
       setStreamStatus('idle');
+      setActiveReplay(null);
     }
   };
 
-  const handleSendMessage = async (rawContent: string) => {
+  const handleSendMessage = async (
+    rawContent: string,
+    options?: {
+      targetUserMessageId?: string;
+    },
+  ) => {
     if (!chatId) {
       message.warning('请先选择或新建一个对话线程');
       return;
@@ -234,6 +253,20 @@ export const useProjectConversationTurn = ({
       return;
     }
 
+    const targetUserMessageId = options?.targetUserMessageId;
+
+    if (targetUserMessageId) {
+      const targetUserMessage = currentConversationDetail?.messages.find(
+        (chatMessage) =>
+          chatMessage.id === targetUserMessageId && chatMessage.role === 'user',
+      );
+
+      if (!targetUserMessage) {
+        message.warning('目标用户消息不存在，无法继续该操作');
+        return;
+      }
+    }
+
     const requestProjectId = activeProjectId;
     const requestConversationId = chatId;
     const clientRequestId = resolvePendingProjectConversationClientRequestId({
@@ -241,6 +274,7 @@ export const useProjectConversationTurn = ({
       projectId: requestProjectId,
       conversationId: requestConversationId,
       content: nextContent,
+      targetUserMessageId,
     });
     const previousMessageIds = new Set(
       currentConversationDetail?.messages.map((chatMessage) => chatMessage.id) ?? [],
@@ -250,6 +284,7 @@ export const useProjectConversationTurn = ({
       conversationId: requestConversationId,
       content: nextContent,
       clientRequestId,
+      ...(targetUserMessageId ? { targetUserMessageId } : {}),
     } satisfies PendingProjectConversationTurnSubmission;
     const abortController = new AbortController();
     let receivedDone = false;
@@ -263,12 +298,24 @@ export const useProjectConversationTurn = ({
     setStreamStatus('streaming');
     setActiveClientRequestId(clientRequestId);
     setActiveUserMessageId(null);
-    setPendingUserMessage({
-      id: `pending-user:${clientRequestId}`,
-      conversationId: requestConversationId,
-      content: nextContent,
-      createdAt: new Date().toISOString(),
-    });
+
+    if (targetUserMessageId) {
+      applyOptimisticReplay({
+        conversationId: requestConversationId,
+        targetUserMessageId,
+        content: nextContent,
+      });
+      setPendingUserMessage(null);
+    } else {
+      setActiveReplay(null);
+      setPendingUserMessage({
+        id: `pending-user:${clientRequestId}`,
+        conversationId: requestConversationId,
+        content: nextContent,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     setDraftAssistantMessage({
       id: `draft-assistant:${clientRequestId}`,
       conversationId: requestConversationId,
@@ -284,6 +331,7 @@ export const useProjectConversationTurn = ({
         {
           content: nextContent,
           clientRequestId,
+          ...(targetUserMessageId ? { targetUserMessageId } : {}),
         },
         {
           signal: abortController.signal,
@@ -295,17 +343,19 @@ export const useProjectConversationTurn = ({
             switch (event.type) {
               case 'ack':
                 setActiveUserMessageId(event.userMessageId);
-                setPendingUserMessage((currentValue) => {
-                  if (!currentValue) {
-                    return currentValue;
-                  }
+                if (!targetUserMessageId) {
+                  setPendingUserMessage((currentValue) => {
+                    if (!currentValue) {
+                      return currentValue;
+                    }
 
-                  return {
-                    ...currentValue,
-                    id: event.userMessageId,
-                  };
-                });
-                setComposerValue('');
+                    return {
+                      ...currentValue,
+                      id: event.userMessageId,
+                    };
+                  });
+                  setComposerValue('');
+                }
                 return;
               case 'delta':
                 setDraftAssistantMessage((currentValue) => {
@@ -432,6 +482,7 @@ export const useProjectConversationTurn = ({
     activeClientRequestId,
     activeUserMessageId,
     streamError,
+    activeReplay,
     pendingUserMessage,
     draftAssistantMessage,
     isStreaming: streamStatus === 'streaming',

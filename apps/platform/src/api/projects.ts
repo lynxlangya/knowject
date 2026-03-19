@@ -92,6 +92,7 @@ export interface UpdateProjectConversationRequest {
 export interface CreateProjectConversationMessageRequest {
   content: string;
   clientRequestId?: string;
+  targetUserMessageId?: string;
 }
 
 export interface ProjectConversationStreamEventBase {
