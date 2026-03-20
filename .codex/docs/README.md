@@ -37,6 +37,7 @@
     tasks-project-chat-knowledge-draft-selection-implementation.md
     tasks-platform-frontend-refactor.md
     tasks-engineering-governance-foundation.md
+    tasks-engineering-governance-foundation-implementation.md
     tasks-service-indexing-refactor.md
     settings-page-task.md
   handoff/
@@ -67,21 +68,22 @@
 9. 若当前要把项目知识草稿改成“必须选择已有项目私有知识库；无私有知识库时先在聊天页内创建空知识库”，再读 `.codex/docs/plans/tasks-project-chat-knowledge-draft-selection.md`
 10. 若当前要按已确认设计直接执行项目知识草稿私有知识库选择改造，再读 `.codex/docs/plans/tasks-project-chat-knowledge-draft-selection-implementation.md`
 11. 涉及长期工程治理总纲、五个标准包、例外机制、评审清单与文档同步矩阵时，再读 `.codex/docs/plans/tasks-engineering-governance-foundation.md`
-12. 涉及前端结构治理、知识库域抽离、`ProjectLayout` / `project.mock.ts` / `ProjectChatPage` / `AppSider` 边界重构，以及 Tailwind v4 治理顺序时，再读 `.codex/docs/plans/tasks-platform-frontend-refactor.md`
-13. 涉及 Node 服务端、Python indexer、MongoDB / Chroma 状态机、项目对话 runtime 或 Docker 契约重构顺序时，再读 `.codex/docs/plans/tasks-service-indexing-refactor.md`；若要直接承接当前批次，优先看第十节验证基线与第十二节进度
-14. 涉及 Week 5-6 已完成基线、顺延项与 Week 7-8 交接接口时，再读 `.codex/docs/plans/tasks-index-ops-project-consumption.md`
-15. 只有在需要判断 Week 7-10 目标态与边界时，再读 `.codex/docs/roadmap/target-architecture.md`
-16. 涉及工作区设置中心、effective AI config、安全边界或 `/api/settings/*` 时，再读 `.codex/docs/plans/settings-page-task.md`
-17. 涉及认证与环境时，再读 `.codex/docs/contracts/auth-contract.md`
-18. 涉及 Chroma、知识索引、namespace / collection 命名、metadata 或检索 service 边界时，再读 `.codex/docs/contracts/chroma-decision.md`
-19. 涉及基础框架阶段范围与完成记录时，再读 `.codex/docs/plans/tasks-foundation-framework.md`
-20. 涉及 Week 3-4 全局资产阶段拆分时，再读 `.codex/docs/plans/tasks-global-assets-foundation.md`
-21. 涉及 Docker、MongoDB 本地联调方式或部署现状时，再读 `.codex/docs/current/docker-usage.md`
-22. 需要直接执行本地登录、后端调用、Navicat 连接、Chroma 查看或开发 / 验收模式切换时，再读 `.codex/docs/current/docker-operation-checklist.md`
-23. 需要直接执行容器启动、TLS 入口或私有化部署命令时，再读 `docker/README.md`；如果要判断当前 Docker 拓扑、端口、安全边界或 secrets 契约，仍以 `.codex/docs/current/docker-usage.md` 为准
-24. 需要给 ChatGPT / 外部大模型快速建立当前上下文时，先读 `.codex/docs/handoff/chatgpt-project-brief.md`
-25. 如果需要一组可直接上传到 ChatGPT Projects 的副本文件，读 `.codex/packs/chatgpt-projects/README.md`
-26. 需要把任务交给下一位 AI 或人类时，使用 `.codex/docs/handoff/handoff-prompt.md`
+12. 涉及把治理设计正式落成 `.codex/docs/standards/`、同步 `AGENTS.md` / `.codex/README.md` / `.codex/MIGRATION.md` / `current/architecture.md`，以及让现有专项计划引用这些标准时，再读 `.codex/docs/plans/tasks-engineering-governance-foundation-implementation.md`
+13. 涉及前端结构治理、知识库域抽离、`ProjectLayout` / `project.mock.ts` / `ProjectChatPage` / `AppSider` 边界重构，以及 Tailwind v4 治理顺序时，再读 `.codex/docs/plans/tasks-platform-frontend-refactor.md`
+14. 涉及 Node 服务端、Python indexer、MongoDB / Chroma 状态机、项目对话 runtime 或 Docker 契约重构顺序时，再读 `.codex/docs/plans/tasks-service-indexing-refactor.md`；若要直接承接当前批次，优先看第十节验证基线与第十二节进度
+15. 涉及 Week 5-6 已完成基线、顺延项与 Week 7-8 交接接口时，再读 `.codex/docs/plans/tasks-index-ops-project-consumption.md`
+16. 只有在需要判断 Week 7-10 目标态与边界时，再读 `.codex/docs/roadmap/target-architecture.md`
+17. 涉及工作区设置中心、effective AI config、安全边界或 `/api/settings/*` 时，再读 `.codex/docs/plans/settings-page-task.md`
+18. 涉及认证与环境时，再读 `.codex/docs/contracts/auth-contract.md`
+19. 涉及 Chroma、知识索引、namespace / collection 命名、metadata 或检索 service 边界时，再读 `.codex/docs/contracts/chroma-decision.md`
+20. 涉及基础框架阶段范围与完成记录时，再读 `.codex/docs/plans/tasks-foundation-framework.md`
+21. 涉及 Week 3-4 全局资产阶段拆分时，再读 `.codex/docs/plans/tasks-global-assets-foundation.md`
+22. 涉及 Docker、MongoDB 本地联调方式或部署现状时，再读 `.codex/docs/current/docker-usage.md`
+23. 需要直接执行本地登录、后端调用、Navicat 连接、Chroma 查看或开发 / 验收模式切换时，再读 `.codex/docs/current/docker-operation-checklist.md`
+24. 需要直接执行容器启动、TLS 入口或私有化部署命令时，再读 `docker/README.md`；如果要判断当前 Docker 拓扑、端口、安全边界或 secrets 契约，仍以 `.codex/docs/current/docker-usage.md` 为准
+25. 需要给 ChatGPT / 外部大模型快速建立当前上下文时，先读 `.codex/docs/handoff/chatgpt-project-brief.md`
+26. 如果需要一组可直接上传到 ChatGPT Projects 的副本文件，读 `.codex/packs/chatgpt-projects/README.md`
+27. 需要把任务交给下一位 AI 或人类时，使用 `.codex/docs/handoff/handoff-prompt.md`
 
 补充说明：
 
@@ -93,8 +95,9 @@
 - 当前仓库已新增 `.codex/docs/plans/tasks-project-chat-knowledge-draft-selection-implementation.md`，用于承接该交互调整的正式实施步骤、测试入口与文档同步清单。
 - 当前仓库已新增 `.codex/docs/plans/tasks-platform-frontend-refactor.md`，用于承接前端结构治理、知识库域抽离、项目数据编排边界与 Tailwind v4 治理顺序，不与 `current/` 事实文档混写。
 - 当前仓库已新增 `.codex/docs/plans/tasks-engineering-governance-foundation.md`，用于承接长期工程治理机制设计、五个标准包、例外机制、评审清单与后续 `standards/` 目录的落点规划，不与具体实施步骤混写。
+- 当前仓库已新增 `.codex/docs/plans/tasks-engineering-governance-foundation-implementation.md`，用于承接治理设计的正式落地顺序，包括创建 `.codex/docs/standards/`、同步入口文档，以及让既有专项计划引用新的治理标准。
 - 当前仓库已新增 `.codex/docs/plans/tasks-service-indexing-refactor.md`，用于承接 Node 服务端、Python indexer、MongoDB / Chroma 状态机、项目对话 runtime 与 Docker 契约的跨模块重构顺序；该计划当前已完成 Milestone 0 + 1 + 2 + 3 + 4 + 5 + 6。直接承接时优先看第十二节中的 Milestone 6 收尾记录，再按相邻专题计划或 handoff 继续后续工作。
-- 当前迭代重点请优先以这九份计划为主，再结合 `.codex/docs/roadmap/gap-analysis.md`、`.codex/docs/plans/tasks-index-ops-project-consumption.md` 的 Week 7-8 交接接口，以及 `.codex/docs/handoff/handoff-guide.md` 的继续开发顺序判断。
+- 当前迭代重点请优先以这十份计划为主，再结合 `.codex/docs/roadmap/gap-analysis.md`、`.codex/docs/plans/tasks-index-ops-project-consumption.md` 的 Week 7-8 交接接口，以及 `.codex/docs/handoff/handoff-guide.md` 的继续开发顺序判断。
 
 ### 理解产品现状与目标
 
@@ -111,7 +114,7 @@
 | 当前事实 | `.codex/docs/current`   | `architecture.md`、`docker-usage.md`、`docker-operation-checklist.md`                                                                                                    | 现在的路由、数据来源、模块边界、API / Docker 边界，以及该怎么操作             |
 | 实施契约 | `.codex/docs/contracts` | `auth-contract.md`、`chat-contract.md`、`chroma-decision.md`                                                                                                            | MongoDB、JWT、密码哈希、注册登录、项目对话 API、Node / Python / Chroma 分层与检索约束怎么定 |
 | 路线蓝图 | `.codex/docs/roadmap`   | `target-architecture.md`、`gap-analysis.md`                                                                                                                              | 产品最终想做成什么、现在差多少、先补什么                                      |
-| 阶段计划 | `.codex/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md`、`tasks-index-ops-project-consumption.md`、`tasks-chat-core-week7-8.md`、`tasks-chat-sse-streaming-refactor.md`、`tasks-chat-ant-design-x-migration.md`、`tasks-project-chat-message-rail.md`、`tasks-project-chat-knowledge-draft-selection.md`、`tasks-project-chat-knowledge-draft-selection-implementation.md`、`tasks-platform-frontend-refactor.md`、`tasks-engineering-governance-foundation.md`、`tasks-service-indexing-refactor.md`、`settings-page-task.md` | 已完成阶段怎么收口、顺延项怎么接、当前迭代顺序与 DoD 如何判断                 |
+| 阶段计划 | `.codex/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md`、`tasks-index-ops-project-consumption.md`、`tasks-chat-core-week7-8.md`、`tasks-chat-sse-streaming-refactor.md`、`tasks-chat-ant-design-x-migration.md`、`tasks-project-chat-message-rail.md`、`tasks-project-chat-knowledge-draft-selection.md`、`tasks-project-chat-knowledge-draft-selection-implementation.md`、`tasks-platform-frontend-refactor.md`、`tasks-engineering-governance-foundation.md`、`tasks-engineering-governance-foundation-implementation.md`、`tasks-service-indexing-refactor.md`、`settings-page-task.md` | 已完成阶段怎么收口、顺延项怎么接、当前迭代顺序与 DoD 如何判断                 |
 | 接手交接 | `.codex/docs/handoff`   | `handoff-guide.md`、`chatgpt-project-brief.md`、`handoff-prompt.md`                                                                                                      | 新协作者、ChatGPT 或外部模型如何快速建立事实并继续推进                        |
 | 输入材料 | `.codex/docs/inputs`    | `知项Knowject-项目认知总结-v2.md`、`知项Knowject-项目认知总结-v3.md`                                                                                                     | 认知总结原文是什么，哪些内容需要吸收为正式文档                                |
 | 设计资料 | `.codex/docs/design`    | 品牌与视觉资料                                                                                                                                                           | 品牌表达、图标、字标、视觉方向是什么                                          |
@@ -204,6 +207,9 @@
 - 更新 `.codex/docs/plans/tasks-engineering-governance-foundation.md`
   - 长期工程治理总纲、五个标准包模板、规则分级、例外机制、评审清单或文档落点规划发生变化。
   - 第一阶段主线不再是“代码结构治理”，或规范型治理准备升级为自动化门禁时，需同步更新。
+- 更新 `.codex/docs/plans/tasks-engineering-governance-foundation-implementation.md`
+  - `standards/` 目录创建顺序、入口文档同步范围、既有专项计划的标准引用方式或本轮验证方式发生变化。
+  - 若治理基础设施的实施范围从“文档与规则落地”扩大到自动化门禁或脚本巡检，也需同步更新。
 - 更新 `.codex/docs/plans/tasks-service-indexing-refactor.md`
   - Node 服务端、Python indexer、MongoDB / Chroma 状态机、项目对话 runtime 或 Docker 契约的重构顺序、任务拆解、DoD、验证基线或回滚策略发生变化。
   - 新的执行批次已经完成、延期、拆分或被降级为候选时，需同步更新状态与决策记录。
@@ -250,6 +256,7 @@
 - 关于“项目知识草稿私有知识库选择改造应按什么顺序实施、先写哪些测试、最后同步哪些文档”的判断，以 `.codex/docs/plans/tasks-project-chat-knowledge-draft-selection-implementation.md` 为准。
 - 关于“前端结构治理、知识库域共享抽离、项目数据编排、`project.mock.ts` 边界收口，以及 Tailwind v4 重构顺序”的判断，以 `.codex/docs/plans/tasks-platform-frontend-refactor.md` 为准。
 - 关于“长期工程治理总纲、五个标准包、例外机制、评审清单与 `standards/` 目录应如何落地”的判断，以 `.codex/docs/plans/tasks-engineering-governance-foundation.md` 为准。
+- 关于“长期工程治理设计应按什么顺序正式落到 `standards/`、哪些入口文档必须同步、以及现有专项计划应如何引用治理标准”的判断，以 `.codex/docs/plans/tasks-engineering-governance-foundation-implementation.md` 为准。
 - 关于“Node 服务端、Python indexer、MongoDB / Chroma 状态机、项目对话 runtime 与 Docker 契约的跨模块重构顺序”的判断，以 `.codex/docs/plans/tasks-service-indexing-refactor.md` 为准。
 - 关于“基础框架阶段的环境变量和认证协议具体怎么实现”的判断，以 `.codex/docs/contracts/auth-contract.md` 为准。
 - 关于“项目对话 create conversation / create message、来源引用字段和 envelope shape 应该长什么样”的判断，以 `.codex/docs/contracts/chat-contract.md` 为准。
