@@ -41,6 +41,6 @@
 
 ## 7. 当前代表性治理对象
 
-- `apps/platform/src/pages/project/ProjectChatPage.tsx`：settings、conversation list/detail、issue 推导混在一处，`tasks-platform-frontend-refactor.md` 将其列为首批拆分对象。
-- `apps/platform/src/app/layouts/components/AppSider.tsx`：侧栏渲染、项目表单、资源 options 拉取、fallback 修补集中，计划中已有 `ProjectFormModal` 与 `useProjectResourceOptions` 的拆分方案。
-- `apps/api/src/modules/knowledge/knowledge.repository.ts`：`SR-40~SR-42` 中的状态迁移、diagnostics、summary 逻辑仍在同一文件，需要像计划中描述的那样下沉 helper 并保留 compare-and-set contract。
+- `apps/platform/src/pages/project/ProjectChatPage.tsx`：仍负责 settings 撤点、自定义 issue flow、conversation list/detail 以及多种 data-to-UI 协调，继续承载多路 domain flow 的风险，值得在每次改动前重新对齐职责。
+- `apps/platform/src/app/layouts/components/AppSider.tsx`：除了渲染 layout 之外，还在拉 project form、加载资源 options、修补 fallback 选项；它仍然是结构治理的代表性 hotspot，需要保持各子责任的清晰边界。
+- `apps/api/src/modules/knowledge/knowledge.repository.ts`：继续聚合 compare-and-set 状态迁移、diagnostics/rebuild/summary 更新等多重职责，若没有明确 helper seam，review 仍然难以把握单一逻辑。
