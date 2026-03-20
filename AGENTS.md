@@ -39,6 +39,7 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
     current/        当前事实与架构文档
     contracts/      实施契约
     roadmap/        目标蓝图与 gap 分析
+    standards/      长期工程治理与协作规范（长期规则与评审清单）
     plans/          阶段任务与文档计划
     handoff/        接手与交接文档
     inputs/         输入材料与认知原稿
@@ -106,7 +107,8 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
   - Mock 数据源、示例路径、存储键变化：同步 `.codex/docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
   - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`.codex/docs/current/docker-usage.md`、`.codex/docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
   - 仓库级命令包装或脚本入口变化：同步 `README.md`、`docker/README.md`、`.codex/docs/current/architecture.md`、必要时同步本文件。
-  - Codex 主目录职责、上传包映射或 Skill 根目录变化：同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`，必要时同步 `.codex/packs/chatgpt-projects/README.md` 与 `.codex/skills/README.md`。
+  - Codex 主目录职责、工程治理 `standards/` 目录职责、上传包映射或 Skill 根目录变化：同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`.codex/docs/README.md`，必要时同步 `.codex/packs/chatgpt-projects/README.md` 与 `.codex/skills/README.md`。
+  - 工程治理规则、协作规范或评审清单变化（`.codex/docs/standards/*`）：同步 `.codex/docs/README.md`、必要时同步 `.codex/docs/current/architecture.md` 与本文件，避免入口与事实源漂移。
   - 模块边界、目录结构、协作规则变化：同步本文件、`.codex/README.md`、`.codex/MIGRATION.md` 与 `.codex/docs/current/architecture.md`。
 
 ## 6. 页面与组件分层约定
