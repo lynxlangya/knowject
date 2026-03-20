@@ -165,6 +165,26 @@ test('desktop rail hides inactive containers with inert instead of aria-hidden',
   assert.doesNotMatch(railSource, /aria-hidden=\{!expanded\}/);
 });
 
+test('browse rail header uses a more compact switch group and a taller selection trigger', () => {
+  const railSource = readFileSync(
+    new URL('../src/pages/project/components/ProjectConversationMessageRail.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    railSource,
+    /h-7! rounded-full! border-0! px-2\.5! text-xs! font-medium! shadow-none!/,
+  );
+  assert.match(
+    railSource,
+    /flex rounded-full border border-slate-200 bg-slate-100 p-0\.5/,
+  );
+  assert.match(
+    railSource,
+    /h-9! rounded-full! border-slate-200! bg-white! px-3\.5! text-xs! font-medium! text-slate-700! shadow-none!/,
+  );
+});
+
 test('starred rail controls reuse the shared warm star affordance', async () => {
   const React = await import('react');
   globalThis.React = React;

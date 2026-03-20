@@ -131,7 +131,7 @@ const RailModeButton = ({
       size="small"
       onClick={onClick}
       className={[
-        'h-8! rounded-full! border-0! px-3! text-xs! font-medium! shadow-none!',
+        'h-7! rounded-full! border-0! px-2.5! text-xs! font-medium! shadow-none!',
         active
           ? (activeClassName ??
             'bg-white! text-slate-800! shadow-[0_6px_18px_rgba(15,23,42,0.08)]!')
@@ -313,7 +313,7 @@ const RailContent = ({
 
         {mode !== 'selection' ? (
           <div className="mt-4 flex items-center justify-between gap-3">
-            <div className="flex rounded-full border border-slate-200 bg-slate-100 p-1">
+            <div className="flex rounded-full border border-slate-200 bg-slate-100 p-0.5">
               <RailModeButton
                 active={mode === 'browse'}
                 icon={MODE_META.browse.icon}
@@ -344,7 +344,7 @@ const RailContent = ({
               size="small"
               icon={<CheckSquareOutlined />}
               onClick={() => onModeChange('selection')}
-              className="rounded-full! border-slate-200! bg-white! px-3! text-xs! font-medium! text-slate-700! shadow-none!"
+              className="h-9! rounded-full! border-slate-200! bg-white! px-3.5! text-xs! font-medium! text-slate-700! shadow-none! hover:border-slate-300! hover:bg-slate-50/80! hover:text-slate-800!"
             >
               选择
             </Button>
