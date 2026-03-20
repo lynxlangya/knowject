@@ -12,7 +12,7 @@
 
 ## 3. 适合抽离的对象
 - 高频特性：`KnowledgeManagementPage` / `SkillsManagementPage` / `AgentsManagementPage` 中重复的搜索/筛选控件、Loading/Error 组织、summary 行为、action 列表结构。
-- 状态 Hook：在两个或以上页面/模块共享的 state/hook（如分页、筛选、健康检查订阅）时，可放入 `apps/platform/src/shared` 或 `hooks` 目录。
+- 状态 Hook：在两个或以上页面/模块共享的 state/hook（如分页、筛选、健康检查订阅）时，可抽到 colocated `.shared.ts` 辅助文件或相邻的 domain helper，例如 `knowledgeUpload.shared.ts`。
 - 样式常量：Tailwind canonical class 统一、radius/text/shadow token 出台后可封装到主题 helper 供 `packages/ui` 与 `apps/platform` 复用，依据 Plans 中 FE-R12 经验。
 - 结构模板：如 detail/diagnostics/reload token 再次复用的弹性布局或 `knowledgeUpload.shared.ts` 中的 payload 组织。
 
@@ -24,7 +24,7 @@
 ## 5. 推荐动作
 - 开工前列出潜在共享候选，梳理实际 consumers、边界参数与变更频率，优先推进复用价值最高的部分（细粒度 context + action 排序）。
 - 对可能的 shared hook/adapter 先开发 thin wrapper，避免引入沉重的上下文；只有在第 2 轮确认证明多处 reuse 时再抽离完整模块。
-- 抽象后增加 smoke test：运行 `pnpm --filter platform lint/check-types/build`，确认新的 shared layer 无编译错误，并检查 `apps/platform/src/pages` 使用点是否保持可读。
+- 抽象后增加 smoke test：分别运行 `pnpm --filter platform lint`、`pnpm --filter platform check-types` 与 `pnpm --filter platform build`，确认新的 shared layer 无编译错误，并检查 `apps/platform/src/pages` 使用点是否保持可读。
 - 复查 FE-R12 的 Tailwind token baseline，确保 canonical class、token 名称与 `packages/ui`/`apps/platform` 中既有主题一致。
 
 ## 6. 允许例外

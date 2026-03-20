@@ -22,13 +22,13 @@
 ## 4. 推荐巡检动作
 - 检查 `docker/secrets/` 是否仍由 `.gitignore` 屏蔽，生成脚本（`docker/scripts/generate-local-secrets.sh`）按期更新，确保 `*_FILE` 模式与 `pnpm` dev 脚本一致。
 - 在配置表（`.env`、compose、CI/CD）里统一使用 `MONGODB_URI_FILE`、`JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE`，其余非 secret 配置继续走明文。
-- 审阅 expose 端口：确认 `platform`、`api`、`chroma` 仅在 `publish` 网络中发布必要端口，生产默认仅由 `caddy` 处理 TLS。
-- 任何 HTTP 登录/设置相关接口的响应都不回显完整 token；200 响应只允许 `apiKeyHint`、`hasKey`，认证或登出逻辑保持前端 localStorage 清理。
+- 审阅 expose 端口：确认 `api`、`mongo`、`chroma` 仅在 `publish` 网络中发布必要端口，`platform` 仍由宿主机端口直连且受到 `caddy` TLS/HTTP 代理；生产默认仅向 `caddy` 公开端口。
+- 审查 `GET /api/settings` 的响应仅对 `apiKeyHint`、`hasKey` 公开提示，登录/注册的 `token + user` payload 仍按 auth contract 回传，不把 token 或 `knowject_token` 写到日志/错误中。
 - 新增健康检查或 internal 路由时记录依赖：`platform` 复用 `/healthz`、`indexer-py` 固定 `/health`，`/internal/*` 仅在 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN` 启用并带 token 校验。
 - 复查 auth contract：`knowject_token`、`Authorization: Bearer`、`401`/`403` 语义保持一致，错误码不要从细节字段泄露。
 
 ## 5. 允许例外
-- 仅当开发环境必须时，短期开放 `/docs`、`/redoc` 等调试路由，并在 `.env.local`/`docker-compose.dev` 明确标记为 `development` 才允许。上线前需移除输入暴露或加上 token。
+- 仅当开发环境必须时，短期开放 `/docs`、`/redoc` 等调试路由，并在 `.env.local`/`compose.local.yml` 明确标记为 `development` 才允许。上线前需移除输入暴露或加上 token。
 - 某些低风险咨询脚本或迁移工具可能需要临时的 `internal` 访问，必须通过文档记录审批并在 Sprint 结束前撤回。
 
 ## 6. 文档同步要求
