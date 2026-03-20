@@ -70,7 +70,7 @@
 8. 若当前要推进项目对话页右侧消息 Rail、消息加星、Markdown 导出与知识草稿沉淀，再读 `.codex/docs/plans/tasks-project-chat-message-rail.md`
 9. 若当前要把项目知识草稿改成“必须选择已有项目私有知识库；无私有知识库时先在聊天页内创建空知识库”，再读 `.codex/docs/plans/tasks-project-chat-knowledge-draft-selection.md`
 10. 若当前要按已确认设计直接执行项目知识草稿私有知识库选择改造，再读 `.codex/docs/plans/tasks-project-chat-knowledge-draft-selection-implementation.md`
-11. 涉及长期工程治理总纲、五个标准包、例外机制、评审清单与文档同步矩阵时，再读 `.codex/docs/plans/tasks-engineering-governance-foundation.md`
+11. 涉及工程治理的设计背景、标准体系的设计与演进台账（而非当前生效的规则正文）时，再读 `.codex/docs/plans/tasks-engineering-governance-foundation.md`；当前治理规则以 `.codex/docs/standards/*` 为准
 12. 涉及当前工程治理规则与评审要求时，先读 `.codex/docs/standards/engineering-governance-overview.md`，再按需读 `.codex/docs/standards/review-checklist.md` 与对应专题标准
 13. 涉及把治理设计正式落成 `.codex/docs/standards/`、同步 `AGENTS.md` / `.codex/README.md` / `.codex/MIGRATION.md` / `current/architecture.md`，以及让现有专项计划引用这些标准时，再读 `.codex/docs/plans/tasks-engineering-governance-foundation-implementation.md`
 14. 涉及前端结构治理、知识库域抽离、`ProjectLayout` / `project.mock.ts` / `ProjectChatPage` / `AppSider` 边界重构，以及 Tailwind v4 治理顺序时，再读 `.codex/docs/plans/tasks-platform-frontend-refactor.md`
