@@ -19,6 +19,12 @@ interface ReplaceProjectConversationMessagesOptions {
   expectedCurrentUpdatedAt?: Date;
 }
 
+interface UpdateProjectConversationMessageMetadataPatch {
+  starred: boolean;
+  starredAt: Date | null;
+  starredBy: string | null;
+}
+
 export class ProjectsRepository {
   private indexesEnsured = false;
   private ensureIndexesPromise: Promise<void> | null = null;
@@ -219,6 +225,69 @@ export class ProjectsRepository {
         },
       },
       {
+        returnDocument: "after",
+      },
+    );
+
+    return result;
+  }
+
+  async updateProjectConversationMessageMetadata(
+    projectId: string,
+    conversationId: string,
+    messageId: string,
+    patch: UpdateProjectConversationMessageMetadataPatch,
+  ): Promise<WithId<ProjectDocument> | null> {
+    const objectId = toObjectId(projectId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getCollection();
+    const setDocument: Record<string, unknown> = {};
+    const unsetDocument: Record<string, ''> = {};
+
+    if (patch.starredAt !== null) {
+      setDocument['conversations.$[conversation].messages.$[message].starredAt'] =
+        patch.starredAt;
+      setDocument['conversations.$[conversation].messages.$[message].starredBy'] =
+        patch.starredBy;
+    } else {
+      unsetDocument['conversations.$[conversation].messages.$[message].starredAt'] =
+        '';
+      unsetDocument['conversations.$[conversation].messages.$[message].starredBy'] =
+        '';
+    }
+
+    const updateDocument: {
+      $set?: Record<string, unknown>;
+      $unset?: Record<string, ''>;
+    } = {};
+
+    if (Object.keys(setDocument).length > 0) {
+      updateDocument.$set = setDocument;
+    }
+
+    if (Object.keys(unsetDocument).length > 0) {
+      updateDocument.$unset = unsetDocument;
+    }
+
+    const result = await collection.findOneAndUpdate(
+      {
+        _id: objectId,
+        "conversations.id": conversationId,
+        "conversations.messages.id": messageId,
+      },
+      updateDocument,
+      {
+        arrayFilters: [
+          {
+            "conversation.id": conversationId,
+          },
+          {
+            "message.id": messageId,
+          },
+        ],
         returnDocument: "after",
       },
     );

@@ -14,10 +14,12 @@ import {
   createDefaultProjectConversation,
   createProjectConversation,
   createProjectConversationNotFoundError,
+  createProjectConversationMessageNotFoundError,
   createProjectNotFoundError,
   getProjectConversation,
   getProjectConversations,
   requireVisibleProject,
+  toProjectConversationMessageResponse,
   toProjectConversationDetailResponse,
   toProjectConversationSummaryResponse,
 } from "./projects.shared.js";
@@ -31,7 +33,9 @@ import type {
   ProjectCommandContext,
   ProjectConversationDetailEnvelope,
   ProjectConversationListResponse,
+  ProjectConversationMessageEnvelope,
   ProjectConversationStreamOptions,
+  UpdateProjectConversationMessageMetadataInput,
   UpdateProjectConversationInput,
 } from "./projects.types.js";
 
@@ -51,6 +55,13 @@ export interface ProjectConversationService {
     conversationId: string,
     input: UpdateProjectConversationInput,
   ): Promise<ProjectConversationDetailEnvelope>;
+  updateProjectConversationMessageMetadata(
+    context: ProjectCommandContext,
+    projectId: string,
+    conversationId: string,
+    messageId: string,
+    input: UpdateProjectConversationMessageMetadataInput,
+  ): Promise<ProjectConversationMessageEnvelope>;
   createProjectConversationMessage(
     context: ProjectCommandContext,
     projectId: string,
@@ -119,6 +130,26 @@ const validateUpdateProjectConversationInput = (
 
   return {
     title,
+  };
+};
+
+const validateUpdateProjectConversationMessageMetadataInput = (
+  input: UpdateProjectConversationMessageMetadataInput,
+): {
+  starred: boolean;
+} => {
+  const normalizedInput = readMutationInput(input, {
+    allowUndefined: true,
+  });
+
+  if (typeof normalizedInput.starred !== "boolean") {
+    throw createValidationAppError("starred 必须为布尔值", {
+      starred: "starred 必须为布尔值",
+    });
+  }
+
+  return {
+    starred: normalizedInput.starred,
   };
 };
 
@@ -244,6 +275,102 @@ export const createProjectConversationService = ({
             ensuredUpdatedProject,
             conversationId,
           ),
+        ),
+      };
+    },
+
+    updateProjectConversationMessageMetadata: async (
+      { actor },
+      projectId,
+      conversationId,
+      messageId,
+      input,
+    ) => {
+      const project = await requireVisibleProject(repository, projectId, actor);
+      const conversation = getProjectConversation(project, conversationId);
+
+      if (!conversation) {
+        throw createProjectConversationNotFoundError();
+      }
+
+      const message = conversation.messages.find(
+        (conversationMessage) => conversationMessage.id === messageId,
+      );
+
+      if (!message) {
+        throw createProjectConversationMessageNotFoundError();
+      }
+
+      const { starred } = validateUpdateProjectConversationMessageMetadataInput(
+        input,
+      );
+      const now = new Date();
+      const persistedProjectId = project._id.toHexString();
+      let updatedProject =
+        await repository.updateProjectConversationMessageMetadata(
+          persistedProjectId,
+          conversationId,
+          messageId,
+          {
+            starred,
+            starredAt: starred ? now : null,
+            starredBy: starred ? actor.id : null,
+          },
+        );
+
+      if (
+        !updatedProject &&
+        conversationId === "chat-default" &&
+        (project.conversations?.length ?? 0) === 0
+      ) {
+        const defaultConversation = createDefaultProjectConversation(project);
+
+        await repository.materializeDefaultProjectConversation(
+          persistedProjectId,
+          defaultConversation,
+          defaultConversation.updatedAt,
+        );
+
+        updatedProject = await repository.updateProjectConversationMessageMetadata(
+          persistedProjectId,
+          conversationId,
+          messageId,
+          {
+            starred,
+            starredAt: starred ? now : null,
+            starredBy: starred ? actor.id : null,
+          },
+        );
+      }
+
+      const ensuredUpdatedProject =
+        updatedProject ??
+        (await throwConversationPersistenceTargetError(
+          repository,
+          persistedProjectId,
+        ));
+
+      const updatedConversation = getProjectConversation(
+        ensuredUpdatedProject,
+        conversationId,
+      );
+
+      if (!updatedConversation) {
+        throw createProjectConversationMessageNotFoundError();
+      }
+
+      const updatedMessage = updatedConversation.messages.find(
+        (conversationMessage) => conversationMessage.id === messageId,
+      );
+
+      if (!updatedMessage) {
+        throw createProjectConversationMessageNotFoundError();
+      }
+
+      return {
+        message: toProjectConversationMessageResponse(
+          conversationId,
+          updatedMessage,
         ),
       };
     },

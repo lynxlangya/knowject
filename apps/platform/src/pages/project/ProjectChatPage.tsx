@@ -1,12 +1,15 @@
 import {
   ArrowUpOutlined,
   PlusOutlined,
+  PushpinOutlined,
   StopOutlined,
 } from '@ant-design/icons';
 import { Bubble } from '@ant-design/x';
 import {
+  App,
   Alert,
   Button,
+  Drawer,
   Empty,
   Input,
   Skeleton,
@@ -14,9 +17,14 @@ import {
 } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { PATHS } from '@app/navigation/paths';
+import {
+  PATHS,
+  buildProjectResourcesPath,
+} from '@app/navigation/paths';
 import { KNOWJECT_BRAND } from '@styles/brand';
 import { ProjectConversationList } from './components/ProjectConversationList';
+import { ProjectConversationMessageRail } from './components/ProjectConversationMessageRail';
+import { ProjectKnowledgeDraftDrawer } from './components/ProjectKnowledgeDraftDrawer';
 import {
   buildProjectChatBubbleItems,
   PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES,
@@ -28,21 +36,44 @@ import { useProjectChatActions } from './useProjectChatActions';
 import { useProjectChatUserMessageActions } from './useProjectChatUserMessageActions';
 import { useProjectChatSettings } from './useProjectChatSettings';
 import {
+  buildProjectConversationMessageBulkActionState,
+  type ProjectKnowledgeDraftValues,
+  useProjectConversationMessageActions,
+} from './useProjectConversationMessageActions';
+import {
   type ProjectConversationTargetRefValue,
   useProjectConversationDetail,
 } from './useProjectConversationDetail';
+import {
+  closeProjectConversationMessageKnowledgeDrawer,
+  completeProjectConversationMessageKnowledgeSave,
+  useProjectConversationMessageRail,
+} from './useProjectConversationMessageRail';
 import { useProjectConversationTurn } from './useProjectConversationTurn';
 import { useProjectPageContext } from './projectPageContext';
 
 export const ProjectChatPage = () => {
+  const { message } = App.useApp();
   const navigate = useNavigate();
   const { chatId } = useParams<{ chatId?: string }>();
-  const { activeProject, conversations } = useProjectPageContext();
+  const {
+    activeProject,
+    conversations,
+    projectKnowledge,
+  } = useProjectPageContext();
   const latestConversationTargetRef = useRef<ProjectConversationTargetRefValue>({
     projectId: activeProject.id,
     chatId,
   });
   const [composerValue, setComposerValue] = useState('');
+  const [mobileRailOpen, setMobileRailOpen] = useState(false);
+  const [knowledgeDraftOpen, setKnowledgeDraftOpen] = useState(false);
+  const [knowledgeDraftValue, setKnowledgeDraftValue] =
+    useState<ProjectKnowledgeDraftValues | null>(null);
+  const [knowledgeDraftExistingKnowledgeId, setKnowledgeDraftExistingKnowledgeId] =
+    useState<string | null>(null);
+  const [knowledgeDraftPartialFailureMessage, setKnowledgeDraftPartialFailureMessage] =
+    useState<string | null>(null);
 
   useEffect(() => {
     latestConversationTargetRef.current = {
@@ -53,6 +84,14 @@ export const ProjectChatPage = () => {
 
   useEffect(() => {
     setComposerValue('');
+  }, [activeProject.id, chatId]);
+
+  useEffect(() => {
+    setMobileRailOpen(false);
+    setKnowledgeDraftOpen(false);
+    setKnowledgeDraftValue(null);
+    setKnowledgeDraftExistingKnowledgeId(null);
+    setKnowledgeDraftPartialFailureMessage(null);
   }, [activeProject.id, chatId]);
 
   const {
@@ -128,13 +167,6 @@ export const ProjectChatPage = () => {
     setChatRuntimeIssue,
     buildChatIssueFromError,
   });
-  const sendActionLocked =
-    turnBusy ||
-    messageActionLocked ||
-    detailLoading ||
-    chatSettingsLoading ||
-    blockingChatIssue !== null;
-  const canSubmitMessage = composerValue.trim().length > 0 && !sendActionLocked;
 
   const activeConversation = chatId
     ? conversations.items.find((conversation) => conversation.id === chatId) ?? null
@@ -156,6 +188,170 @@ export const ProjectChatPage = () => {
         getUserMessageActionHandlers(chatMessage.id),
     },
   );
+  const messageRail = useProjectConversationMessageRail({
+    messages: displayMessages,
+    pendingUserMessageId:
+      pendingUserMessage?.conversationId === chatId
+        ? pendingUserMessage?.id ?? null
+        : null,
+    draftAssistantMessageId:
+      draftAssistantMessage?.conversationId === chatId
+        ? draftAssistantMessage?.id ?? null
+        : null,
+  });
+  const {
+    starringMessageId,
+    savingKnowledgeDraft,
+    toggleMessageStar,
+    exportSelectedMessagesAsMarkdown,
+    buildKnowledgeDraftFromSelection,
+    saveKnowledgeDraft,
+  } = useProjectConversationMessageActions({
+    activeProjectId: activeProject.id,
+    conversationId: chatId,
+    currentConversationDetail,
+    setConversationDetail,
+    refreshProjectKnowledge: projectKnowledge.refresh,
+  });
+  const sendActionLocked =
+    turnBusy ||
+    messageActionLocked ||
+    detailLoading ||
+    chatSettingsLoading ||
+    blockingChatIssue !== null;
+  const canSubmitMessage = composerValue.trim().length > 0 && !sendActionLocked;
+  const bulkActionState = buildProjectConversationMessageBulkActionState({
+    isStreaming,
+    selectedMessageCount: messageRail.selectedMessageIds.length,
+  });
+
+  const handleScrollToMessage = (messageId: string) => {
+    document.getElementById(`project-chat-message-${messageId}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  };
+
+  const handleOpenKnowledgeDraft = () => {
+    const nextDraft = buildKnowledgeDraftFromSelection(
+      messageRail.selectedMessageIds,
+    );
+
+    if (!nextDraft) {
+      message.warning('请先选择至少一条已持久化的消息');
+      return;
+    }
+
+    messageRail.setMode('selection');
+    setKnowledgeDraftValue(nextDraft);
+    setKnowledgeDraftExistingKnowledgeId(null);
+    setKnowledgeDraftPartialFailureMessage(null);
+    setKnowledgeDraftOpen(true);
+  };
+
+  const handleCloseKnowledgeDraft = () => {
+    if (savingKnowledgeDraft) {
+      return;
+    }
+
+    const nextSelectionState = closeProjectConversationMessageKnowledgeDrawer({
+      mode: messageRail.mode,
+      selectedMessageIds: messageRail.selectedMessageIds,
+    });
+
+    messageRail.setMode(nextSelectionState.mode);
+    messageRail.setSelectedMessageIds(nextSelectionState.selectedMessageIds);
+    setKnowledgeDraftOpen(false);
+  };
+
+  const handleKnowledgeDraftValueChange = (
+    patch: Partial<ProjectKnowledgeDraftValues>,
+  ) => {
+    setKnowledgeDraftValue((currentValue) =>
+      currentValue
+        ? {
+            ...currentValue,
+            ...patch,
+          }
+        : currentValue,
+    );
+  };
+
+  const handleKnowledgeDraftSaveSuccess = (successMessage: string) => {
+    const nextSelectionState = completeProjectConversationMessageKnowledgeSave({
+      mode: messageRail.mode,
+      selectedMessageIds: messageRail.selectedMessageIds,
+    });
+
+    messageRail.setMode(nextSelectionState.mode);
+    messageRail.setSelectedMessageIds(nextSelectionState.selectedMessageIds);
+    setKnowledgeDraftOpen(false);
+    setKnowledgeDraftValue(null);
+    setKnowledgeDraftExistingKnowledgeId(null);
+    setKnowledgeDraftPartialFailureMessage(null);
+    message.success(successMessage);
+  };
+
+  const handleSubmitKnowledgeDraft = async (
+    existingKnowledgeId?: string | null,
+  ) => {
+    if (!knowledgeDraftValue) {
+      return;
+    }
+
+    const result = await saveKnowledgeDraft(knowledgeDraftValue, {
+      existingKnowledgeId,
+    });
+
+    if (result.status === 'success') {
+      handleKnowledgeDraftSaveSuccess(
+        existingKnowledgeId
+          ? '知识草稿已完成补传'
+          : '项目知识草稿已保存并上传 Markdown',
+      );
+      return;
+    }
+
+    if (result.status === 'partial_failure') {
+      setKnowledgeDraftExistingKnowledgeId(
+        result.knowledgeId ?? existingKnowledgeId ?? null,
+      );
+      setKnowledgeDraftPartialFailureMessage(
+        result.message ?? '知识库已创建，但 Markdown 上传失败，请稍后重试',
+      );
+      message.warning(
+        result.message ?? '知识库已创建，但 Markdown 上传失败，请稍后重试',
+      );
+      return;
+    }
+
+    message.error(result.message ?? '保存知识草稿失败，请稍后重试');
+  };
+
+  const railProps = {
+    messages: displayMessages,
+    mode: messageRail.mode,
+    expanded: messageRail.expanded,
+    selectedMessageIds: messageRail.selectedMessageIds,
+    selectableMessageIds: messageRail.selectableMessageIds,
+    starringMessageId,
+    exportDisabled: bulkActionState.exportDisabled,
+    knowledgeDraftDisabled: bulkActionState.knowledgeDraftDisabled,
+    onExpandedChange: messageRail.setPanelOpen,
+    onModeChange: messageRail.setMode,
+    onToggleSelectedMessageId: messageRail.toggleSelectedMessageId,
+    onScrollToMessage: handleScrollToMessage,
+    onToggleMessageStar: (
+      chatMessage: (typeof displayMessages)[number],
+      nextStarred: boolean,
+    ) => {
+      void toggleMessageStar(chatMessage.id, nextStarred);
+    },
+    onExportMarkdown: () => {
+      exportSelectedMessagesAsMarkdown(messageRail.selectedMessageIds);
+    },
+    onGenerateKnowledgeDraft: handleOpenKnowledgeDraft,
+  } as const;
 
   const renderCreateChatButton = ({
     block = false,
@@ -262,134 +458,183 @@ export const ProjectChatPage = () => {
           </div>
         ) : currentConversationDetail ? (
           <>
-            <div className="flex min-h-0 flex-1 flex-col bg-[radial-gradient(circle_at_bottom,rgba(40,184,160,0.08),transparent_34%),linear-gradient(180deg,rgba(246,251,250,0.82)_0%,rgba(255,255,255,0.98)_26%,rgba(255,255,255,1)_100%)] px-6 py-5">
-              {blockingChatIssue ? (
-                <Alert
-                  type="warning"
-                  showIcon
-                  className="mb-4"
-                  title={blockingChatIssue.title}
-                  description={
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span>{blockingChatIssue.description}</span>
-                      <div className="flex flex-wrap gap-2">
-                        <Button type="primary" onClick={() => navigate(PATHS.settings)}>
-                          前往设置
-                        </Button>
-                        <Button onClick={() => void loadChatSettings()}>
-                          重新检查配置
-                        </Button>
+            <div className="flex min-h-0 flex-1 bg-white">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <div className="flex min-h-0 flex-1 flex-col bg-[radial-gradient(circle_at_bottom,rgba(40,184,160,0.08),transparent_34%),linear-gradient(180deg,rgba(246,251,250,0.82)_0%,rgba(255,255,255,0.98)_26%,rgba(255,255,255,1)_100%)] px-6 py-5">
+                  <div className="mb-4 flex justify-end xl:hidden">
+                    <Button
+                      icon={<PushpinOutlined />}
+                      onClick={() => setMobileRailOpen(true)}
+                      className="rounded-full! border-slate-200! bg-white! text-slate-700!"
+                    >
+                      消息导航
+                    </Button>
+                  </div>
+
+                  {blockingChatIssue ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      className="mb-4"
+                      title={blockingChatIssue.title}
+                      description={
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <span>{blockingChatIssue.description}</span>
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="primary" onClick={() => navigate(PATHS.settings)}>
+                              前往设置
+                            </Button>
+                            <Button onClick={() => void loadChatSettings()}>
+                              重新检查配置
+                            </Button>
+                          </div>
+                        </div>
+                      }
+                    />
+                  ) : null}
+                  {chatSettingsError ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      className="mb-4"
+                      title="当前无法确认对话配置"
+                      description={`${chatSettingsError}。如后续发送失败，请前往设置页检查配置。`}
+                    />
+                  ) : null}
+                  {inlineChatIssue ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      className="mb-4"
+                      title={inlineChatIssue.title}
+                      description={inlineChatIssue.description}
+                    />
+                  ) : null}
+                  {conversationBubbleItems.length > 0 ? (
+                    <div className="min-h-0 flex-1">
+                      <div className="mx-auto h-full w-full max-w-7xl">
+                        <Bubble.List
+                          items={conversationBubbleItems}
+                          autoScroll
+                          role={PROJECT_CHAT_BUBBLE_ROLES}
+                          classNames={PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES}
+                          styles={PROJECT_CHAT_BUBBLE_LIST_STYLES}
+                        />
                       </div>
                     </div>
-                  }
-                />
-              ) : null}
-              {chatSettingsError ? (
-                <Alert
-                  type="warning"
-                  showIcon
-                  className="mb-4"
-                  title="当前无法确认对话配置"
-                  description={`${chatSettingsError}。如后续发送失败，请前往设置页检查配置。`}
-                />
-              ) : null}
-              {inlineChatIssue ? (
-                <Alert
-                  type="warning"
-                  showIcon
-                  className="mb-4"
-                  title={inlineChatIssue.title}
-                  description={inlineChatIssue.description}
-                />
-              ) : null}
-              {conversationBubbleItems.length > 0 ? (
-                <div className="min-h-0 flex-1">
-                  <div className="mx-auto h-full w-full max-w-7xl">
-                    <Bubble.List
-                      items={conversationBubbleItems}
-                      autoScroll
-                      role={PROJECT_CHAT_BUBBLE_ROLES}
-                      classNames={PROJECT_CHAT_BUBBLE_LIST_CLASS_NAMES}
-                      styles={PROJECT_CHAT_BUBBLE_LIST_STYLES}
-                    />
+                  ) : (
+                    <div className="grid min-h-0 flex-1 place-items-center">
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该对话暂无消息" />
+                    </div>
+                  )}
+                </div>
+
+                <footer className="border-t border-slate-200/70 bg-white px-6 pb-5 pt-4">
+                  <div className="mx-auto w-full max-w-7xl">
+                    <form
+                      className="rounded-hero border bg-white p-2.5 transition-colors duration-200"
+                      style={{
+                        borderColor: KNOWJECT_BRAND.primaryBorder,
+                      }}
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        void handleSendMessage(composerValue);
+                      }}
+                    >
+                      <div className="flex items-end gap-3">
+                        <div className="min-w-0 flex-1">
+                          <Input.TextArea
+                            value={composerValue}
+                            autoSize={{ minRows: 1, maxRows: 6 }}
+                            disabled={sendActionLocked}
+                            variant="borderless"
+                            aria-label="项目消息输入框"
+                            placeholder="输入项目问题"
+                            style={{ width: '100%' }}
+                            className="w-full! rounded-card-lg! bg-transparent! px-4! py-3! text-body! leading-7! text-slate-700! placeholder:text-slate-400!"
+                            onChange={(event) => setComposerValue(event.target.value)}
+                            onPressEnter={(event) => {
+                              if (event.shiftKey || event.nativeEvent.isComposing) {
+                                return;
+                              }
+
+                              event.preventDefault();
+                              void handleSendMessage(composerValue);
+                            }}
+                          />
+                        </div>
+
+                        {isStreaming ? (
+                          <Button
+                            htmlType="button"
+                            aria-label="停止生成"
+                            icon={<StopOutlined />}
+                            onClick={handleCancelStreaming}
+                            className="mb-1 h-11! rounded-full! border-slate-200! px-4! text-sm! font-semibold! text-slate-700!"
+                          >
+                            停止生成
+                          </Button>
+                        ) : (
+                          <Button
+                            type="primary"
+                            htmlType="submit"
+                            shape="circle"
+                            aria-label="发送消息"
+                            loading={streamStatus === 'reconciling'}
+                            disabled={!canSubmitMessage}
+                            icon={<ArrowUpOutlined />}
+                            className="mb-1 h-11! w-11! shrink-0 border-0!"
+                            style={{
+                              background: canSubmitMessage
+                                ? KNOWJECT_BRAND.primary
+                                : KNOWJECT_BRAND.primarySurfaceStrong,
+                              color: canSubmitMessage
+                                ? '#ffffff'
+                                : KNOWJECT_BRAND.textMuted,
+                            }}
+                          />
+                        )}
+                      </div>
+                    </form>
                   </div>
-                </div>
-              ) : (
-                <div className="grid min-h-0 flex-1 place-items-center">
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该对话暂无消息" />
-                </div>
-              )}
+                </footer>
+              </div>
+
+              <ProjectConversationMessageRail {...railProps} />
             </div>
 
-            <footer className="border-t border-slate-200/70 bg-white px-6 pb-5 pt-4">
-              <div className="mx-auto w-full max-w-7xl">
-                <form
-                  className="rounded-hero border bg-white p-2.5 transition-colors duration-200"
-                  style={{
-                    borderColor: KNOWJECT_BRAND.primaryBorder,
-                  }}
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void handleSendMessage(composerValue);
-                  }}
-                >
-                  <div className="flex items-end gap-3">
-                    <div className="min-w-0 flex-1">
-                      <Input.TextArea
-                        value={composerValue}
-                        autoSize={{ minRows: 1, maxRows: 6 }}
-                        disabled={sendActionLocked}
-                        variant="borderless"
-                        aria-label="项目消息输入框"
-                        placeholder="输入项目问题"
-                        style={{ width: '100%' }}
-                        className="w-full! rounded-card-lg! bg-transparent! px-4! py-3! text-body! leading-7! text-slate-700! placeholder:text-slate-400!"
-                        onChange={(event) => setComposerValue(event.target.value)}
-                        onPressEnter={(event) => {
-                          if (event.shiftKey || event.nativeEvent.isComposing) {
-                            return;
-                          }
+            <Drawer
+              open={mobileRailOpen}
+              width={360}
+              title="消息导航"
+              placement="right"
+              className="xl:hidden"
+              onClose={() => setMobileRailOpen(false)}
+            >
+              <ProjectConversationMessageRail
+                {...railProps}
+                variant="mobile"
+                expanded
+                onExpandedChange={undefined}
+              />
+            </Drawer>
 
-                          event.preventDefault();
-                          void handleSendMessage(composerValue);
-                        }}
-                      />
-                    </div>
-
-                    {isStreaming ? (
-                      <Button
-                        htmlType="button"
-                        aria-label="停止生成"
-                        icon={<StopOutlined />}
-                        onClick={handleCancelStreaming}
-                        className="mb-1 h-11! rounded-full! border-slate-200! px-4! text-sm! font-semibold! text-slate-700!"
-                      >
-                        停止生成
-                      </Button>
-                    ) : (
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        shape="circle"
-                        aria-label="发送消息"
-                        loading={streamStatus === 'reconciling'}
-                        disabled={!canSubmitMessage}
-                        icon={<ArrowUpOutlined />}
-                        className="mb-1 h-11! w-11! shrink-0 border-0!"
-                        style={{
-                          background: canSubmitMessage
-                            ? KNOWJECT_BRAND.primary
-                            : KNOWJECT_BRAND.primarySurfaceStrong,
-                          color: canSubmitMessage
-                            ? '#ffffff'
-                            : KNOWJECT_BRAND.textMuted,
-                        }}
-                      />
-                    )}
-                  </div>
-                </form>
-              </div>
-            </footer>
+            <ProjectKnowledgeDraftDrawer
+              open={knowledgeDraftOpen}
+              value={knowledgeDraftValue}
+              saving={savingKnowledgeDraft}
+              partialFailureMessage={knowledgeDraftPartialFailureMessage}
+              hasExistingKnowledge={knowledgeDraftExistingKnowledgeId !== null}
+              onChange={handleKnowledgeDraftValueChange}
+              onClose={handleCloseKnowledgeDraft}
+              onSubmit={() => void handleSubmitKnowledgeDraft()}
+              onRetryUpload={() =>
+                void handleSubmitKnowledgeDraft(knowledgeDraftExistingKnowledgeId)
+              }
+              onOpenResources={() =>
+                void navigate(buildProjectResourcesPath(activeProject.id, 'knowledge'))
+              }
+            />
           </>
         ) : (
           <div className="grid min-h-full place-items-center px-8 py-10">

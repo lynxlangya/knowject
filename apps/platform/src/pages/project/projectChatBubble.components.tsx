@@ -5,8 +5,9 @@ import {
   RedoOutlined,
 } from '@ant-design/icons';
 import { Popover, Typography } from 'antd';
+import React from 'react';
 import type { MouseEvent } from 'react';
-import type { ProjectConversationSourceResponse } from '@api/projects';
+import type { ProjectConversationSourceResponse } from '../../api/projects';
 import { ProjectChatMarkdown } from './projectChat.markdown';
 
 export interface ProjectChatUserBubbleActions {
@@ -22,6 +23,7 @@ export interface ProjectChatUserBubbleActions {
 export interface ProjectChatBubbleExtraInfo {
   createdAt: string;
   sources: ProjectConversationSourceResponse[];
+  messageId?: string;
   status?: ProjectChatBubbleStatus;
   userActions?: ProjectChatUserBubbleActions;
 }
@@ -32,6 +34,8 @@ const PROJECT_CHAT_BUBBLE_STATUS_LABELS: Record<ProjectChatBubbleStatus, string>
   streaming: '生成中',
   reconciling: '同步中',
 };
+
+void React;
 
 const formatMessageTime = (value: string): string => {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -120,17 +124,39 @@ const BubbleTimestamp = ({ createdAt }: { createdAt: string }) => {
   );
 };
 
-export const ProjectChatAssistantMessage = ({ content }: { content: string }) => {
+export const ProjectChatAssistantMessage = ({
+  content,
+  extraInfo,
+}: {
+  content: string;
+  extraInfo?: ProjectChatBubbleExtraInfo;
+}) => {
   return (
-    <div className="text-body text-slate-700">
+    <div
+      id={getProjectChatMessageDomId(extraInfo?.messageId)}
+      className="text-body text-slate-700"
+    >
       <ProjectChatMarkdown content={content} />
     </div>
   );
 };
 
-export const ProjectChatUserMessage = ({ content }: { content: string }) => {
+const getProjectChatMessageDomId = (messageId?: string) => {
+  return messageId ? `project-chat-message-${messageId}` : undefined;
+};
+
+export const ProjectChatUserMessage = ({
+  content,
+  extraInfo,
+}: {
+  content: string;
+  extraInfo?: ProjectChatBubbleExtraInfo;
+}) => {
   return (
-    <Typography.Paragraph className="mb-0! whitespace-pre-wrap text-body! leading-7! text-slate-800!">
+    <Typography.Paragraph
+      id={getProjectChatMessageDomId(extraInfo?.messageId)}
+      className="mb-0! whitespace-pre-wrap text-body! leading-7! text-slate-800!"
+    >
       {content}
     </Typography.Paragraph>
   );

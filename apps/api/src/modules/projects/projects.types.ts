@@ -34,6 +34,8 @@ export interface ProjectConversationMessageDocument {
   createdAt: Date;
   clientRequestId?: string;
   sources?: ProjectConversationSourceDocument[];
+  starredAt?: Date;
+  starredBy?: string;
 }
 
 export interface ProjectConversationSourceDocument {
@@ -89,6 +91,10 @@ export interface CreateProjectConversationMessageInput {
   content?: unknown;
   clientRequestId?: unknown;
   targetUserMessageId?: unknown;
+}
+
+export interface UpdateProjectConversationMessageMetadataInput {
+  starred?: unknown;
 }
 
 export interface ProjectConversationStreamEventBase {
@@ -193,6 +199,9 @@ export interface ProjectConversationMessageResponse {
   role: ProjectConversationMessageRole;
   content: string;
   createdAt: string;
+  starred: boolean;
+  starredAt?: string | null;
+  starredBy?: string | null;
   sources?: ProjectConversationSourceResponse[];
 }
 
@@ -213,6 +222,10 @@ export interface ProjectConversationDetailResponse
 
 export interface ProjectConversationDetailEnvelope {
   conversation: ProjectConversationDetailResponse;
+}
+
+export interface ProjectConversationMessageEnvelope {
+  message: ProjectConversationMessageResponse;
 }
 
 export interface ProjectCommandContext {

@@ -21,6 +21,9 @@ __pycache__/
 .venv/
 .pytest_cache/
 .codex/
+.superpowers/
+.worktrees/
+docs/
 
 # Testing
 coverage

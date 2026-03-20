@@ -1,3 +1,5 @@
+import { normalizeMarkdownFileName } from '../project/projectConversationMessageExport';
+
 const DOCUMENT_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 const DOCUMENT_UPLOAD_SOFT_WARNING_BYTES = 20 * 1024 * 1024;
 const SUPPORTED_DOCUMENT_EXTENSIONS = ['.md', '.markdown', '.txt'] as const;
@@ -168,5 +170,19 @@ export const createTextSourceFile = ({
 
   return new File([fileContent], fileName, {
     type: 'text/plain;charset=utf-8',
+  });
+};
+
+export const createMarkdownSourceFile = ({
+  title,
+  content,
+}: {
+  title?: string;
+  content: string;
+}): File => {
+  const fileName = normalizeMarkdownFileName(title?.trim() ?? '');
+
+  return new File([content.trim()], fileName, {
+    type: 'text/markdown;charset=utf-8',
   });
 };

@@ -8,6 +8,7 @@ import type {
   CreateProjectConversationInput,
   CreateProjectConversationMessageInput,
   CreateProjectInput,
+  UpdateProjectConversationMessageMetadataInput,
   UpdateProjectConversationInput,
   UpdateProjectInput,
 } from './projects.types.js';
@@ -24,6 +25,12 @@ const getRequiredConversationId = (request: Request): string => {
   return Array.isArray(conversationId)
     ? conversationId[0] ?? ''
     : conversationId ?? '';
+};
+
+const getRequiredMessageId = (request: Request): string => {
+  const messageId = request.params.messageId;
+
+  return Array.isArray(messageId) ? messageId[0] ?? '' : messageId ?? '';
 };
 
 const waitForSseDrain = (response: Response): Promise<void> => {
@@ -163,6 +170,23 @@ export const createProjectsRouter = (
         getRequiredProjectId(req),
         getRequiredConversationId(req),
         req.body as UpdateProjectConversationInput,
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  projectsRouter.patch(
+    '/:projectId/conversations/:conversationId/messages/:messageId',
+    asyncHandler(async (req, res) => {
+      const result = await projectsService.updateProjectConversationMessageMetadata(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        getRequiredProjectId(req),
+        getRequiredConversationId(req),
+        getRequiredMessageId(req),
+        req.body as UpdateProjectConversationMessageMetadataInput,
       );
 
       sendSuccess(res, result);

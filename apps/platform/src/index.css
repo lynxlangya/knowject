@@ -121,6 +121,31 @@
   margin-top: 0 !important;
 }
 
+.project-chat-rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
+}
+
+.project-chat-rail-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.project-chat-rail-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.project-chat-rail-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.55);
+  background-clip: padding-box;
+}
+
+.project-chat-rail-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.62);
+  background-clip: padding-box;
+}
+
 @keyframes hubPulse {
   0%,
   100% {

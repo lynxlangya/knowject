@@ -9,6 +9,7 @@ import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { SettingsRepository } from '@modules/settings/settings.repository.js';
 import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
 import { createProjectConversationRuntime } from './project-conversation-runtime.js';
+import type { ProjectsService } from './projects.service.js';
 import { createProjectsService } from './projects.service.js';
 import type { ProjectsRepository } from './projects.repository.js';
 import type {
@@ -623,6 +624,768 @@ test('createProjectConversationMessage appends persisted user and assistant mess
   );
   assert.equal(result.conversation.messages[1]?.sources?.length, 1);
   assert.equal(result.conversation.title, '已有会话');
+});
+
+test('message star contract returns starred metadata for the persisted message', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439030'),
+    name: '消息星标契约',
+    description: '验证 persisted message 的 star contract',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-18T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-star-contract',
+        title: '消息星标会话',
+        messages: [
+          {
+            id: 'msg-star-target',
+            role: 'user',
+            content: '把这条消息加星',
+            createdAt: new Date('2026-03-18T09:00:00.000Z'),
+          },
+        ],
+        createdAt: new Date('2026-03-18T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-18T09:30:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-18T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-18T09:30:00.000Z'),
+  };
+
+  let persistedProject = project;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? persistedProject : null,
+    updateProjectConversationMessageMetadata: async (
+      projectId: string,
+      conversationId: string,
+      messageId: string,
+      patch: {
+        starred: boolean;
+        starredAt: Date | null;
+        starredBy: string | null;
+      },
+    ) => {
+      assert.equal(projectId, project._id.toHexString());
+      assert.equal(conversationId, 'chat-star-contract');
+      assert.equal(messageId, 'msg-star-target');
+      assert.equal(patch.starred, true);
+      assert.ok(patch.starredAt instanceof Date);
+      assert.equal(patch.starredBy, 'user-1');
+
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: conversation.messages.map((message) =>
+                  message.id === messageId
+                    ? {
+                        ...message,
+                        starredAt: patch.starredAt ?? undefined,
+                        starredBy: patch.starredBy ?? undefined,
+                      }
+                    : message,
+                ),
+              }
+            : conversation,
+        ),
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await (
+    service as ProjectsService & {
+      updateProjectConversationMessageMetadata(
+        context: { actor: { id: string; username: string } },
+        projectId: string,
+        conversationId: string,
+        messageId: string,
+        input: { starred?: unknown },
+      ): Promise<{
+        message: {
+          starred: boolean;
+          starredAt: string | null;
+          starredBy: string | null;
+          id: string;
+          conversationId: string;
+          content: string;
+        };
+      }>;
+    }
+  ).updateProjectConversationMessageMetadata(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-star-contract',
+    'msg-star-target',
+    {
+      starred: true,
+    },
+  );
+
+  assert.equal(result.message.id, 'msg-star-target');
+  assert.equal(result.message.conversationId, 'chat-star-contract');
+  assert.equal(result.message.starred, true);
+  assert.equal(result.message.starredBy, 'user-1');
+  assert.ok(result.message.starredAt);
+});
+
+test('message star contract clears starred metadata when unstarred', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439031'),
+    name: '消息取消加星',
+    description: '验证 unstar contract',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-18T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-unstar-contract',
+        title: '已加星会话',
+        messages: [
+          {
+            id: 'msg-unstar-target',
+            role: 'assistant',
+            content: '这条消息先处于已加星状态',
+            createdAt: new Date('2026-03-18T09:00:00.000Z'),
+            starredAt: new Date('2026-03-18T09:10:00.000Z'),
+            starredBy: 'user-1',
+          },
+        ],
+        createdAt: new Date('2026-03-18T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-18T09:30:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-18T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-18T09:30:00.000Z'),
+  };
+
+  let persistedProject = project;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? persistedProject : null,
+    updateProjectConversationMessageMetadata: async (
+      projectId: string,
+      conversationId: string,
+      messageId: string,
+      patch: {
+        starred: boolean;
+        starredAt: Date | null;
+        starredBy: string | null;
+      },
+    ) => {
+      assert.equal(projectId, project._id.toHexString());
+      assert.equal(conversationId, 'chat-unstar-contract');
+      assert.equal(messageId, 'msg-unstar-target');
+      assert.equal(patch.starred, false);
+      assert.equal(patch.starredAt, null);
+      assert.equal(patch.starredBy, null);
+
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: conversation.messages.map((message) =>
+                  message.id === messageId
+                    ? {
+                        ...message,
+                        starredAt: undefined,
+                        starredBy: undefined,
+                      }
+                    : message,
+                ),
+              }
+            : conversation,
+        ),
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await (
+    service as ProjectsService & {
+      updateProjectConversationMessageMetadata(
+        context: { actor: { id: string; username: string } },
+        projectId: string,
+        conversationId: string,
+        messageId: string,
+        input: { starred?: unknown },
+      ): Promise<{
+        message: {
+          starred: boolean;
+          starredAt: string | null;
+          starredBy: string | null;
+          id: string;
+          conversationId: string;
+          content: string;
+        };
+      }>;
+    }
+  ).updateProjectConversationMessageMetadata(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-unstar-contract',
+    'msg-unstar-target',
+    {
+      starred: false,
+    },
+  );
+
+  assert.equal(result.message.id, 'msg-unstar-target');
+  assert.equal(result.message.starred, false);
+  assert.equal(result.message.starredAt, null);
+  assert.equal(result.message.starredBy, null);
+});
+
+test('message star mutation rejects an invalid message id with not-found semantics', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439032'),
+    name: '非法消息星标',
+    description: '验证不存在的 messageId',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-18T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-star-not-found',
+        title: '消息不存在会话',
+        messages: [
+          {
+            id: 'msg-present',
+            role: 'user',
+            content: '存在的消息',
+            createdAt: new Date('2026-03-18T09:00:00.000Z'),
+          },
+        ],
+        createdAt: new Date('2026-03-18T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-18T09:30:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-18T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-18T09:30:00.000Z'),
+  };
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    updateProjectConversationMessageMetadata: async () => {
+      throw new Error('updateProjectConversationMessageMetadata should not be called');
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  await assert.rejects(
+    () =>
+      (
+        service as ProjectsService & {
+          updateProjectConversationMessageMetadata(
+            context: { actor: { id: string; username: string } },
+            projectId: string,
+            conversationId: string,
+            messageId: string,
+            input: { starred?: unknown },
+          ): Promise<unknown>;
+        }
+      ).updateProjectConversationMessageMetadata(
+        {
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
+        },
+        project._id.toHexString(),
+        'chat-star-not-found',
+        'msg-missing',
+        {
+          starred: true,
+        },
+      ),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.equal(error.statusCode, 404);
+      return true;
+    },
+  );
+});
+
+test('message star mutation materializes the default conversation before updating metadata', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439032'),
+    name: '默认会话星标',
+    description: '验证默认 chat-default 也能更新消息星标',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-18T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [],
+    createdAt: new Date('2026-03-18T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-18T09:30:00.000Z'),
+  };
+
+  let materializeCalls = 0;
+  let updateCalls = 0;
+  let persistedConversation: ProjectConversationDocument | null = null;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    materializeDefaultProjectConversation: async (
+      _projectId: string,
+      conversation: ProjectConversationDocument,
+      updatedAt: Date,
+    ) => {
+      materializeCalls += 1;
+      persistedConversation = conversation;
+
+      return {
+        ...project,
+        conversations: [conversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+    updateProjectConversationMessageMetadata: async (
+      _projectId: string,
+      conversationId: string,
+      messageId: string,
+      patch: {
+        starred: boolean;
+        starredAt: Date | null;
+        starredBy: string | null;
+      },
+    ) => {
+      updateCalls += 1;
+      assert.equal(conversationId, 'chat-default');
+      assert.equal(messageId, 'msg-default-assistant');
+      assert.equal(patch.starred, true);
+
+      if (!persistedConversation) {
+        return null;
+      }
+
+      persistedConversation = {
+        ...persistedConversation,
+        messages: persistedConversation.messages.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                starredAt: patch.starredAt ?? undefined,
+                starredBy: patch.starredBy ?? undefined,
+              }
+            : message,
+        ),
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        _id: project._id,
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await (
+    service as ProjectsService & {
+      updateProjectConversationMessageMetadata(
+        context: { actor: { id: string; username: string } },
+        projectId: string,
+        conversationId: string,
+        messageId: string,
+        input: { starred?: unknown },
+      ): Promise<{
+        message: {
+          id: string;
+          starred: boolean;
+          starredAt: string | null;
+          starredBy: string | null;
+        };
+      }>;
+    }
+  ).updateProjectConversationMessageMetadata(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-default',
+    'msg-default-assistant',
+    {
+      starred: true,
+    },
+  );
+
+  assert.equal(materializeCalls, 1);
+  assert.equal(updateCalls, 2);
+  assert.equal(result.message.id, 'msg-default-assistant');
+  assert.equal(result.message.starred, true);
+  assert.equal(result.message.starredBy, 'user-1');
+  assert.ok(result.message.starredAt);
+});
+
+test('message star mutation keeps conversation.updatedAt stable', async () => {
+  const conversationUpdatedAt = new Date('2026-03-18T09:30:00.000Z');
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439033'),
+    name: '更新时间不漂移',
+    description: '验证消息星标不会改 conversation.updatedAt',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-18T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-updated-at-stable',
+        title: '更新时间稳定会话',
+        messages: [
+          {
+            id: 'msg-updated-at-target',
+            role: 'assistant',
+            content: '目标消息',
+            createdAt: new Date('2026-03-18T09:00:00.000Z'),
+          },
+        ],
+        createdAt: new Date('2026-03-18T09:00:00.000Z'),
+        updatedAt: conversationUpdatedAt,
+      },
+    ],
+    createdAt: new Date('2026-03-18T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-18T09:30:00.000Z'),
+  };
+
+  let persistedProject = project;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? persistedProject : null,
+    updateProjectConversationMessageMetadata: async (
+      _projectId: string,
+      conversationId: string,
+      messageId: string,
+      patch: {
+        starred: boolean;
+        starredAt: Date | null;
+        starredBy: string | null;
+      },
+    ) => {
+      assert.equal(conversationId, 'chat-updated-at-stable');
+      assert.equal(messageId, 'msg-updated-at-target');
+      assert.equal(patch.starred, true);
+
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: conversation.messages.map((message) =>
+                  message.id === messageId
+                    ? {
+                        ...message,
+                        starredAt: patch.starredAt ?? undefined,
+                        starredBy: patch.starredBy ?? undefined,
+                      }
+                    : message,
+                ),
+              }
+            : conversation,
+        ),
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await (
+    service as ProjectsService & {
+      updateProjectConversationMessageMetadata(
+        context: { actor: { id: string; username: string } },
+        projectId: string,
+        conversationId: string,
+        messageId: string,
+        input: { starred?: unknown },
+      ): Promise<{
+        message: {
+          starred: boolean;
+          starredAt: string | null;
+          starredBy: string | null;
+          id: string;
+          conversationId: string;
+          content: string;
+        };
+      }>;
+    }
+  ).updateProjectConversationMessageMetadata(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-updated-at-stable',
+    'msg-updated-at-target',
+    {
+      starred: true,
+    },
+  );
+
+  assert.equal(result.message.starred, true);
+  assert.equal(result.message.conversationId, 'chat-updated-at-stable');
+  assert.equal(result.message.starredBy, 'user-1');
+  assert.ok(result.message.starredAt);
+  assert.equal(persistedProject.conversations[0]?.updatedAt, conversationUpdatedAt);
+  assert.equal(persistedProject.updatedAt, project.updatedAt);
+});
+
+test('message star mutation keeps conversation ordering stable', async () => {
+  const olderUpdatedAt = new Date('2026-03-18T09:00:00.000Z');
+  const newerUpdatedAt = new Date('2026-03-18T10:00:00.000Z');
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439034'),
+    name: '排序不漂移',
+    description: '验证消息星标不会影响列表顺序',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-18T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-newer',
+        title: '较新的会话',
+        messages: [
+          {
+            id: 'msg-newer',
+            role: 'assistant',
+            content: '较新的会话消息',
+            createdAt: newerUpdatedAt,
+          },
+        ],
+        createdAt: newerUpdatedAt,
+        updatedAt: newerUpdatedAt,
+      },
+      {
+        id: 'chat-older',
+        title: '较旧的会话',
+        messages: [
+          {
+            id: 'msg-older-target',
+            role: 'user',
+            content: '较旧会话中的目标消息',
+            createdAt: olderUpdatedAt,
+          },
+        ],
+        createdAt: olderUpdatedAt,
+        updatedAt: olderUpdatedAt,
+      },
+    ],
+    createdAt: new Date('2026-03-18T00:00:00.000Z'),
+    updatedAt: newerUpdatedAt,
+  };
+
+  let persistedProject = project;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? persistedProject : null,
+    updateProjectConversationMessageMetadata: async (
+      _projectId: string,
+      conversationId: string,
+      messageId: string,
+      patch: {
+        starred: boolean;
+        starredAt: Date | null;
+        starredBy: string | null;
+      },
+    ) => {
+      assert.equal(conversationId, 'chat-older');
+      assert.equal(messageId, 'msg-older-target');
+      assert.equal(patch.starred, true);
+
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: conversation.messages.map((message) =>
+                  message.id === messageId
+                    ? {
+                        ...message,
+                        starredAt: patch.starredAt ?? undefined,
+                        starredBy: patch.starredBy ?? undefined,
+                      }
+                    : message,
+                ),
+              }
+            : conversation,
+        ),
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const before = await service.listProjectConversations(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+  );
+
+  await (
+    service as ProjectsService & {
+      updateProjectConversationMessageMetadata(
+        context: { actor: { id: string; username: string } },
+        projectId: string,
+        conversationId: string,
+        messageId: string,
+        input: { starred?: unknown },
+      ): Promise<unknown>;
+    }
+  ).updateProjectConversationMessageMetadata(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-older',
+    'msg-older-target',
+    {
+      starred: true,
+    },
+  );
+
+  const after = await service.listProjectConversations(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+  );
+
+  assert.deepEqual(before.items.map((item) => item.id), ['chat-newer', 'chat-older']);
+  assert.deepEqual(after.items.map((item) => item.id), ['chat-newer', 'chat-older']);
 });
 
 test('createProjectConversationMessage auto-generates a concise title from the first user message', async () => {

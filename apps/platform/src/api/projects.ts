@@ -70,6 +70,9 @@ export interface ProjectConversationMessageResponse {
   content: string;
   createdAt: string;
   sources?: ProjectConversationSourceResponse[];
+  starred: boolean;
+  starredAt: string | null;
+  starredBy: string | null;
 }
 
 export interface ProjectConversationDetailResponse
@@ -79,6 +82,10 @@ export interface ProjectConversationDetailResponse
 
 export interface ProjectConversationDetailEnvelope {
   conversation: ProjectConversationDetailResponse;
+}
+
+export interface ProjectConversationMessageEnvelope {
+  message: ProjectConversationMessageResponse;
 }
 
 export interface CreateProjectConversationRequest {
@@ -93,6 +100,10 @@ export interface CreateProjectConversationMessageRequest {
   content: string;
   clientRequestId?: string;
   targetUserMessageId?: string;
+}
+
+export interface UpdateProjectConversationMessageMetadataRequest {
+  starred: boolean;
 }
 
 export interface ProjectConversationStreamEventBase {
@@ -290,6 +301,22 @@ export const createProjectConversationMessage = async (
     {
       timeout: PROJECT_CHAT_MESSAGE_TIMEOUT_MS,
     },
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const updateProjectConversationMessageMetadata = async (
+  projectId: string,
+  conversationId: string,
+  messageId: string,
+  payload: UpdateProjectConversationMessageMetadataRequest,
+): Promise<ProjectConversationMessageEnvelope> => {
+  const response = await client.patch<ApiEnvelope<ProjectConversationMessageEnvelope>>(
+    `/projects/${encodeURIComponent(projectId)}/conversations/${encodeURIComponent(
+      conversationId,
+    )}/messages/${encodeURIComponent(messageId)}`,
+    payload,
   );
 
   return unwrapApiData(response.data);

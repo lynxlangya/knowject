@@ -3,12 +3,12 @@ import type {
   BubbleListProps,
   ConversationItemType,
 } from '@ant-design/x';
-import type { MenuProps } from 'antd';
+import { Typography, type MenuProps } from 'antd';
 import type { CSSProperties } from 'react';
-import { createElement } from 'react';
-import type { ConversationSummary } from '@app/project/project.types';
-import type { ProjectConversationMessageResponse } from '@api/projects';
-import { KNOWJECT_BRAND } from '@styles/brand';
+import { createElement, type ReactNode } from 'react';
+import type { ConversationSummary } from '../../app/project/project.types';
+import type { ProjectConversationMessageResponse } from '../../api/projects';
+import { KNOWJECT_BRAND } from '../../styles/brand';
 import {
   ProjectChatAssistantFooter,
   ProjectChatAssistantMessage,
@@ -18,7 +18,6 @@ import {
   ProjectChatUserFooter,
   ProjectChatUserMessage,
 } from './projectChatBubble.components';
-import { ProjectConversationLabel } from './projectChat.components';
 
 const AI_BUBBLE_STYLE: CSSProperties = {
   padding: 18,
@@ -29,6 +28,121 @@ const USER_BUBBLE_STYLE: CSSProperties = {
   padding: '10px 12px',
   borderRadius: 4,
   background: KNOWJECT_BRAND.primarySurface,
+};
+
+interface ProjectConversationLabelProps {
+  conversation: ConversationSummary;
+  active: boolean;
+  titleContent?: ReactNode;
+}
+
+const formatConversationUpdatedAt = (value: string): string => {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+};
+
+const ProjectConversationLabel = ({
+  conversation,
+  active,
+  titleContent,
+}: ProjectConversationLabelProps) => {
+  const rootClassName = [
+    'group relative w-full overflow-hidden rounded-3xl border px-4 py-4 text-left transition-colors duration-200 ease-out',
+    active
+      ? 'bg-white'
+      : 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/70',
+  ].join(' ');
+  const rootStyle = active
+    ? {
+        backgroundColor: KNOWJECT_BRAND.primarySurface,
+        borderColor: KNOWJECT_BRAND.primaryBorder,
+      }
+    : undefined;
+  const railClassName = [
+    'absolute bottom-4 left-0 top-4 w-1 rounded-full transition-colors duration-200',
+    active ? '' : 'bg-slate-200/70 group-hover:bg-slate-300/80',
+  ].join(' ');
+  const dotClassName = [
+    'h-2.5 w-2.5 rounded-full transition-colors duration-200',
+    active ? 'bg-emerald-400' : 'bg-slate-300 group-hover:bg-slate-400',
+  ].join(' ');
+  const labelClassName = [
+    'text-caption font-semibold uppercase tracking-[0.18em]',
+    active ? 'text-emerald-600' : 'text-slate-400',
+  ].join(' ');
+  const badgeClassName = [
+    'shrink-0 rounded-full px-2.5 py-1 text-caption font-medium',
+    active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500',
+  ].join(' ');
+  const titleClassName =
+    '[display:-webkit-box] overflow-hidden text-body font-semibold leading-7 text-slate-800 [-webkit-box-orient:vertical] [-webkit-line-clamp:2]';
+
+  return createElement(
+    'div',
+    {
+      className: rootClassName,
+      style: rootStyle,
+    },
+    createElement('span', {
+      className: railClassName,
+      style: active ? { backgroundColor: KNOWJECT_BRAND.primary } : undefined,
+      'aria-hidden': 'true',
+    }),
+    createElement(
+      'div',
+      {
+        className: 'pl-3',
+      },
+      createElement(
+        'div',
+        {
+          className: 'mb-3 flex items-start justify-between gap-3',
+        },
+        createElement(
+          'div',
+          {
+            className: 'min-w-0 flex-1',
+          },
+          createElement(
+            'div',
+            {
+              className: 'mb-2 flex items-center gap-2',
+            },
+            createElement('span', {
+              className: dotClassName,
+              'aria-hidden': 'true',
+            }),
+            createElement(
+              Typography.Text,
+              {
+                className: labelClassName,
+              },
+              active ? '当前线程' : '最近活跃',
+            ),
+          ),
+        ),
+        createElement(
+          'span',
+          {
+            className: badgeClassName,
+          },
+          formatConversationUpdatedAt(conversation.updatedAt),
+        ),
+      ),
+      titleContent ??
+        createElement(
+          Typography.Text,
+          {
+            className: titleClassName,
+          },
+          conversation.title,
+        ),
+    ),
+  );
 };
 
 export type ProjectConversationContextAction =
@@ -81,6 +195,7 @@ export const buildProjectChatBubbleItems = (
     role: message.role === 'assistant' ? 'ai' : 'user',
     content: message.content,
     extraInfo: {
+      messageId: message.id,
       createdAt: message.createdAt,
       sources: message.sources ?? [],
       ...(message.role === 'user'
@@ -175,9 +290,10 @@ export const PROJECT_CHAT_BUBBLE_ROLES: BubbleListProps['role'] = {
     styles: {
       content: AI_BUBBLE_STYLE,
     },
-    contentRender: (content) =>
+    contentRender: (content, info) =>
       createElement(ProjectChatAssistantMessage, {
         content: String(content),
+        extraInfo: info.extraInfo as ProjectChatBubbleExtraInfo | undefined,
       }),
     footerPlacement: 'outer-start',
     footer: (_content, info) =>
@@ -200,6 +316,7 @@ export const PROJECT_CHAT_BUBBLE_ROLES: BubbleListProps['role'] = {
       contentRender: (content) =>
         createElement(ProjectChatUserMessage, {
           content: String(content),
+          extraInfo: extraInfo,
         }),
       editable: userActions
         ? {

@@ -53,6 +53,14 @@ export const createProjectConversationNotFoundError = (): AppError => {
   });
 };
 
+export const createProjectConversationMessageNotFoundError = (): AppError => {
+  return new AppError({
+    statusCode: 404,
+    code: 'PROJECT_CONVERSATION_MESSAGE_NOT_FOUND',
+    message: '项目对话消息不存在',
+  });
+};
+
 export const getProjectMember = (
   project: Pick<ProjectDocument, 'members'>,
   userId: string,
@@ -252,7 +260,7 @@ const toProjectConversationSourceResponse = (
   };
 };
 
-const toProjectConversationMessageResponse = (
+export const toProjectConversationMessageResponse = (
   conversationId: string,
   message: ProjectConversationMessageDocument,
 ): ProjectConversationMessageResponse => {
@@ -262,6 +270,9 @@ const toProjectConversationMessageResponse = (
     role: message.role,
     content: message.content,
     createdAt: message.createdAt.toISOString(),
+    starred: Boolean(message.starredAt),
+    starredAt: message.starredAt?.toISOString() ?? null,
+    starredBy: message.starredBy ?? null,
     ...(message.sources !== undefined
       ? {
           sources: message.sources.map((source) =>
