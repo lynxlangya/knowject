@@ -34,3 +34,4 @@
 ## 例外记录
 
 - [ ] 若延期处理，是否记录位置 / 原因 / 风险 / 去向
+- 参考 `[engineering-governance-overview.md](engineering-governance-overview.md)` 第 3 节“例外机制”确保记录包含位置、原因、风险与去向。

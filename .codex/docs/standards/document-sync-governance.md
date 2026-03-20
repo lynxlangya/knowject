@@ -24,6 +24,10 @@
 | `.codex/docs/README.md` | `.codex/docs` 的目录职责、标准流程、上传包同步、Skill 根目录变化 | 上述 README 里的“维护边界”条目第 5-6 项指明这些文档是 `.codex` 事实的统一入口。 |
 | `AGENTS.md` | 关键路径、模块边界、协作机制、例外收束、Codex 角色发生调整 | AGENTS §5-6 列出必须同步 AGENTS 及相关 doc 的前提，避免规则藏在隐式约定里。 |
 | `.codex/docs/current/architecture.md` | 路由、data flow、API 依赖、mock 用例、localStorage 键、模块归属、Default behavior 变更 | README 列出的 architecture 维护边界对上述事实变更给出了清晰触发器。 |
+| `.codex/README.md` | `.codex/docs` 目录职责、标准流程、上传包/Skill 目录职责变化 | AGENTS §5 强调 Codex 根目录职责调整需同步 `.codex/README.md`，保持入口说明与治理规则一致。 |
+| `.codex/MIGRATION.md` | `.codex/docs` 与 `.agent/` 收口策略变更、目录迁移、结构职责调整 | AGENTS §5/§0.1 要求 `.codex/MIGRATION.md` 与 `.codex/README.md` 同步体现迁移规则，避免交接歧义。 |
+| `.codex/packs/chatgpt-projects/README.md` | `.codex/docs` 中的 source 文档 (current/contracts/plans) 被上传包引用的内容发生变化 | AGENTS §5 规定派生上传包必须与事实源同步，相关 README 也应更新以反映最新可上传快照。 |
+| `.codex/skills/README.md` | `.codex/skills` 目录职责、Skill 目录治理流程、导入/发布政策变更 | AGENTS §5 要求 `.codex/skills/README.md` 反映当前 skills 协作治理，确保 `.codex/docs` 的入口说明一致。 |
 | `.codex/docs/current/docker-usage.md` | Docker/compose 文件变化、新增镜像、端口/网络/secret/vault 方案修改 | README “维护边界”第 5 项专门列出 Docker 维护情形。 |
 | `.codex/docs/contracts/*.md` | APIs、接口约定、错误/状态码、身份校验、Chat/Knowledge/Indexer 约定发生变化 | README “维护边界”中认证/对话/Chroma contract 的维护条目。 |
 | `.codex/docs/roadmap/*.md` | 产品目标、gap 分析、阶段优先级调整 | README 指出 roadmap 目标和 gap 需同步。 |
@@ -48,6 +52,6 @@
 ## 6. 文档同步要求
 
 - 所有文档同步都要在 `review-checklist.md` 的“文档同步”项中打钩或说明例外，必要时引用本标准的矩阵行号。
-- 同步完成后，在 `.codex/docs/README.md` 的“维护边界”部分或 `AGENTS.md` 里补充一条：本次变更触发了哪条同步规则，确认入口文档中的表述仍适用。
+- 同步记录应保留在 PR 描述、review note、implementation plan、或 `engineering-governance-overview.md` 中的例外日志/plan 记录，不要把入口文档作为同步笔记；只有当入口文档本身的事实、结构或职责发生变化时再更新它们。
 - 如果同步引入了新目录/标准（例如新建 `standards/document-sync-governance.md`），务必在 `engineering-governance-overview.md`、`review-checklist.md` 和 `.codex/docs/README.md` 中新增导航，确保治理标准本身也在文档同步体系内。
 - 每一轮同步后，复查 `.codex/docs/current/architecture.md` 与 README 的内链，确保没有遗失的新路径或名字，并把检查结果附在 review note 或 Plan 记录里。

@@ -25,7 +25,7 @@
 
 ## 5. 标准包索引
 
-- 目前仓库已完成五个治理标准（含本纲与 `review-checklist.md`），其专文如下：
+- 本纲与 `review-checklist.md` 构成治理支持层，评审时直接借助这两份 doc；仓库还配套五个专项治理标准，分别覆盖以下治理线：
   - `[code-structure-governance.md](code-structure-governance.md)`（结构治理）：重点在职责边界与巨石文件评估。
   - `[core-code-commenting.md](core-code-commenting.md)`（核心中文注释）：为复杂业务、状态机、幂等等核心逻辑补齐中文意图说明。
   - `[config-security-governance.md](config-security-governance.md)`（配置与安全）：覆盖 Docker、数据库、env、internal、日志/健康检查的暴露面管理。
