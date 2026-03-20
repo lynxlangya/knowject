@@ -32,6 +32,6 @@
 - 某些项目级特殊布局（如 project 资源篇章、智体目录）可能需要更强的定制化抽象；只要保证该抽象明确归属，仍可接受。
 
 ## 7. 文档同步要求
-- 抽象治理变动后，更新 `.codex/docs/plans/tasks-platform-frontend-refactor.md` 中的前端复用原则/token baseline 描述，并说明复用点。
-- 同步 `.codex/docs/current/architecture.md` 中前端架构/路由描述，确保抽象后的组件层级仍能被理解。
+- 抽象治理变动后，更新 `.codex/docs/current/architecture.md` 中的前端架构/路由描述，确保抽象后的组件层级仍能被理解。
 - 若新抽象影响 `packages/ui` 的共享组件/样式，需要同时更新 `.codex/docs/standards/code-structure-governance.md` 或 `core-code-commenting` 中对应条目，并通知页面 owner。
+- 应用级计划本身若因此需要调整（例如 `tasks-platform-frontend-refactor.md` 的策略变更），由该文档的 owner 在更新时说明引用的标准。

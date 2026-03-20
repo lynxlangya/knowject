@@ -32,6 +32,6 @@
 - 某些低风险咨询脚本或迁移工具可能需要临时的 `internal` 访问，必须通过文档记录审批并在 Sprint 结束前撤回。
 
 ## 6. 文档同步要求
-- 与配置/Secret 相关的同步点包括 `.codex/docs/current/docker-usage.md`（compose、网络、secret 路径）、`.codex/docs/contracts/auth-contract.md`（token 写入/暴露规则）、`.codex/docs/current/architecture.md`，并在必要时让 `.codex/docs/standards/review-checklist.md` 与 `.codex/AGENTS.md` 反映新巡检或责任主体。
+- 与配置/Secret 相关的同步点包括 `.codex/docs/current/docker-usage.md`（compose、网络、secret 路径）、`.codex/docs/contracts/auth-contract.md`（token 写入/暴露规则）、`.codex/docs/current/architecture.md`，并在必要时让 `.codex/docs/standards/review-checklist.md` 与 `AGENTS.md` 反映新巡检或责任主体。
 - 如果拓扑、端口或 TLS 入口有变更，附带更新 `docker/README.md`、`.codex/docs/current/architecture.md`、`.codex/docs/current/docker-usage.md` 中的边界说明。
 - 若新增巡检或 tooling（如新的 secret 生成脚本、lint 规则），同步 `.codex/docs/standards/review-checklist.md` 并通知相关 owner。
