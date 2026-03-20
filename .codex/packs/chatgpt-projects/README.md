@@ -1,8 +1,8 @@
 # Knowject ChatGPT Projects 上传包
 
 状态：2026-03-19 同步。
-定位：本目录位于 `.codex/packs/chatgpt-projects/`，是“给 ChatGPT Projects 上传用的派生文档包”，不是新的事实源。  
-.agent/gpt/ 已废弃，仅保留兼容说明；后续不要再把历史路径当成上传包主目录。  
+定位：本目录位于 `.codex/packs/chatgpt-projects/`，是“给 ChatGPT Projects 上传用的派生文档包”，不是新的事实源。
+.agent/gpt/ 已废弃，仅保留兼容说明；后续不要再把历史路径当成上传包主目录。
 事实、契约与任务的正式维护仍以仓库原文档为准：
 
 - `AGENTS.md`

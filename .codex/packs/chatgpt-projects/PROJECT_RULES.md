@@ -1,7 +1,7 @@
 # Knowject 项目协作规则（ChatGPT Projects 上传版）
 
 状态：2026-03-19
-来源：基于项目 `AGENTS.md` 与当前 handoff / roadmap 文档精简同步。  
+来源：基于项目 `AGENTS.md`、`.codex/docs/standards/*` 与当前 handoff / roadmap 文档精简同步。
 定位：这是给 ChatGPT Projects 用的协作规则副本，不是仓库自动生效规则。
 
 ## 1. 输出风格
@@ -83,8 +83,8 @@
 3. `.codex/docs/standards/*`
 4. `.codex/docs/plans/*`
 5. `.codex/docs/roadmap/*`
-5. 必要时更新项目 `AGENTS.md`
-6. 若外部模型上传包依赖这些文档，也同步更新 `.codex/packs/chatgpt-projects/*`
+6. 必要时更新项目 `AGENTS.md`
+7. 若外部模型上传包依赖这些文档，也同步更新 `.codex/packs/chatgpt-projects/*`
 
 ## 8. 这份上传包的特别说明
 

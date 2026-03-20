@@ -27,6 +27,11 @@
   standards/
     engineering-governance-overview.md 长期工程治理总纲
     review-checklist.md        工程治理评审清单
+    code-structure-governance.md 代码结构治理标准
+    core-code-commenting.md    核心代码注释标准
+    config-security-governance.md 配置与安全治理标准
+    frontend-shared-abstractions.md 前端共享抽象标准
+    document-sync-governance.md 文档同步治理标准
   plans/
     doc-iteration-handoff-plan.md
     tasks-foundation-framework.md
@@ -118,7 +123,7 @@
 | 当前事实 | `.codex/docs/current`   | `architecture.md`、`docker-usage.md`、`docker-operation-checklist.md`                                                                                                    | 现在的路由、数据来源、模块边界、API / Docker 边界，以及该怎么操作             |
 | 实施契约 | `.codex/docs/contracts` | `auth-contract.md`、`chat-contract.md`、`chroma-decision.md`                                                                                                            | MongoDB、JWT、密码哈希、注册登录、项目对话 API、Node / Python / Chroma 分层与检索约束怎么定 |
 | 路线蓝图 | `.codex/docs/roadmap`   | `target-architecture.md`、`gap-analysis.md`                                                                                                                              | 产品最终想做成什么、现在差多少、先补什么                                      |
-| 工程标准 | `.codex/docs/standards` | `engineering-governance-overview.md`、`review-checklist.md`                                                                                                              | 工程治理规则如何分级、默认门禁是什么、遇到例外如何评审与落盘                  |
+| 工程标准 | `.codex/docs/standards` | `engineering-governance-overview.md`、`review-checklist.md`、`code-structure-governance.md`、`core-code-commenting.md`、`config-security-governance.md`、`frontend-shared-abstractions.md`、`document-sync-governance.md` | 工程治理规则如何分级、默认门禁是什么、遇到例外如何评审与落盘                  |
 | 阶段计划 | `.codex/docs/plans`     | `doc-iteration-handoff-plan.md`、`tasks-foundation-framework.md`、`tasks-global-assets-foundation.md`、`tasks-index-ops-project-consumption.md`、`tasks-chat-core-week7-8.md`、`tasks-chat-sse-streaming-refactor.md`、`tasks-chat-ant-design-x-migration.md`、`tasks-project-chat-message-rail.md`、`tasks-project-chat-knowledge-draft-selection.md`、`tasks-project-chat-knowledge-draft-selection-implementation.md`、`tasks-platform-frontend-refactor.md`、`tasks-engineering-governance-foundation.md`、`tasks-engineering-governance-foundation-implementation.md`、`tasks-service-indexing-refactor.md`、`settings-page-task.md` | 已完成阶段怎么收口、顺延项怎么接、当前迭代顺序与 DoD 如何判断                 |
 | 接手交接 | `.codex/docs/handoff`   | `handoff-guide.md`、`chatgpt-project-brief.md`、`handoff-prompt.md`                                                                                                      | 新协作者、ChatGPT 或外部模型如何快速建立事实并继续推进                        |
 | 输入材料 | `.codex/docs/inputs`    | `知项Knowject-项目认知总结-v2.md`、`知项Knowject-项目认知总结-v3.md`                                                                                                     | 认知总结原文是什么，哪些内容需要吸收为正式文档                                |

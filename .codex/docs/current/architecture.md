@@ -1,7 +1,6 @@
 # Knowject 架构事实（2026-03-20）
 
 本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `.codex/docs/roadmap/target-architecture.md` 与 `.codex/docs/roadmap/gap-analysis.md`。
-截至 2026-03-11，`.codex/docs/plans/tasks-foundation-framework.md` 中定义的基础框架阶段（`BF-01` ~ `BF-10`）已经完成。
 
 ## 1. 文档角色
 
@@ -103,6 +102,11 @@ files/
     roadmap/gap-analysis.md     current vs target 对照
     standards/engineering-governance-overview.md  工程治理总纲
     standards/review-checklist.md  工程治理评审清单
+    standards/code-structure-governance.md  代码结构治理标准
+    standards/core-code-commenting.md  核心代码注释标准
+    standards/config-security-governance.md  配置与安全治理标准
+    standards/frontend-shared-abstractions.md  前端共享抽象标准
+    standards/document-sync-governance.md  文档同步治理标准
     design/                     品牌与视觉资料
   packs/chatgpt-projects/
     README.md                   ChatGPT Projects 上传包说明
@@ -402,6 +406,11 @@ files/
 - `.codex/docs/README.md`：文档索引、分类导航与维护边界。
 - `.codex/docs/standards/engineering-governance-overview.md`：长期工程治理与协作规则总览。
 - `.codex/docs/standards/review-checklist.md`：工程治理评审清单与默认门禁。
+- `.codex/docs/standards/code-structure-governance.md`：代码结构治理标准。
+- `.codex/docs/standards/core-code-commenting.md`：核心代码注释标准。
+- `.codex/docs/standards/config-security-governance.md`：配置与安全治理标准。
+- `.codex/docs/standards/frontend-shared-abstractions.md`：前端共享抽象标准。
+- `.codex/docs/standards/document-sync-governance.md`：文档同步治理标准。
 - `../../../files/README.md`：知识库模板总导航与推荐使用顺序。
 - `.codex/docs/current/docker-usage.md`：Docker 当前拓扑、安全策略与部署边界。
 - `.codex/docs/handoff/chatgpt-project-brief.md`：给 ChatGPT / 外部大模型的最小项目说明。
