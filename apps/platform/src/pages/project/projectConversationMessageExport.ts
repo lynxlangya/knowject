@@ -12,18 +12,6 @@ export interface BuildConversationMessageMarkdownOptions {
   messages: ConversationMessageExportItem[];
 }
 
-export interface BuildKnowledgeDraftDefaultsOptions {
-  conversationTitle: string;
-  markdownContent: string;
-}
-
-export interface KnowledgeDraftDefaults {
-  knowledgeName: string;
-  knowledgeDescription: string;
-  documentTitle: string;
-  markdownContent: string;
-}
-
 const DEFAULT_MARKDOWN_FILE_NAME = '项目对话.md';
 
 const normalizeWhitespace = (value: string): string => {
@@ -73,16 +61,8 @@ export const buildConversationMessageMarkdown = ({
   return [`# ${normalizedTitle}`, ...sections].join('\n\n');
 };
 
-export const buildKnowledgeDraftDefaults = ({
-  conversationTitle,
-  markdownContent,
-}: BuildKnowledgeDraftDefaultsOptions): KnowledgeDraftDefaults => {
-  const documentTitle = normalizeWhitespace(conversationTitle) || '项目对话知识草稿';
-
-  return {
-    knowledgeName: documentTitle,
-    knowledgeDescription: `基于「${documentTitle}」整理的项目对话知识草稿`,
-    documentTitle,
-    markdownContent,
-  };
-};
+export {
+  buildKnowledgeDraftDefaults,
+  type BuildKnowledgeDraftDefaultsOptions,
+  type KnowledgeDraftDefaults,
+} from './projectKnowledgeDraft.helpers';

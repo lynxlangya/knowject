@@ -2,7 +2,9 @@ import {
   Alert,
   Button,
   Drawer,
+  Empty,
   Input,
+  Select,
   Space,
   Typography,
 } from 'antd';
@@ -12,13 +14,15 @@ interface ProjectKnowledgeDraftDrawerProps {
   open: boolean;
   value: ProjectKnowledgeDraftValues | null;
   saving: boolean;
-  partialFailureMessage?: string | null;
-  hasExistingKnowledge: boolean;
+  projectKnowledgeOptions: Array<{ label: string; value: string }>;
+  projectKnowledgeLoading: boolean;
+  projectKnowledgeError?: string | null;
+  selectedKnowledgeId: string | null;
   onChange: (patch: Partial<ProjectKnowledgeDraftValues>) => void;
+  onKnowledgeChange: (knowledgeId: string | null) => void;
+  onCreateKnowledge: () => void;
   onClose: () => void;
   onSubmit: () => void;
-  onRetryUpload: () => void;
-  onOpenResources: () => void;
 }
 
 const { TextArea } = Input;
@@ -27,18 +31,23 @@ export const ProjectKnowledgeDraftDrawer = ({
   open,
   value,
   saving,
-  partialFailureMessage,
-  hasExistingKnowledge,
+  projectKnowledgeOptions,
+  projectKnowledgeLoading,
+  projectKnowledgeError,
+  selectedKnowledgeId,
   onChange,
+  onKnowledgeChange,
+  onCreateKnowledge,
   onClose,
   onSubmit,
-  onRetryUpload,
-  onOpenResources,
 }: ProjectKnowledgeDraftDrawerProps) => {
+  const hasProjectKnowledgeOptions = projectKnowledgeOptions.length > 0;
   const submitDisabled =
     saving ||
     !value ||
-    value.knowledgeName.trim().length <= 0 ||
+    projectKnowledgeLoading ||
+    !!projectKnowledgeError ||
+    !selectedKnowledgeId ||
     value.documentTitle.trim().length <= 0 ||
     value.markdownContent.trim().length <= 0;
 
@@ -50,26 +59,13 @@ export const ProjectKnowledgeDraftDrawer = ({
       title="生成项目知识草稿"
       onClose={onClose}
       footer={
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Space wrap>
-            {partialFailureMessage && hasExistingKnowledge ? (
-              <Button onClick={onRetryUpload} disabled={saving}>
-                重试上传
-              </Button>
-            ) : null}
-            {partialFailureMessage ? (
-              <Button type="link" className="px-0!" onClick={onOpenResources}>
-                前往项目资源
-              </Button>
-            ) : null}
-          </Space>
-
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <Space wrap>
             <Button onClick={onClose} disabled={saving}>
               关闭
             </Button>
             <Button type="primary" loading={saving} disabled={submitDisabled} onClick={onSubmit}>
-              {hasExistingKnowledge ? '继续上传 Markdown' : '创建知识并上传'}
+              保存到项目知识库
             </Button>
           </Space>
         </div>
@@ -77,40 +73,49 @@ export const ProjectKnowledgeDraftDrawer = ({
     >
       {!value ? null : (
         <div className="space-y-5">
-          <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
-            当前会按“先创建项目私有知识库，再上传一份 Markdown 文档”的顺序保存。关闭抽屉不会清空你当前的消息选择。
-          </Typography.Paragraph>
-
-          {partialFailureMessage ? (
-            <Alert
-              type="warning"
-              showIcon
-              message="知识草稿未完全保存"
-              description={partialFailureMessage}
-            />
-          ) : null}
-
-          <label className="block space-y-2">
-            <Typography.Text strong>知识名称</Typography.Text>
-            <Input
-              value={value.knowledgeName}
-              maxLength={80}
-              placeholder="请输入项目知识名称"
-              onChange={(event) => onChange({ knowledgeName: event.target.value })}
-            />
-          </label>
-
-          <label className="block space-y-2">
-            <Typography.Text strong>知识描述</Typography.Text>
-            <TextArea
-              value={value.knowledgeDescription}
-              autoSize={{ minRows: 3, maxRows: 6 }}
-              placeholder="描述这份知识草稿会沉淀什么内容"
-              onChange={(event) =>
-                onChange({ knowledgeDescription: event.target.value })
-              }
-            />
-          </label>
+          <div className="space-y-2">
+            <Typography.Text strong>项目私有知识库</Typography.Text>
+            {hasProjectKnowledgeOptions ? (
+              <div className="space-y-2">
+                <Select
+                  value={selectedKnowledgeId ?? undefined}
+                  options={projectKnowledgeOptions}
+                  placeholder="请选择项目私有知识库"
+                  status={!selectedKnowledgeId ? 'error' : undefined}
+                  onChange={(nextValue) => onKnowledgeChange(nextValue)}
+                />
+                {!selectedKnowledgeId ? (
+                  <Typography.Text type="danger" className="text-xs!">
+                    请选择项目私有知识库
+                  </Typography.Text>
+                ) : null}
+              </div>
+            ) : projectKnowledgeLoading ? (
+              <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-6">
+                <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
+                  正在加载项目私有知识库...
+                </Typography.Paragraph>
+              </div>
+            ) : projectKnowledgeError ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="项目私有知识库加载失败"
+                description={projectKnowledgeError}
+              />
+            ) : (
+              <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-6">
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="当前项目还没有项目私有知识库，请先创建一个空知识库。"
+                >
+                  <Button type="primary" onClick={onCreateKnowledge}>
+                    新建项目私有知识库
+                  </Button>
+                </Empty>
+              </div>
+            )}
+          </div>
 
           <label className="block space-y-2">
             <Typography.Text strong>文档标题</Typography.Text>

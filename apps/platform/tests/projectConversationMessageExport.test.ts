@@ -40,6 +40,10 @@ test('buildKnowledgeDraftDefaults derives default names from the conversation ti
   });
 
   assert.equal(defaults.knowledgeName, '项目周会复盘');
+  assert.equal(
+    defaults.knowledgeDescription,
+    '基于「项目周会复盘」整理的项目对话知识草稿',
+  );
   assert.equal(defaults.documentTitle, '项目周会复盘');
   assert.equal(defaults.markdownContent, '# 复盘\n\n内容');
 
@@ -51,4 +55,23 @@ test('buildKnowledgeDraftDefaults derives default names from the conversation ti
 
   assert.equal(sourceFile.name, fileName);
   assert.equal(fileName, '项目周会复盘.md');
+});
+
+test('buildKnowledgeDraftDefaults 冻结文档级默认值契约', () => {
+  const defaults = buildKnowledgeDraftDefaults({
+    conversationTitle: '  项目周会复盘  ',
+    markdownContent: '# 复盘\n\n内容',
+  });
+
+  assert.deepEqual(
+    {
+      documentTitle: defaults.documentTitle,
+      markdownContent: defaults.markdownContent,
+    },
+    {
+      documentTitle: '项目周会复盘',
+      markdownContent: '# 复盘\n\n内容',
+    },
+  );
+  assert.notEqual(defaults.knowledgeName, '');
 });

@@ -90,7 +90,7 @@ const ProjectConversationSources = ({
             mouseEnterDelay={0.12}
             overlayClassName="max-w-[420px]"
             content={
-              <div className="max-w-[360px] space-y-3">
+              <div className="max-w-90 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
@@ -122,7 +122,7 @@ const ProjectConversationSources = ({
                 {index + 1}
               </span>
               <FileTextOutlined className="text-xs text-slate-400" />
-              <span className="max-w-[13rem] truncate">{fileName}</span>
+              <span className="max-w-52 truncate">{fileName}</span>
             </span>
           </Popover>
         );

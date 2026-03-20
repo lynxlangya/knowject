@@ -40,3 +40,45 @@ test('project chat drawers use Drawer size instead of deprecated width', () => {
     /<Drawer[\s\S]*?size=\{520\}/,
   );
 });
+
+test('project knowledge draft flow source no longer keeps legacy create-then-upload copy or partial failure state', () => {
+  const projectChatPageSource = readFileSync(
+    new URL('../src/pages/project/ProjectChatPage.tsx', import.meta.url),
+    'utf8',
+  );
+  const projectKnowledgeDraftDrawerSource = readFileSync(
+    new URL(
+      '../src/pages/project/components/ProjectKnowledgeDraftDrawer.tsx',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+
+  assert.doesNotMatch(
+    projectKnowledgeDraftDrawerSource,
+    /当前会按“先创建项目私有知识库，再上传一份 Markdown 文档”的顺序保存/,
+  );
+  assert.doesNotMatch(projectKnowledgeDraftDrawerSource, /知识名称/);
+  assert.doesNotMatch(projectKnowledgeDraftDrawerSource, /知识描述/);
+  assert.doesNotMatch(projectChatPageSource, /knowledgeDraftExistingKnowledgeId/);
+  assert.doesNotMatch(
+    projectChatPageSource,
+    /knowledgeDraftPartialFailureMessage/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /projectKnowledgeLoading=\{projectKnowledge\.loading\}/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /projectKnowledgeError=\{projectKnowledge\.error\}/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /setKnowledgeDraftSelectedKnowledgeId\(null\);/,
+  );
+  assert.doesNotMatch(
+    projectChatPageSource,
+    /if \(currentKnowledgeId && knowledgeIds\.includes\(currentKnowledgeId\)\)/,
+  );
+});

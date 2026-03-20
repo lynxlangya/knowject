@@ -12,6 +12,10 @@ import type {
 import { createMarkdownSourceFile } from '../knowledge/knowledgeUpload.shared';
 import { copyProjectChatText } from './projectChat.clipboard';
 import {
+  saveProjectKnowledgeDraftDocument,
+  type SaveProjectKnowledgeDraftResult,
+} from './projectKnowledgeDraft.helpers';
+import {
   buildConversationMessageMarkdown,
   buildKnowledgeDraftDefaults,
   type KnowledgeDraftDefaults,
@@ -28,12 +32,6 @@ export interface ProjectConversationMessageBulkActionState {
 export interface ProjectConversationAssistantActionState {
   retryDisabled: boolean;
   starDisabled: boolean;
-}
-
-export interface SaveProjectKnowledgeDraftResult {
-  status: 'success' | 'partial_failure' | 'error';
-  knowledgeId?: string;
-  message?: string;
 }
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
@@ -500,78 +498,29 @@ export const useProjectConversationMessageActions = ({
     async (
       draft: ProjectKnowledgeDraftValues,
       options?: {
-        existingKnowledgeId?: string | null;
+        knowledgeId?: string | null;
       },
     ): Promise<SaveProjectKnowledgeDraftResult> => {
-      const knowledgeName = draft.knowledgeName.trim();
-      const knowledgeDescription = draft.knowledgeDescription.trim();
-      const documentTitle = draft.documentTitle.trim();
-      const markdownContent = draft.markdownContent.trim();
-
-      if (!knowledgeName || !documentTitle || !markdownContent) {
-        return {
-          status: 'error',
-          message: '请补全知识名称、文档标题和 Markdown 内容',
-        };
-      }
-
       setSavingKnowledgeDraft(true);
 
-      let knowledgeId = options?.existingKnowledgeId ?? null;
-
       try {
-        if (!knowledgeId) {
-          const { createProjectKnowledge } = await import('../../api/knowledge');
-          const result = await createProjectKnowledge(activeProjectId, {
-            name: knowledgeName,
-            description: knowledgeDescription,
-            sourceType: 'global_docs',
-          });
-
-          knowledgeId = result.knowledge.id;
-          await Promise.resolve(refreshProjectKnowledge?.());
-        }
-
-        const markdownFile = createMarkdownSourceFile({
-          title: documentTitle,
-          content: markdownContent,
-        });
-
         const { uploadProjectKnowledgeDocument } = await import(
           '../../api/knowledge'
         );
-        await uploadProjectKnowledgeDocument(
+        return await saveProjectKnowledgeDraftDocument({
           activeProjectId,
-          knowledgeId,
-          markdownFile,
-        );
-        await Promise.resolve(refreshProjectKnowledge?.());
-
-        return {
-          status: 'success',
-          knowledgeId,
-        };
+          knowledgeId: options?.knowledgeId ?? null,
+          draft,
+          uploadProjectKnowledgeDocument,
+          refreshProjectKnowledge,
+        });
       } catch (currentError) {
-        const errorMessage = getErrorMessage(
-          currentError,
-          knowledgeId && !options?.existingKnowledgeId
-            ? '知识库已创建，但 Markdown 上传失败，请稍后重试'
-            : '保存知识草稿失败，请稍后重试',
-        );
-
-        if (knowledgeId) {
-          await Promise.resolve(refreshProjectKnowledge?.());
-
-          return {
-            status: 'partial_failure',
-            knowledgeId,
-            message: errorMessage,
-          };
-        }
-
         return {
           status: 'error',
-          message: errorMessage,
+          message: getErrorMessage(
+            currentError,
+            '保存知识草稿失败，请稍后重试',
+          ),
         };
       } finally {
         setSavingKnowledgeDraft(false);

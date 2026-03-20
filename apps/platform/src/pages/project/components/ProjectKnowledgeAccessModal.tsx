@@ -19,11 +19,16 @@ export type ProjectKnowledgeAccessMode = 'global' | 'project';
 interface ProjectKnowledgeAccessModalProps {
   open: boolean;
   initialMode: ProjectKnowledgeAccessMode;
+  allowedModes?: ProjectKnowledgeAccessMode[];
   knowledgeCatalog: KnowledgeSummaryResponse[];
   knowledgeCatalogLoading: boolean;
   boundKnowledgeIds: string[];
   binding: boolean;
   creating: boolean;
+  createProjectTitle?: string;
+  createProjectDescription?: string;
+  createProjectHelperText?: string;
+  createProjectSubmitText?: string;
   onCancel: () => void;
   onBindGlobalKnowledge: (knowledgeIds: string[]) => void | Promise<void>;
   onCreateProjectKnowledge: (
@@ -37,35 +42,84 @@ const GLOBAL_KNOWLEDGE_PAGE_SIZE = 4;
 export const ProjectKnowledgeAccessModal = ({
   open,
   initialMode,
+  allowedModes,
   knowledgeCatalog,
   knowledgeCatalogLoading,
   boundKnowledgeIds,
   binding,
   creating,
+  createProjectTitle,
+  createProjectDescription,
+  createProjectHelperText,
+  createProjectSubmitText = '创建并继续上传',
   onCancel,
   onBindGlobalKnowledge,
   onCreateProjectKnowledge,
   onOpenGlobalManagement,
 }: ProjectKnowledgeAccessModalProps) => {
-  const [mode, setMode] = useState<ProjectKnowledgeAccessMode>(initialMode);
+  const availableGlobalKnowledge = knowledgeCatalog.filter(
+    (knowledge) => !boundKnowledgeIds.includes(knowledge.id),
+  );
+  const modeOptions = [
+    {
+      value: 'global' as const,
+      icon: <LinkOutlined />,
+      title: '引入全局知识库',
+      description: '复用团队已经治理好的知识资产，在项目中只读查看文档内容。',
+      helper: `已绑定 ${boundKnowledgeIds.length} 个，还可继续引入 ${availableGlobalKnowledge.length} 个`,
+      accentClassName: {
+        wrapper:
+          'border-sky-300 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(224,242,254,0.84))] shadow-[0_20px_40px_rgba(14,116,144,0.12)]',
+        icon: 'border-sky-200 bg-white text-sky-600',
+        badge: 'border-sky-200 bg-white/90 text-sky-700',
+        helper: 'text-sky-700',
+      },
+    },
+    {
+      value: 'project' as const,
+      icon: <FolderAddOutlined />,
+      title: '新建项目私有知识库',
+      description:
+        createProjectDescription ??
+        '为当前项目沉淀专属上下文，创建后立即进入上传来源流程。',
+      helper:
+        createProjectHelperText ??
+        '仅当前项目内可见，可继续编辑、上传、重建与删除文档',
+      accentClassName: {
+        wrapper:
+          'border-emerald-300 bg-[linear-gradient(180deg,rgba(236,253,245,0.98),rgba(209,250,229,0.84))] shadow-[0_20px_40px_rgba(5,150,105,0.12)]',
+        icon: 'border-emerald-200 bg-white text-emerald-600',
+        badge: 'border-emerald-200 bg-white/90 text-emerald-700',
+        helper: 'text-emerald-700',
+      },
+    },
+  ];
+  const visibleModeOptions = modeOptions.filter((option) =>
+    allowedModes?.includes(option.value) ?? true,
+  );
+  const resolvedInitialMode =
+    visibleModeOptions.find((option) => option.value === initialMode)?.value ??
+    visibleModeOptions[0]?.value ??
+    'project';
+  const [mode, setMode] = useState<ProjectKnowledgeAccessMode>(resolvedInitialMode);
   const [globalSearchValue, setGlobalSearchValue] = useState('');
   const [globalKnowledgePage, setGlobalKnowledgePage] = useState(1);
   const [selectedGlobalKnowledgeIds, setSelectedGlobalKnowledgeIds] = useState<string[]>([]);
   const [form] = Form.useForm<ProjectKnowledgeFormValues>();
 
   const resetTransientState = (
-    nextMode: ProjectKnowledgeAccessMode = initialMode,
+    nextMode: ProjectKnowledgeAccessMode = resolvedInitialMode,
   ) => {
     form.resetFields();
     setGlobalSearchValue('');
     setGlobalKnowledgePage(1);
     setSelectedGlobalKnowledgeIds([]);
-    setMode(nextMode);
+    setMode(
+      visibleModeOptions.find((option) => option.value === nextMode)?.value ??
+        resolvedInitialMode,
+    );
   };
 
-  const availableGlobalKnowledge = knowledgeCatalog.filter(
-    (knowledge) => !boundKnowledgeIds.includes(knowledge.id),
-  );
   const normalizedSearchValue = globalSearchValue.trim().toLowerCase();
   const filteredGlobalKnowledge = availableGlobalKnowledge.filter((knowledge) => {
     if (!normalizedSearchValue) {
@@ -94,36 +148,13 @@ export const ProjectKnowledgeAccessModal = ({
   const confirmDisabled = isGlobalMode
     ? selectedGlobalKnowledgeIds.length === 0
     : false;
-  const modeOptions = [
-    {
-      value: 'global' as const,
-      icon: <LinkOutlined />,
-      title: '引入全局知识库',
-      description: '复用团队已经治理好的知识资产，在项目中只读查看文档内容。',
-      helper: `已绑定 ${boundKnowledgeIds.length} 个，还可继续引入 ${availableGlobalKnowledge.length} 个`,
-      accentClassName: {
-        wrapper:
-          'border-sky-300 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(224,242,254,0.84))] shadow-[0_20px_40px_rgba(14,116,144,0.12)]',
-        icon: 'border-sky-200 bg-white text-sky-600',
-        badge: 'border-sky-200 bg-white/90 text-sky-700',
-        helper: 'text-sky-700',
-      },
-    },
-    {
-      value: 'project' as const,
-      icon: <FolderAddOutlined />,
-      title: '新建项目私有知识库',
-      description: '为当前项目沉淀专属上下文，创建后立即进入上传来源流程。',
-      helper: '仅当前项目内可见，可继续编辑、上传、重建与删除文档',
-      accentClassName: {
-        wrapper:
-          'border-emerald-300 bg-[linear-gradient(180deg,rgba(236,253,245,0.98),rgba(209,250,229,0.84))] shadow-[0_20px_40px_rgba(5,150,105,0.12)]',
-        icon: 'border-emerald-200 bg-white text-emerald-600',
-        badge: 'border-emerald-200 bg-white/90 text-emerald-700',
-        helper: 'text-emerald-700',
-      },
-    },
-  ];
+  const showModeSwitcher = visibleModeOptions.length > 1;
+  const accessModeDescription = showModeSwitcher
+    ? '把团队已经治理好的全局知识库接入到当前项目，或直接新建只属于当前项目的私有知识库。前者复用全局资产，后者用于沉淀项目专属上下文。'
+    : isGlobalMode
+      ? '选择要接入当前项目的全局知识库，项目内将只读消费这些知识内容。'
+      : createProjectDescription ??
+        '先创建一个空的项目私有知识库，再回到知识草稿抽屉继续保存当前 Markdown 文档。';
 
   const handleToggleGlobalKnowledge = (knowledgeId: string) => {
     setSelectedGlobalKnowledgeIds((current) => {
@@ -151,11 +182,11 @@ export const ProjectKnowledgeAccessModal = ({
       onCancel={onCancel}
       afterOpenChange={(nextOpen) => {
         if (nextOpen) {
-          resetTransientState(initialMode);
+          resetTransientState(resolvedInitialMode);
         }
       }}
       onOk={handleConfirm}
-      okText={isGlobalMode ? '绑定到当前项目' : '创建并继续上传'}
+      okText={isGlobalMode ? '绑定到当前项目' : createProjectSubmitText}
       cancelText="取消"
       confirmLoading={confirmLoading}
       okButtonProps={{
@@ -172,82 +203,84 @@ export const ProjectKnowledgeAccessModal = ({
               接入方式
             </Typography.Text>
             <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-600!">
-              把团队已经治理好的全局知识库接入到当前项目，或直接新建只属于当前项目的私有知识库。前者复用全局资产，后者用于沉淀项目专属上下文。
+              {accessModeDescription}
             </Typography.Paragraph>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {modeOptions.map((option) => {
-              const selected = mode === option.value;
+          {showModeSwitcher ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {visibleModeOptions.map((option) => {
+                const selected = mode === option.value;
 
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setMode(option.value)}
-                  className={[
-                    'group rounded-card-lg border px-4 py-3.5 text-left transition',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2',
-                    selected
-                      ? option.accentClassName.wrapper
-                      : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_32px_rgba(15,23,42,0.06)]',
-                  ].join(' ')}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span
-                      className={[
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-lg transition',
-                        selected
-                          ? option.accentClassName.icon
-                          : 'border-slate-200 bg-slate-50 text-slate-500',
-                      ].join(' ')}
-                    >
-                      {option.icon}
-                    </span>
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setMode(option.value)}
+                    className={[
+                      'group rounded-card-lg border px-4 py-3.5 text-left transition',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2',
+                      selected
+                        ? option.accentClassName.wrapper
+                        : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_32px_rgba(15,23,42,0.06)]',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span
+                        className={[
+                          'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-lg transition',
+                          selected
+                            ? option.accentClassName.icon
+                            : 'border-slate-200 bg-slate-50 text-slate-500',
+                        ].join(' ')}
+                      >
+                        {option.icon}
+                      </span>
 
-                    <span
+                      <span
+                        className={[
+                          'rounded-full border px-3 py-1 text-xs font-medium transition',
+                          selected
+                            ? option.accentClassName.badge
+                            : 'border-slate-200 bg-slate-50 text-slate-500',
+                        ].join(' ')}
+                      >
+                        {selected ? '当前选择' : '点击切换'}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 space-y-1.5">
+                      <Typography.Title level={5} className="mb-0! text-lg! text-slate-800!">
+                        {option.title}
+                      </Typography.Title>
+                      <Typography.Paragraph className="mb-0! text-label! leading-5! text-slate-500!">
+                        {option.description}
+                      </Typography.Paragraph>
+                    </div>
+
+                    <div
                       className={[
-                        'rounded-full border px-3 py-1 text-xs font-medium transition',
+                        'mt-3 rounded-2xl border px-3.5 py-2 text-xs leading-5 transition',
                         selected
                           ? option.accentClassName.badge
                           : 'border-slate-200 bg-slate-50 text-slate-500',
                       ].join(' ')}
                     >
-                      {selected ? '当前选择' : '点击切换'}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 space-y-1.5">
-                    <Typography.Title level={5} className="mb-0! text-lg! text-slate-800!">
-                      {option.title}
-                    </Typography.Title>
-                    <Typography.Paragraph className="mb-0! text-label! leading-5! text-slate-500!">
-                      {option.description}
-                    </Typography.Paragraph>
-                  </div>
-
-                  <div
-                    className={[
-                      'mt-3 rounded-2xl border px-3.5 py-2 text-xs leading-5 transition',
-                      selected
-                        ? option.accentClassName.badge
-                        : 'border-slate-200 bg-slate-50 text-slate-500',
-                    ].join(' ')}
-                  >
-                    <span
-                      className={[
-                        'font-medium',
-                        selected ? option.accentClassName.helper : '',
-                      ].join(' ')}
-                    >
-                      {option.helper}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                      <span
+                        className={[
+                          'font-medium',
+                          selected ? option.accentClassName.helper : '',
+                        ].join(' ')}
+                      >
+                        {option.helper}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
 
         {isGlobalMode ? (
@@ -382,10 +415,11 @@ export const ProjectKnowledgeAccessModal = ({
               </span>
               <div className="min-w-0">
                 <Typography.Title level={5} className="mb-1! text-slate-800!">
-                  新建当前项目的私有知识库
+                  {createProjectTitle ?? '新建当前项目的私有知识库'}
                 </Typography.Title>
                 <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
-                  创建完成后会立刻进入上传来源流程。项目私有知识只在当前项目内消费，不会出现在全局知识库列表中。
+                  {createProjectDescription ??
+                    '创建完成后会立刻进入上传来源流程。项目私有知识只在当前项目内消费，不会出现在全局知识库列表中。'}
                 </Typography.Paragraph>
               </div>
             </div>
@@ -421,7 +455,8 @@ export const ProjectKnowledgeAccessModal = ({
               </Form.Item>
 
               <div className="rounded-card border border-dashed border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-700">
-                创建成功后会直接弹出上传来源面板，继续完成文档导入。
+                {createProjectHelperText ??
+                  '创建成功后会直接弹出上传来源面板，继续完成文档导入。'}
               </div>
             </Form>
           </div>

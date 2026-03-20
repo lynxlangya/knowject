@@ -19,11 +19,16 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   PATHS,
-  buildProjectResourcesPath,
 } from '@app/navigation/paths';
+import { extractApiErrorMessage } from '@api/error';
+import { createProjectKnowledge } from '@api/knowledge';
 import { KNOWJECT_BRAND } from '@styles/brand';
 import { ProjectConversationList } from './components/ProjectConversationList';
 import { ProjectConversationMessageRail } from './components/ProjectConversationMessageRail';
+import {
+  ProjectKnowledgeAccessModal,
+  type ProjectKnowledgeFormValues,
+} from './components/ProjectKnowledgeAccessModal';
 import { ProjectKnowledgeDraftDrawer } from './components/ProjectKnowledgeDraftDrawer';
 import {
   buildProjectChatBubbleItems,
@@ -31,6 +36,10 @@ import {
   PROJECT_CHAT_BUBBLE_LIST_STYLES,
   PROJECT_CHAT_BUBBLE_ROLES,
 } from './projectChat.adapters';
+import {
+  buildProjectKnowledgeDraftSessionKey,
+  resolveProjectKnowledgeDraftSelection,
+} from './projectKnowledgeDraft.helpers';
 import { buildOptimisticProjectConversationMessages } from './useProjectConversationTurn.helpers';
 import { useProjectChatActions } from './useProjectChatActions';
 import { useProjectChatUserMessageActions } from './useProjectChatUserMessageActions';
@@ -70,10 +79,16 @@ export const ProjectChatPage = () => {
   const [knowledgeDraftOpen, setKnowledgeDraftOpen] = useState(false);
   const [knowledgeDraftValue, setKnowledgeDraftValue] =
     useState<ProjectKnowledgeDraftValues | null>(null);
-  const [knowledgeDraftExistingKnowledgeId, setKnowledgeDraftExistingKnowledgeId] =
+  const [knowledgeDraftSelectedKnowledgeId, setKnowledgeDraftSelectedKnowledgeId] =
     useState<string | null>(null);
-  const [knowledgeDraftPartialFailureMessage, setKnowledgeDraftPartialFailureMessage] =
-    useState<string | null>(null);
+  const [knowledgeDraftPendingKnowledgeOption, setKnowledgeDraftPendingKnowledgeOption] =
+    useState<{ label: string; value: string } | null>(null);
+  const [knowledgeAccessModalOpen, setKnowledgeAccessModalOpen] =
+    useState(false);
+  const [creatingDraftKnowledge, setCreatingDraftKnowledge] =
+    useState(false);
+  const [lastUsedKnowledgeIdBySession, setLastUsedKnowledgeIdBySession] =
+    useState<Record<string, string>>({});
 
   useEffect(() => {
     latestConversationTargetRef.current = {
@@ -90,9 +105,23 @@ export const ProjectChatPage = () => {
     setMobileRailOpen(false);
     setKnowledgeDraftOpen(false);
     setKnowledgeDraftValue(null);
-    setKnowledgeDraftExistingKnowledgeId(null);
-    setKnowledgeDraftPartialFailureMessage(null);
+    setKnowledgeDraftSelectedKnowledgeId(null);
+    setKnowledgeDraftPendingKnowledgeOption(null);
+    setKnowledgeAccessModalOpen(false);
   }, [activeProject.id, chatId]);
+
+  useEffect(() => {
+    if (
+      !knowledgeDraftPendingKnowledgeOption ||
+      !projectKnowledge.items.some(
+        (knowledge) => knowledge.id === knowledgeDraftPendingKnowledgeOption.value,
+      )
+    ) {
+      return;
+    }
+
+    setKnowledgeDraftPendingKnowledgeOption(null);
+  }, [knowledgeDraftPendingKnowledgeOption, projectKnowledge.items]);
 
   const {
     chatSettingsLoading,
@@ -233,6 +262,17 @@ export const ProjectChatPage = () => {
     isStreaming,
     selectedMessageCount: messageRail.selectedMessageIds.length,
   });
+  const projectKnowledgeOptions = projectKnowledge.items.map((knowledge) => ({
+    label: knowledge.name,
+    value: knowledge.id,
+  }));
+  const knowledgeDraftProjectKnowledgeOptions =
+    knowledgeDraftPendingKnowledgeOption &&
+    !projectKnowledgeOptions.some(
+      (option) => option.value === knowledgeDraftPendingKnowledgeOption.value,
+    )
+      ? [knowledgeDraftPendingKnowledgeOption, ...projectKnowledgeOptions]
+      : projectKnowledgeOptions;
 
   const handleScrollToMessage = (messageId: string) => {
     document.getElementById(`project-chat-message-${messageId}`)?.scrollIntoView({
@@ -251,10 +291,22 @@ export const ProjectChatPage = () => {
       return;
     }
 
+    const knowledgeIds = knowledgeDraftProjectKnowledgeOptions.map(
+      (option) => option.value,
+    );
+
     messageRail.setMode('selection');
     setKnowledgeDraftValue(nextDraft);
-    setKnowledgeDraftExistingKnowledgeId(null);
-    setKnowledgeDraftPartialFailureMessage(null);
+    setKnowledgeDraftSelectedKnowledgeId(
+      chatId
+        ? resolveProjectKnowledgeDraftSelection({
+            projectId: activeProject.id,
+            chatId,
+            projectKnowledgeIds: knowledgeIds,
+            lastUsedKnowledgeIdBySession,
+          })
+        : null,
+    );
     setKnowledgeDraftOpen(true);
   };
 
@@ -271,6 +323,7 @@ export const ProjectChatPage = () => {
     messageRail.setMode(nextSelectionState.mode);
     messageRail.setSelectedMessageIds(nextSelectionState.selectedMessageIds);
     setKnowledgeDraftOpen(false);
+    setKnowledgeDraftSelectedKnowledgeId(null);
   };
 
   const handleKnowledgeDraftValueChange = (
@@ -286,51 +339,72 @@ export const ProjectChatPage = () => {
     );
   };
 
-  const handleKnowledgeDraftSaveSuccess = (successMessage: string) => {
+  const handleKnowledgeDraftSaveSuccess = (selectedKnowledgeId: string) => {
     const nextSelectionState = completeProjectConversationMessageKnowledgeSave({
       mode: messageRail.mode,
       selectedMessageIds: messageRail.selectedMessageIds,
     });
 
+    if (chatId) {
+      const sessionKey = buildProjectKnowledgeDraftSessionKey(
+        activeProject.id,
+        chatId,
+      );
+      setLastUsedKnowledgeIdBySession((currentValue) => ({
+        ...currentValue,
+        [sessionKey]: selectedKnowledgeId,
+      }));
+    }
+
     messageRail.setMode(nextSelectionState.mode);
     messageRail.setSelectedMessageIds(nextSelectionState.selectedMessageIds);
     setKnowledgeDraftOpen(false);
     setKnowledgeDraftValue(null);
-    setKnowledgeDraftExistingKnowledgeId(null);
-    setKnowledgeDraftPartialFailureMessage(null);
-    message.success(successMessage);
+    setKnowledgeDraftSelectedKnowledgeId(null);
+    message.success('项目知识草稿已保存到所选私有知识库');
   };
 
-  const handleSubmitKnowledgeDraft = async (
-    existingKnowledgeId?: string | null,
+  const handleCreateProjectKnowledgeForDraft = async (
+    values: ProjectKnowledgeFormValues,
   ) => {
+    setCreatingDraftKnowledge(true);
+
+    try {
+      const result = await createProjectKnowledge(activeProject.id, {
+        name: values.name,
+        description: values.description,
+        sourceType: 'global_docs',
+      });
+
+      setKnowledgeDraftPendingKnowledgeOption({
+        label: result.knowledge.name,
+        value: result.knowledge.id,
+      });
+      setKnowledgeDraftSelectedKnowledgeId(result.knowledge.id);
+      setKnowledgeAccessModalOpen(false);
+      message.success('项目私有知识库已创建');
+      void projectKnowledge.refresh();
+    } catch (currentError) {
+      message.error(
+        extractApiErrorMessage(currentError, '创建项目知识库失败，请稍后重试'),
+      );
+    } finally {
+      setCreatingDraftKnowledge(false);
+    }
+  };
+
+  const handleSubmitKnowledgeDraft = async () => {
     if (!knowledgeDraftValue) {
       return;
     }
 
+    const selectedKnowledgeId = knowledgeDraftSelectedKnowledgeId;
     const result = await saveKnowledgeDraft(knowledgeDraftValue, {
-      existingKnowledgeId,
+      knowledgeId: selectedKnowledgeId,
     });
 
-    if (result.status === 'success') {
-      handleKnowledgeDraftSaveSuccess(
-        existingKnowledgeId
-          ? '知识草稿已完成补传'
-          : '项目知识草稿已保存并上传 Markdown',
-      );
-      return;
-    }
-
-    if (result.status === 'partial_failure') {
-      setKnowledgeDraftExistingKnowledgeId(
-        result.knowledgeId ?? existingKnowledgeId ?? null,
-      );
-      setKnowledgeDraftPartialFailureMessage(
-        result.message ?? '知识库已创建，但 Markdown 上传失败，请稍后重试',
-      );
-      message.warning(
-        result.message ?? '知识库已创建，但 Markdown 上传失败，请稍后重试',
-      );
+    if (result.status === 'success' && selectedKnowledgeId) {
+      handleKnowledgeDraftSaveSuccess(selectedKnowledgeId);
       return;
     }
 
@@ -632,17 +706,36 @@ export const ProjectChatPage = () => {
               open={knowledgeDraftOpen}
               value={knowledgeDraftValue}
               saving={savingKnowledgeDraft}
-              partialFailureMessage={knowledgeDraftPartialFailureMessage}
-              hasExistingKnowledge={knowledgeDraftExistingKnowledgeId !== null}
+              projectKnowledgeOptions={knowledgeDraftProjectKnowledgeOptions}
+              projectKnowledgeLoading={projectKnowledge.loading}
+              projectKnowledgeError={projectKnowledge.error}
+              selectedKnowledgeId={knowledgeDraftSelectedKnowledgeId}
               onChange={handleKnowledgeDraftValueChange}
+              onKnowledgeChange={setKnowledgeDraftSelectedKnowledgeId}
+              onCreateKnowledge={() => setKnowledgeAccessModalOpen(true)}
               onClose={handleCloseKnowledgeDraft}
               onSubmit={() => void handleSubmitKnowledgeDraft()}
-              onRetryUpload={() =>
-                void handleSubmitKnowledgeDraft(knowledgeDraftExistingKnowledgeId)
-              }
-              onOpenResources={() =>
-                void navigate(buildProjectResourcesPath(activeProject.id, 'knowledge'))
-              }
+            />
+
+            <ProjectKnowledgeAccessModal
+              open={knowledgeAccessModalOpen}
+              initialMode="project"
+              allowedModes={['project']}
+              knowledgeCatalog={[]}
+              knowledgeCatalogLoading={false}
+              boundKnowledgeIds={[]}
+              binding={false}
+              creating={creatingDraftKnowledge}
+              createProjectTitle="新建当前项目的私有知识库"
+              createProjectDescription="先创建一个空的项目私有知识库，再回到知识草稿抽屉继续保存当前 Markdown 文档。"
+              createProjectHelperText="创建成功后会回到知识草稿抽屉，继续保存当前 Markdown 文档。"
+              createProjectSubmitText="创建空知识库"
+              onCancel={() => setKnowledgeAccessModalOpen(false)}
+              onBindGlobalKnowledge={() => undefined}
+              onCreateProjectKnowledge={(values) => {
+                void handleCreateProjectKnowledgeForDraft(values);
+              }}
+              onOpenGlobalManagement={() => undefined}
             />
           </>
         ) : (
