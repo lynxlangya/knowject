@@ -103,6 +103,56 @@ test('selection mode does not render a desktop collapse toggle because the rail 
   assert.doesNotMatch(selectionHtml, /aria-label="收起消息 Rail"/);
 });
 
+test('selection mode bulk action buttons render as readonly when nothing is selected', async () => {
+  const React = await import('react');
+  globalThis.React = React;
+  const { ProjectConversationMessageRail } = await import(
+    '../src/pages/project/components/ProjectConversationMessageRail'
+  );
+
+  const selectionHtml = renderToStaticMarkup(
+    React.createElement(ProjectConversationMessageRail, {
+      messages: [
+        {
+          id: 'message-1',
+          conversationId: 'chat-1',
+          role: 'assistant',
+          content: '这是当前回答',
+          createdAt: '2026-03-20T08:00:00.000Z',
+          starred: false,
+          starredAt: null,
+          starredBy: null,
+          sources: [],
+        },
+      ],
+      mode: 'selection',
+      expanded: true,
+      selectedMessageIds: [],
+      selectableMessageIds: ['message-1'],
+      starringMessageId: null,
+      exportDisabled: true,
+      knowledgeDraftDisabled: true,
+      onExpandedChange: () => undefined,
+      onModeChange: () => undefined,
+      onToggleSelectedMessageId: () => undefined,
+      onScrollToMessage: () => undefined,
+      onToggleMessageStar: () => undefined,
+      onExportMarkdown: () => undefined,
+      onGenerateKnowledgeDraft: () => undefined,
+    } as any),
+  );
+
+  assert.match(
+    selectionHtml,
+    /aria-disabled="true"[^>]*class="[^"]*cursor-not-allowed![^"]*"[^>]*>[\s\S]*?导出 Markdown/,
+  );
+  assert.match(
+    selectionHtml,
+    /aria-disabled="true"[^>]*class="[^"]*cursor-not-allowed![^"]*"[^>]*>[\s\S]*?沉淀为知识/,
+  );
+  assert.doesNotMatch(selectionHtml, /disabled=""/);
+});
+
 test('desktop rail hides inactive containers with inert instead of aria-hidden', () => {
   const railSource = readFileSync(
     new URL('../src/pages/project/components/ProjectConversationMessageRail.tsx', import.meta.url),

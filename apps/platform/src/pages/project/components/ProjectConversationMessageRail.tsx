@@ -164,6 +164,51 @@ const RailCountBadge = ({
   );
 };
 
+const RailBulkActionButton = ({
+  icon,
+  children,
+  readOnly = false,
+  disabled = false,
+  variant = 'secondary',
+  onClick,
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+  readOnly?: boolean;
+  disabled?: boolean;
+  variant?: 'secondary' | 'primary';
+  onClick: () => void;
+}) => {
+  const handleClick = () => {
+    if (readOnly || disabled) {
+      return;
+    }
+
+    onClick();
+  };
+
+  return (
+    <Button
+      type={variant === 'primary' && !readOnly ? 'primary' : 'default'}
+      icon={icon}
+      disabled={disabled && !readOnly}
+      aria-disabled={readOnly ? true : undefined}
+      tabIndex={readOnly ? -1 : undefined}
+      onClick={handleClick}
+      className={[
+        'h-10! justify-start! rounded-2xl! px-4! text-sm! font-medium! shadow-none! transition-colors',
+        readOnly
+          ? 'cursor-not-allowed! border-slate-200! bg-white! text-slate-400! opacity-100! hover:border-slate-200! hover:bg-white! hover:text-slate-400!'
+          : variant === 'primary'
+            ? 'border-emerald-500! bg-emerald-500! text-white! hover:border-emerald-600! hover:bg-emerald-600! hover:text-white! disabled:border-slate-200! disabled:bg-slate-100! disabled:text-slate-400!'
+            : 'border-slate-200! bg-white! text-slate-700! hover:border-slate-300! hover:bg-slate-50/80! hover:text-slate-800! disabled:border-slate-200! disabled:bg-white! disabled:text-slate-400!',
+      ].join(' ')}
+    >
+      {children}
+    </Button>
+  );
+};
+
 const RailContent = ({
   messages,
   mode,
@@ -192,6 +237,7 @@ const RailContent = ({
     mode === 'selection'
       ? `${selectedMessageIds.length} 已选`
       : `${visibleMessages.length} 条`;
+  const bulkActionsReadOnly = mode === 'selection' && selectedMessageIds.length <= 0;
   const canCollapse = Boolean(onExpandedChange) && mode !== 'selection';
   const headerEyebrow = mode === 'selection' ? '批量操作' : '消息导航';
   const handleMessageAction = ({
@@ -488,23 +534,23 @@ const RailContent = ({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Button
+            <RailBulkActionButton
               icon={<FileMarkdownOutlined />}
+              readOnly={bulkActionsReadOnly}
               disabled={exportDisabled}
               onClick={onExportMarkdown}
-              className="h-10! justify-start! rounded-2xl! border-slate-200! bg-white! px-4! text-sm! font-medium! text-slate-700! shadow-none!"
             >
               导出 Markdown
-            </Button>
-            <Button
-              type="primary"
+            </RailBulkActionButton>
+            <RailBulkActionButton
+              variant="primary"
               icon={<BookOutlined />}
+              readOnly={bulkActionsReadOnly}
               disabled={knowledgeDraftDisabled}
               onClick={onGenerateKnowledgeDraft}
-              className="h-10! justify-start! rounded-2xl! px-4! text-sm! font-medium!"
             >
               沉淀为知识
-            </Button>
+            </RailBulkActionButton>
           </div>
         </div>
       ) : null}
