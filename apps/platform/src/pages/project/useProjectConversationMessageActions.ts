@@ -10,17 +10,24 @@ import type {
   ProjectConversationMessageResponse,
 } from '../../api/projects';
 import { createMarkdownSourceFile } from '../knowledge/knowledgeUpload.shared';
+import { copyProjectChatText } from './projectChat.clipboard';
 import {
   buildConversationMessageMarkdown,
   buildKnowledgeDraftDefaults,
   type KnowledgeDraftDefaults,
 } from './projectConversationMessageExport';
+import type { ProjectChatAssistantBubbleActions } from './projectChatBubble.components';
 
 export interface ProjectKnowledgeDraftValues extends KnowledgeDraftDefaults {}
 
 export interface ProjectConversationMessageBulkActionState {
   exportDisabled: boolean;
   knowledgeDraftDisabled: boolean;
+}
+
+export interface ProjectConversationAssistantActionState {
+  retryDisabled: boolean;
+  starDisabled: boolean;
 }
 
 export interface SaveProjectKnowledgeDraftResult {
@@ -45,6 +52,25 @@ export const buildProjectConversationMessageBulkActionState = ({
   return {
     exportDisabled: disabled,
     knowledgeDraftDisabled: disabled,
+  };
+};
+
+export const buildProjectConversationAssistantActionState = ({
+  messageActionLocked,
+  turnBusy,
+  starringMessageId,
+  messageId,
+}: {
+  messageActionLocked: boolean;
+  turnBusy: boolean;
+  starringMessageId: string | null;
+  messageId: string;
+}): ProjectConversationAssistantActionState => {
+  return {
+    retryDisabled: messageActionLocked,
+    starDisabled:
+      turnBusy ||
+      (starringMessageId !== null && starringMessageId !== messageId),
   };
 };
 
@@ -100,6 +126,36 @@ export const restoreProjectConversationMessage = ({
   };
 };
 
+export const findProjectConversationAssistantRetryTarget = ({
+  conversation,
+  messageId,
+}: {
+  conversation: ProjectConversationDetailResponse;
+  messageId: string;
+}): ProjectConversationMessageResponse | null => {
+  const targetAssistantMessageIndex = conversation.messages.findIndex(
+    (message) => message.id === messageId && message.role === 'assistant',
+  );
+
+  if (targetAssistantMessageIndex <= 0) {
+    return null;
+  }
+
+  for (
+    let currentIndex = targetAssistantMessageIndex - 1;
+    currentIndex >= 0;
+    currentIndex -= 1
+  ) {
+    const currentMessage = conversation.messages[currentIndex];
+
+    if (currentMessage?.role === 'user') {
+      return currentMessage;
+    }
+  }
+
+  return null;
+};
+
 export const replaceProjectConversationMessage = ({
   conversation,
   message,
@@ -132,6 +188,14 @@ interface UseProjectConversationMessageActionsOptions {
   activeProjectId: string;
   conversationId?: string;
   currentConversationDetail: ProjectConversationDetailResponse | null;
+  messageActionLocked: boolean;
+  turnBusy: boolean;
+  handleSendMessage: (
+    content: string,
+    options?: {
+      targetUserMessageId?: string;
+    },
+  ) => Promise<void>;
   setConversationDetail: Dispatch<
     SetStateAction<ProjectConversationDetailResponse | null>
   >;
@@ -142,6 +206,9 @@ export const useProjectConversationMessageActions = ({
   activeProjectId,
   conversationId,
   currentConversationDetail,
+  messageActionLocked,
+  turnBusy,
+  handleSendMessage,
   setConversationDetail,
   refreshProjectKnowledge,
 }: UseProjectConversationMessageActionsOptions) => {
@@ -257,6 +324,136 @@ export const useProjectConversationMessageActions = ({
       message,
       setConversationDetail,
     ],
+  );
+
+  const copyAssistantMessage = useCallback(
+    async (content: string): Promise<boolean> => {
+      try {
+        await copyProjectChatText(content);
+        message.success('已复制回复');
+        return true;
+      } catch (currentError) {
+        console.error(currentError);
+        message.error('复制回复失败，请稍后重试');
+        return false;
+      }
+    },
+    [message],
+  );
+
+  const copyPersistedAssistantMessage = useCallback(
+    async (messageId: string): Promise<boolean> => {
+      const targetAssistantMessage = currentConversationDetail?.messages.find(
+        (conversationMessage) =>
+          conversationMessage.id === messageId &&
+          conversationMessage.role === 'assistant',
+      );
+
+      if (!targetAssistantMessage) {
+        message.warning('目标助手回复不存在，无法复制');
+        return false;
+      }
+
+      return copyAssistantMessage(targetAssistantMessage.content);
+    },
+    [copyAssistantMessage, currentConversationDetail, message],
+  );
+
+  const retryAssistantMessage = useCallback(
+    async (messageId: string): Promise<boolean> => {
+      if (messageActionLocked) {
+        return false;
+      }
+
+      if (!currentConversationDetail) {
+        message.warning('当前对话尚未准备完成，暂时无法重试该回复');
+        return false;
+      }
+
+      const retryTarget = findProjectConversationAssistantRetryTarget({
+        conversation: currentConversationDetail,
+        messageId,
+      });
+
+      if (!retryTarget) {
+        message.warning('未找到可重试的上一条用户消息');
+        return false;
+      }
+
+      void handleSendMessage(retryTarget.content, {
+        targetUserMessageId: retryTarget.id,
+      });
+      return true;
+    },
+    [
+      currentConversationDetail,
+      handleSendMessage,
+      message,
+      messageActionLocked,
+    ],
+  );
+
+  const getAssistantMessageActionHandlers = useCallback(
+    (messageId: string): ProjectChatAssistantBubbleActions | null => {
+      const targetAssistantMessage = currentConversationDetail?.messages.find(
+        (conversationMessage) =>
+          conversationMessage.id === messageId &&
+          conversationMessage.role === 'assistant',
+      );
+
+      if (!targetAssistantMessage) {
+        return null;
+      }
+
+      const assistantActionState = buildProjectConversationAssistantActionState({
+        messageActionLocked,
+        turnBusy,
+        starringMessageId,
+        messageId,
+      });
+
+      return {
+        copyDisabled: false,
+        retryDisabled: assistantActionState.retryDisabled,
+        starDisabled: assistantActionState.starDisabled,
+        starring: starringMessageId === messageId,
+        starred: targetAssistantMessage.starred,
+        onCopy: () => {
+          void copyPersistedAssistantMessage(messageId);
+        },
+        onRetry: () => {
+          void retryAssistantMessage(messageId);
+        },
+        onToggleStar: () => {
+          void toggleMessageStar(messageId, !targetAssistantMessage.starred);
+        },
+      };
+    },
+    [
+      copyPersistedAssistantMessage,
+      currentConversationDetail,
+      messageActionLocked,
+      retryAssistantMessage,
+      starringMessageId,
+      toggleMessageStar,
+      turnBusy,
+    ],
+  );
+
+  const getDraftAssistantMessageActionHandlers = useCallback(
+    (content: string): ProjectChatAssistantBubbleActions => ({
+      copyDisabled: content.trim().length <= 0,
+      retryDisabled: true,
+      starDisabled: true,
+      starring: false,
+      starred: false,
+      onCopy: () => {
+        void copyAssistantMessage(content);
+      },
+      onRetry: () => undefined,
+      onToggleStar: () => undefined,
+    }),
+    [copyAssistantMessage],
   );
 
   const exportSelectedMessagesAsMarkdown = useCallback(
@@ -387,6 +584,8 @@ export const useProjectConversationMessageActions = ({
     starringMessageId,
     savingKnowledgeDraft,
     toggleMessageStar,
+    getAssistantMessageActionHandlers,
+    getDraftAssistantMessageActionHandlers,
     exportSelectedMessagesAsMarkdown,
     buildKnowledgeDraftFromSelection,
     saveKnowledgeDraft,

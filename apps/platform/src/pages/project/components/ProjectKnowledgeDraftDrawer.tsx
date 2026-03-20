@@ -45,7 +45,7 @@ export const ProjectKnowledgeDraftDrawer = ({
   return (
     <Drawer
       open={open}
-      width={520}
+      size={520}
       destroyOnClose={false}
       title="生成项目知识草稿"
       onClose={onClose}

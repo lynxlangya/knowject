@@ -16,6 +16,7 @@ import {
 } from 'antd';
 import React, { type CSSProperties, type ReactNode } from 'react';
 import type { ProjectConversationMessageResponse } from '@api/projects';
+import { PROJECT_CHAT_STAR_CLASS_NAMES } from '../projectChatStar.styles';
 import type { ProjectConversationMessageRailMode } from '../useProjectConversationMessageRail';
 
 void React;
@@ -107,25 +108,34 @@ const MODE_META: Record<
 const RailModeButton = ({
   active,
   icon,
+  activeIcon,
   label,
   onClick,
+  activeClassName,
+  inactiveClassName,
 }: {
   active: boolean;
   icon: React.ReactNode;
+  activeIcon?: React.ReactNode;
   label: string;
   onClick: () => void;
+  activeClassName?: string;
+  inactiveClassName?: string;
 }) => {
+  const resolvedIcon = active && activeIcon ? activeIcon : icon;
+
   return (
     <Button
       type="text"
-      icon={icon}
+      icon={resolvedIcon}
       size="small"
       onClick={onClick}
       className={[
         'h-8! rounded-full! border-0! px-3! text-xs! font-medium! shadow-none!',
         active
-          ? 'bg-white! text-slate-800! shadow-[0_6px_18px_rgba(15,23,42,0.08)]!'
-          : 'text-slate-500!',
+          ? (activeClassName ??
+            'bg-white! text-slate-800! shadow-[0_6px_18px_rgba(15,23,42,0.08)]!')
+          : (inactiveClassName ?? 'text-slate-500!'),
       ].join(' ')}
     >
       {label}
@@ -241,9 +251,9 @@ const RailContent = ({
               <Typography.Text className="block text-xs font-medium text-emerald-700">
                 批量选择上下文
               </Typography.Text>
-              <Typography.Text className="block text-[11px] text-emerald-700/80">
+              {/* <Typography.Text className="block text-[11px] text-emerald-700/80">
                 点击条目勾选消息，底部操作保持原有导出与知识草稿流程。
-              </Typography.Text>
+              </Typography.Text> */}
             </div>
             <Button
               size="small"
@@ -267,8 +277,20 @@ const RailContent = ({
               <RailModeButton
                 active={mode === 'starred'}
                 icon={MODE_META.starred.icon}
+                activeIcon={
+                  <StarFilled
+                    className={PROJECT_CHAT_STAR_CLASS_NAMES.iconActive}
+                  />
+                }
                 label="已加星"
                 onClick={() => onModeChange('starred')}
+                activeClassName={
+                  PROJECT_CHAT_STAR_CLASS_NAMES.buttonActiveAntd
+                }
+                inactiveClassName={[
+                  'text-slate-500!',
+                  PROJECT_CHAT_STAR_CLASS_NAMES.buttonHoverAntd,
+                ].join(' ')}
               />
             </div>
 
@@ -318,7 +340,7 @@ const RailContent = ({
                   key={message.id}
                   tabIndex={0}
                   className={[
-                    'group relative rounded-[20px] px-3 py-2.5 transition-[background-color,box-shadow,transform]',
+                    'group relative rounded-card px-3 py-2.5 transition-[background-color,box-shadow,transform]',
                     'outline-none focus:bg-white focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08),0_10px_24px_rgba(15,23,42,0.06)]',
                     selected
                       ? 'bg-emerald-50/85 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.24)]'
@@ -349,7 +371,7 @@ const RailContent = ({
                   <span
                     aria-hidden
                     className={[
-                      'absolute inset-y-2 left-0 w-[3px] rounded-full transition-opacity duration-150',
+                      'absolute inset-y-2 left-0 w-0.75 rounded-full transition-opacity duration-150',
                       selected
                         ? 'bg-emerald-500 opacity-100'
                         : mode === 'starred'
@@ -389,7 +411,12 @@ const RailContent = ({
                               {formatMessageTime(message.createdAt)}
                             </Typography.Text>
                             {showSelectionAffordance && message.starred ? (
-                              <StarFilled className="text-[11px] text-amber-500" />
+                              <StarFilled
+                                className={[
+                                  'text-[11px]',
+                                  PROJECT_CHAT_STAR_CLASS_NAMES.iconActive,
+                                ].join(' ')}
+                              />
                             ) : null}
                             {disableSelectionAffordance ? (
                               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
@@ -413,14 +440,16 @@ const RailContent = ({
                             loading={starringMessageId === message.id}
                             aria-label={message.starred ? '取消加星' : '加星'}
                             className={[
-                              'mt-[-2px] h-8! w-8! rounded-full! border-0! shadow-none!',
+                              '-mt-0.5 h-8! w-8! rounded-full! border-0! shadow-none!',
                               message.starred
-                                ? 'bg-amber-50! text-amber-600!'
-                                : 'text-slate-400!',
+                                ? PROJECT_CHAT_STAR_CLASS_NAMES.buttonActiveAntd
+                                : PROJECT_CHAT_STAR_CLASS_NAMES.buttonInactiveAntd,
                             ].join(' ')}
                             icon={
                               message.starred ? (
-                                <StarFilled className="text-amber-500" />
+                                <StarFilled
+                                  className={PROJECT_CHAT_STAR_CLASS_NAMES.iconActive}
+                                />
                               ) : (
                                 <StarOutlined />
                               )
@@ -448,9 +477,9 @@ const RailContent = ({
               <Typography.Text className="block text-xs font-medium text-slate-700">
                 批量操作
               </Typography.Text>
-              <Typography.Text className="block text-[11px] leading-5 text-slate-500">
+              {/* <Typography.Text className="block text-[11px] leading-5 text-slate-500">
                 已选消息会按当前顺序进入导出与知识草稿流程。
-              </Typography.Text>
+              </Typography.Text> */}
             </div>
             <RailCountBadge
               value={`${selectedMessageIds.length} 条`}
@@ -521,7 +550,7 @@ export const ProjectConversationMessageRail = ({
             ? 'w-0 opacity-0 pointer-events-none'
             : `${DESKTOP_RAIL_GUTTER_WIDTH_CLASS_NAME} opacity-100`,
         ].join(' ')}
-        aria-hidden={expanded}
+        inert={expanded}
       >
         <Button
           type="text"
@@ -536,17 +565,26 @@ export const ProjectConversationMessageRail = ({
         <div className="space-y-2">
           {gutterModes.map((gutterMode) => {
             const active = gutterMode === contentProps.mode;
+            const starredActive = active && gutterMode === 'starred';
             return (
               <div
                 key={gutterMode}
                 className={[
                   'flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
                   active
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    ? starredActive
+                      ? PROJECT_CHAT_STAR_CLASS_NAMES.gutterActive
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-700'
                     : 'border-slate-200 bg-white text-slate-500',
                 ].join(' ')}
               >
-                {MODE_META[gutterMode].icon}
+                {starredActive ? (
+                  <StarFilled
+                    className={PROJECT_CHAT_STAR_CLASS_NAMES.iconActive}
+                  />
+                ) : (
+                  MODE_META[gutterMode].icon
+                )}
               </div>
             );
           })}
@@ -562,7 +600,7 @@ export const ProjectConversationMessageRail = ({
           `${DESKTOP_RAIL_PANEL_WIDTH_CLASS_NAME} h-full shrink-0 bg-white transition-opacity duration-160 ease-out`,
           expanded ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
         ].join(' ')}
-        aria-hidden={!expanded}
+        inert={!expanded}
       >
         <RailContent
           {...contentProps}

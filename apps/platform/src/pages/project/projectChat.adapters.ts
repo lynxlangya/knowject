@@ -10,6 +10,7 @@ import type { ConversationSummary } from '../../app/project/project.types';
 import type { ProjectConversationMessageResponse } from '../../api/projects';
 import { KNOWJECT_BRAND } from '../../styles/brand';
 import {
+  type ProjectChatAssistantBubbleActions,
   ProjectChatAssistantFooter,
   ProjectChatAssistantMessage,
   type ProjectChatBubbleExtraInfo,
@@ -185,9 +186,19 @@ export const buildProjectChatBubbleItems = (
       createdAt: string;
       status: ProjectChatBubbleStatus;
     } | null;
+    getDraftAssistantMessageActions?: (draftMessage: {
+      conversationId: string;
+      id: string;
+      content: string;
+      createdAt: string;
+      status: ProjectChatBubbleStatus;
+    }) => ProjectChatAssistantBubbleActions | null;
     getUserMessageActions?: (
       message: ProjectConversationMessageResponse,
     ) => ProjectChatUserBubbleActions | null;
+    getAssistantMessageActions?: (
+      message: ProjectConversationMessageResponse,
+    ) => ProjectChatAssistantBubbleActions | null;
   } = {},
 ): BubbleItemType[] => {
   const bubbleItems: BubbleItemType[] = messages.map((message) => ({
@@ -198,6 +209,12 @@ export const buildProjectChatBubbleItems = (
       messageId: message.id,
       createdAt: message.createdAt,
       sources: message.sources ?? [],
+      ...(message.role === 'assistant'
+        ? {
+            assistantActions:
+              options.getAssistantMessageActions?.(message) ?? undefined,
+          }
+        : {}),
       ...(message.role === 'user'
         ? {
             userActions:
@@ -235,6 +252,10 @@ export const buildProjectChatBubbleItems = (
         createdAt: options.draftAssistantMessage.createdAt,
         sources: [],
         status: options.draftAssistantMessage.status,
+        assistantActions:
+          options.getDraftAssistantMessageActions?.(
+            options.draftAssistantMessage,
+          ) ?? undefined,
       } satisfies ProjectChatBubbleExtraInfo,
     });
   }

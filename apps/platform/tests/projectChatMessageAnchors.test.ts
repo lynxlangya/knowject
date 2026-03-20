@@ -9,7 +9,7 @@ require.extensions['.css'] = () => undefined;
 test('buildProjectChatBubbleItems and bubble wrappers keep stable message anchors for persisted messages', async () => {
   const [
     { buildProjectChatBubbleItems },
-    { ProjectChatUserMessage },
+    { ProjectChatAssistantFooter, ProjectChatUserMessage },
   ] = await Promise.all([
     import('../src/pages/project/projectChat.adapters'),
     import('../src/pages/project/projectChatBubble.components'),
@@ -91,4 +91,76 @@ test('buildProjectChatBubbleItems and bubble wrappers keep stable message anchor
       ?.messageId,
     'message-2',
   );
+
+  const bubbleItemsWithAssistantActions = buildProjectChatBubbleItems(messages, {
+    conversationId: 'chat-1',
+    getAssistantMessageActions: (message) =>
+      message.role === 'assistant'
+        ? {
+            copyDisabled: false,
+            retryDisabled: false,
+            starDisabled: true,
+            starring: false,
+            starred: true,
+            onCopy: () => undefined,
+            onRetry: () => undefined,
+            onToggleStar: () => undefined,
+          }
+        : null,
+  });
+  const bubbleItemsWithInactiveStarAction = buildProjectChatBubbleItems(messages, {
+    conversationId: 'chat-1',
+    getAssistantMessageActions: (message) =>
+      message.role === 'assistant'
+        ? {
+            copyDisabled: false,
+            retryDisabled: false,
+            starDisabled: false,
+            starring: false,
+            starred: false,
+            onCopy: () => undefined,
+            onRetry: () => undefined,
+            onToggleStar: () => undefined,
+          }
+        : null,
+  });
+  const assistantBubble = bubbleItemsWithAssistantActions.find(
+    (item) => item.key === 'message-2',
+  );
+  const inactiveAssistantBubble = bubbleItemsWithInactiveStarAction.find(
+    (item) => item.key === 'message-2',
+  );
+  const assistantFooterHtml = renderToStaticMarkup(
+    ProjectChatAssistantFooter({
+      extraInfo: assistantBubble?.extraInfo as any,
+    } as any),
+  );
+  const inactiveAssistantFooterHtml = renderToStaticMarkup(
+    ProjectChatAssistantFooter({
+      extraInfo: inactiveAssistantBubble?.extraInfo as any,
+    } as any),
+  );
+  const draftAssistantFooterHtml = renderToStaticMarkup(
+    ProjectChatAssistantFooter({
+      extraInfo: draftBubble?.extraInfo as any,
+    } as any),
+  );
+
+  assert.ok(assistantBubble?.extraInfo?.assistantActions);
+  assert.match(assistantFooterHtml, /aria-label="复制回复"/);
+  assert.match(assistantFooterHtml, /aria-label="取消加星"/);
+  assert.match(
+    assistantFooterHtml,
+    /class="[^"]*\sbg-amber-50(?:\s|")/,
+  );
+  assert.match(assistantFooterHtml, /aria-disabled="true"/);
+  assert.match(inactiveAssistantFooterHtml, /aria-label="加星"/);
+  assert.match(
+    inactiveAssistantFooterHtml,
+    /class="[^"]*hover:bg-amber-50[^"]*hover:text-amber-600[^"]*"/,
+  );
+  assert.match(assistantFooterHtml, /aria-label="重新生成回复"/);
+  assert.doesNotMatch(assistantFooterHtml, />08:00</);
+  assert.match(draftAssistantFooterHtml, /aria-label="加星"/);
+  assert.match(draftAssistantFooterHtml, /aria-disabled="true"/);
 });

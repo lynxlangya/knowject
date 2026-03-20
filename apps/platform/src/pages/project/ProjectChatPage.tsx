@@ -178,12 +178,35 @@ export const ProjectChatPage = () => {
         ? activeReplay
         : null,
   });
+  const {
+    starringMessageId,
+    savingKnowledgeDraft,
+    toggleMessageStar,
+    getAssistantMessageActionHandlers,
+    getDraftAssistantMessageActionHandlers,
+    exportSelectedMessagesAsMarkdown,
+    buildKnowledgeDraftFromSelection,
+    saveKnowledgeDraft,
+  } = useProjectConversationMessageActions({
+    activeProjectId: activeProject.id,
+    conversationId: chatId,
+    currentConversationDetail,
+    messageActionLocked,
+    turnBusy,
+    handleSendMessage,
+    setConversationDetail,
+    refreshProjectKnowledge: projectKnowledge.refresh,
+  });
   const conversationBubbleItems = buildProjectChatBubbleItems(
     displayMessages,
     {
       conversationId: chatId,
       pendingUserMessage,
       draftAssistantMessage,
+      getAssistantMessageActions: (chatMessage) =>
+        getAssistantMessageActionHandlers(chatMessage.id),
+      getDraftAssistantMessageActions: (draftMessage) =>
+        getDraftAssistantMessageActionHandlers(draftMessage.content),
       getUserMessageActions: (chatMessage) =>
         getUserMessageActionHandlers(chatMessage.id),
     },
@@ -198,20 +221,6 @@ export const ProjectChatPage = () => {
       draftAssistantMessage?.conversationId === chatId
         ? draftAssistantMessage?.id ?? null
         : null,
-  });
-  const {
-    starringMessageId,
-    savingKnowledgeDraft,
-    toggleMessageStar,
-    exportSelectedMessagesAsMarkdown,
-    buildKnowledgeDraftFromSelection,
-    saveKnowledgeDraft,
-  } = useProjectConversationMessageActions({
-    activeProjectId: activeProject.id,
-    conversationId: chatId,
-    currentConversationDetail,
-    setConversationDetail,
-    refreshProjectKnowledge: projectKnowledge.refresh,
   });
   const sendActionLocked =
     turnBusy ||
@@ -605,7 +614,7 @@ export const ProjectChatPage = () => {
 
             <Drawer
               open={mobileRailOpen}
-              width={360}
+              size={360}
               title="消息导航"
               placement="right"
               className="xl:hidden"

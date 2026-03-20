@@ -7,6 +7,23 @@ const joinClassName = (...classNames: Array<string | undefined>) => {
   return classNames.filter(Boolean).join(' ');
 };
 
+const splitMarkdownDomProps = <TRest extends Record<string, unknown>>(
+  props: TRest,
+) => {
+  const {
+    class: legacyClassName,
+    ...restProps
+  } = props as TRest & {
+    class?: unknown;
+  };
+
+  return {
+    legacyClassName:
+      typeof legacyClassName === 'string' ? legacyClassName : undefined,
+    restProps,
+  };
+};
+
 const renderMarkdownParagraph = ({
   domNode: _domNode,
   streamStatus: _streamStatus,
@@ -14,11 +31,14 @@ const renderMarkdownParagraph = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <p
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'mb-3 text-sm leading-7 text-slate-700 last:mb-0',
+        legacyClassName,
         className,
       )}
     >
@@ -34,11 +54,14 @@ const renderMarkdownHeading1 = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <h1
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'mb-3 text-xl font-semibold text-slate-900',
+        legacyClassName,
         className,
       )}
     >
@@ -54,11 +77,14 @@ const renderMarkdownHeading2 = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <h2
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'mb-3 text-lg font-semibold text-slate-900',
+        legacyClassName,
         className,
       )}
     >
@@ -74,11 +100,14 @@ const renderMarkdownHeading3 = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <h3
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'mb-3 text-base font-semibold text-slate-900',
+        legacyClassName,
         className,
       )}
     >
@@ -94,11 +123,14 @@ const renderMarkdownList = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <ul
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'mb-3 list-disc space-y-1 pl-5 text-sm leading-7 text-slate-700 last:mb-0',
+        legacyClassName,
         className,
       )}
     >
@@ -114,11 +146,14 @@ const renderMarkdownOrderedList = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <ol
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'mb-3 list-decimal space-y-1 pl-5 text-sm leading-7 text-slate-700 last:mb-0',
+        legacyClassName,
         className,
       )}
     >
@@ -134,10 +169,16 @@ const renderMarkdownListItem = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <li
-      {...rest}
-      className={joinClassName('text-sm leading-7 text-slate-700', className)}
+      {...restProps}
+      className={joinClassName(
+        'text-sm leading-7 text-slate-700',
+        legacyClassName,
+        className,
+      )}
     >
       {children}
     </li>
@@ -151,11 +192,14 @@ const renderMarkdownPre = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <pre
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'mb-3 overflow-x-auto rounded-2xl bg-slate-950 px-4 py-3 text-xs leading-6 text-slate-100 last:mb-0',
+        legacyClassName,
         className,
       )}
     >
@@ -172,12 +216,15 @@ const renderMarkdownCode = ({
   block,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   if (block) {
     return (
       <code
-        {...rest}
+        {...restProps}
         className={joinClassName(
           'font-mono text-xs leading-6 text-slate-100',
+          legacyClassName,
           className,
         )}
       >
@@ -188,9 +235,10 @@ const renderMarkdownCode = ({
 
   return (
     <code
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700',
+        legacyClassName,
         className,
       )}
     >
@@ -206,11 +254,14 @@ const renderMarkdownLink = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <a
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'font-medium text-emerald-700 underline decoration-emerald-200 underline-offset-3 hover:text-emerald-800',
+        legacyClassName,
         className,
       )}
     >
@@ -226,11 +277,14 @@ const renderMarkdownBlockquote = ({
   className,
   ...rest
 }: XMarkdownComponentProps) => {
+  const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+
   return (
     <blockquote
-      {...rest}
+      {...restProps}
       className={joinClassName(
         'mb-3 border-l-3 border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm leading-7 text-slate-700 last:mb-0',
+        legacyClassName,
         className,
       )}
     >

@@ -3,12 +3,15 @@ import {
   EditOutlined,
   FileTextOutlined,
   RedoOutlined,
+  StarFilled,
+  StarOutlined,
 } from '@ant-design/icons';
 import { Popover, Typography } from 'antd';
 import React from 'react';
 import type { MouseEvent } from 'react';
 import type { ProjectConversationSourceResponse } from '../../api/projects';
 import { ProjectChatMarkdown } from './projectChat.markdown';
+import { PROJECT_CHAT_STAR_CLASS_NAMES } from './projectChatStar.styles';
 
 export interface ProjectChatUserBubbleActions {
   editing: boolean;
@@ -20,11 +23,23 @@ export interface ProjectChatUserBubbleActions {
   onCopy: () => void;
 }
 
+export interface ProjectChatAssistantBubbleActions {
+  copyDisabled: boolean;
+  retryDisabled: boolean;
+  starDisabled: boolean;
+  starring: boolean;
+  starred: boolean;
+  onCopy: () => void;
+  onRetry: () => void;
+  onToggleStar: () => void;
+}
+
 export interface ProjectChatBubbleExtraInfo {
   createdAt: string;
   sources: ProjectConversationSourceResponse[];
   messageId?: string;
   status?: ProjectChatBubbleStatus;
+  assistantActions?: ProjectChatAssistantBubbleActions;
   userActions?: ProjectChatUserBubbleActions;
 }
 
@@ -171,6 +186,27 @@ export const ProjectChatAssistantFooter = ({
     return null;
   }
 
+  const assistantActions = extraInfo.assistantActions;
+  const copyDisabled = assistantActions?.copyDisabled ?? true;
+  const retryDisabled = assistantActions?.retryDisabled ?? true;
+  const starDisabled =
+    (assistantActions?.starDisabled ?? true) || assistantActions?.starring === true;
+
+  const handleActionClick = (
+    event: MouseEvent<HTMLButtonElement>,
+    disabled: boolean,
+    action?: () => void,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (disabled || !action) {
+      return;
+    }
+
+    action();
+  };
+
   return (
     <div className="mt-2.5 flex flex-col gap-2.5">
       {extraInfo.sources.length > 0 ? (
@@ -182,7 +218,79 @@ export const ProjectChatAssistantFooter = ({
             {PROJECT_CHAT_BUBBLE_STATUS_LABELS[extraInfo.status]}
           </span>
         ) : null}
-        <BubbleTimestamp createdAt={extraInfo.createdAt} />
+        <div className="flex items-center gap-1 text-slate-400">
+          <button
+            type="button"
+            aria-label="复制回复"
+            aria-disabled={copyDisabled}
+            tabIndex={copyDisabled ? -1 : 0}
+            className={[
+              'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600',
+              copyDisabled
+                ? 'cursor-not-allowed text-slate-300 hover:bg-transparent hover:text-slate-300'
+                : '',
+            ].join(' ')}
+            onClick={(event) =>
+              handleActionClick(event, copyDisabled, assistantActions?.onCopy)
+            }
+          >
+            <CopyOutlined className="text-xs" />
+          </button>
+          <button
+            type="button"
+            aria-label={assistantActions?.starred ? '取消加星' : '加星'}
+            aria-disabled={starDisabled}
+            tabIndex={starDisabled ? -1 : 0}
+            className={[
+              'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200',
+              assistantActions?.starred
+                ? [
+                    PROJECT_CHAT_STAR_CLASS_NAMES.buttonActive,
+                    starDisabled
+                      ? 'cursor-not-allowed'
+                      : '',
+                  ].join(' ')
+                : starDisabled
+                  ? PROJECT_CHAT_STAR_CLASS_NAMES.buttonDisabledInactive
+                  : PROJECT_CHAT_STAR_CLASS_NAMES.buttonInactive,
+            ].join(' ')}
+            onClick={(event) =>
+              handleActionClick(
+                event,
+                starDisabled,
+                assistantActions?.onToggleStar,
+              )
+            }
+          >
+            {assistantActions?.starred ? (
+              <StarFilled
+                className={[
+                  'text-xs',
+                  PROJECT_CHAT_STAR_CLASS_NAMES.iconActive,
+                ].join(' ')}
+              />
+            ) : (
+              <StarOutlined className="text-xs" />
+            )}
+          </button>
+          <button
+            type="button"
+            aria-label="重新生成回复"
+            aria-disabled={retryDisabled}
+            tabIndex={retryDisabled ? -1 : 0}
+            className={[
+              'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600',
+              retryDisabled
+                ? 'cursor-not-allowed text-slate-300 hover:bg-transparent hover:text-slate-300'
+                : '',
+            ].join(' ')}
+            onClick={(event) =>
+              handleActionClick(event, retryDisabled, assistantActions?.onRetry)
+            }
+          >
+            <RedoOutlined className="text-xs" />
+          </button>
+        </div>
       </div>
     </div>
   );
