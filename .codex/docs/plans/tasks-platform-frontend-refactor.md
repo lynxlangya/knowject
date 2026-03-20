@@ -1,8 +1,8 @@
 # 平台前端重构任务拆解（Milestone 0-5，规划拆解）
 
-状态：进行中（2026-03-18：已完成 FE-R0 ~ FE-R7）  
-优先级：P1  
-阶段：Platform 前端结构治理 / 重构准备  
+状态：进行中（2026-03-18：已完成 FE-R0 ~ FE-R7）
+优先级：P1
+阶段：Platform 前端结构治理 / 重构准备
 关联模块：`apps/platform` / `packages/ui` / `packages/request` / `.codex/docs`
 
 当前结论：
