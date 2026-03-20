@@ -52,6 +52,6 @@
 ## 6. 文档同步要求
 
 - 所有文档同步都要在 `review-checklist.md` 的“文档同步”项中打钩或说明例外，必要时引用本标准的矩阵行号。
-- 同步记录应保留在 PR 描述、review note、implementation plan、或 `engineering-governance-overview.md` 中的例外日志/plan 记录，不要把入口文档作为同步笔记；只有当入口文档本身的事实、结构或职责发生变化时再更新它们。
+- 同步记录应保留在 PR 描述、review note、implementation plan、或例外记录中，不要把入口文档作为同步笔记；只有当入口文档本身的事实、结构或职责发生变化时再更新它们。
 - 如果同步引入了新目录/标准（例如新建 `standards/document-sync-governance.md`），务必在 `engineering-governance-overview.md`、`review-checklist.md` 和 `.codex/docs/README.md` 中新增导航，确保治理标准本身也在文档同步体系内。
 - 每一轮同步后，复查 `.codex/docs/current/architecture.md` 与 README 的内链，确保没有遗失的新路径或名字，并把检查结果附在 review note 或 Plan 记录里。
