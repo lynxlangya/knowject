@@ -20,7 +20,7 @@
 ## 维护规则
 
 - 新增 Codex 相关文档、上传包或项目私有 Skill 时，只能落在 `.codex/` 下。
-- `.codex/` 当前是的正式协作目录；当作本地临时资料目录处理。
+- `.codex/` 是正式长期协作目录；不得当作本地临时资料目录或 scratch 区使用。
 - `.codex/docs/` 先更新，`.codex/packs/chatgpt-projects/` 再按需同步；不要直接把派生包当主源维护。
 - 应用内页面 / service / repository 的模块边界发生变化时，先更新 `AGENTS.md` 与 `.codex/docs/current/architecture.md`；`.codex/README.md` 只补入口级维护规则，不重复记录实现细节。
 - `.agent/` 已废弃，仅保留历史说明与兼容提示；禁止继续向 `.agent/*` 新增主内容。
