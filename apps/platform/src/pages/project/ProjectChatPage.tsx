@@ -479,9 +479,6 @@ export const ProjectChatPage = () => {
                   <Typography.Title level={4} className="mb-1! mt-0! text-slate-800!">
                     最近上下文
                   </Typography.Title>
-                  <Typography.Paragraph className="mb-0! max-w-[24rem] text-label! leading-6! text-slate-600!">
-                    左侧只保留标题与最近活跃时间，方便你更快切回要继续的线程。
-                  </Typography.Paragraph>
                 </div>
 
                 <div className="xl:hidden">{renderCreateChatButton({ compact: true })}</div>
