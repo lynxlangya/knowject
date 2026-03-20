@@ -21,13 +21,6 @@
 - `.codex/docs/standards/frontend-shared-abstractions.md`（前端通用封装）：这份标准要求没有复用价值的页面逻辑不得先抽象，抽象前先列出 consumer 列表、保持页面可观察性、跟 FE-R1~FE-R4/FE-R8~FE-R10/FE-R11~FE-R13 的 hook 与 Tailwind token 做溯源说明，保证 shared layer 由现实复用驱动而不是感觉通用。
 - `.codex/docs/standards/review-checklist.md`（评审清单）：在结构治理、前端封装、文档同步等复用项里，各 checkpoint 都要对照 `review-checklist`：每次触发“巨石文件”/“shared hook”/“文档同步”都要在 PR 描述里打钩并说明处理结果，避免忽略评审矩阵中的关键项。
 
-## 治理依赖
-
-本计划从执行开始就必须对齐下面三个治理标准：
-
-- `.codex/docs/standards/code-structure-governance.md`（结构治理）：该标准定义了巨石文件评估、职责边界失真判定和例外记录机制，FE-R0~FE-R10 里的 `ProjectLayout.tsx`、`ProjectChatPage.tsx`、`KnowledgeManagementPage.tsx` 这种大体量文件的拆分都要以此为触发点，并在 PR/计划中额外标注“为什么现在可以拆、例外放在哪、回滚风险是什么”。
-- `.codex/docs/standards/frontend-shared-abstractions.md`（前端通用封装）：这份标准要求没有复用价值的页面逻辑不得先抽象，抽象前先列出 consumer 列表、保持页面可观察性、跟 FE-R1~FE-R4/FE-R8~FE-R10/FE-R11~FE-R13 的 hook 与 Tailwind token 做溯源说明，保证 shared layer 由现实复用驱动而不是感觉通用。
-- `.codex/docs/standards/review-checklist.md`（评审清单）：在结构治理、前端封装、文档同步等复用项里，各 checkpoint 都要对照 `review-checklist`：每次触发“巨石文件”/“shared hook”/“文档同步”都要在 PR 描述里打钩并说明处理结果，避免忽略评审矩阵中的关键项。
 
 ---
 
