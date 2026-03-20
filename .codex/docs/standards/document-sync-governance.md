@@ -20,7 +20,7 @@
 
 | 文档 | 触发变化 | 说明与参照 |
 | --- | --- | --- |
-| `README.md` | 结构、入口、运行流程、部署命令或资源约定发生变化 | AGENTS §6 与 `.codex/docs/README.md` §5 要求把入口文档与现状保持一致，并在 `plans/` 中同步记录改动。 |
+| `README.md` | 结构、入口、运行流程、部署命令或资源约定发生变化 | AGENTS §5 与 `.codex/docs/README.md` §5 要求把入口文档与现状保持一致，并在 `plans/` 中同步记录改动。 |
 | `.codex/docs/README.md` | `.codex/docs` 的目录职责、标准流程、上传包同步、Skill 根目录变化 | 上述 README 里的“维护边界”条目第 5-6 项指明这些文档是 `.codex` 事实的统一入口。 |
 | `AGENTS.md` | 关键路径、模块边界、协作机制、例外收束、Codex 角色发生调整 | AGENTS §5-6 列出必须同步 AGENTS 及相关 doc 的前提，避免规则藏在隐式约定里。 |
 | `.codex/docs/current/architecture.md` | 路由、data flow、API 依赖、mock 用例、localStorage 键、模块归属、Default behavior 变更 | README 列出的 architecture 维护边界对上述事实变更给出了清晰触发器。 |

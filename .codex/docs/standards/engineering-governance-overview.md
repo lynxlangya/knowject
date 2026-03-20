@@ -25,12 +25,12 @@
 
 ## 5. 标准包索引
 
-- 目前仓库内的治理材料包括本总纲、复用本门禁的 `review-checklist.md`，以及新添的结构治理与中文注释标准；其余专项标准仍在筹备中。后续将逐步补齐以下治理线的专文：
-  - `code-structure-governance.md`（结构治理）：重点在职责边界与巨石文件评估。
-  - `core-code-commenting.md`（核心中文注释）：为复杂业务、状态机、幂等等核心逻辑补齐中文意图说明。
-  - `config-security-governance.md`（配置与安全）：覆盖 Docker、数据库、env、internal、日志/健康检查的暴露面管理。
-  - `frontend-shared-abstractions.md`（前端通用封装）：明确什么值得抽象、什么暂留页面层。
-  - `document-sync-governance.md`（文档同步）：建立 current/plans/contracts/README/AGENTS 的文档同步矩阵。
+- 目前仓库已完成五个治理标准（含本纲与 `review-checklist.md`），其专文如下：
+  - `[code-structure-governance.md](code-structure-governance.md)`（结构治理）：重点在职责边界与巨石文件评估。
+  - `[core-code-commenting.md](core-code-commenting.md)`（核心中文注释）：为复杂业务、状态机、幂等等核心逻辑补齐中文意图说明。
+  - `[config-security-governance.md](config-security-governance.md)`（配置与安全）：覆盖 Docker、数据库、env、internal、日志/健康检查的暴露面管理。
+  - `[frontend-shared-abstractions.md](frontend-shared-abstractions.md)`（前端通用封装）：明确什么值得抽象、什么暂留页面层。
+  - `[document-sync-governance.md](document-sync-governance.md)`（文档同步）：建立 current/plans/contracts/README/AGENTS 的文档同步矩阵。
 - 各标准的详细结构在初期可略有差异，但它们都应至少回应以下治理关切：目标、触发条件、坏味道判定、推荐动作、允许例外、文档同步点以及例外记录方式。
 
 ## 6. 与 plans / current / contracts 的边界
