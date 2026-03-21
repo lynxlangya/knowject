@@ -1,6 +1,6 @@
 # Repo Skill Root
 
-`.agents/skills/` 当前承载了 Task 3 迁移过来的 Knowject 项目级 Skills 内容。
+`.agents/skills/` 当前是 Knowject 项目级 Skills 的 live 根目录。
 
 当前目录下技能均为 Knowject 项目私有 Skills，不作为跨项目全局技能分发目录。
 

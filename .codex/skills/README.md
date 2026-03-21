@@ -2,7 +2,7 @@
 
 `.codex/skills/` 当前仅作为兼容入口，不再承载项目级 Skills 主内容。
 
-Task 3 已将项目级 Skills 内容迁移到 `.agents/skills/`：
+项目级 Skills 的 live 根目录在 `.agents/skills/`：
 - 入口说明见 `.agents/skills/README.md`
 - 新增或维护 Skills 请仅在 `.agents/skills/<skill>/`（包含 `SKILL.md`，以及该 skill 需要的同目录 `agents/`、脚本或资产文件）
 
