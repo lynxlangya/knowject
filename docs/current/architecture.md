@@ -93,7 +93,10 @@ files/
     README.md                   ChatGPT Projects 上传包说明
     PROJECT_BRIEF.md            ChatGPT Projects 首读摘要
   skills/
-    README.md                   项目级 Skill 根目录说明
+    README.md                   兼容 stub（live Skill 根目录见 `.agents/skills/`）
+.agents/
+  skills/
+    README.md                   项目级 Skill live 根目录说明
 docs/
   README.md                     项目文档主入口（唯一文档根）
   current/                      当前事实文档

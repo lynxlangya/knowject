@@ -12,7 +12,7 @@
 - Mock 数据源、示例路径、项目本地存储的键、配置模板或授权 token 组织方式调整，按照 AGENTS 的规划必须同步 `docs/current/architecture.md`、相关 README，必要时同步 `AGENTS.md` 确保协作约定清楚。
 - Docker/compose/容器端口、网络、环境变量、secrets 暴露面发生变化，要同步 `README.md`、`docs/current/docker-usage.md`、`docs/current/architecture.md`、`docker/README.md` 与 `apps/api/README.md` 并验证手册和部署文档一致。
 - 仓库级命令包装、新增脚本、部署辅助命令、镜像构建变化时，要同步 README、`docker/README.md`、`docs/current/architecture.md`，并在必要时把控制路径写进 `AGENTS.md` 或相关计划。
-- Codex 根目录职责、`docs` 上传包映射、`.codex/skills` 根目录变化必须同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`.codex/packs/chatgpt-projects/README.md` 与 `.codex/skills/README.md`，避免后续导入/上传包与事实源脱节。
+- Codex 根目录职责、`docs` 上传包映射、Skill 根目录变化必须同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`.codex/packs/chatgpt-projects/README.md`、`.agents/skills/README.md`（live root）与 `.codex/skills/README.md`（compatibility stub），避免后续导入/上传包与事实源脱节。
 - 模块边界、目录结构、协作规则等核心架构变化，要同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md` 与 `docs/current/architecture.md`，并更新任何引用这些边界的 `plans/` 或 `tasks-*` 文档。
 - 任何 contracts、contracts 相关接口、roadmap 目标、plans 进度、handoff 内容、templates 或 pack 副本被更新的场景，都必须反推是否要同步 `docs/contracts/*`、`docs/roadmap/*`、`docs/plans/*`、`docs/handoff/*`、`docs/templates/PLANS.md`、`.codex/packs/chatgpt-projects/*` 这些依赖文档。
 
@@ -27,7 +27,8 @@
 | `.codex/README.md` | `docs` 目录职责、标准流程、上传包/Skill 目录职责变化 | AGENTS §5 强调 Codex 根目录职责调整需同步 `.codex/README.md`，保持入口说明与治理规则一致。 |
 | `.codex/MIGRATION.md` | `docs` 与 `.agent/` 收口策略变更、目录迁移、结构职责调整 | AGENTS §5/§0.1 要求 `.codex/MIGRATION.md` 与 `.codex/README.md` 同步体现迁移规则，避免交接歧义。 |
 | `.codex/packs/chatgpt-projects/README.md` | `docs` 中的 source 文档 (current/contracts/plans) 被上传包引用的内容发生变化 | AGENTS §5 规定派生上传包必须与事实源同步，相关 README 也应更新以反映最新可上传快照。 |
-| `.codex/skills/README.md` | `.codex/skills` 目录职责、Skill 目录治理流程、导入/发布政策变更 | AGENTS §5 要求 `.codex/skills/README.md` 反映当前 skills 协作治理，确保 `docs` 的入口说明一致。 |
+| `.agents/skills/README.md` | 项目级 Skill live 根目录职责、Skill 包目录治理流程、导入/发布政策变更 | 当前 skill-root governance 的主入口，需与 AGENTS §5 和 root entry docs 保持一致。 |
+| `.codex/skills/README.md` | 兼容 stub 跳转说明、历史链接兼容策略变更 | 该文件不再承载 live 根目录职责；仅用于兼容入口与迁移指引说明。 |
 | `docs/current/docker-usage.md` | Docker/compose 文件变化、新增镜像、端口/网络/secret/vault 方案修改 | 与 `docs/current/architecture.md` 的当前拓扑描述保持一致；冲突时以 current facts 为准。 |
 | `docs/contracts/*.md` | APIs、接口约定、错误/状态码、身份校验、Chat/Knowledge/Indexer 约定发生变化 | 与当前后端行为和 `docs/current/architecture.md` 中的接口边界保持一致。 |
 | `docs/roadmap/*.md` | 产品目标、gap 分析、阶段优先级调整 | 仅记录目标态与差距；不得覆盖当前事实，需与 `docs/current/*` 区分。 |
