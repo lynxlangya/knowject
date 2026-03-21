@@ -79,7 +79,7 @@ docs/exports/ 派生导出目录（非事实源）
 - 涉及以下变化时，必须同步检查并更新文档：
   - 路由、重定向、页面命名变化：同步 `README.md`、`docs/current/architecture.md`、相关子模块 README。
   - Mock 数据源、示例路径、存储键变化：同步 `docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
-  - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`docs/current/docker-usage.md`、`docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
+  - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
   - 仓库级命令包装或脚本入口变化：同步 `README.md`、`docker/README.md`、`docs/current/architecture.md`、必要时同步本文件。
   - Root governance、工程治理 `standards/`、导出映射或 Skill 根目录变化：同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`docs/README.md`，必要时同步 `docs/exports/README.md`；若 Skill 根目录迁移已落地，再同步 `.agents/skills/README.md`。
   - 工程治理规则、协作规范或评审清单变化（`docs/standards/*`）：同步 `docs/README.md`、必要时同步 `docs/current/architecture.md` 与本文件，避免入口与事实源漂移。

@@ -132,7 +132,7 @@ pnpm knowject:help
 
 ## Documentation
 
-`docs/` is the project documentation root and `docs/exports/` is the derived export directory. Skill-root migration to `.agents/skills/` is planned for Task 3 and is not a current live path in this worktree.
+`docs/` is the project documentation root. `docs/exports/` is the new derived-layer root, while the current ChatGPT Projects export package content still lives under `.codex/packs/chatgpt-projects/*` until Task 4 lands. Skill-root migration to `.agents/skills/` is planned for Task 3 and is not a current live path in this worktree.
 
 - [Project Rules](./AGENTS.md)
 - [Codex Workspace](./.codex/README.md)
