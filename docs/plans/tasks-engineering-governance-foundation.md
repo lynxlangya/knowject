@@ -3,7 +3,7 @@
 状态：规划中（2026-03-20）  
 优先级：P1  
 阶段：Engineering Governance / Standards Foundation  
-关联模块：`apps/platform` / `apps/api` / `apps/indexer-py` / `docker` / `scripts` / `.codex/docs` / `AGENTS.md`
+关联模块：`apps/platform` / `apps/api` / `apps/indexer-py` / `docker` / `scripts` / `docs` / `AGENTS.md`
 
 当前结论：
 
@@ -11,7 +11,7 @@
 - 落地方式采用规范型治理，不把首批规则直接升级成 CI 硬门禁。
 - 治理文档采用“一份总治理方案 + 五个专题标准包 + 一份评审清单”的分层结构。
 - 第一阶段主线固定为“代码结构治理”；中文注释、配置安全、前端通用封装与文档同步作为配套标准同步建立。
-- 现有 `.codex/docs/plans/*` 继续承担实施计划职责；后续由它们显式引用本治理体系，而不是被本体系替代。
+- 现有 `docs/plans/*` 继续承担实施计划职责；后续由它们显式引用本治理体系，而不是被本体系替代。
 
 ---
 
@@ -37,10 +37,10 @@
 
 ### 2.1 当前仓库状态
 
-- `.codex/docs/` 已是 Knowject 当前唯一正式文档根目录；`plans/` 用于承载阶段任务、实施计划与任务拆解。
+- `docs/` 已是 Knowject 当前唯一正式文档根目录；`plans/` 用于承载阶段任务、实施计划与任务拆解。
 - 仓库已经存在面向前端与服务端的专项重构计划：
-  - `.codex/docs/plans/tasks-platform-frontend-refactor.md`
-  - `.codex/docs/plans/tasks-service-indexing-refactor.md`
+  - `docs/plans/tasks-platform-frontend-refactor.md`
+  - `docs/plans/tasks-service-indexing-refactor.md`
 - 当前仓库已经出现典型的结构治理对象，且集中在“页面编排层 / service façade / repository façade / 复杂展示组件”。
 
 ### 2.2 当前已确认的治理热点
@@ -65,7 +65,7 @@
 - 仓库已有大量实施计划，但缺少长期工程治理总纲。
 - 现有“什么时候该拆文件、什么时候该补注释、什么时候必须同步文档”的判断仍偏经验化。
 - 配置安全与前端复用封装已有局部实践，但没有形成项目级标准。
-- 文档同步责任已散落在 `AGENTS.md` 与 `.codex/docs/README.md`，但还没收敛成统一治理矩阵。
+- 文档同步责任已散落在 `AGENTS.md` 与 `docs/README.md`，但还没收敛成统一治理矩阵。
 
 ## 三、治理模型设计
 
@@ -253,8 +253,8 @@
 本标准将复用并收敛现有文档同步边界：
 
 - `AGENTS.md`
-- `.codex/docs/README.md`
-- `.codex/docs/current/architecture.md`
+- `docs/README.md`
+- `docs/current/architecture.md`
 
 ## 五、文档落点与目录衔接
 
@@ -263,7 +263,7 @@
 后续正式落地治理标准时，建议新增：
 
 ```text
-.codex/docs/standards/
+docs/standards/
   engineering-governance-overview.md
   code-structure-governance.md
   core-code-commenting.md
@@ -326,7 +326,7 @@
 
 - 创建 `standards/` 目录；
 - 写入总纲、五个标准包与评审检查清单；
-- 更新 `.codex/docs/README.md`、`.codex/README.md`、`AGENTS.md` 的入口说明。
+- 更新 `docs/README.md`、`.codex/README.md`、`AGENTS.md` 的入口说明。
 
 #### Milestone 2：示范计划接线
 

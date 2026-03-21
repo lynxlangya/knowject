@@ -4,7 +4,7 @@
 
 - 目标是为 Knowject 提供一套长期一致的工程治理判断，让后续每轮迭代都清楚：什么是工程债、哪些问题必须在当前改动解决、什么可以延期但需记录例外，以及代码、配置、前端封装、文档各自该同步到哪里。
 - 本纲不替代现有实施计划，而是成为所有专项计划（如 `tasks-platform-frontend-refactor.md` 与 `tasks-service-indexing-refactor.md`）引用的“为什么要做”的规范型层。
-- 适用范围覆盖涉及 `apps/platform`、`apps/api`、`apps/indexer-py`、`docker`、`scripts`、`.codex/docs` 与 `AGENTS.md` 的结构、注释、配置、安全、封装与文档改动。
+- 适用范围覆盖涉及 `apps/platform`、`apps/api`、`apps/indexer-py`、`docker`、`scripts`、`docs` 与 `AGENTS.md` 的结构、注释、配置、安全、封装与文档改动。
 
 ## 2. 规则分级
 
@@ -38,7 +38,7 @@
 - `plans/` 继续承担阶段性实施计划，并显式引用本标准；`standards/` 作为长期规则目录，不应直接包含改造步骤。
 - `current/` 保留落地的事实与现状描述；任何触发事实变更的标准包都要明确是否需要同步 `current/architecture.md`。
 - `contracts/` 用于协议与边界文档；架构或接口级变更若触及契约，一定要同步 `contracts/`，并把具体变更记录放在对应评审记录、实施计划或例外备案中，而非在标准包文档里写改动日志。
-- `README`、`AGENTS`、`.codex/docs/README.md` 作为入口文档，要新增治理标准目录的导航说明。
+- `README`、`AGENTS`、`docs/README.md` 作为入口文档，要新增治理标准目录的导航说明。
 
 ## 7. 第一阶段主线与后续衔接
 

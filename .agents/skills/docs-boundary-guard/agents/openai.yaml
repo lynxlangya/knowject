@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docs Boundary Guard"
+  short_description: "Audit Knowject docs boundaries and sync duties."
+  default_prompt: "Use $docs-boundary-guard to audit this Knowject change for docs boundary drift and missing sync work."

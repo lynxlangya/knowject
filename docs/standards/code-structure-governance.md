@@ -25,7 +25,7 @@
 2. 抽出共享 helper/adapter/hook/mapper：把 detail/diagnostics/upload/retry/rebuild/delete 等重复流统一交给 domain hook 或 controller，避免不同页面/场景各自维护相同逻辑。
 3. Service/repository facade 只保留授权/orchestration/error wrapping：状态迁移、diagnostics、recovery、summary 等具体逻辑应下沉到专门的 helper 模块，由 facade 通过 thin API 调用，而非在大文件里混写。
 4. 拆分完成后立即验证：跑 `platform lint`、`api check-types`、与结构变更相关的 smoke test 等，确保 facade 变化没有引入 regressions。
-5. 把结构治理判断记录在 plans/review：在 `.codex/docs/plans/` 以及 `review-checklist.md` 中注明当前痛点与拆分方向，并记录任何例外。
+5. 把结构治理判断记录在 plans/review：在 `docs/plans/` 以及 `review-checklist.md` 中注明当前痛点与拆分方向，并记录任何例外。
 
 ## 5. 允许例外
 
@@ -35,8 +35,8 @@
 
 ## 6. 文档同步要求
 
-- 结构治理相关的痛点与拆分计划必须补在 `.codex/docs/plans/` 中，以保证标准与执行计划相互印证。
-- 导致页面/模块职责变化时，要同步 `.codex/docs/current/architecture.md`、`README.md`、`.codex/docs/README.md` 等事实类文档，避免 review 时误认为现状与结构规则不一致。
+- 结构治理相关的痛点与拆分计划必须补在 `docs/plans/` 中，以保证标准与执行计划相互印证。
+- 导致页面/模块职责变化时，要同步 `docs/current/architecture.md`、`README.md`、`docs/README.md` 等事实类文档，避免 review 时误认为现状与结构规则不一致。
 - `review-checklist.md` 中“结构治理”条目应勾选“已判断”或注明例外，若触发例外请把证据链接到 `AGENTS.md` 或 review comment 方便后续追踪。
 
 ## 7. 当前代表性治理对象

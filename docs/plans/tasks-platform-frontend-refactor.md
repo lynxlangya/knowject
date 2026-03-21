@@ -3,7 +3,7 @@
 状态：进行中（2026-03-18：已完成 FE-R0 ~ FE-R7）
 优先级：P1
 阶段：Platform 前端结构治理 / 重构准备
-关联模块：`apps/platform` / `packages/ui` / `packages/request` / `.codex/docs`
+关联模块：`apps/platform` / `packages/ui` / `packages/request` / `docs`
 
 当前结论：
 
@@ -17,9 +17,9 @@
 
 本计划从执行开始就必须对齐下面三个治理标准：
 
-- `.codex/docs/standards/code-structure-governance.md`（结构治理）：该标准定义了巨石文件评估、职责边界失真判定和例外记录机制，FE-R0~FE-R10 里的 `ProjectLayout.tsx`、`ProjectChatPage.tsx`、`KnowledgeManagementPage.tsx` 这种大体量文件的拆分都要以此为触发点，并在 PR/计划中额外标注“为什么现在可以拆、例外放在哪、回滚风险是什么”。
-- `.codex/docs/standards/frontend-shared-abstractions.md`（前端通用封装）：这份标准要求没有复用价值的页面逻辑不得先抽象，抽象前先列出 consumer 列表、保持页面可观察性、跟 FE-R1~FE-R4/FE-R8~FE-R10/FE-R11~FE-R13 的 hook 与 Tailwind token 做溯源说明，保证 shared layer 由现实复用驱动而不是感觉通用。
-- `.codex/docs/standards/review-checklist.md`（评审清单）：在结构治理、前端封装、文档同步等复用项里，各 checkpoint 都要对照 `review-checklist`：每次触发“巨石文件”/“shared hook”/“文档同步”都要在 PR 描述里打钩并说明处理结果，避免忽略评审矩阵中的关键项。
+- `docs/standards/code-structure-governance.md`（结构治理）：该标准定义了巨石文件评估、职责边界失真判定和例外记录机制，FE-R0~FE-R10 里的 `ProjectLayout.tsx`、`ProjectChatPage.tsx`、`KnowledgeManagementPage.tsx` 这种大体量文件的拆分都要以此为触发点，并在 PR/计划中额外标注“为什么现在可以拆、例外放在哪、回滚风险是什么”。
+- `docs/standards/frontend-shared-abstractions.md`（前端通用封装）：这份标准要求没有复用价值的页面逻辑不得先抽象，抽象前先列出 consumer 列表、保持页面可观察性、跟 FE-R1~FE-R4/FE-R8~FE-R10/FE-R11~FE-R13 的 hook 与 Tailwind token 做溯源说明，保证 shared layer 由现实复用驱动而不是感觉通用。
+- `docs/standards/review-checklist.md`（评审清单）：在结构治理、前端封装、文档同步等复用项里，各 checkpoint 都要对照 `review-checklist`：每次触发“巨石文件”/“shared hook”/“文档同步”都要在 PR 描述里打钩并说明处理结果，避免忽略评审矩阵中的关键项。
 
 
 ---
@@ -41,7 +41,7 @@
 
 ### 2.1 当前事实真相源文件
 
-- `.codex/docs/current/architecture.md`
+- `docs/current/architecture.md`
 - `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx`
 - `apps/platform/src/pages/project/ProjectResourcesPage.tsx`
 - `apps/platform/src/pages/project/ProjectLayout.tsx`
@@ -142,23 +142,23 @@
 
 ### 4.1 本次立刻需要同步的文档
 
-- `.codex/docs/plans/tasks-platform-frontend-refactor.md`
-- `.codex/docs/README.md`
+- `docs/plans/tasks-platform-frontend-refactor.md`
+- `docs/README.md`
 
 ### 4.2 本次不需要同步的文档
 
-- `.codex/docs/current/architecture.md`
+- `docs/current/architecture.md`
 - `AGENTS.md`
 - `.codex/README.md`
 - `.codex/MIGRATION.md`
-- `.codex/packs/chatgpt-projects/*`
+- `docs/exports/chatgpt-projects/*`
 - 根 `README.md`
 
 ### 4.3 判断依据
 
 - 本次只是新增前端重构执行计划，没有改动已落地事实、目录职责或上传包映射。
-- `.codex/docs/current/architecture.md` 只记录“当前是什么”，不记录未来重构方案。
-- `.codex/packs/chatgpt-projects/*` 当前没有镜像这份计划，不需要派生同步。
+- `docs/current/architecture.md` 只记录“当前是什么”，不记录未来重构方案。
+- `docs/exports/chatgpt-projects/*` 当前没有镜像这份计划，不需要派生同步。
 
 ## 五、范围
 
@@ -621,9 +621,9 @@
 
 ### 11.3 文档一致性检查
 
-- 计划实施前后，对照 `.codex/docs/current/architecture.md` 判断是否出现“计划已落地但事实文档未更新”的漂移。
+- 计划实施前后，对照 `docs/current/architecture.md` 判断是否出现“计划已落地但事实文档未更新”的漂移。
 - 若任一 milestone 实际改动了模块边界、目录结构、路由或数据来源，需要同步更新：
-  - `.codex/docs/current/architecture.md`
+  - `docs/current/architecture.md`
   - 必要时 `AGENTS.md`
   - 必要时对应 README
 
@@ -679,7 +679,7 @@
 - 2026-03-18：已完成 FE-R0，`pnpm --filter platform lint`、`pnpm --filter platform check-types` 与 `pnpm --filter platform build` 全部通过。
 - 2026-03-18：已完成 FE-R1 ~ FE-R4，知识域共享 helper、detail/diagnostics hook、upload hook 与 document actions hook 已接入全局知识页与项目资源页，`pnpm --filter platform lint`、`pnpm --filter platform check-types` 与 `pnpm --filter platform build` 全部通过。
 - 2026-03-18：已完成 FE-R5 ~ FE-R6，`ProjectLayout` 已拆为 conversations / global catalogs / project knowledge 三个 hook，项目资源页改为通过 `ProjectContext` 的资源绑定 mutation 更新 knowledge 绑定，`pnpm --filter platform lint`、`pnpm --filter platform check-types` 与 `pnpm --filter platform build` 全部通过。
-- 2026-03-18：已完成 FE-R7，`project.mock.ts` 已拆为 `projectResourceMappers.ts` 与 `projectWorkspaceSnapshot.mock.ts`，项目概览 / 资源页 / 全局成员页引用已切换，并同步更新 `AGENTS.md`、`apps/platform/README.md` 与 `.codex/docs/current/architecture.md`，`pnpm --filter platform lint`、`pnpm --filter platform check-types` 与 `pnpm --filter platform build` 全部通过。
+- 2026-03-18：已完成 FE-R7，`project.mock.ts` 已拆为 `projectResourceMappers.ts` 与 `projectWorkspaceSnapshot.mock.ts`，项目概览 / 资源页 / 全局成员页引用已切换，并同步更新 `AGENTS.md`、`apps/platform/README.md` 与 `docs/current/architecture.md`，`pnpm --filter platform lint`、`pnpm --filter platform check-types` 与 `pnpm --filter platform build` 全部通过。
 - 2026-03-18：已完成 FE-R8 ~ FE-R10，`ProjectChatPage` 已收敛为编排层并拆出 markdown / bubble / settings / detail / actions 边界，`AppSider` 已拆出 `ProjectFormModal` 与 `useProjectResourceOptions`，`/skills`、`/agents` 已共享 global asset 的 summary / filter / meta / updatedAt 展示基元，`pnpm --filter platform lint`、`pnpm --filter platform check-types` 与 `pnpm --filter platform build` 全部通过。
 - 2026-03-18：已完成 FE-R11 ~ FE-R13，`apps/platform/src` 已完成第一批 Tailwind canonical class 替换并建立 `radius / text / shadow` token 基线，根 `eslint.config.mjs` 已对前端源码启用 type-aware `await-thenable / no-floating-promises` 护栏，`pnpm --filter platform lint`、`pnpm --filter platform check-types` 与 `pnpm --filter platform build` 全部通过。
 
