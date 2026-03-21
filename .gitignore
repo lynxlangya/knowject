@@ -23,7 +23,6 @@ __pycache__/
 .codex/
 .superpowers/
 .worktrees/
-docs/
 
 # Testing
 coverage
