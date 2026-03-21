@@ -52,7 +52,7 @@
   - `/project/:projectId/chat/:chatId`
   - `/project/:projectId/resources`
   - `/project/:projectId/members`
-- `/workspace` 只是兼容入口，必须重定向到 `/home`。
+- 仓库中可能存在 `/workspace` 相关路径常量，但当前未注册实际路由；不要假定它可用或依赖它做兼容跳转。
 - `/home/project/*` 只是兼容入口，不应继续作为主路径扩展。
 
 ## 6. 当前阶段范围约束
