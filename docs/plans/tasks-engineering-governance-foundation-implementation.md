@@ -4,9 +4,9 @@
 
 **Goal:** Build Knowject's long-term engineering governance foundation by creating the `standards/` source of truth, wiring the review checklist, and syncing every affected documentation entry point before any code cleanup work starts.
 
-**Architecture:** This implementation is documentation-first. First create `.codex/docs/standards/` and move the long-lived governance rules there, then update repository entry points and architecture facts so the new directory is discoverable and authoritative, and finally rewire existing implementation plans to reference the standards instead of restating governance rationale. This keeps `standards/` for durable rules, `plans/` for staged execution, and `current/` for repository facts.
+**Architecture:** This implementation is documentation-first. First create `docs/standards/` and move the long-lived governance rules there, then update repository entry points and architecture facts so the new directory is discoverable and authoritative, and finally rewire existing implementation plans to reference the standards instead of restating governance rationale. This keeps `standards/` for durable rules, `plans/` for staged execution, and `current/` for repository facts.
 
-**Tech Stack:** Markdown, `.codex/docs/*`, `AGENTS.md`, git, Prettier
+**Tech Stack:** Markdown, `docs/*`, `AGENTS.md`, git, Prettier
 
 ---
 
@@ -17,22 +17,22 @@
 ### Task 1: Create the Standards Directory and Core Overview
 
 **Files:**
-- Create: `.codex/docs/standards/engineering-governance-overview.md`
-- Create: `.codex/docs/standards/review-checklist.md`
-- Reference: `.codex/docs/plans/tasks-engineering-governance-foundation.md`
-- Reference: `.codex/docs/templates/PLANS.md`
+- Create: `docs/standards/engineering-governance-overview.md`
+- Create: `docs/standards/review-checklist.md`
+- Reference: `docs/plans/tasks-engineering-governance-foundation.md`
+- Reference: `docs/templates/PLANS.md`
 
 - [ ] **Step 1: Re-read the approved spec and confirm the standards boundary**
 
 Run:
 
 ```bash
-sed -n '1,260p' .codex/docs/plans/tasks-engineering-governance-foundation.md
+sed -n '1,260p' docs/plans/tasks-engineering-governance-foundation.md
 ```
 
 Expected: the spec confirms `standards/` is the long-term home for governance rules, while `plans/` stays execution-only.
 
-- [ ] **Step 2: Create `.codex/docs/standards/engineering-governance-overview.md` with the agreed top-level structure**
+- [ ] **Step 2: Create `docs/standards/engineering-governance-overview.md` with the agreed top-level structure**
 
 Write this skeleton first, then fill each section with repository-specific content from the approved spec:
 
@@ -48,7 +48,7 @@ Write this skeleton first, then fill each section with repository-specific conte
 ## 7. 第一阶段主线与后续衔接
 ```
 
-- [ ] **Step 3: Create `.codex/docs/standards/review-checklist.md` as a reusable review gate**
+- [ ] **Step 3: Create `docs/standards/review-checklist.md` as a reusable review gate**
 
 Start with a checklist that can be applied to any future task:
 
@@ -80,7 +80,7 @@ Start with a checklist that can be applied to any future task:
 Run:
 
 ```bash
-pnpm exec prettier --write .codex/docs/standards/engineering-governance-overview.md .codex/docs/standards/review-checklist.md
+pnpm exec prettier --write docs/standards/engineering-governance-overview.md docs/standards/review-checklist.md
 ```
 
 Expected: Prettier rewrites the files in place without errors.
@@ -90,7 +90,7 @@ Expected: Prettier rewrites the files in place without errors.
 Run:
 
 ```bash
-git add -f .codex/docs/standards/engineering-governance-overview.md .codex/docs/standards/review-checklist.md
+git add -f docs/standards/engineering-governance-overview.md docs/standards/review-checklist.md
 git commit -m "docs(codex): add governance overview and review checklist"
 ```
 
@@ -99,22 +99,22 @@ Expected: one docs-only commit containing the overview and checklist.
 ### Task 2: Write the Code Structure and Commenting Standards
 
 **Files:**
-- Create: `.codex/docs/standards/code-structure-governance.md`
-- Create: `.codex/docs/standards/core-code-commenting.md`
-- Reference: `.codex/docs/plans/tasks-platform-frontend-refactor.md`
-- Reference: `.codex/docs/plans/tasks-service-indexing-refactor.md`
+- Create: `docs/standards/code-structure-governance.md`
+- Create: `docs/standards/core-code-commenting.md`
+- Reference: `docs/plans/tasks-platform-frontend-refactor.md`
+- Reference: `docs/plans/tasks-service-indexing-refactor.md`
 
 - [ ] **Step 1: Capture the file-size threshold and structure smells from the existing plans**
 
 Run:
 
 ```bash
-rg -n "ProjectChatPage|AppSider|knowledge.repository|巨石|结构治理" .codex/docs/plans/tasks-platform-frontend-refactor.md .codex/docs/plans/tasks-service-indexing-refactor.md .codex/docs/plans/tasks-engineering-governance-foundation.md
+rg -n "ProjectChatPage|AppSider|knowledge.repository|巨石|结构治理" docs/plans/tasks-platform-frontend-refactor.md docs/plans/tasks-service-indexing-refactor.md docs/plans/tasks-engineering-governance-foundation.md
 ```
 
 Expected: concrete examples and wording that can be reused in the standard.
 
-- [ ] **Step 2: Write `.codex/docs/standards/code-structure-governance.md`**
+- [ ] **Step 2: Write `docs/standards/code-structure-governance.md`**
 
 The document must include these exact section headings:
 
@@ -130,7 +130,7 @@ The document must include these exact section headings:
 ## 7. 当前代表性治理对象
 ```
 
-- [ ] **Step 3: Write `.codex/docs/standards/core-code-commenting.md`**
+- [ ] **Step 3: Write `docs/standards/core-code-commenting.md`**
 
 Use this skeleton and keep the emphasis on intent comments instead of noisy inline narration:
 
@@ -151,7 +151,7 @@ Use this skeleton and keep the emphasis on intent comments instead of noisy inli
 Run:
 
 ```bash
-rg -n "## 1. 目标|## 4. 推荐动作|## 5. 允许例外|## 6. 文档同步要求" .codex/docs/standards/code-structure-governance.md .codex/docs/standards/core-code-commenting.md
+rg -n "## 1. 目标|## 4. 推荐动作|## 5. 允许例外|## 6. 文档同步要求" docs/standards/code-structure-governance.md docs/standards/core-code-commenting.md
 ```
 
 Expected: both files report all required section headings.
@@ -161,8 +161,8 @@ Expected: both files report all required section headings.
 Run:
 
 ```bash
-pnpm exec prettier --write .codex/docs/standards/code-structure-governance.md .codex/docs/standards/core-code-commenting.md
-git add -f .codex/docs/standards/code-structure-governance.md .codex/docs/standards/core-code-commenting.md
+pnpm exec prettier --write docs/standards/code-structure-governance.md docs/standards/core-code-commenting.md
+git add -f docs/standards/code-structure-governance.md docs/standards/core-code-commenting.md
 git commit -m "docs(codex): add structure and commenting standards"
 ```
 
@@ -171,23 +171,23 @@ Expected: a second docs-only commit for the first two standards.
 ### Task 3: Write the Config Security and Frontend Abstractions Standards
 
 **Files:**
-- Create: `.codex/docs/standards/config-security-governance.md`
-- Create: `.codex/docs/standards/frontend-shared-abstractions.md`
-- Reference: `.codex/docs/current/docker-usage.md`
-- Reference: `.codex/docs/contracts/auth-contract.md`
-- Reference: `.codex/docs/plans/tasks-platform-frontend-refactor.md`
+- Create: `docs/standards/config-security-governance.md`
+- Create: `docs/standards/frontend-shared-abstractions.md`
+- Reference: `docs/current/docker-usage.md`
+- Reference: `docs/contracts/auth-contract.md`
+- Reference: `docs/plans/tasks-platform-frontend-refactor.md`
 
 - [ ] **Step 1: Pull the existing configuration and frontend reuse facts**
 
 Run:
 
 ```bash
-rg -n "secret|internal|暴露|token|shared|token 化|通用|复用" .codex/docs/current/docker-usage.md .codex/docs/contracts/auth-contract.md .codex/docs/plans/tasks-platform-frontend-refactor.md .codex/docs/plans/tasks-engineering-governance-foundation.md
+rg -n "secret|internal|暴露|token|shared|token 化|通用|复用" docs/current/docker-usage.md docs/contracts/auth-contract.md docs/plans/tasks-platform-frontend-refactor.md docs/plans/tasks-engineering-governance-foundation.md
 ```
 
 Expected: concrete repository terminology for the two standards.
 
-- [ ] **Step 2: Write `.codex/docs/standards/config-security-governance.md`**
+- [ ] **Step 2: Write `docs/standards/config-security-governance.md`**
 
 Include at least:
 
@@ -202,7 +202,7 @@ Include at least:
 ## 6. 文档同步要求
 ```
 
-- [ ] **Step 3: Write `.codex/docs/standards/frontend-shared-abstractions.md`**
+- [ ] **Step 3: Write `docs/standards/frontend-shared-abstractions.md`**
 
 Include at least:
 
@@ -223,8 +223,8 @@ Include at least:
 Run:
 
 ```bash
-pnpm exec prettier --write .codex/docs/standards/config-security-governance.md .codex/docs/standards/frontend-shared-abstractions.md
-rg -n "允许例外|文档同步要求" .codex/docs/standards/config-security-governance.md .codex/docs/standards/frontend-shared-abstractions.md
+pnpm exec prettier --write docs/standards/config-security-governance.md docs/standards/frontend-shared-abstractions.md
+rg -n "允许例外|文档同步要求" docs/standards/config-security-governance.md docs/standards/frontend-shared-abstractions.md
 ```
 
 Expected: Prettier succeeds and both docs expose the standard governance sections.
@@ -234,7 +234,7 @@ Expected: Prettier succeeds and both docs expose the standard governance section
 Run:
 
 ```bash
-git add -f .codex/docs/standards/config-security-governance.md .codex/docs/standards/frontend-shared-abstractions.md
+git add -f docs/standards/config-security-governance.md docs/standards/frontend-shared-abstractions.md
 git commit -m "docs(codex): add config and frontend governance standards"
 ```
 
@@ -243,24 +243,24 @@ Expected: a third docs-only commit for the config/frontend standards.
 ### Task 4: Write the Document Sync Standard and Finalize the Standards Index
 
 **Files:**
-- Create: `.codex/docs/standards/document-sync-governance.md`
-- Modify: `.codex/docs/standards/engineering-governance-overview.md`
-- Modify: `.codex/docs/standards/review-checklist.md`
+- Create: `docs/standards/document-sync-governance.md`
+- Modify: `docs/standards/engineering-governance-overview.md`
+- Modify: `docs/standards/review-checklist.md`
 - Reference: `AGENTS.md`
-- Reference: `.codex/docs/README.md`
-- Reference: `.codex/docs/current/architecture.md`
+- Reference: `docs/README.md`
+- Reference: `docs/current/architecture.md`
 
 - [ ] **Step 1: Extract the existing sync rules from the project instructions**
 
 Run:
 
 ```bash
-rg -n "必须同步|同步检查并更新文档|更新 `.codex/docs|AGENTS.md|README.md" AGENTS.md .codex/docs/README.md
+rg -n "必须同步|同步检查并更新文档|更新 `docs|AGENTS.md|README.md" AGENTS.md docs/README.md
 ```
 
 Expected: the command surfaces the current sync matrix wording that the new standard must absorb.
 
-- [ ] **Step 2: Write `.codex/docs/standards/document-sync-governance.md`**
+- [ ] **Step 2: Write `docs/standards/document-sync-governance.md`**
 
 Include the matrix headings below and map each change type to the correct doc family:
 
@@ -277,15 +277,15 @@ Include the matrix headings below and map each change type to the correct doc fa
 
 - [ ] **Step 3: Back-link the overview and review checklist to all five standards**
 
-Update `.codex/docs/standards/engineering-governance-overview.md` so it links to each standard doc, and update `.codex/docs/standards/review-checklist.md` so every checklist group points back to its owning standard.
+Update `docs/standards/engineering-governance-overview.md` so it links to each standard doc, and update `docs/standards/review-checklist.md` so every checklist group points back to its owning standard.
 
 - [ ] **Step 4: Format and validate the standards directory**
 
 Run:
 
 ```bash
-pnpm exec prettier --write .codex/docs/standards/*.md
-rg -n "code-structure-governance|core-code-commenting|config-security-governance|frontend-shared-abstractions|document-sync-governance" .codex/docs/standards/engineering-governance-overview.md .codex/docs/standards/review-checklist.md
+pnpm exec prettier --write docs/standards/*.md
+rg -n "code-structure-governance|core-code-commenting|config-security-governance|frontend-shared-abstractions|document-sync-governance" docs/standards/engineering-governance-overview.md docs/standards/review-checklist.md
 ```
 
 Expected: the overview and checklist both reference all five standards by file name.
@@ -295,7 +295,7 @@ Expected: the overview and checklist both reference all five standards by file n
 Run:
 
 ```bash
-git add -f .codex/docs/standards/document-sync-governance.md .codex/docs/standards/engineering-governance-overview.md .codex/docs/standards/review-checklist.md
+git add -f docs/standards/document-sync-governance.md docs/standards/engineering-governance-overview.md docs/standards/review-checklist.md
 git commit -m "docs(codex): add document sync governance standard"
 ```
 
@@ -304,15 +304,15 @@ Expected: a fourth docs-only commit finishing the `standards/` source of truth.
 ### Task 5: Sync Repository Entry Points and Current Facts
 
 **Files:**
-- Modify: `.codex/docs/README.md`
+- Modify: `docs/README.md`
 - Modify: `.codex/README.md`
 - Modify: `.codex/MIGRATION.md`
-- Modify: `.codex/docs/current/architecture.md`
+- Modify: `docs/current/architecture.md`
 - Modify: `AGENTS.md`
 
 - [ ] **Step 1: Update the docs index to include `standards/` in structure, reading order, and maintenance rules**
 
-Add `standards/` to `.codex/docs/README.md` in:
+Add `standards/` to `docs/README.md` in:
 
 - the directory tree;
 - the category table;
@@ -323,21 +323,21 @@ Add `standards/` to `.codex/docs/README.md` in:
 
 Both docs must clearly state that:
 
-- `.codex/docs/standards/` now holds long-lived engineering governance rules;
-- `.codex/docs/plans/` remains the execution-plan layer;
+- `docs/standards/` now holds long-lived engineering governance rules;
+- `docs/plans/` remains the execution-plan layer;
 - `.agent/` still stays deprecated and out of the new governance flow.
 
-- [ ] **Step 3: Update `AGENTS.md` and `.codex/docs/current/architecture.md`**
+- [ ] **Step 3: Update `AGENTS.md` and `docs/current/architecture.md`**
 
-Add `.codex/docs/standards/` to the documented project tree and sync the doc-maintenance rules so future structure or collaboration-rule changes mention the new directory.
+Add `docs/standards/` to the documented project tree and sync the doc-maintenance rules so future structure or collaboration-rule changes mention the new directory.
 
 - [ ] **Step 4: Format and review all entry-point docs**
 
 Run:
 
 ```bash
-pnpm exec prettier --write .codex/docs/README.md .codex/README.md .codex/MIGRATION.md .codex/docs/current/architecture.md AGENTS.md
-rg -n "standards/" .codex/docs/README.md .codex/README.md .codex/MIGRATION.md .codex/docs/current/architecture.md AGENTS.md
+pnpm exec prettier --write docs/README.md .codex/README.md .codex/MIGRATION.md docs/current/architecture.md AGENTS.md
+rg -n "standards/" docs/README.md .codex/README.md .codex/MIGRATION.md docs/current/architecture.md AGENTS.md
 ```
 
 Expected: each entry-point doc now references `standards/` at least once.
@@ -347,7 +347,7 @@ Expected: each entry-point doc now references `standards/` at least once.
 Run:
 
 ```bash
-git add -f .codex/docs/README.md .codex/README.md .codex/MIGRATION.md .codex/docs/current/architecture.md
+git add -f docs/README.md .codex/README.md .codex/MIGRATION.md docs/current/architecture.md
 git add AGENTS.md
 git commit -m "docs(codex): register governance standards across entry docs"
 ```
@@ -357,27 +357,27 @@ Expected: one commit containing the directory and maintenance rule sync.
 ### Task 6: Rewire Existing Implementation Plans to the Standards
 
 **Files:**
-- Modify: `.codex/docs/plans/tasks-platform-frontend-refactor.md`
-- Modify: `.codex/docs/plans/tasks-service-indexing-refactor.md`
-- Reference: `.codex/docs/standards/code-structure-governance.md`
-- Reference: `.codex/docs/standards/config-security-governance.md`
-- Reference: `.codex/docs/standards/review-checklist.md`
+- Modify: `docs/plans/tasks-platform-frontend-refactor.md`
+- Modify: `docs/plans/tasks-service-indexing-refactor.md`
+- Reference: `docs/standards/code-structure-governance.md`
+- Reference: `docs/standards/config-security-governance.md`
+- Reference: `docs/standards/review-checklist.md`
 
 - [ ] **Step 1: Add an explicit governance dependency section to the frontend refactor plan**
 
-Update `.codex/docs/plans/tasks-platform-frontend-refactor.md` so it states that execution must follow:
+Update `docs/plans/tasks-platform-frontend-refactor.md` so it states that execution must follow:
 
-- `.codex/docs/standards/code-structure-governance.md`
-- `.codex/docs/standards/frontend-shared-abstractions.md`
-- `.codex/docs/standards/review-checklist.md`
+- `docs/standards/code-structure-governance.md`
+- `docs/standards/frontend-shared-abstractions.md`
+- `docs/standards/review-checklist.md`
 
 - [ ] **Step 2: Add an explicit governance dependency section to the service/indexing refactor plan**
 
-Update `.codex/docs/plans/tasks-service-indexing-refactor.md` so it states that execution must follow:
+Update `docs/plans/tasks-service-indexing-refactor.md` so it states that execution must follow:
 
-- `.codex/docs/standards/code-structure-governance.md`
-- `.codex/docs/standards/config-security-governance.md`
-- `.codex/docs/standards/review-checklist.md`
+- `docs/standards/code-structure-governance.md`
+- `docs/standards/config-security-governance.md`
+- `docs/standards/review-checklist.md`
 
 - [ ] **Step 3: Make the references concrete instead of generic**
 
@@ -388,8 +388,8 @@ Do not write vague wording like "follow the new standards." Name the exact files
 Run:
 
 ```bash
-pnpm exec prettier --write .codex/docs/plans/tasks-platform-frontend-refactor.md .codex/docs/plans/tasks-service-indexing-refactor.md
-git diff --check -- .codex/docs/plans/tasks-platform-frontend-refactor.md .codex/docs/plans/tasks-service-indexing-refactor.md
+pnpm exec prettier --write docs/plans/tasks-platform-frontend-refactor.md docs/plans/tasks-service-indexing-refactor.md
+git diff --check -- docs/plans/tasks-platform-frontend-refactor.md docs/plans/tasks-service-indexing-refactor.md
 ```
 
 Expected: formatting succeeds and diff-check reports no whitespace errors.
@@ -399,7 +399,7 @@ Expected: formatting succeeds and diff-check reports no whitespace errors.
 Run:
 
 ```bash
-git add -f .codex/docs/plans/tasks-platform-frontend-refactor.md .codex/docs/plans/tasks-service-indexing-refactor.md
+git add -f docs/plans/tasks-platform-frontend-refactor.md docs/plans/tasks-service-indexing-refactor.md
 git commit -m "docs(codex): align refactor plans with governance standards"
 ```
 
@@ -408,21 +408,21 @@ Expected: the existing execution plans now point at the durable governance rules
 ### Task 7: Final Verification and Handoff
 
 **Files:**
-- Review: `.codex/docs/standards/*.md`
-- Review: `.codex/docs/README.md`
+- Review: `docs/standards/*.md`
+- Review: `docs/README.md`
 - Review: `.codex/README.md`
 - Review: `.codex/MIGRATION.md`
-- Review: `.codex/docs/current/architecture.md`
+- Review: `docs/current/architecture.md`
 - Review: `AGENTS.md`
-- Review: `.codex/docs/plans/tasks-platform-frontend-refactor.md`
-- Review: `.codex/docs/plans/tasks-service-indexing-refactor.md`
+- Review: `docs/plans/tasks-platform-frontend-refactor.md`
+- Review: `docs/plans/tasks-service-indexing-refactor.md`
 
 - [ ] **Step 1: Run the full markdown formatting check for all touched docs**
 
 Run:
 
 ```bash
-pnpm exec prettier --check .codex/docs/standards/*.md .codex/docs/README.md .codex/README.md .codex/MIGRATION.md .codex/docs/current/architecture.md AGENTS.md .codex/docs/plans/tasks-platform-frontend-refactor.md .codex/docs/plans/tasks-service-indexing-refactor.md
+pnpm exec prettier --check docs/standards/*.md docs/README.md .codex/README.md .codex/MIGRATION.md docs/current/architecture.md AGENTS.md docs/plans/tasks-platform-frontend-refactor.md docs/plans/tasks-service-indexing-refactor.md
 ```
 
 Expected: `All matched files use Prettier code style!`
@@ -443,7 +443,7 @@ Expected: no whitespace errors. If you committed after each task as instructed, 
 Run:
 
 ```bash
-rg -n "standards/" .codex/docs/README.md .codex/README.md .codex/MIGRATION.md .codex/docs/current/architecture.md AGENTS.md
+rg -n "standards/" docs/README.md .codex/README.md .codex/MIGRATION.md docs/current/architecture.md AGENTS.md
 ```
 
 Expected: every entry point references the new directory.

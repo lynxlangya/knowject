@@ -1,12 +1,12 @@
 # Knowject 架构事实（2026-03-20）
 
-本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `.codex/docs/roadmap/target-architecture.md` 与 `.codex/docs/roadmap/gap-analysis.md`。
+本文档只记录当前仓库已经落地并能被源码印证的事实，用于回答“现在是什么状态”。未来目标、路线设想和演进优先级请分别查看 `docs/roadmap/target-architecture.md` 与 `docs/roadmap/gap-analysis.md`。
 
 ## 1. 文档角色
 
 - 权威级别：当前实现事实源。
 - 适用范围：仓库结构、当前路由、当前数据来源、当前 API 边界、当前限制。
-- 工程治理与协作规则的长期标准放在 `.codex/docs/standards/`；执行计划与里程碑记录仍以 `.codex/docs/plans/` 为准。
+- 工程治理与协作规则的长期标准放在 `docs/standards/`；执行计划与里程碑记录仍以 `docs/plans/` 为准。
 - 不包含内容：真实 RAG、完整 Skill 执行引擎、更重的 Agent runtime 等完整 AI 业务能力。
 
 ## 2. 当前基线
@@ -115,7 +115,7 @@ files/
     README.md                   项目级 Skill 根目录说明
 .agent/
   README.md                     历史目录废弃说明
-  docs/README.md                主文档已迁移到 `.codex/docs/`
+  docs/README.md                主文档已迁移到 `docs/`
   gpt/README.md                 上传包已迁移到 `.codex/packs/chatgpt-projects/`
   skills/README.md              Skill 根目录已迁移到 `.codex/skills/`
 ```
@@ -403,22 +403,22 @@ files/
 
 - `.codex/README.md`：Codex 工作区入口与维护规则。
 - `.codex/MIGRATION.md`：`.agent/` 收口到 `.codex/` 的迁移映射与后续维护方式。
-- `.codex/docs/README.md`：文档索引、分类导航与维护边界。
-- `.codex/docs/standards/engineering-governance-overview.md`：长期工程治理与协作规则总览。
-- `.codex/docs/standards/review-checklist.md`：工程治理评审清单与默认门禁。
-- `.codex/docs/standards/code-structure-governance.md`：代码结构治理标准。
-- `.codex/docs/standards/core-code-commenting.md`：核心代码注释标准。
-- `.codex/docs/standards/config-security-governance.md`：配置与安全治理标准。
-- `.codex/docs/standards/frontend-shared-abstractions.md`：前端共享抽象标准。
-- `.codex/docs/standards/document-sync-governance.md`：文档同步治理标准。
+- `docs/README.md`：文档索引、分类导航与维护边界。
+- `docs/standards/engineering-governance-overview.md`：长期工程治理与协作规则总览。
+- `docs/standards/review-checklist.md`：工程治理评审清单与默认门禁。
+- `docs/standards/code-structure-governance.md`：代码结构治理标准。
+- `docs/standards/core-code-commenting.md`：核心代码注释标准。
+- `docs/standards/config-security-governance.md`：配置与安全治理标准。
+- `docs/standards/frontend-shared-abstractions.md`：前端共享抽象标准。
+- `docs/standards/document-sync-governance.md`：文档同步治理标准。
 - `../../../files/README.md`：知识库模板总导航与推荐使用顺序。
-- `.codex/docs/current/docker-usage.md`：Docker 当前拓扑、安全策略与部署边界。
-- `.codex/docs/handoff/chatgpt-project-brief.md`：给 ChatGPT / 外部大模型的最小项目说明。
-- `.codex/docs/contracts/chroma-decision.md`：Chroma 的角色定位、collection 命名与检索层边界说明。
-- `.codex/docs/handoff/handoff-guide.md`：新协作者快速建立当前事实的入口。
-- `.codex/docs/handoff/handoff-prompt.md`：把当前上下文继续交给下一位协作者的模板。
-- `.codex/docs/roadmap/target-architecture.md`：目标蓝图与阶段能力。
-- `.codex/docs/roadmap/gap-analysis.md`：现状与目标差距、风险和建议优先级。
-- `.codex/docs/plans/tasks-index-ops-project-consumption.md`：Week 5-6 索引运维与项目层消费任务规划。
-- `.codex/docs/inputs/知项Knowject-项目认知总结-v3.md`：最新目标蓝图输入材料，不是当前事实源。
+- `docs/current/docker-usage.md`：Docker 当前拓扑、安全策略与部署边界。
+- `docs/handoff/chatgpt-project-brief.md`：给 ChatGPT / 外部大模型的最小项目说明。
+- `docs/contracts/chroma-decision.md`：Chroma 的角色定位、collection 命名与检索层边界说明。
+- `docs/handoff/handoff-guide.md`：新协作者快速建立当前事实的入口。
+- `docs/handoff/handoff-prompt.md`：把当前上下文继续交给下一位协作者的模板。
+- `docs/roadmap/target-architecture.md`：目标蓝图与阶段能力。
+- `docs/roadmap/gap-analysis.md`：现状与目标差距、风险和建议优先级。
+- `docs/plans/tasks-index-ops-project-consumption.md`：Week 5-6 索引运维与项目层消费任务规划。
+- `docs/inputs/知项Knowject-项目认知总结-v3.md`：最新目标蓝图输入材料，不是当前事实源。
 - `../../../docker/README.md`：Docker 命令入口与最小操作手册；当前拓扑和边界仍以 `docker-usage.md` 为准。

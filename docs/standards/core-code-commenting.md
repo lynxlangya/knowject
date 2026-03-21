@@ -34,7 +34,7 @@
 - 不要写“简单复述代码”的注释，如 `// 增加计数`，也不要在每个 `const` 前加“// 这个常量定义了…”。
 - 不要用注释掩盖可以通过 helper/rename/refactor 消除的复杂性。
 - 避免英文/双语注释只是翻译；主导语言为中文，必要时加英文术语辅助说明。
-- 注释不能替代 TODO/plan；治理计划应写在 `.codex/docs/plans/`，注释只说明当前行为与边界。
+- 注释不能替代 TODO/plan；治理计划应写在 `docs/plans/`，注释只说明当前行为与边界。
 
 ## 6. 允许例外
 
@@ -44,6 +44,6 @@
 
 ## 7. 文档同步要求
 
-- 触发注释标准的场景（如 `knowledge.repository` 的状态分层、`ProjectChatPage` 的 domain logic）必须在 `.codex/docs/plans/` 中说明“为什么要注释”“是否待拆 helper”“是否有例外”。
-- 注释若解释兼容性/安全约束，应在 `AGENTS.md` 或 `.codex/docs/standards/engineering-governance-overview.md` 中同步提及相关约束。
-- 注释与结构治理互为反馈：对 core 文件的语义补充若影响架构现状，需考虑是否也要同步 `.codex/docs/current/architecture.md`，防止注释与事实文档脱节。
+- 触发注释标准的场景（如 `knowledge.repository` 的状态分层、`ProjectChatPage` 的 domain logic）必须在 `docs/plans/` 中说明“为什么要注释”“是否待拆 helper”“是否有例外”。
+- 注释若解释兼容性/安全约束，应在 `AGENTS.md` 或 `docs/standards/engineering-governance-overview.md` 中同步提及相关约束。
+- 注释与结构治理互为反馈：对 core 文件的语义补充若影响架构现状，需考虑是否也要同步 `docs/current/architecture.md`，防止注释与事实文档脱节。
