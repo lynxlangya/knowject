@@ -1,4 +1,4 @@
 # Knowject Codex project configuration.
 # `.codex/` is configuration + compatibility space only.
 # Primary docs live in `docs/`; derived exports live in `docs/exports/`.
-# Project skills live in `.agents/skills/`.
+# Project skills official root is planned to move to `.agents/skills/` in Task 3.
