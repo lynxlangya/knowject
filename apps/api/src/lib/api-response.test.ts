@@ -94,6 +94,7 @@ const createProtocolTestApp = (exposeDetails: boolean) => {
       statusCode: 400,
       code: 'VALIDATION_ERROR',
       message: '字段校验失败',
+      messageKey: 'api.validation.failed',
       details: {
         field: 'name',
       },
@@ -134,7 +135,11 @@ const withServer = async (
 
 test('success responses use ApiEnvelope defaults', async () => {
   await withServer(createProtocolTestApp(true), async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/success`);
+    const response = await fetch(`${baseUrl}/success`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
     const body = (await response.json()) as {
       code: string;
       message: string;
@@ -144,7 +149,7 @@ test('success responses use ApiEnvelope defaults', async () => {
 
     assert.equal(response.status, 200);
     assert.equal(body.code, 'SUCCESS');
-    assert.equal(body.message, '请求成功');
+    assert.equal(body.message, 'Request succeeded');
     assert.deepEqual(body.data, { ok: true });
     assert.equal(typeof body.meta.requestId, 'string');
     assert.ok(body.meta.requestId.length > 0);
@@ -157,6 +162,9 @@ test('created responses use CREATED code and message', async () => {
   await withServer(createProtocolTestApp(true), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/created`, {
       method: 'POST',
+      headers: {
+        'Accept-Language': 'en',
+      },
     });
     const body = (await response.json()) as {
       code: string;
@@ -166,7 +174,7 @@ test('created responses use CREATED code and message', async () => {
 
     assert.equal(response.status, 201);
     assert.equal(body.code, 'CREATED');
-    assert.equal(body.message, '创建成功');
+    assert.equal(body.message, 'Created successfully');
     assert.deepEqual(body.data, { id: 'created-id' });
   });
 });
@@ -175,6 +183,9 @@ test('delete responses return 200 envelope with null data', async () => {
   await withServer(createProtocolTestApp(true), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/resource`, {
       method: 'DELETE',
+      headers: {
+        'Accept-Language': 'en',
+      },
     });
     const body = (await response.json()) as {
       code: string;
@@ -185,7 +196,7 @@ test('delete responses return 200 envelope with null data', async () => {
 
     assert.equal(response.status, 200);
     assert.equal(body.code, 'SUCCESS');
-    assert.equal(body.message, '请求成功');
+    assert.equal(body.message, 'Request succeeded');
     assert.equal(body.data, null);
     assert.equal(typeof body.meta.requestId, 'string');
     assert.ok(!Number.isNaN(Date.parse(body.meta.timestamp)));
@@ -194,7 +205,11 @@ test('delete responses return 200 envelope with null data', async () => {
 
 test('error responses expose details when enabled', async () => {
   await withServer(createProtocolTestApp(true), async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/error`);
+    const response = await fetch(`${baseUrl}/error`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
     const body = (await response.json()) as {
       code: string;
       message: string;
@@ -204,7 +219,7 @@ test('error responses expose details when enabled', async () => {
 
     assert.equal(response.status, 400);
     assert.equal(body.code, 'VALIDATION_ERROR');
-    assert.equal(body.message, '字段校验失败');
+    assert.equal(body.message, 'Validation failed');
     assert.equal(body.data, null);
     assert.deepEqual(body.meta.details, {
       field: 'name',
@@ -214,7 +229,11 @@ test('error responses expose details when enabled', async () => {
 
 test('error responses omit details when disabled', async () => {
   await withServer(createProtocolTestApp(false), async (baseUrl) => {
-    const response = await fetch(`${baseUrl}/error`);
+    const response = await fetch(`${baseUrl}/error`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
     const body = (await response.json()) as {
       code: string;
       message: string;
@@ -224,7 +243,7 @@ test('error responses omit details when disabled', async () => {
 
     assert.equal(response.status, 400);
     assert.equal(body.code, 'VALIDATION_ERROR');
-    assert.equal(body.message, '字段校验失败');
+    assert.equal(body.message, 'Validation failed');
     assert.equal(body.data, null);
     assert.equal('details' in body.meta, false);
   });
@@ -236,6 +255,7 @@ test('invalid JSON is normalized into the shared error envelope', async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept-Language': 'en',
       },
       body: '{"broken":',
     });
@@ -248,10 +268,10 @@ test('invalid JSON is normalized into the shared error envelope', async () => {
 
     assert.equal(response.status, 400);
     assert.equal(body.code, 'VALIDATION_ERROR');
-    assert.equal(body.message, '请求体不是合法 JSON');
+    assert.equal(body.message, 'Request body must be valid JSON');
     assert.equal(body.data, null);
     assert.deepEqual(body.meta.details, {
-      body: '请求体不是合法 JSON',
+      body: 'Request body must be valid JSON',
     });
     assert.equal(typeof body.meta.requestId, 'string');
     assert.ok(!Number.isNaN(Date.parse(body.meta.timestamp)));

@@ -2,6 +2,9 @@ import type { ErrorRequestHandler } from 'express';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
 import { createErrorEnvelope } from '@lib/api-response.js';
+import type { SupportedLocale } from '@lib/locale.js';
+import { DEFAULT_LOCALE } from '@lib/locale.js';
+import { getMessage } from '@lib/locale.messages.js';
 
 interface JsonParseError extends SyntaxError {
   status?: number;
@@ -33,6 +36,7 @@ const normalizeError = (error: unknown): AppError => {
       statusCode: 400,
       code: 'VALIDATION_ERROR',
       message: '请求体不是合法 JSON',
+      messageKey: 'api.validation.invalidJson',
       details: {
         body: '请求体不是合法 JSON',
       },
@@ -56,10 +60,39 @@ const normalizeError = (error: unknown): AppError => {
   });
 };
 
+const resolveErrorMessage = (error: AppError, locale: SupportedLocale): string => {
+  return getMessage(error.messageKey, locale) ?? error.message;
+};
+
+const resolveErrorDetails = (
+  error: AppError,
+  message: string,
+  exposeDetails: boolean,
+): unknown => {
+  if (!exposeDetails) {
+    return undefined;
+  }
+
+  if (error.messageKey !== 'api.validation.invalidJson') {
+    return error.details;
+  }
+
+  if (!error.details || typeof error.details !== 'object') {
+    return error.details;
+  }
+
+  return {
+    ...(error.details as Record<string, unknown>),
+    body: message,
+  };
+};
+
 export const createErrorHandler = (env: AppEnv): ErrorRequestHandler => {
   return (error, req, res, _next) => {
     void _next;
     const normalizedError = normalizeError(error);
+    const locale = req.locale ?? DEFAULT_LOCALE;
+    const responseMessage = resolveErrorMessage(normalizedError, locale);
     if (normalizedError.statusCode >= 500) {
       if (env.apiErrors.includeStack && normalizedError.stack) {
         console.error(`[${req.requestId}] ${normalizedError.message}\n${normalizedError.stack}`);
@@ -72,8 +105,8 @@ export const createErrorHandler = (env: AppEnv): ErrorRequestHandler => {
       createErrorEnvelope({
         request: req,
         code: normalizedError.code,
-        message: normalizedError.message,
-        details: env.apiErrors.exposeDetails ? normalizedError.details : undefined,
+        message: responseMessage,
+        details: resolveErrorDetails(normalizedError, responseMessage, env.apiErrors.exposeDetails),
       }),
     );
   };

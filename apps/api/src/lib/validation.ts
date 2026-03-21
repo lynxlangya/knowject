@@ -1,9 +1,11 @@
 import { AppError } from './app-error.js';
+import type { MessageKey } from './locale.messages.js';
 
 export interface ApiErrorShape {
   statusCode: number;
   code: string;
   message: string;
+  messageKey?: MessageKey;
   details: {
     fields: Record<string, string>;
   };
@@ -18,11 +20,13 @@ const REQUIRED_FIELD_MESSAGES: Record<string, string> = {
 export const createValidationErrorShape = (
   message: string,
   fields: Record<string, string>,
+  messageKey?: MessageKey,
 ): ApiErrorShape => {
   return {
     statusCode: 400,
     code: 'VALIDATION_ERROR',
     message,
+    messageKey,
     details: {
       fields,
     },
@@ -32,8 +36,9 @@ export const createValidationErrorShape = (
 export const createValidationAppError = (
   message: string,
   fields: Record<string, string>,
+  messageKey?: MessageKey,
 ): AppError => {
-  return new AppError(createValidationErrorShape(message, fields));
+  return new AppError(createValidationErrorShape(message, fields, messageKey));
 };
 
 export const createRequiredFieldError = (field: string): ApiErrorShape => {
@@ -41,7 +46,7 @@ export const createRequiredFieldError = (field: string): ApiErrorShape => {
 
   return createValidationErrorShape(message, {
     [field]: message,
-  });
+  }, 'validation.required');
 };
 
 export const readOptionalStringField = (
@@ -55,7 +60,7 @@ export const readOptionalStringField = (
   if (typeof body !== 'string') {
     throw createValidationAppError(`${field} 必须为字符串`, {
       [field]: `${field} 必须为字符串`,
-    });
+    }, 'validation.string');
   }
 
   return body.trim();
