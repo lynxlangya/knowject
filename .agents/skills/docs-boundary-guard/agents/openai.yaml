@@ -1,4 +1,4 @@
 interface:
   display_name: "Docs Boundary Guard"
-  short_description: "Audit Knowject .codex docs and sync duties."
-  default_prompt: "Audit this Knowject change for .codex doc boundary drift and missing sync work."
+  short_description: "Audit Knowject docs boundaries and sync duties."
+  default_prompt: "Audit this Knowject change for docs boundary drift and missing sync work."
