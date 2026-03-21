@@ -5,6 +5,7 @@ import test from 'node:test';
 import express from 'express';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import { createRequiredFieldError } from '@lib/validation.js';
 import { createErrorHandler } from '@middleware/error-handler.js';
 import { notFoundHandler } from '@middleware/not-found.js';
 import { requestContextMiddleware } from '@middleware/request-context.js';
@@ -99,6 +100,14 @@ const createProtocolTestApp = (exposeDetails: boolean) => {
         field: 'name',
       },
     });
+  });
+
+  app.get('/required', () => {
+    throw new AppError(createRequiredFieldError('username'));
+  });
+
+  app.get('/internal-error', () => {
+    throw new Error('boom');
   });
 
   app.post('/echo', (req, res) => {
@@ -246,6 +255,53 @@ test('error responses omit details when disabled', async () => {
     assert.equal(body.message, 'Validation failed');
     assert.equal(body.data, null);
     assert.equal('details' in body.meta, false);
+  });
+});
+
+test('required field validation localizes shared messages', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/required`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      data: null;
+      meta: { requestId: string; timestamp: string; details?: unknown };
+    };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.code, 'VALIDATION_ERROR');
+    assert.equal(body.message, 'Username is required');
+    assert.equal(body.data, null);
+    assert.deepEqual(body.meta.details, {
+      fields: {
+        username: 'Username is required',
+      },
+    });
+  });
+});
+
+test('internal errors localize the shared 500 envelope message', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/internal-error`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      data: null;
+      meta: { requestId: string; timestamp: string; details?: unknown };
+    };
+
+    assert.equal(response.status, 500);
+    assert.equal(body.code, 'INTERNAL_SERVER_ERROR');
+    assert.equal(body.message, 'Service temporarily unavailable');
+    assert.equal(body.data, null);
   });
 });
 

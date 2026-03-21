@@ -17,6 +17,12 @@ const REQUIRED_FIELD_MESSAGES: Record<string, string> = {
   query: 'query 为必填项',
 };
 
+const REQUIRED_FIELD_MESSAGE_KEYS: Record<string, MessageKey> = {
+  username: 'validation.required.username',
+  password: 'validation.required.password',
+  query: 'validation.required.query',
+};
+
 export const createValidationErrorShape = (
   message: string,
   fields: Record<string, string>,
@@ -43,10 +49,12 @@ export const createValidationAppError = (
 
 export const createRequiredFieldError = (field: string): ApiErrorShape => {
   const message = REQUIRED_FIELD_MESSAGES[field] ?? `${field} 为必填项`;
+  const messageKey =
+    REQUIRED_FIELD_MESSAGE_KEYS[field] ?? 'validation.required.generic';
 
   return createValidationErrorShape(message, {
     [field]: message,
-  }, 'validation.required');
+  }, messageKey);
 };
 
 export const readOptionalStringField = (

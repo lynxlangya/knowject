@@ -49,6 +49,7 @@ const normalizeError = (error: unknown): AppError => {
       statusCode: 500,
       code: 'INTERNAL_SERVER_ERROR',
       message: '服务暂时不可用',
+      messageKey: 'api.internalError',
       cause: error,
     });
   }
@@ -57,6 +58,7 @@ const normalizeError = (error: unknown): AppError => {
     statusCode: 500,
     code: 'INTERNAL_SERVER_ERROR',
     message: '服务暂时不可用',
+    messageKey: 'api.internalError',
   });
 };
 
@@ -67,6 +69,7 @@ const resolveErrorMessage = (error: AppError, locale: SupportedLocale): string =
 const resolveErrorDetails = (
   error: AppError,
   message: string,
+  locale: SupportedLocale,
   exposeDetails: boolean,
 ): unknown => {
   if (!exposeDetails) {
@@ -74,7 +77,40 @@ const resolveErrorDetails = (
   }
 
   if (error.messageKey !== 'api.validation.invalidJson') {
-    return error.details;
+    if (!error.messageKey?.startsWith('validation.')) {
+      return error.details;
+    }
+
+    if (locale === 'zh-CN') {
+      return error.details;
+    }
+
+    if (!error.details || typeof error.details !== 'object') {
+      return error.details;
+    }
+
+    const details = error.details as { fields?: Record<string, string> };
+
+    if (!details.fields || typeof details.fields !== 'object') {
+      return error.details;
+    }
+
+    const localizedMessage = getMessage(error.messageKey, locale);
+
+    if (!localizedMessage) {
+      return error.details;
+    }
+
+    const localizedFields: Record<string, string> = {};
+
+    for (const field of Object.keys(details.fields)) {
+      localizedFields[field] = localizedMessage;
+    }
+
+    return {
+      ...details,
+      fields: localizedFields,
+    };
   }
 
   if (!error.details || typeof error.details !== 'object') {
@@ -106,7 +142,12 @@ export const createErrorHandler = (env: AppEnv): ErrorRequestHandler => {
         request: req,
         code: normalizedError.code,
         message: responseMessage,
-        details: resolveErrorDetails(normalizedError, responseMessage, env.apiErrors.exposeDetails),
+        details: resolveErrorDetails(
+          normalizedError,
+          responseMessage,
+          locale,
+          env.apiErrors.exposeDetails,
+        ),
       }),
     );
   };
