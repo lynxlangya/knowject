@@ -20,20 +20,20 @@
 
 | 文档 | 触发变化 | 说明与参照 |
 | --- | --- | --- |
-| `README.md` | 结构、入口、运行流程、部署命令或资源约定发生变化 | AGENTS §5 与 `docs/README.md` §5 要求把入口文档与现状保持一致，并在 `plans/` 中同步记录改动。 |
-| `docs/README.md` | `docs` 的目录职责、标准流程、上传包同步、Skill 根目录变化 | 上述 README 里的“维护边界”条目第 5-6 项指明这些文档是 `.codex` 事实的统一入口。 |
+| `README.md` | 结构、入口、运行流程、部署命令或资源约定发生变化 | 依据 `AGENTS.md` 的“开发与文档同步约束”执行入口文档同步，并在相关 `docs/plans/*` 中记录变更。 |
+| `docs/README.md` | `docs` 的目录职责、truth-surface 映射或默认阅读顺序变化 | 该文件是当前文档根入口；目录映射或阅读顺序变更后必须与 `docs/current/architecture.md` 和 `AGENTS.md` 保持一致。 |
 | `AGENTS.md` | 关键路径、模块边界、协作机制、例外收束、Codex 角色发生调整 | AGENTS §5-6 列出必须同步 AGENTS 及相关 doc 的前提，避免规则藏在隐式约定里。 |
-| `docs/current/architecture.md` | 路由、data flow、API 依赖、mock 用例、localStorage 键、模块归属、Default behavior 变更 | README 列出的 architecture 维护边界对上述事实变更给出了清晰触发器。 |
+| `docs/current/architecture.md` | 路由、data flow、API 依赖、mock 用例、localStorage 键、模块归属、Default behavior 变更 | 该文件是“当前事实源”；任何代码侧事实变更都应先同步这里，再回写入口导航。 |
 | `.codex/README.md` | `docs` 目录职责、标准流程、上传包/Skill 目录职责变化 | AGENTS §5 强调 Codex 根目录职责调整需同步 `.codex/README.md`，保持入口说明与治理规则一致。 |
 | `.codex/MIGRATION.md` | `docs` 与 `.agent/` 收口策略变更、目录迁移、结构职责调整 | AGENTS §5/§0.1 要求 `.codex/MIGRATION.md` 与 `.codex/README.md` 同步体现迁移规则，避免交接歧义。 |
 | `.codex/packs/chatgpt-projects/README.md` | `docs` 中的 source 文档 (current/contracts/plans) 被上传包引用的内容发生变化 | AGENTS §5 规定派生上传包必须与事实源同步，相关 README 也应更新以反映最新可上传快照。 |
 | `.codex/skills/README.md` | `.codex/skills` 目录职责、Skill 目录治理流程、导入/发布政策变更 | AGENTS §5 要求 `.codex/skills/README.md` 反映当前 skills 协作治理，确保 `docs` 的入口说明一致。 |
-| `docs/current/docker-usage.md` | Docker/compose 文件变化、新增镜像、端口/网络/secret/vault 方案修改 | README “维护边界”第 5 项专门列出 Docker 维护情形。 |
-| `docs/contracts/*.md` | APIs、接口约定、错误/状态码、身份校验、Chat/Knowledge/Indexer 约定发生变化 | README “维护边界”中认证/对话/Chroma contract 的维护条目。 |
-| `docs/roadmap/*.md` | 产品目标、gap 分析、阶段优先级调整 | README 指出 roadmap 目标和 gap 需同步。 |
-| `docs/plans/*.md` | 阶段状态、DoD、里程碑、资源绑定、计划实施方法更新 | README 里每个 plan 条目都说明何种变更需同步 plan 文档（包括 governance implementation plan）。 |
-| `docs/handoff/*` & `docs/templates/PLANS.md` | 交接顺序、handoff prompt、模板结构或引用路径变化 | README 里 handoff/brief/prompt、templates 维护条目。 |
-| `.codex/packs/chatgpt-projects/*` | 被上传包引用的 `docs/*` 源文档内容变更 | README 提到副本必须与事实源同步，优先以 `docs` 为准。 |
+| `docs/current/docker-usage.md` | Docker/compose 文件变化、新增镜像、端口/网络/secret/vault 方案修改 | 与 `docs/current/architecture.md` 的当前拓扑描述保持一致；冲突时以 current facts 为准。 |
+| `docs/contracts/*.md` | APIs、接口约定、错误/状态码、身份校验、Chat/Knowledge/Indexer 约定发生变化 | 与当前后端行为和 `docs/current/architecture.md` 中的接口边界保持一致。 |
+| `docs/roadmap/*.md` | 产品目标、gap 分析、阶段优先级调整 | 仅记录目标态与差距；不得覆盖当前事实，需与 `docs/current/*` 区分。 |
+| `docs/plans/*.md` | 阶段状态、DoD、里程碑、资源绑定、计划实施方法更新 | 作为执行层文档，需引用 `docs/standards/*` 并与 `docs/current/*` 的事实保持可追踪关系。 |
+| `docs/handoff/*` & `docs/templates/PLANS.md` | 交接顺序、handoff prompt、模板结构或引用路径变化 | 与 `docs/README.md` 的阅读顺序和目录映射保持一致，避免交接入口失真。 |
+| `.codex/packs/chatgpt-projects/*` | 被上传包引用的 `docs/*` 源文档内容变更 | 该目录为派生层；同步顺序始终是先更新 `docs/*`，再更新 `packs/*`。 |
 
 ## 4. 推荐动作
 

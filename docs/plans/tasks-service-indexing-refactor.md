@@ -8,7 +8,7 @@
 当前结论：
 
 - 这次重构不适合 big-bang，必须按“先护栏、再抽 seam、再调状态机、最后清 Docker 契约”的顺序推进。
-- 最高收益点是 `knowledge` 链路，不是通用框架化。Node 的 [knowledge.service.ts](../../../apps/api/src/modules/knowledge/knowledge.service.ts) 与 Python 的 [pipeline.py](../../../apps/indexer-py/app/domain/indexing/pipeline.py) 是当前最重的复杂度中心。
+- 最高收益点是 `knowledge` 链路，不是通用框架化。Node 的 [knowledge.service.ts](../../apps/api/src/modules/knowledge/knowledge.service.ts) 与 Python 的 [pipeline.py](../../apps/indexer-py/app/domain/indexing/pipeline.py) 是当前最重的复杂度中心。
 - 数据库层的主问题不是命名，而是状态迁移、汇总策略、查询/索引错位和 Node / Python 对 Chroma 生命周期的重复认知。
 - 项目对话应该先把 runtime / service 拆出来，再决定是否迁到独立 collection；不要第一步直接做数据迁移。
 - Docker 拓扑本身基本正确，真正要优先收口的是 `env / secrets / compose flow / 脚本职责` 四条契约。

@@ -15,6 +15,7 @@
 | Inputs | `docs/inputs/` |
 | Design | `docs/design/` |
 | Templates | `docs/templates/` |
+| Derived exports (not truth surface) | `docs/exports/` |
 
 ## Default Reading Order
 

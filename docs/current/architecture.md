@@ -88,36 +88,25 @@ files/
   README.md                     Codex 入口与维护说明
   MIGRATION.md                  `.agent/` -> `.codex/` 迁移规则与映射
   docs/
-    current/architecture.md     当前事实源
-    contracts/auth-contract.md  认证与环境实施契约
-    contracts/chat-contract.md  项目对话 API 契约
-    plans/doc-iteration-handoff-plan.md  本轮文档执行计划
-    handoff/handoff-guide.md    快速接手指南
-    handoff/handoff-prompt.md   交接 Prompt 模板
-    plans/tasks-foundation-framework.md  基础框架阶段任务归档
-    plans/tasks-global-assets-foundation.md  全局资产阶段任务拆分
-    plans/tasks-index-ops-project-consumption.md  Week 5-6 任务拆分
-    plans/tasks-chat-core-week7-8.md  Week 7-8 对话核心任务拆分
-    roadmap/target-architecture.md  目标蓝图
-    roadmap/gap-analysis.md     current vs target 对照
-    standards/engineering-governance-overview.md  工程治理总纲
-    standards/review-checklist.md  工程治理评审清单
-    standards/code-structure-governance.md  代码结构治理标准
-    standards/core-code-commenting.md  核心代码注释标准
-    standards/config-security-governance.md  配置与安全治理标准
-    standards/frontend-shared-abstractions.md  前端共享抽象标准
-    standards/document-sync-governance.md  文档同步治理标准
-    design/                     品牌与视觉资料
+    README.md                   兼容 stub，主文档根已迁移到 `docs/`
   packs/chatgpt-projects/
     README.md                   ChatGPT Projects 上传包说明
     PROJECT_BRIEF.md            ChatGPT Projects 首读摘要
   skills/
     README.md                   项目级 Skill 根目录说明
-.agent/
-  README.md                     历史目录废弃说明
-  docs/README.md                主文档已迁移到 `docs/`
-  gpt/README.md                 上传包已迁移到 `.codex/packs/chatgpt-projects/`
-  skills/README.md              Skill 根目录已迁移到 `.codex/skills/`
+docs/
+  README.md                     项目文档主入口（唯一文档根）
+  current/                      当前事实文档
+  contracts/                    实施契约与接口约束
+  standards/                    长期工程治理标准
+  plans/                        阶段计划与实施拆解
+  handoff/                      交接与历史记录
+  roadmap/                      目标蓝图与差距分析
+  inputs/                       输入材料
+  design/                       品牌与视觉资料
+  templates/                    可复用模板
+  exports/                      派生导出层（非事实源）
+  superpowers/                  过程资产空间（非事实源）
 ```
 
 ## 3.1 当前导入别名约定
@@ -411,7 +400,7 @@ files/
 - `docs/standards/config-security-governance.md`：配置与安全治理标准。
 - `docs/standards/frontend-shared-abstractions.md`：前端共享抽象标准。
 - `docs/standards/document-sync-governance.md`：文档同步治理标准。
-- `../../../files/README.md`：知识库模板总导航与推荐使用顺序。
+- `../../files/README.md`：知识库模板总导航与推荐使用顺序。
 - `docs/current/docker-usage.md`：Docker 当前拓扑、安全策略与部署边界。
 - `docs/handoff/chatgpt-project-brief.md`：给 ChatGPT / 外部大模型的最小项目说明。
 - `docs/contracts/chroma-decision.md`：Chroma 的角色定位、collection 命名与检索层边界说明。
@@ -421,4 +410,4 @@ files/
 - `docs/roadmap/gap-analysis.md`：现状与目标差距、风险和建议优先级。
 - `docs/plans/tasks-index-ops-project-consumption.md`：Week 5-6 索引运维与项目层消费任务规划。
 - `docs/inputs/知项Knowject-项目认知总结-v3.md`：最新目标蓝图输入材料，不是当前事实源。
-- `../../../docker/README.md`：Docker 命令入口与最小操作手册；当前拓扑和边界仍以 `docker-usage.md` 为准。
+- `../../docker/README.md`：Docker 命令入口与最小操作手册；当前拓扑和边界仍以 `docker-usage.md` 为准。
