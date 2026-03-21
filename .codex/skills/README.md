@@ -4,7 +4,7 @@
 
 Task 3 已将项目级 Skills 内容迁移到 `.agents/skills/`：
 - 入口说明见 `.agents/skills/README.md`
-- 新增或维护 Skills 请仅在 `.agents/skills/<skill>/SKILL.md`
+- 新增或维护 Skills 请仅在 `.agents/skills/<skill>/`（包含 `SKILL.md`，以及该 skill 需要的同目录 `agents/`、脚本或资产文件）
 
 注意：该迁移只覆盖 skill 目录边界；其他仓库级入口文档是否完成切换以各任务状态为准。
 保留本文件用于旧链接与历史文档跳转。
