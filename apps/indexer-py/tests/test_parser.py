@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from app.domain.indexing.parser import DocumentParser
 from app.domain.indexing.pipeline import IndexDocumentRequest, IndexerError
@@ -29,20 +31,21 @@ class ParserTest(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "demo.md"
             path.write_text("hello\n\nworld", encoding="utf-8")
-            request = IndexDocumentRequest(
-                knowledge_id="knowledge-1",
-                document_id="document-1",
-                source_type="global_docs",
-                collection_name="global_docs",
-                file_name="demo.md",
-                mime_type="text/markdown",
-                storage_path=str(path),
-                document_version_hash="hash-1",
-                embedding_config=self.embedding_config,
-                indexing_config=self.indexing_config,
-            )
+            with patch.dict(os.environ, {"KNOWLEDGE_STORAGE_ROOT": temp_dir}):
+                request = IndexDocumentRequest(
+                    knowledge_id="knowledge-1",
+                    document_id="document-1",
+                    source_type="global_docs",
+                    collection_name="global_docs",
+                    file_name="demo.md",
+                    mime_type="text/markdown",
+                    storage_path=str(path),
+                    document_version_hash="hash-1",
+                    embedding_config=self.embedding_config,
+                    indexing_config=self.indexing_config,
+                )
 
-            text = self.parser.parse_document_text(request)
+                text = self.parser.parse_document_text(request)
 
         self.assertEqual(text, "hello\n\nworld")
 

@@ -369,7 +369,10 @@ test('importSkill supports raw markdown URL preview without persisting data', as
   try {
     await withMockFetch(
       async (input) => {
-        assert.equal(String(input), 'https://example.com/skills/review/SKILL.md');
+        assert.equal(
+          String(input),
+          'https://raw.githubusercontent.com/openai/example-skills/main/skills/review/SKILL.md',
+        );
 
         return new Response(
           buildSkillMarkdown(
@@ -389,7 +392,7 @@ test('importSkill supports raw markdown URL preview without persisting data', as
           { actor: ACTOR },
           {
             mode: 'url',
-            url: 'https://example.com/skills/review/SKILL.md',
+            url: 'https://raw.githubusercontent.com/openai/example-skills/main/skills/review/SKILL.md',
             dryRun: true,
           },
         );
@@ -827,7 +830,10 @@ test('importSkill rejects HTML pages and missing GitHub SKILL.md bundles', async
       async (input) => {
         const url = String(input);
 
-        if (url === 'https://example.com/not-raw') {
+        if (
+          url ===
+          'https://raw.githubusercontent.com/openai/example-skills/main/skills/not-raw/SKILL.md'
+        ) {
           return new Response('<html><body>not markdown</body></html>', {
             status: 200,
             headers: {
@@ -869,7 +875,7 @@ test('importSkill rejects HTML pages and missing GitHub SKILL.md bundles', async
               { actor: ACTOR },
               {
                 mode: 'url',
-                url: 'https://example.com/not-raw',
+                url: 'https://raw.githubusercontent.com/openai/example-skills/main/skills/not-raw/SKILL.md',
               },
             ),
           (error: unknown) => {
