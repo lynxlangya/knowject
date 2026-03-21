@@ -63,6 +63,10 @@ const normalizeError = (error: unknown): AppError => {
 };
 
 const resolveErrorMessage = (error: AppError, locale: SupportedLocale): string => {
+  if (error.preserveMessage) {
+    return error.message;
+  }
+
   return getMessage(error.messageKey, locale) ?? error.message;
 };
 

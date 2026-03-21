@@ -44,6 +44,7 @@ export const readUploadedKnowledgeFile = async (
               code: 'KNOWLEDGE_UPLOAD_TOO_LARGE',
               message: getFallbackMessage('knowledge.upload.tooLarge'),
               messageKey: 'knowledge.upload.tooLarge',
+              preserveMessage: true,
               details: {
                 maxUploadSize: formatUploadLimitLabel(),
               },

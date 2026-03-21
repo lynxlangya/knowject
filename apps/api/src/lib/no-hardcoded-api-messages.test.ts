@@ -20,6 +20,7 @@ const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/projects/projects.shared.ts',
   'apps/api/src/modules/projects/validators/project-conversation-turn.validator.ts',
   'apps/api/src/modules/settings/settings.service.validation.ts',
+  'apps/api/src/modules/skills/skills.binding.ts',
   'apps/api/src/modules/skills/skills.import.ts',
   'apps/api/src/modules/skills/skills.markdown.ts',
   'apps/api/src/modules/skills/skills.shared.ts',
@@ -93,6 +94,11 @@ const REMAINING_SWEEP_CHECKLIST: Record<string, string[]> = {
   ],
   'apps/api/src/modules/agents/agents.service.ts': [
     '以下知识库不存在：',
+  ],
+  'apps/api/src/modules/skills/skills.binding.ts': [
+    '以下 Skill 不存在：',
+    '以下 Skill 尚未发布，暂不可绑定：',
+    'Skill 绑定校验失败',
   ],
   'apps/api/src/modules/skills/skills.shared.ts': [
     '个项目',

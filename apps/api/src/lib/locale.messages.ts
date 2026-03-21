@@ -88,6 +88,8 @@ export const messages = {
       'lifecycleStatus filter is invalid',
     'validation.skills.bindableFilter.invalid':
       'bindable filter is invalid',
+    'validation.skills.binding.invalid':
+      'Skill binding validation failed',
     'validation.skills.import.repository.invalid':
       'repository format is invalid',
     'validation.skills.import.githubUrl.invalid':
@@ -310,6 +312,7 @@ export const messages = {
       'lifecycleStatus 过滤条件不合法',
     'validation.skills.bindableFilter.invalid':
       'bindable 过滤条件不合法',
+    'validation.skills.binding.invalid': 'Skill 绑定校验失败',
     'validation.skills.import.repository.invalid':
       'repository 格式不合法',
     'validation.skills.import.githubUrl.invalid': 'GitHub URL 不合法',

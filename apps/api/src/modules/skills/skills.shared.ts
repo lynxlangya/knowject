@@ -92,6 +92,7 @@ export const createSkillInUseError = ({
     code: 'SKILL_IN_USE',
     message,
     messageKey: 'skills.inUse',
+    preserveMessage: true,
     details: {
       action,
       projectCount,

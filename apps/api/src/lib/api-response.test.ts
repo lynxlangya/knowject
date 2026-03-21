@@ -106,6 +106,33 @@ const createProtocolTestApp = (exposeDetails: boolean) => {
     throw new AppError(createRequiredFieldError('username'));
   });
 
+  app.get('/dynamic-skill-error', () => {
+    throw new AppError({
+      statusCode: 409,
+      code: 'SKILL_IN_USE',
+      message: 'Skill 已被1 个项目绑定，暂不可删除',
+      messageKey: 'skills.inUse.message',
+      details: {
+        usage: '1 个项目',
+        action: '删除',
+      },
+      preserveMessage: true,
+    });
+  });
+
+  app.get('/dynamic-upload-error', () => {
+    throw new AppError({
+      statusCode: 400,
+      code: 'KNOWLEDGE_UPLOAD_TOO_LARGE',
+      message: '上传文件不能超过 20 MB',
+      messageKey: 'knowledge.upload.tooLarge',
+      details: {
+        maxUploadSize: '20 MB',
+      },
+      preserveMessage: true,
+    });
+  });
+
   app.get('/internal-error', () => {
     throw new Error('boom');
   });
@@ -280,6 +307,48 @@ test('required field validation localizes shared messages', async () => {
       fields: {
         username: 'Username is required',
       },
+    });
+  });
+});
+
+test('dynamic skill-in-use errors keep rendered message content', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/dynamic-skill-error`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      data: null;
+    };
+
+    assert.equal(response.status, 409);
+    assert.equal(body.code, 'SKILL_IN_USE');
+    assert.equal(body.message, 'Skill 已被1 个项目绑定，暂不可删除');
+  });
+});
+
+test('dynamic upload-size errors keep rendered limit content', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/dynamic-upload-error`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      data: null;
+      meta: { details?: unknown };
+    };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.code, 'KNOWLEDGE_UPLOAD_TOO_LARGE');
+    assert.equal(body.message, '上传文件不能超过 20 MB');
+    assert.deepEqual(body.meta.details, {
+      maxUploadSize: '20 MB',
     });
   });
 });

@@ -1,4 +1,6 @@
-import { createValidationAppError } from '@lib/validation.js';
+import { AppError } from '@lib/app-error.js';
+import { getFallbackMessage } from '@lib/locale.messages.js';
+import { createValidationErrorShape } from '@lib/validation.js';
 import { findRegisteredSkillById } from './skills.registry.js';
 import { buildSkillBindableFlag } from './skills.shared.js';
 import type { SkillsRepository } from './skills.repository.js';
@@ -57,18 +59,21 @@ export const createSkillBindingValidator = ({
         return;
       }
 
-      const messages: string[] = [];
-
-      if (missingSkillIds.length > 0) {
-        messages.push(`以下 Skill 不存在：${missingSkillIds.join(', ')}`);
-      }
-
-      if (unpublishedSkillLabels.length > 0) {
-        messages.push(`以下 Skill 尚未发布，暂不可绑定：${unpublishedSkillLabels.join(', ')}`);
-      }
-
-      throw createValidationAppError('Skill 绑定校验失败', {
-        [fieldName]: messages.join('；'),
+      throw new AppError({
+        ...createValidationErrorShape(
+          getFallbackMessage('validation.skills.binding.invalid'),
+          {
+            [fieldName]: getFallbackMessage('validation.skills.binding.invalid'),
+          },
+          'validation.skills.binding.invalid',
+        ),
+        details: {
+          fields: {
+            [fieldName]: getFallbackMessage('validation.skills.binding.invalid'),
+          },
+          missingSkillIds,
+          unpublishedSkillLabels,
+        },
       });
     },
   };

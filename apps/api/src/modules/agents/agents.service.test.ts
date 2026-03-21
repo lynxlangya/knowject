@@ -157,7 +157,7 @@ test('createAgent rejects unknown builtin skill ids', async () => {
     (error: unknown) => {
       assert.ok(error instanceof AppError);
       assert.equal(error.code, 'VALIDATION_ERROR');
-      assert.match(error.message, /Skill 绑定/);
+      assert.equal(error.messageKey, 'validation.skills.binding.invalid');
       return true;
     },
   );
@@ -221,7 +221,7 @@ test('createAgent accepts published managed skill ids and rejects draft skill id
     (error: unknown) => {
       assert.ok(error instanceof AppError);
       assert.equal(error.code, 'VALIDATION_ERROR');
-      assert.match(error.message, /Skill 绑定校验失败/);
+      assert.equal(error.messageKey, 'validation.skills.binding.invalid');
       return true;
     },
   );
