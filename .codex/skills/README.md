@@ -1,5 +1,9 @@
 # Compatibility Stub
 
-`.codex/skills/` 不再是主 Skill 目录。
-项目级 Skills 官方根目录计划在 Task 3 迁移到 `.agents/skills/*`（当前 HEAD 尚未落地该目录）。
-Task 3 落地前，Skill-root 的 live 兼容入口仍是 `.codex/skills/README.md`；active 引用暂不切换到新路径。
+`.codex/skills/` 已退役为兼容入口，不再承载项目级 Skills。
+
+项目级 Skills 官方根目录已迁移至 `.agents/skills/`：
+- 入口说明见 `.agents/skills/README.md`
+- 新增或维护 Skills 请仅在 `.agents/skills/<skill>/SKILL.md`
+
+保留本文件仅用于旧链接与历史文档跳转。

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Knowledge Index Boundary Guard"
+  short_description: "Audit Knowject knowledge index boundaries."
+  default_prompt: "Use $knowledge-index-boundary-guard to audit this Knowject change for indexing boundary drift across api, indexer-py, settings, docs, and validation."
