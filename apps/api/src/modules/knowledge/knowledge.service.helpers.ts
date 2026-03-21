@@ -5,6 +5,7 @@ import { getEffectiveEmbeddingConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
 import { AppError } from "@lib/app-error.js";
 import { normalizeIndexerErrorMessage } from "@lib/http.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import {
   createRequiredFieldError,
   createValidationAppError,
@@ -60,7 +61,8 @@ export const createKnowledgeNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: "KNOWLEDGE_NOT_FOUND",
-    message: "知识库不存在",
+    message: getFallbackMessage("knowledge.notFound"),
+    messageKey: "knowledge.notFound",
   });
 };
 
@@ -92,7 +94,8 @@ export const createKnowledgeDocumentNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: "KNOWLEDGE_DOCUMENT_NOT_FOUND",
-    message: "文档不存在",
+    message: getFallbackMessage("knowledge.document.notFound"),
+    messageKey: "knowledge.document.notFound",
   });
 };
 
@@ -100,7 +103,8 @@ const createUploadNotSupportedError = (): AppError => {
   return new AppError({
     statusCode: 400,
     code: "KNOWLEDGE_UPLOAD_UNSUPPORTED_TYPE",
-    message: "当前只支持上传 md、markdown、txt、pdf、docx、xlsx 文件",
+    message: getFallbackMessage("knowledge.upload.unsupportedType"),
+    messageKey: "knowledge.upload.unsupportedType",
   });
 };
 
@@ -108,7 +112,8 @@ const createUploadEmptyFileError = (): AppError => {
   return new AppError({
     statusCode: 400,
     code: "KNOWLEDGE_UPLOAD_EMPTY_FILE",
-    message: "上传文件内容为空，请检查后重试",
+    message: getFallbackMessage("knowledge.upload.emptyFile"),
+    messageKey: "knowledge.upload.emptyFile",
   });
 };
 
@@ -116,7 +121,8 @@ const createUploadSourceTypeError = (): AppError => {
   return new AppError({
     statusCode: 400,
     code: "KNOWLEDGE_UPLOAD_SOURCE_TYPE_UNSUPPORTED",
-    message: "当前知识库类型暂不支持上传文档",
+    message: getFallbackMessage("knowledge.upload.sourceTypeUnsupported"),
+    messageKey: "knowledge.upload.sourceTypeUnsupported",
   });
 };
 
@@ -124,7 +130,8 @@ export const createDocumentRetryConflictError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "KNOWLEDGE_DOCUMENT_RETRY_CONFLICT",
-    message: "文档已在索引中，请稍后刷新状态",
+    message: getFallbackMessage("knowledge.document.retryConflict"),
+    messageKey: "knowledge.document.retryConflict",
   });
 };
 
@@ -132,7 +139,8 @@ export const createKnowledgeRebuildConflictError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "KNOWLEDGE_REBUILD_CONFLICT",
-    message: "知识库存在正在索引的文档，请稍后再试",
+    message: getFallbackMessage("knowledge.rebuild.conflict"),
+    messageKey: "knowledge.rebuild.conflict",
   });
 };
 
@@ -140,7 +148,8 @@ export const createKnowledgeRebuildEmptyError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "KNOWLEDGE_REBUILD_EMPTY",
-    message: "当前知识库暂无可重建文档",
+    message: getFallbackMessage("knowledge.rebuild.empty"),
+    messageKey: "knowledge.rebuild.empty",
   });
 };
 
@@ -148,7 +157,8 @@ export const createNamespaceRebuildingConflictError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "KNOWLEDGE_NAMESPACE_REBUILDING",
-    message: "当前命名空间正在重建，请稍后再试",
+    message: getFallbackMessage("knowledge.namespace.rebuilding"),
+    messageKey: "knowledge.namespace.rebuilding",
   });
 };
 
@@ -156,7 +166,8 @@ export const createNamespaceRebuildRequiredError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "KNOWLEDGE_NAMESPACE_REBUILD_REQUIRED",
-    message: "当前向量模型已变更，请先执行知识库全量重建",
+    message: getFallbackMessage("knowledge.namespace.rebuildRequired"),
+    messageKey: "knowledge.namespace.rebuildRequired",
   });
 };
 
@@ -164,7 +175,8 @@ export const createLegacyNamespaceRebuildRequiredError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "KNOWLEDGE_NAMESPACE_LEGACY_REBUILD_REQUIRED",
-    message: "当前索引缺少模型版本元数据，请先执行一次知识库全量重建",
+    message: getFallbackMessage("knowledge.namespace.legacyRebuildRequired"),
+    messageKey: "knowledge.namespace.legacyRebuildRequired",
   });
 };
 
@@ -174,7 +186,8 @@ export const createDuplicateKnowledgeDocumentVersionError = (
   return new AppError({
     statusCode: 409,
     code: "KNOWLEDGE_DOCUMENT_DUPLICATE_VERSION",
-    message: "相同内容的文档已存在，请直接重试或重建现有文档",
+    message: getFallbackMessage("knowledge.document.duplicateVersion"),
+    messageKey: "knowledge.document.duplicateVersion",
     details: {
       knowledgeId: document.knowledgeId,
       documentId: document._id.toHexString(),
@@ -249,9 +262,13 @@ const readOptionalSourceType = (
     return value;
   }
 
-  throw createValidationAppError("sourceType 不合法", {
-    sourceType: "sourceType 只能为 global_docs 或 global_code",
-  });
+  throw createValidationAppError(
+    getFallbackMessage("validation.knowledge.sourceType.invalid"),
+    {
+      sourceType: getFallbackMessage("validation.knowledge.sourceType.invalid"),
+    },
+    "validation.knowledge.sourceType.invalid",
+  );
 };
 
 export const validateCreateKnowledgeInput = (
@@ -263,9 +280,13 @@ export const validateCreateKnowledgeInput = (
   const sourceType = readOptionalSourceType(input.sourceType) ?? "global_docs";
 
   if (!name) {
-    throw createValidationAppError("请输入知识库名称", {
-      name: "请输入知识库名称",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.knowledgeName"),
+      {
+        name: getFallbackMessage("validation.required.knowledgeName"),
+      },
+      "validation.required.knowledgeName",
+    );
   }
 
   const now = new Date();
@@ -294,9 +315,15 @@ export const validateCreateProjectKnowledgeInput = (
   const knowledge = validateCreateKnowledgeInput(input, actorId);
 
   if (knowledge.sourceType !== "global_docs") {
-    throw createValidationAppError("当前项目知识只支持 global_docs", {
-      sourceType: "当前项目知识只支持 global_docs",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.knowledge.projectSourceType.unsupported"),
+      {
+        sourceType: getFallbackMessage(
+          "validation.knowledge.projectSourceType.unsupported",
+        ),
+      },
+      "validation.knowledge.projectSourceType.unsupported",
+    );
   }
 
   return {
@@ -311,16 +338,24 @@ export const validateUpdateKnowledgeInput = (input: UpdateKnowledgeInput) => {
   const description = readOptionalStringField(input.description, "description");
 
   if (name === undefined && description === undefined) {
-    throw createValidationAppError("至少需要提供一个可更新字段", {
-      name: "至少需要提供 name 或 description",
-      description: "至少需要提供 name 或 description",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.atLeastOneField"),
+      {
+        name: getFallbackMessage("validation.atLeastOneField"),
+        description: getFallbackMessage("validation.atLeastOneField"),
+      },
+      "validation.atLeastOneField",
+    );
   }
 
   if (input.name !== undefined && !name) {
-    throw createValidationAppError("请输入知识库名称", {
-      name: "请输入知识库名称",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.knowledgeName"),
+      {
+        name: getFallbackMessage("validation.required.knowledgeName"),
+      },
+      "validation.required.knowledgeName",
+    );
   }
 
   return {
@@ -356,9 +391,13 @@ export const validateSearchDocumentsInput = (
   }
 
   if (!Number.isInteger(topK) || topK <= 0 || topK > 10) {
-    throw createValidationAppError("topK 必须是 1 到 10 之间的整数", {
-      topK: "topK 必须是 1 到 10 之间的整数",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.topK.range"),
+      {
+        topK: getFallbackMessage("validation.topK.range"),
+      },
+      "validation.topK.range",
+    );
   }
 
   return {

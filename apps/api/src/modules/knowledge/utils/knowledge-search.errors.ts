@@ -1,4 +1,5 @@
 import { AppError } from "@lib/app-error.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import type { EffectiveEmbeddingConfig } from "@modules/settings/settings.types.js";
 
 export const createServiceUnavailableError = (
@@ -50,7 +51,7 @@ export const resolveDiagnosticsErrorMessage = (error: unknown): string => {
     return error.message.trim();
   }
 
-  return "Chroma 诊断失败";
+  return getFallbackMessage("knowledge.search.diagnosticsFailed");
 };
 
 export const isIndexerRouteNotFoundError = (

@@ -1,4 +1,5 @@
 import { AppError } from "@lib/app-error.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import { readMutationInput } from "@lib/mutation-input.js";
 import {
   createValidationAppError,
@@ -91,7 +92,8 @@ const createProjectConversationLastThreadForbiddenError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "PROJECT_CONVERSATION_LAST_THREAD_FORBIDDEN",
-    message: "项目至少保留一个对话线程",
+    message: getFallbackMessage("project.conversation.lastThreadForbidden"),
+    messageKey: "project.conversation.lastThreadForbidden",
   });
 };
 
@@ -123,9 +125,13 @@ const validateUpdateProjectConversationInput = (
   const title = readOptionalStringField(normalizedInput.title, "title");
 
   if (!title) {
-    throw createValidationAppError("请输入对话标题", {
-      title: "请输入对话标题",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.conversationTitle"),
+      {
+        title: getFallbackMessage("validation.required.conversationTitle"),
+      },
+      "validation.required.conversationTitle",
+    );
   }
 
   return {
@@ -143,9 +149,13 @@ const validateUpdateProjectConversationMessageMetadataInput = (
   });
 
   if (typeof normalizedInput.starred !== "boolean") {
-    throw createValidationAppError("starred 必须为布尔值", {
-      starred: "starred 必须为布尔值",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.starred.boolean"),
+      {
+        starred: getFallbackMessage("validation.starred.boolean"),
+      },
+      "validation.starred.boolean",
+    );
   }
 
   return {

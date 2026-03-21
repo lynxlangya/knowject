@@ -1,4 +1,5 @@
 import { AppError } from "@lib/app-error.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import { readMutationInput } from "@lib/mutation-input.js";
 import {
   createValidationAppError,
@@ -28,15 +29,25 @@ export const validateCreateProjectConversationMessageInput = (
   );
 
   if (!content) {
-    throw createValidationAppError("请输入消息内容", {
-      content: "请输入消息内容",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.messageContent"),
+      {
+        content: getFallbackMessage("validation.required.messageContent"),
+      },
+      "validation.required.messageContent",
+    );
   }
 
   if (options?.requireClientRequestId && !clientRequestId) {
-    throw createValidationAppError("流式消息必须携带 clientRequestId", {
-      clientRequestId: "流式消息必须携带 clientRequestId",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.clientRequestId.required"),
+      {
+        clientRequestId: getFallbackMessage(
+          "validation.clientRequestId.required",
+        ),
+      },
+      "validation.clientRequestId.required",
+    );
   }
 
   return {
@@ -50,9 +61,15 @@ export const requireProjectConversationClientRequestId = (
   clientRequestId?: string,
 ): string => {
   if (!clientRequestId) {
-    throw createValidationAppError("流式消息必须携带 clientRequestId", {
-      clientRequestId: "流式消息必须携带 clientRequestId",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.clientRequestId.required"),
+      {
+        clientRequestId: getFallbackMessage(
+          "validation.clientRequestId.required",
+        ),
+      },
+      "validation.clientRequestId.required",
+    );
   }
 
   return clientRequestId;
@@ -63,15 +80,19 @@ export const createProjectConversationStreamingUnavailableError =
     return new AppError({
       statusCode: 503,
       code: "PROJECT_CONVERSATION_STREAMING_UNAVAILABLE",
-      message: "当前项目对话流式能力暂不可用",
+      message: getFallbackMessage("project.conversation.streamingUnavailable"),
+      messageKey: "project.conversation.streamingUnavailable",
     });
   };
 
 export const createProjectConversationReplayTargetError = (): AppError => {
   return createValidationAppError(
-    "targetUserMessageId 必须指向当前会话中的用户消息",
+    getFallbackMessage("validation.projectConversation.replayTarget.invalid"),
     {
-      targetUserMessageId: "targetUserMessageId 必须指向当前会话中的用户消息",
+      targetUserMessageId: getFallbackMessage(
+        "validation.projectConversation.replayTarget.invalid",
+      ),
     },
+    "validation.projectConversation.replayTarget.invalid",
   );
 };

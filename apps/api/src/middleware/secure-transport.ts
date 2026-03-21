@@ -1,6 +1,7 @@
 import type { Request, RequestHandler } from 'express';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import { getFallbackMessage } from '@lib/locale.messages.js';
 
 const HTTPS_PROTOCOL = 'https';
 const IPV4_MAPPED_IPV6_PREFIX = '::ffff:';
@@ -102,7 +103,8 @@ export const createSensitiveRouteTransportGuard = (env: AppEnv): RequestHandler 
       new AppError({
         statusCode: 426,
         code: 'SECURE_TRANSPORT_REQUIRED',
-        message: '生产环境中的认证与鉴权请求必须通过 HTTPS 发送',
+        message: getFallbackMessage('secureTransport.required'),
+        messageKey: 'secureTransport.required',
         details: {
           transport: 'https_required',
         },

@@ -4,6 +4,8 @@ import {
   normalizeOpenAiCompatibleErrorMessage,
   parseResponseBody,
 } from "@lib/http.js";
+import type { MessageKey } from "@lib/locale.messages.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import type { EffectiveLlmConfig } from "@modules/settings/settings.types.js";
 import {
   isProjectConversationChatSupported,
@@ -38,7 +40,8 @@ const createProjectConversationLlmUnavailableError = (): AppError => {
   return new AppError({
     statusCode: 503,
     code: "PROJECT_CONVERSATION_LLM_UNAVAILABLE",
-    message: "当前未配置可用的对话模型，请先完成 LLM 设置",
+    message: getFallbackMessage("project.conversation.llmUnavailable"),
+    messageKey: "project.conversation.llmUnavailable",
   });
 };
 
@@ -46,7 +49,8 @@ const createProjectConversationLlmProviderUnsupportedError = (): AppError => {
   return new AppError({
     statusCode: 503,
     code: "PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED",
-    message: "当前 LLM Provider 暂不支持项目对话",
+    message: getFallbackMessage("project.conversation.providerUnsupported"),
+    messageKey: "project.conversation.providerUnsupported",
   });
 };
 
@@ -54,20 +58,27 @@ const createProjectConversationLlmStreamUnsupportedError = (): AppError => {
   return new AppError({
     statusCode: 503,
     code: "PROJECT_CONVERSATION_LLM_STREAM_UNSUPPORTED",
-    message: "当前 LLM Provider 暂不支持流式项目对话",
+    message: getFallbackMessage("project.conversation.streamUnsupported"),
+    messageKey: "project.conversation.streamUnsupported",
   });
 };
 
 const createProjectConversationLlmUpstreamError = (
   message: string,
   cause?: unknown,
+  messageKey?: MessageKey,
 ): AppError => {
   return new AppError({
     statusCode: 502,
     code: "PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR",
     message,
+    messageKey,
     cause,
   });
+};
+
+const buildProjectConversationTimeoutMessage = (timeoutMs: number): string => {
+  return `项目对话流式生成超时（${timeoutMs}ms 内未收到新内容）`;
 };
 
 const extractOpenAiCompatibleTextContent = (content: unknown): string => {
@@ -355,8 +366,11 @@ export const createProjectConversationProviderAdapter =
           throw createProjectConversationLlmUpstreamError(
             error instanceof Error && error.message.trim()
               ? error.message
-              : "项目对话生成失败，请稍后重试",
+              : getFallbackMessage("project.conversation.generationFailed"),
             error,
+            error instanceof Error && error.message.trim()
+              ? undefined
+              : "project.conversation.generationFailed",
           );
         }
 
@@ -364,7 +378,9 @@ export const createProjectConversationProviderAdapter =
 
         if (!content) {
           throw createProjectConversationLlmUpstreamError(
-            "项目对话模型返回了空内容",
+            getFallbackMessage("project.conversation.emptyResponse"),
+            undefined,
+            "project.conversation.emptyResponse",
           );
         }
 
@@ -404,16 +420,20 @@ export const createProjectConversationProviderAdapter =
 
           if (timeoutController.didTimeout()) {
             throw createProjectConversationLlmUpstreamError(
-              `项目对话流式生成超时（${llmConfig.requestTimeoutMs}ms 内未收到新内容）`,
+              buildProjectConversationTimeoutMessage(llmConfig.requestTimeoutMs),
               error,
+              "project.conversation.timeout",
             );
           }
 
           throw createProjectConversationLlmUpstreamError(
             error instanceof Error && error.message.trim()
               ? error.message
-              : "项目对话流式生成失败，请稍后重试",
+              : getFallbackMessage("project.conversation.streamFailed"),
             error,
+            error instanceof Error && error.message.trim()
+              ? undefined
+              : "project.conversation.streamFailed",
           );
         }
 
@@ -430,7 +450,9 @@ export const createProjectConversationProviderAdapter =
 
         if (!response.body) {
           throw createProjectConversationLlmUpstreamError(
-            "项目对话流式生成未返回响应体",
+            getFallbackMessage("project.conversation.responseBodyMissing"),
+            undefined,
+            "project.conversation.responseBodyMissing",
           );
         }
 
@@ -479,8 +501,9 @@ export const createProjectConversationProviderAdapter =
                 body = JSON.parse(payload);
               } catch (error) {
                 throw createProjectConversationLlmUpstreamError(
-                  "项目对话流式响应格式非法",
+                  getFallbackMessage("project.conversation.invalidStreamFormat"),
                   error,
+                  "project.conversation.invalidStreamFormat",
                 );
               }
 
@@ -512,8 +535,9 @@ export const createProjectConversationProviderAdapter =
               body = JSON.parse(trailingPayload);
             } catch (error) {
               throw createProjectConversationLlmUpstreamError(
-                "项目对话流式响应格式非法",
+                getFallbackMessage("project.conversation.invalidStreamFormat"),
                 error,
+                "project.conversation.invalidStreamFormat",
               );
             }
 
@@ -536,8 +560,9 @@ export const createProjectConversationProviderAdapter =
 
           if (timeoutController.didTimeout()) {
             throw createProjectConversationLlmUpstreamError(
-              `项目对话流式生成超时（${llmConfig.requestTimeoutMs}ms 内未收到新内容）`,
+              buildProjectConversationTimeoutMessage(llmConfig.requestTimeoutMs),
               error,
+              "project.conversation.timeout",
             );
           }
 
@@ -548,8 +573,11 @@ export const createProjectConversationProviderAdapter =
           throw createProjectConversationLlmUpstreamError(
             error instanceof Error && error.message.trim()
               ? error.message
-              : "项目对话流式生成失败，请稍后重试",
+              : getFallbackMessage("project.conversation.streamFailed"),
             error,
+            error instanceof Error && error.message.trim()
+              ? undefined
+              : "project.conversation.streamFailed",
           );
         } finally {
           timeoutController.clear();
@@ -560,7 +588,9 @@ export const createProjectConversationProviderAdapter =
 
         if (!normalizedContent) {
           throw createProjectConversationLlmUpstreamError(
-            "项目对话模型返回了空内容",
+            getFallbackMessage("project.conversation.emptyResponse"),
+            undefined,
+            "project.conversation.emptyResponse",
           );
         }
 

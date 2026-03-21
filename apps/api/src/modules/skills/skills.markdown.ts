@@ -1,4 +1,5 @@
 import { createValidationAppError } from '@lib/validation.js';
+import { getFallbackMessage } from '@lib/locale.messages.js';
 
 type SkillFrontmatterValue = string | number | boolean | string[];
 
@@ -70,9 +71,13 @@ const parseFrontmatterBlock = (
 
     const keyMatch = /^([A-Za-z0-9_-]+):(?:\s*(.*))?$/.exec(line);
     if (!keyMatch) {
-      throw createValidationAppError('SKILL.md frontmatter 解析失败', {
-        skillMarkdown: `无法解析 frontmatter 行：${trimmed}`,
-      });
+      throw createValidationAppError(
+        getFallbackMessage('validation.skillMarkdown.frontmatter.parse'),
+        {
+          skillMarkdown: `无法解析 frontmatter 行：${trimmed}`,
+        },
+        'validation.skillMarkdown.frontmatter.parse',
+      );
     }
 
     const key = keyMatch[1];
@@ -96,9 +101,13 @@ const parseFrontmatterBlock = (
         }
 
         if (!/^\s+/.test(nextLine)) {
-          throw createValidationAppError('SKILL.md frontmatter 解析失败', {
-            skillMarkdown: `frontmatter 多行字段 ${key} 缩进不合法`,
-          });
+          throw createValidationAppError(
+            getFallbackMessage('validation.skillMarkdown.frontmatter.parse'),
+            {
+              skillMarkdown: `frontmatter 多行字段 ${key} 缩进不合法`,
+            },
+            'validation.skillMarkdown.frontmatter.parse',
+          );
         }
 
         blockLines.push(nextLine.replace(/^\s{2}/, '').trimEnd());
@@ -149,9 +158,13 @@ const parseFrontmatterBlock = (
           continue;
         }
 
-        throw createValidationAppError('SKILL.md frontmatter 解析失败', {
-          skillMarkdown: `frontmatter 字段 ${key} 格式不合法`,
-        });
+        throw createValidationAppError(
+          getFallbackMessage('validation.skillMarkdown.frontmatter.parse'),
+          {
+            skillMarkdown: `frontmatter 字段 ${key} 格式不合法`,
+          },
+          'validation.skillMarkdown.frontmatter.parse',
+        );
       }
 
       result[key] =
@@ -195,17 +208,25 @@ export const parseSkillMarkdown = (value: string): ParsedSkillMarkdown => {
   const normalized = normalizeMarkdown(value);
 
   if (!normalized) {
-    throw createValidationAppError('SKILL.md 不能为空', {
-      skillMarkdown: '请填写 SKILL.md 内容',
-    });
+    throw createValidationAppError(
+      getFallbackMessage('validation.skillMarkdown.empty'),
+      {
+        skillMarkdown: getFallbackMessage('validation.required.skillMarkdown'),
+      },
+      'validation.skillMarkdown.empty',
+    );
   }
 
   const lines = normalized.split('\n');
 
   if (lines[0]?.trim() !== FRONTMATTER_BOUNDARY) {
-    throw createValidationAppError('SKILL.md 必须包含 frontmatter', {
-      skillMarkdown: 'SKILL.md 顶部必须以 --- frontmatter 开头',
-    });
+    throw createValidationAppError(
+      getFallbackMessage('validation.skillMarkdown.frontmatter.required'),
+      {
+        skillMarkdown: 'SKILL.md 顶部必须以 --- frontmatter 开头',
+      },
+      'validation.skillMarkdown.frontmatter.required',
+    );
   }
 
   const closingIndex = lines.findIndex(
@@ -213,9 +234,13 @@ export const parseSkillMarkdown = (value: string): ParsedSkillMarkdown => {
   );
 
   if (closingIndex <= 0) {
-    throw createValidationAppError('SKILL.md frontmatter 未闭合', {
-      skillMarkdown: '请补齐 frontmatter 结束分隔线 ---',
-    });
+    throw createValidationAppError(
+      getFallbackMessage('validation.skillMarkdown.frontmatter.unclosed'),
+      {
+        skillMarkdown: '请补齐 frontmatter 结束分隔线 ---',
+      },
+      'validation.skillMarkdown.frontmatter.unclosed',
+    );
   }
 
   const frontmatter = parseFrontmatterBlock(lines.slice(1, closingIndex).join('\n'));
@@ -226,15 +251,25 @@ export const parseSkillMarkdown = (value: string): ParsedSkillMarkdown => {
   const description = typeof rawDescription === 'string' ? rawDescription.trim() : '';
 
   if (!name) {
-    throw createValidationAppError('SKILL.md frontmatter 缺少 name', {
-      skillMarkdown: 'frontmatter 必须包含非空 name',
-    });
+    throw createValidationAppError(
+      getFallbackMessage('validation.skillMarkdown.frontmatter.nameRequired'),
+      {
+        skillMarkdown: 'frontmatter 必须包含非空 name',
+      },
+      'validation.skillMarkdown.frontmatter.nameRequired',
+    );
   }
 
   if (!description) {
-    throw createValidationAppError('SKILL.md frontmatter 缺少 description', {
-      skillMarkdown: 'frontmatter 必须包含非空 description',
-    });
+    throw createValidationAppError(
+      getFallbackMessage(
+        'validation.skillMarkdown.frontmatter.descriptionRequired',
+      ),
+      {
+        skillMarkdown: 'frontmatter 必须包含非空 description',
+      },
+      'validation.skillMarkdown.frontmatter.descriptionRequired',
+    );
   }
 
   const skillMarkdown = `${[

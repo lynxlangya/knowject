@@ -1,4 +1,5 @@
 import { AppError } from "@lib/app-error.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import {
   createRequiredFieldError,
   createValidationAppError,
@@ -47,7 +48,8 @@ const createUserNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: "AUTH_USER_NOT_FOUND",
-    message: "目标用户不存在",
+    message: getFallbackMessage("memberships.userNotFound"),
+    messageKey: "memberships.userNotFound",
   });
 };
 
@@ -55,7 +57,8 @@ const createProjectMemberNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: "PROJECT_MEMBER_NOT_FOUND",
-    message: "项目成员不存在",
+    message: getFallbackMessage("memberships.memberNotFound"),
+    messageKey: "memberships.memberNotFound",
   });
 };
 
@@ -63,7 +66,8 @@ const createProjectMemberAlreadyExistsError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "PROJECT_MEMBER_ALREADY_EXISTS",
-    message: "该用户已在当前项目中",
+    message: getFallbackMessage("memberships.memberAlreadyExists"),
+    messageKey: "memberships.memberAlreadyExists",
   });
 };
 
@@ -71,7 +75,8 @@ const createLastAdminRequiredError = (): AppError => {
   return new AppError({
     statusCode: 409,
     code: "PROJECT_LAST_ADMIN_REQUIRED",
-    message: "项目至少需要保留一位 admin",
+    message: getFallbackMessage("memberships.lastAdminRequired"),
+    messageKey: "memberships.lastAdminRequired",
   });
 };
 
@@ -80,9 +85,13 @@ const readRequiredRole = (value: unknown): ProjectRole => {
     return value;
   }
 
-  throw createValidationAppError("role 必须为 admin 或 member", {
-    role: "role 必须为 admin 或 member",
-  });
+  throw createValidationAppError(
+    getFallbackMessage("validation.projectRole.invalid"),
+    {
+      role: getFallbackMessage("validation.projectRole.invalid"),
+    },
+    "validation.projectRole.invalid",
+  );
 };
 
 const readRequiredUsername = (value: unknown): string => {

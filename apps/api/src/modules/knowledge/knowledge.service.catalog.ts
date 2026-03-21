@@ -16,6 +16,7 @@ import {
   validateUpdateKnowledgeInput,
   buildKnowledgeActorProfileMap,
 } from "./knowledge.service.helpers.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import { removeKnowledgeStorageRoot } from "./knowledge.storage.js";
 import { toKnowledgeSummaryResponse } from "./knowledge.shared.js";
 import type {
@@ -199,7 +200,8 @@ export const createKnowledgeCatalogHandlers = ({
         throw new AppError({
           statusCode: 502,
           code: "KNOWLEDGE_VECTOR_DELETE_FAILED",
-          message: "知识库向量清理失败，已停止删除，请稍后重试",
+          message: getFallbackMessage("knowledge.vectorDeleteFailed"),
+          messageKey: "knowledge.vectorDeleteFailed",
           cause: error,
           details: {
             knowledgeId,

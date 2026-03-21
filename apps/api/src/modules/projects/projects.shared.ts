@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { WithId } from 'mongodb';
 import { AppError } from '@lib/app-error.js';
+import { getFallbackMessage } from '@lib/locale.messages.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { AuthenticatedRequestUser, AuthUserProfile } from '@modules/auth/auth.types.js';
 import type { ProjectsRepository } from './projects.repository.js';
@@ -33,7 +34,8 @@ export const createProjectNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: 'PROJECT_NOT_FOUND',
-    message: '项目不存在或当前用户不可见',
+    message: getFallbackMessage('project.notFound'),
+    messageKey: 'project.notFound',
   });
 };
 
@@ -41,7 +43,8 @@ export const createProjectForbiddenError = (): AppError => {
   return new AppError({
     statusCode: 403,
     code: 'PROJECT_FORBIDDEN',
-    message: '当前用户没有该项目的管理权限',
+    message: getFallbackMessage('project.forbidden'),
+    messageKey: 'project.forbidden',
   });
 };
 
@@ -49,7 +52,8 @@ export const createProjectConversationNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: 'PROJECT_CONVERSATION_NOT_FOUND',
-    message: '项目对话不存在',
+    message: getFallbackMessage('project.conversation.notFound'),
+    messageKey: 'project.conversation.notFound',
   });
 };
 
@@ -57,7 +61,8 @@ export const createProjectConversationMessageNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: 'PROJECT_CONVERSATION_MESSAGE_NOT_FOUND',
-    message: '项目对话消息不存在',
+    message: getFallbackMessage('project.conversation.message.notFound'),
+    messageKey: 'project.conversation.message.notFound',
   });
 };
 

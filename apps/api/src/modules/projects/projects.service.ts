@@ -1,4 +1,5 @@
 import type { WithId } from "mongodb";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import {
   createValidationAppError,
   readOptionalStringField,
@@ -67,9 +68,13 @@ const readOptionalStringArrayField = (
   }
 
   if (!Array.isArray(value)) {
-    throw createValidationAppError(`${field} 必须为字符串数组`, {
-      [field]: `${field} 必须为字符串数组`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.stringArray"),
+      {
+        [field]: getFallbackMessage("validation.stringArray"),
+      },
+      "validation.stringArray",
+    );
   }
 
   const normalizedValues = value
@@ -78,9 +83,13 @@ const readOptionalStringArrayField = (
     .filter(Boolean);
 
   if (normalizedValues.length !== value.length) {
-    throw createValidationAppError(`${field} 必须为字符串数组`, {
-      [field]: `${field} 必须为字符串数组`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.stringArray"),
+      {
+        [field]: getFallbackMessage("validation.stringArray"),
+      },
+      "validation.stringArray",
+    );
   }
 
   return Array.from(new Set(normalizedValues));
@@ -103,9 +112,13 @@ const validateCreateProjectInput = (
     readOptionalStringArrayField(input.skillIds, "skillIds") ?? [];
 
   if (!name) {
-    throw createValidationAppError("请输入项目名称", {
-      name: "请输入项目名称",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.projectName"),
+      {
+        name: getFallbackMessage("validation.required.projectName"),
+      },
+      "validation.required.projectName",
+    );
   }
 
   return {
@@ -141,19 +154,27 @@ const validateUpdateProjectInput = (
     agentIds === undefined &&
     skillIds === undefined
   ) {
-    throw createValidationAppError("至少需要提供一个可更新字段", {
-      name: "至少需要提供 name 或 description",
-      description: "至少需要提供 name 或 description",
-      knowledgeBaseIds: "至少需要提供一个可更新字段",
-      agentIds: "至少需要提供一个可更新字段",
-      skillIds: "至少需要提供一个可更新字段",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.atLeastOneField"),
+      {
+        name: getFallbackMessage("validation.atLeastOneField"),
+        description: getFallbackMessage("validation.atLeastOneField"),
+        knowledgeBaseIds: getFallbackMessage("validation.atLeastOneField"),
+        agentIds: getFallbackMessage("validation.atLeastOneField"),
+        skillIds: getFallbackMessage("validation.atLeastOneField"),
+      },
+      "validation.atLeastOneField",
+    );
   }
 
   if (input.name !== undefined && !name) {
-    throw createValidationAppError("请输入项目名称", {
-      name: "请输入项目名称",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.projectName"),
+      {
+        name: getFallbackMessage("validation.required.projectName"),
+      },
+      "validation.required.projectName",
+    );
   }
 
   return {

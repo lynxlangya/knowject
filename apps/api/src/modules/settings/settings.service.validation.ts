@@ -1,4 +1,5 @@
 import { AppError } from "@lib/app-error.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import { readMutationInput } from "@lib/mutation-input.js";
 import {
   createValidationAppError,
@@ -38,7 +39,8 @@ export const createUnsupportedLlmProviderError = (): AppError => {
   return new AppError({
     statusCode: 400,
     code: "SETTINGS_LLM_TEST_PROVIDER_UNSUPPORTED",
-    message: "当前 provider 暂不支持在线测试",
+    message: getFallbackMessage("settings.llmTestProvider.unsupported"),
+    messageKey: "settings.llmTestProvider.unsupported",
   });
 };
 
@@ -46,7 +48,8 @@ export const createMissingApiKeyError = (): AppError => {
   return new AppError({
     statusCode: 400,
     code: "SETTINGS_API_KEY_REQUIRED",
-    message: "API Key 未配置，请先输入或保存后再测试",
+    message: getFallbackMessage("settings.apiKey.required"),
+    messageKey: "settings.apiKey.required",
   });
 };
 
@@ -54,7 +57,8 @@ export const createApiKeyReentryRequiredError = (): AppError => {
   return new AppError({
     statusCode: 400,
     code: "SETTINGS_API_KEY_REENTRY_REQUIRED",
-    message: "切换 Provider 或 Base URL 后，请重新输入新的 API Key",
+    message: getFallbackMessage("settings.apiKey.reentryRequired"),
+    messageKey: "settings.apiKey.reentryRequired",
   });
 };
 
@@ -68,17 +72,25 @@ const readOptionalProvider = <TProvider extends string>(
   }
 
   if (typeof value !== "string") {
-    throw createValidationAppError(`${field} 不合法`, {
-      [field]: `${field} 不合法`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.provider.invalid"),
+      {
+        [field]: getFallbackMessage("validation.provider.invalid"),
+      },
+      "validation.provider.invalid",
+    );
   }
 
   const normalizedValue = value.trim() as TProvider;
 
   if (!allowedValues.includes(normalizedValue)) {
-    throw createValidationAppError(`${field} 不合法`, {
-      [field]: `${field} 不合法`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.provider.invalid"),
+      {
+        [field]: getFallbackMessage("validation.provider.invalid"),
+      },
+      "validation.provider.invalid",
+    );
   }
 
   return normalizedValue;
@@ -91,9 +103,13 @@ const readOptionalNonEmptyString = (
   const normalizedValue = readOptionalStringField(value, field);
 
   if (value !== undefined && !normalizedValue) {
-    throw createValidationAppError(`${field} 不能为空`, {
-      [field]: `${field} 不能为空`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.nonEmptyString"),
+      {
+        [field]: getFallbackMessage("validation.nonEmptyString"),
+      },
+      "validation.nonEmptyString",
+    );
   }
 
   return normalizedValue;
@@ -105,9 +121,13 @@ const readOptionalApiKey = (value: unknown): string | undefined => {
   }
 
   if (typeof value !== "string") {
-    throw createValidationAppError("apiKey 必须为字符串", {
-      apiKey: "apiKey 必须为字符串",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.apiKey.string"),
+      {
+        apiKey: getFallbackMessage("validation.apiKey.string"),
+      },
+      "validation.apiKey.string",
+    );
   }
 
   const trimmedValue = value.trim();
@@ -127,15 +147,23 @@ const readRequiredIntegerInRange = (
   }
 
   if (typeof value !== "number" || !Number.isInteger(value)) {
-    throw createValidationAppError(`${field} 必须为整数`, {
-      [field]: `${field} 必须为整数`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.integer"),
+      {
+        [field]: getFallbackMessage("validation.integer"),
+      },
+      "validation.integer",
+    );
   }
 
   if (value < range.min || (range.max !== undefined && value > range.max)) {
-    throw createValidationAppError(`${field} 超出允许范围`, {
-      [field]: `${field} 超出允许范围`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.range"),
+      {
+        [field]: getFallbackMessage("validation.range"),
+      },
+      "validation.range",
+    );
   }
 
   return value;
@@ -147,9 +175,15 @@ const readOptionalSupportedTypes = (value: unknown): string[] | undefined => {
   }
 
   if (!Array.isArray(value)) {
-    throw createValidationAppError("supportedTypes 必须为字符串数组", {
-      supportedTypes: "supportedTypes 必须为字符串数组",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.supportedTypes.stringArray"),
+      {
+        supportedTypes: getFallbackMessage(
+          "validation.supportedTypes.stringArray",
+        ),
+      },
+      "validation.supportedTypes.stringArray",
+    );
   }
 
   const normalizedValues = value
@@ -158,17 +192,29 @@ const readOptionalSupportedTypes = (value: unknown): string[] | undefined => {
     .filter(Boolean);
 
   if (normalizedValues.length !== value.length) {
-    throw createValidationAppError("supportedTypes 必须为字符串数组", {
-      supportedTypes: "supportedTypes 必须为字符串数组",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.supportedTypes.stringArray"),
+      {
+        supportedTypes: getFallbackMessage(
+          "validation.supportedTypes.stringArray",
+        ),
+      },
+      "validation.supportedTypes.stringArray",
+    );
   }
 
   const deduplicatedValues = Array.from(new Set(normalizedValues));
 
   if (deduplicatedValues.length === 0) {
-    throw createValidationAppError("supportedTypes 至少需要保留一种文件类型", {
-      supportedTypes: "supportedTypes 至少需要保留一种文件类型",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.supportedTypes.nonEmpty"),
+      {
+        supportedTypes: getFallbackMessage(
+          "validation.supportedTypes.nonEmpty",
+        ),
+      },
+      "validation.supportedTypes.nonEmpty",
+    );
   }
 
   if (
@@ -179,9 +225,15 @@ const readOptionalSupportedTypes = (value: unknown): string[] | undefined => {
         ),
     )
   ) {
-    throw createValidationAppError("supportedTypes 只支持 md、txt、pdf、docx、xlsx", {
-      supportedTypes: "supportedTypes 只支持 md、txt、pdf、docx、xlsx",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.supportedTypes.allowed"),
+      {
+        supportedTypes: getFallbackMessage(
+          "validation.supportedTypes.allowed",
+        ),
+      },
+      "validation.supportedTypes.allowed",
+    );
   }
 
   return deduplicatedValues;
@@ -196,9 +248,15 @@ const readOptionalWorkspaceDescription = (
     normalizedValue !== undefined &&
     normalizedValue.length > WORKSPACE_DESCRIPTION_MAX_LENGTH
   ) {
-    throw createValidationAppError("description 长度不能超过 200", {
-      description: "description 长度不能超过 200",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.workspaceDescription.maxLength"),
+      {
+        description: getFallbackMessage(
+          "validation.workspaceDescription.maxLength",
+        ),
+      },
+      "validation.workspaceDescription.maxLength",
+    );
   }
 
   return normalizedValue;
@@ -262,9 +320,15 @@ export const normalizeIndexingUpdateInput = (
     chunkOverlap !== undefined &&
     chunkOverlap >= chunkSize
   ) {
-    throw createValidationAppError("chunkOverlap 必须小于 chunkSize", {
-      chunkOverlap: "chunkOverlap 必须小于 chunkSize",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.chunkOverlap.lessThanChunkSize"),
+      {
+        chunkOverlap: getFallbackMessage(
+          "validation.chunkOverlap.lessThanChunkSize",
+        ),
+      },
+      "validation.chunkOverlap.lessThanChunkSize",
+    );
   }
 
   return {
@@ -291,10 +355,14 @@ export const normalizeWorkspaceUpdateInput = (
   );
 
   if (name === undefined && description === undefined) {
-    throw createValidationAppError("至少需要提供一个可更新字段", {
-      name: "至少需要提供一个可更新字段",
-      description: "至少需要提供一个可更新字段",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.atLeastOneField"),
+      {
+        name: getFallbackMessage("validation.atLeastOneField"),
+        description: getFallbackMessage("validation.atLeastOneField"),
+      },
+      "validation.atLeastOneField",
+    );
   }
 
   return {

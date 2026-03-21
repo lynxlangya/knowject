@@ -1,7 +1,7 @@
 import { AppError } from "@lib/app-error.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import { readMutationInput } from "@lib/mutation-input.js";
 import {
-  createRequiredFieldError,
   createValidationAppError,
   readOptionalStringField,
 } from "@lib/validation.js";
@@ -42,7 +42,8 @@ const createAgentNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: "AGENT_NOT_FOUND",
-    message: "智能体不存在",
+    message: getFallbackMessage("agents.notFound"),
+    messageKey: "agents.notFound",
   });
 };
 
@@ -55,9 +56,13 @@ const readOptionalStringArrayField = (
   }
 
   if (!Array.isArray(value)) {
-    throw createValidationAppError(`${field} 必须为字符串数组`, {
-      [field]: `${field} 必须为字符串数组`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.stringArray"),
+      {
+        [field]: getFallbackMessage("validation.stringArray"),
+      },
+      "validation.stringArray",
+    );
   }
 
   const normalizedValues = value
@@ -66,9 +71,13 @@ const readOptionalStringArrayField = (
     .filter(Boolean);
 
   if (normalizedValues.length !== value.length) {
-    throw createValidationAppError(`${field} 必须为字符串数组`, {
-      [field]: `${field} 必须为字符串数组`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.stringArray"),
+      {
+        [field]: getFallbackMessage("validation.stringArray"),
+      },
+      "validation.stringArray",
+    );
   }
 
   return Array.from(new Set(normalizedValues));
@@ -85,9 +94,13 @@ const readOptionalAgentStatus = (
     return value;
   }
 
-  throw createValidationAppError("status 不合法", {
-    status: "status 只能为 active 或 disabled",
-  });
+  throw createValidationAppError(
+    getFallbackMessage("validation.agent.status.invalid"),
+    {
+      status: getFallbackMessage("validation.agent.status.invalid"),
+    },
+    "validation.agent.status.invalid",
+  );
 };
 
 const validateCreateAgentInput = (
@@ -117,13 +130,23 @@ const validateCreateAgentInput = (
   const status = readOptionalAgentStatus(normalizedInput.status) ?? "active";
 
   if (!name) {
-    throw createValidationAppError("请输入智能体名称", {
-      name: "请输入智能体名称",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.agentName"),
+      {
+        name: getFallbackMessage("validation.required.agentName"),
+      },
+      "validation.required.agentName",
+    );
   }
 
   if (!systemPrompt) {
-    throw new AppError(createRequiredFieldError("systemPrompt"));
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.systemPrompt"),
+      {
+        systemPrompt: getFallbackMessage("validation.required.systemPrompt"),
+      },
+      "validation.required.systemPrompt",
+    );
   }
 
   const now = new Date();
@@ -183,26 +206,38 @@ const validateUpdateAgentInput = (
     boundKnowledgeIds === undefined &&
     status === undefined
   ) {
-    throw createValidationAppError("至少需要提供一个可更新字段", {
-      name: "至少需要提供一个可更新字段",
-      description: "至少需要提供一个可更新字段",
-      systemPrompt: "至少需要提供一个可更新字段",
-      boundSkillIds: "至少需要提供一个可更新字段",
-      boundKnowledgeIds: "至少需要提供一个可更新字段",
-      status: "至少需要提供一个可更新字段",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.atLeastOneField"),
+      {
+        name: getFallbackMessage("validation.atLeastOneField"),
+        description: getFallbackMessage("validation.atLeastOneField"),
+        systemPrompt: getFallbackMessage("validation.atLeastOneField"),
+        boundSkillIds: getFallbackMessage("validation.atLeastOneField"),
+        boundKnowledgeIds: getFallbackMessage("validation.atLeastOneField"),
+        status: getFallbackMessage("validation.atLeastOneField"),
+      },
+      "validation.atLeastOneField",
+    );
   }
 
   if (normalizedInput.name !== undefined && !name) {
-    throw createValidationAppError("请输入智能体名称", {
-      name: "请输入智能体名称",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.agentName"),
+      {
+        name: getFallbackMessage("validation.required.agentName"),
+      },
+      "validation.required.agentName",
+    );
   }
 
   if (normalizedInput.systemPrompt !== undefined && !systemPrompt) {
-    throw createValidationAppError("请输入 systemPrompt", {
-      systemPrompt: "请输入 systemPrompt",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.systemPrompt"),
+      {
+        systemPrompt: getFallbackMessage("validation.required.systemPrompt"),
+      },
+      "validation.required.systemPrompt",
+    );
   }
 
   return {
@@ -269,9 +304,13 @@ const validateBoundKnowledgeIds = async (
   );
 
   if (invalidKnowledgeIds.length > 0) {
-    throw createValidationAppError("存在未注册的知识库绑定", {
-      boundKnowledgeIds: `以下知识库不存在：${invalidKnowledgeIds.join(", ")}`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.knowledgeBindings.unregistered"),
+      {
+        boundKnowledgeIds: `以下知识库不存在：${invalidKnowledgeIds.join(", ")}`,
+      },
+      "validation.knowledgeBindings.unregistered",
+    );
   }
 };
 

@@ -1,7 +1,7 @@
 import { AppError } from "@lib/app-error.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import { readMutationInput } from "@lib/mutation-input.js";
 import {
-  createRequiredFieldError,
   createValidationAppError,
   readOptionalStringField,
 } from "@lib/validation.js";
@@ -31,9 +31,15 @@ const readOptionalLifecycleStatus = (
     return value;
   }
 
-  throw createValidationAppError("lifecycleStatus 不合法", {
-    lifecycleStatus: "lifecycleStatus 只能为 draft 或 published",
-  });
+  throw createValidationAppError(
+    getFallbackMessage("validation.skills.lifecycleStatus.invalid"),
+    {
+      lifecycleStatus: getFallbackMessage(
+        "validation.skills.lifecycleStatus.invalid",
+      ),
+    },
+    "validation.skills.lifecycleStatus.invalid",
+  );
 };
 
 const readOptionalSkillMarkdown = (value: unknown): string | undefined => {
@@ -42,9 +48,13 @@ const readOptionalSkillMarkdown = (value: unknown): string | undefined => {
   }
 
   if (typeof value !== "string") {
-    throw createValidationAppError("skillMarkdown 必须为字符串", {
-      skillMarkdown: "skillMarkdown 必须为字符串",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.skillMarkdown.string"),
+      {
+        skillMarkdown: getFallbackMessage("validation.skillMarkdown.string"),
+      },
+      "validation.skillMarkdown.string",
+    );
   }
 
   return value;
@@ -64,7 +74,13 @@ const prepareSkillMarkdown = ({
   const sourceMarkdown = nextMarkdown ?? baseMarkdown;
 
   if (!sourceMarkdown) {
-    throw new AppError(createRequiredFieldError("skillMarkdown"));
+    throw createValidationAppError(
+      getFallbackMessage("validation.required.skillMarkdown"),
+      {
+        skillMarkdown: getFallbackMessage("validation.required.skillMarkdown"),
+      },
+      "validation.required.skillMarkdown",
+    );
   }
 
   if (name === undefined && description === undefined) {
@@ -123,12 +139,16 @@ export const validateUpdateSkillInput = (
     description === undefined &&
     lifecycleStatus === undefined
   ) {
-    throw createValidationAppError("至少需要提供一个可更新字段", {
-      skillMarkdown: "至少需要提供一个可更新字段",
-      name: "至少需要提供一个可更新字段",
-      description: "至少需要提供一个可更新字段",
-      lifecycleStatus: "至少需要提供一个可更新字段",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.atLeastOneField"),
+      {
+        skillMarkdown: getFallbackMessage("validation.atLeastOneField"),
+        name: getFallbackMessage("validation.atLeastOneField"),
+        description: getFallbackMessage("validation.atLeastOneField"),
+        lifecycleStatus: getFallbackMessage("validation.atLeastOneField"),
+      },
+      "validation.atLeastOneField",
+    );
   }
 
   const parsedSkill = prepareSkillMarkdown({

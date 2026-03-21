@@ -1,4 +1,5 @@
 import { AppError } from '@lib/app-error.js';
+import { getFallbackMessage } from '@lib/locale.messages.js';
 import { createValidationAppError } from '@lib/validation.js';
 import type { WithId } from 'mongodb';
 import type {
@@ -18,7 +19,8 @@ export const createSkillNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
     code: 'SKILL_NOT_FOUND',
-    message: 'Skill 不存在',
+    message: getFallbackMessage('skills.notFound'),
+    messageKey: 'skills.notFound',
   });
 };
 
@@ -26,7 +28,8 @@ export const createReadonlySystemSkillError = (): AppError => {
   return new AppError({
     statusCode: 403,
     code: 'SYSTEM_SKILL_READONLY',
-    message: '系统内置 Skill 不可编辑或删除',
+    message: getFallbackMessage('skills.systemReadonly'),
+    messageKey: 'skills.systemReadonly',
   });
 };
 
@@ -34,7 +37,8 @@ export const createSkillSlugConflictError = (slug: string): AppError => {
   return new AppError({
     statusCode: 409,
     code: 'SKILL_SLUG_CONFLICT',
-    message: 'Skill slug 已存在',
+    message: getFallbackMessage('skills.slugConflict'),
+    messageKey: 'skills.slugConflict',
     details: {
       slug,
     },
@@ -55,15 +59,19 @@ export const createSkillInUseError = ({
     agentCount > 0 ? `${agentCount} 个智能体` : null,
   ].filter((label): label is string => Boolean(label));
   const actionLabel = action === 'delete' ? '删除' : '回退为草稿';
+  const message = `Skill 已被${usageLabels.join('、')}绑定，暂不可${actionLabel}`;
 
   return new AppError({
     statusCode: 409,
     code: 'SKILL_IN_USE',
-    message: `Skill 已被${usageLabels.join('、')}绑定，暂不可${actionLabel}`,
+    message,
+    messageKey: 'skills.inUse',
     details: {
       action,
       projectCount,
       agentCount,
+      usageLabels,
+      actionLabel,
     },
   });
 };
@@ -109,17 +117,25 @@ export const assertSafeBundleRelativePath = (relativePath: string): string => {
   const normalized = relativePath.replace(/\\/g, '/').trim().replace(/^\/+/, '');
 
   if (!normalized || normalized === '.' || normalized === '..') {
-    throw createValidationAppError('Skill bundle 文件路径不合法', {
-      skillMarkdown: 'Skill bundle 文件路径不合法',
-    });
+    throw createValidationAppError(
+      getFallbackMessage('validation.skillBundlePath.invalid'),
+      {
+        skillMarkdown: getFallbackMessage('validation.skillBundlePath.invalid'),
+      },
+      'validation.skillBundlePath.invalid',
+    );
   }
 
   const segments = normalized.split('/');
 
   if (segments.some((segment) => !segment || segment === '.' || segment === '..')) {
-    throw createValidationAppError('Skill bundle 文件路径不合法', {
-      skillMarkdown: `非法文件路径：${relativePath}`,
-    });
+    throw createValidationAppError(
+      getFallbackMessage('validation.skillBundlePath.invalid'),
+      {
+        skillMarkdown: `非法文件路径：${relativePath}`,
+      },
+      'validation.skillBundlePath.invalid',
+    );
   }
 
   return normalized;
@@ -170,9 +186,13 @@ const readOptionalSourceFilter = (value: unknown): SkillSource | undefined => {
     return value;
   }
 
-  throw createValidationAppError('source 过滤条件不合法', {
-    source: 'source 只能为 system、custom 或 imported',
-  });
+  throw createValidationAppError(
+    getFallbackMessage('validation.skills.sourceFilter.invalid'),
+    {
+      source: getFallbackMessage('validation.skills.sourceFilter.invalid'),
+    },
+    'validation.skills.sourceFilter.invalid',
+  );
 };
 
 const readOptionalLifecycleStatus = (
@@ -186,9 +206,15 @@ const readOptionalLifecycleStatus = (
     return value;
   }
 
-  throw createValidationAppError('lifecycleStatus 过滤条件不合法', {
-    lifecycleStatus: 'lifecycleStatus 只能为 draft 或 published',
-  });
+  throw createValidationAppError(
+    getFallbackMessage('validation.skills.lifecycleFilter.invalid'),
+    {
+      lifecycleStatus: getFallbackMessage(
+        'validation.skills.lifecycleFilter.invalid',
+      ),
+    },
+    'validation.skills.lifecycleFilter.invalid',
+  );
 };
 
 const readOptionalBindable = (value: unknown): boolean | undefined => {
@@ -210,9 +236,13 @@ const readOptionalBindable = (value: unknown): boolean | undefined => {
     }
   }
 
-  throw createValidationAppError('bindable 过滤条件不合法', {
-    bindable: 'bindable 只能为 true 或 false',
-  });
+  throw createValidationAppError(
+    getFallbackMessage('validation.skills.bindableFilter.invalid'),
+    {
+      bindable: getFallbackMessage('validation.skills.bindableFilter.invalid'),
+    },
+    'validation.skills.bindableFilter.invalid',
+  );
 };
 
 export const normalizeSkillsListFilters = (

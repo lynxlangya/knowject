@@ -3,6 +3,7 @@ import {
 } from "@config/ai-config.js";
 import { AppError } from "@lib/app-error.js";
 import { normalizeIndexerErrorMessage } from "@lib/http.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import { queueExistingKnowledgeDocument } from "./knowledge.index-orchestrator.js";
 import { resolveNamespaceIndexContext } from "./knowledge.namespace.js";
 import { adjustKnowledgeSummaryAfterDocumentRemoval } from "./knowledge.repository.js";
@@ -77,7 +78,8 @@ export const createKnowledgeDocumentHandlers = ({
         throw new AppError({
           statusCode: 502,
           code: "KNOWLEDGE_DOCUMENT_VECTOR_DELETE_FAILED",
-          message: "文档向量清理失败，已停止删除，请稍后重试",
+          message: getFallbackMessage("knowledge.document.vectorDeleteFailed"),
+          messageKey: "knowledge.document.vectorDeleteFailed",
           cause: error,
           details: {
             knowledgeId,

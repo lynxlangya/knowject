@@ -1,3 +1,4 @@
+import { getFallbackMessage } from "./locale.messages.js";
 import { createValidationAppError } from "./validation.js";
 
 interface ReadMutationInputOptions {
@@ -13,15 +14,23 @@ export const readMutationInput = <T>(
       return {} as T & Record<string, unknown>;
     }
 
-    throw createValidationAppError("请求体必须为对象", {
-      body: "请求体必须为对象",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.object"),
+      {
+        body: getFallbackMessage("validation.object"),
+      },
+      "validation.object",
+    );
   }
 
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    throw createValidationAppError("请求体必须为对象", {
-      body: "请求体必须为对象",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.object"),
+      {
+        body: getFallbackMessage("validation.object"),
+      },
+      "validation.object",
+    );
   }
 
   return input as T & Record<string, unknown>;

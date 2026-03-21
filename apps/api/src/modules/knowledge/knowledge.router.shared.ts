@@ -1,6 +1,7 @@
 import multer, { MulterError } from 'multer';
 import type { Request, Response } from 'express';
 import { AppError } from '@lib/app-error.js';
+import { getFallbackMessage } from '@lib/locale.messages.js';
 import {
   KNOWLEDGE_UPLOAD_FIELD_NAME,
   KNOWLEDGE_UPLOAD_MAX_BYTES,
@@ -41,7 +42,11 @@ export const readUploadedKnowledgeFile = async (
             new AppError({
               statusCode: 400,
               code: 'KNOWLEDGE_UPLOAD_TOO_LARGE',
-              message: `上传文件不能超过 ${formatUploadLimitLabel()}`,
+              message: getFallbackMessage('knowledge.upload.tooLarge'),
+              messageKey: 'knowledge.upload.tooLarge',
+              details: {
+                maxUploadSize: formatUploadLimitLabel(),
+              },
             }),
           );
           return;
@@ -51,7 +56,8 @@ export const readUploadedKnowledgeFile = async (
           new AppError({
             statusCode: 400,
             code: 'KNOWLEDGE_UPLOAD_INVALID_REQUEST',
-            message: '上传请求不合法，请确认字段名为 file 且只上传一个文件',
+            message: getFallbackMessage('knowledge.upload.invalidRequest'),
+            messageKey: 'knowledge.upload.invalidRequest',
             details: {
               multerCode: error.code,
             },
@@ -69,7 +75,8 @@ export const readUploadedKnowledgeFile = async (
     throw new AppError({
       statusCode: 400,
       code: 'KNOWLEDGE_UPLOAD_FILE_REQUIRED',
-      message: '请上传文件',
+      message: getFallbackMessage('knowledge.upload.fileRequired'),
+      messageKey: 'knowledge.upload.fileRequired',
     });
   }
 
