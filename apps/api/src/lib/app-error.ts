@@ -1,11 +1,12 @@
 import type { MessageKey } from './locale.messages.js';
+import type { MessageParams } from './locale.messages.js';
 
 interface AppErrorOptions {
   statusCode: number;
   code: string;
   message: string;
   messageKey?: MessageKey;
-  preserveMessage?: boolean;
+  messageParams?: MessageParams;
   details?: unknown;
   cause?: unknown;
 }
@@ -15,14 +16,14 @@ export class AppError extends Error {
   readonly code: string;
   readonly details: unknown;
   readonly messageKey?: MessageKey;
-  readonly preserveMessage: boolean;
+  readonly messageParams?: MessageParams;
 
   constructor({
     statusCode,
     code,
     message,
     messageKey,
-    preserveMessage = false,
+    messageParams,
     details = null,
     cause,
   }: AppErrorOptions) {
@@ -33,7 +34,7 @@ export class AppError extends Error {
     this.code = code;
     this.details = details;
     this.messageKey = messageKey;
-    this.preserveMessage = preserveMessage;
+    this.messageParams = messageParams;
 
     if (cause instanceof Error) {
       this.cause = cause;

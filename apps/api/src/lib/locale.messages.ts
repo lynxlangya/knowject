@@ -98,7 +98,7 @@ export const messages = {
     'validation.skills.import.trustedRawUrlOnly':
       'Only trusted raw Markdown URLs are supported',
     'agents.notFound': 'Agent does not exist',
-    'knowledge.upload.tooLarge': 'Uploaded file exceeds the allowed size limit',
+    'knowledge.upload.tooLarge': 'Uploaded file must not exceed {maxUploadSize}',
     'knowledge.upload.invalidRequest':
       'Upload request is invalid; use the file field and upload only one file',
     'knowledge.upload.fileRequired': 'Please upload a file',
@@ -320,7 +320,7 @@ export const messages = {
     'validation.skills.import.trustedRawUrlOnly':
       'URL 导入仅支持受信任的原始文件地址',
     'agents.notFound': '智能体不存在',
-    'knowledge.upload.tooLarge': '上传文件不能超过限制大小',
+    'knowledge.upload.tooLarge': '上传文件不能超过 {maxUploadSize}',
     'knowledge.upload.invalidRequest':
       '上传请求不合法，请确认字段名为 file 且只上传一个文件',
     'knowledge.upload.fileRequired': '请上传文件',
@@ -429,18 +429,95 @@ export const messages = {
 } as const;
 
 export type MessageKey = keyof typeof messages.en;
+export type MessageParams = Record<string, string | number>;
+
+const renderTemplate = (
+  template: string,
+  params: MessageParams | undefined,
+): string => {
+  if (!params) {
+    return template;
+  }
+
+  return Object.entries(params).reduce((result, [key, value]) => {
+    return result.replaceAll(`{${key}}`, String(value));
+  }, template);
+};
+
+const resolveSkillInUseParams = (
+  locale: SupportedLocale,
+  params: MessageParams | undefined,
+): MessageParams | undefined => {
+  if (!params) {
+    return params;
+  }
+
+  const projectCount = Number(params.projectCount ?? 0);
+  const agentCount = Number(params.agentCount ?? 0);
+  const action = String(params.action ?? 'delete');
+  const usage: string[] = [];
+
+  if (projectCount > 0) {
+    usage.push(
+      renderTemplate(messages[locale]['skills.inUse.projectBindingUnit'], {
+        count: projectCount,
+      }),
+    );
+  }
+
+  if (agentCount > 0) {
+    usage.push(
+      renderTemplate(messages[locale]['skills.inUse.agentBindingUnit'], {
+        count: agentCount,
+      }),
+    );
+  }
+
+  const actionKey =
+    action === 'delete'
+      ? 'skills.inUse.action.delete'
+      : 'skills.inUse.action.unpublish';
+
+  return {
+    ...params,
+    usage: usage.join(locale === 'zh-CN' ? '、' : ', '),
+    action: messages[locale][actionKey],
+  };
+};
 
 export const getMessage = (
   key: MessageKey | undefined,
   locale: SupportedLocale,
+  params?: MessageParams,
 ): string | undefined => {
   if (!key) {
     return undefined;
   }
 
-  return messages[locale]?.[key] ?? messages[DEFAULT_LOCALE]?.[key];
+  const localizedParams =
+    key === 'skills.inUse.message'
+      ? resolveSkillInUseParams(locale, params)
+      : params;
+  const localeMessage = messages[locale]?.[key];
+
+  if (localeMessage) {
+    return renderTemplate(localeMessage, localizedParams);
+  }
+
+  const fallbackMessage = messages[DEFAULT_LOCALE]?.[key];
+  return fallbackMessage
+    ? renderTemplate(
+        fallbackMessage,
+        key === 'skills.inUse.message'
+          ? resolveSkillInUseParams(DEFAULT_LOCALE, params)
+          : params,
+      )
+    : undefined;
 };
 
-export const getFallbackMessage = (key: MessageKey): string => {
-  return messages[FALLBACK_ERROR_LOCALE][key];
+export const getFallbackMessage = (
+  key: MessageKey,
+  params?: MessageParams,
+): string => {
+  return getMessage(key, FALLBACK_ERROR_LOCALE, params) ?? '';
 };

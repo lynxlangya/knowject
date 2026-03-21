@@ -9,6 +9,9 @@ import { createRequiredFieldError } from '@lib/validation.js';
 import { createErrorHandler } from '@middleware/error-handler.js';
 import { notFoundHandler } from '@middleware/not-found.js';
 import { requestContextMiddleware } from '@middleware/request-context.js';
+import { KNOWLEDGE_UPLOAD_MAX_BYTES } from '@modules/knowledge/knowledge.shared.js';
+import { readUploadedKnowledgeFile } from '@modules/knowledge/knowledge.router.shared.js';
+import { createSkillInUseError } from '@modules/skills/skills.shared.js';
 import { sendCreated, sendSuccess } from './api-response.js';
 
 const createTestEnv = (exposeDetails: boolean): AppEnv => {
@@ -107,30 +110,20 @@ const createProtocolTestApp = (exposeDetails: boolean) => {
   });
 
   app.get('/dynamic-skill-error', () => {
-    throw new AppError({
-      statusCode: 409,
-      code: 'SKILL_IN_USE',
-      message: 'Skill 已被1 个项目绑定，暂不可删除',
-      messageKey: 'skills.inUse.message',
-      details: {
-        usage: '1 个项目',
-        action: '删除',
-      },
-      preserveMessage: true,
+    throw createSkillInUseError({
+      action: 'delete',
+      projectCount: 1,
+      agentCount: 0,
     });
   });
 
-  app.get('/dynamic-upload-error', () => {
-    throw new AppError({
-      statusCode: 400,
-      code: 'KNOWLEDGE_UPLOAD_TOO_LARGE',
-      message: '上传文件不能超过 20 MB',
-      messageKey: 'knowledge.upload.tooLarge',
-      details: {
-        maxUploadSize: '20 MB',
-      },
-      preserveMessage: true,
-    });
+  app.post('/dynamic-upload-error', async (req, res, next) => {
+    try {
+      await readUploadedKnowledgeFile(req, res);
+      sendSuccess(res, null);
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.get('/internal-error', () => {
@@ -326,16 +319,25 @@ test('dynamic skill-in-use errors keep rendered message content', async () => {
 
     assert.equal(response.status, 409);
     assert.equal(body.code, 'SKILL_IN_USE');
-    assert.equal(body.message, 'Skill 已被1 个项目绑定，暂不可删除');
+    assert.equal(body.message, 'Skill is bound by 1 project(s) and cannot be delete right now');
   });
 });
 
 test('dynamic upload-size errors keep rendered limit content', async () => {
   await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const formData = new FormData();
+    formData.set(
+      'file',
+      new Blob([new Uint8Array(KNOWLEDGE_UPLOAD_MAX_BYTES + 1)]),
+      'oversized.md',
+    );
+
     const response = await fetch(`${baseUrl}/dynamic-upload-error`, {
+      method: 'POST',
       headers: {
         'Accept-Language': 'en',
       },
+      body: formData,
     });
     const body = (await response.json()) as {
       code: string;
@@ -346,9 +348,9 @@ test('dynamic upload-size errors keep rendered limit content', async () => {
 
     assert.equal(response.status, 400);
     assert.equal(body.code, 'KNOWLEDGE_UPLOAD_TOO_LARGE');
-    assert.equal(body.message, '上传文件不能超过 20 MB');
+    assert.equal(body.message, 'Uploaded file must not exceed 50 MB');
     assert.deepEqual(body.meta.details, {
-      maxUploadSize: '20 MB',
+      maxUploadSize: '50 MB',
     });
   });
 });

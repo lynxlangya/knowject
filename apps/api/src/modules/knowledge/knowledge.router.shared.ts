@@ -42,9 +42,13 @@ export const readUploadedKnowledgeFile = async (
             new AppError({
               statusCode: 400,
               code: 'KNOWLEDGE_UPLOAD_TOO_LARGE',
-              message: getFallbackMessage('knowledge.upload.tooLarge'),
+              message: getFallbackMessage('knowledge.upload.tooLarge', {
+                maxUploadSize: formatUploadLimitLabel(),
+              }),
               messageKey: 'knowledge.upload.tooLarge',
-              preserveMessage: true,
+              messageParams: {
+                maxUploadSize: formatUploadLimitLabel(),
+              },
               details: {
                 maxUploadSize: formatUploadLimitLabel(),
               },

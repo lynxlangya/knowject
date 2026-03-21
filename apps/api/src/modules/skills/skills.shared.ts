@@ -15,15 +15,6 @@ import type {
 export const SKILLS_COLLECTION_NAME = 'skills';
 export const SKILL_ENTRY_FILE_NAME = 'SKILL.md';
 
-const formatTemplate = (
-  template: string,
-  values: Record<string, string>,
-): string => {
-  return Object.entries(values).reduce((result, [key, value]) => {
-    return result.replaceAll(`{${key}}`, value);
-  }, template);
-};
-
 export const createSkillNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
@@ -63,42 +54,26 @@ export const createSkillInUseError = ({
   projectCount: number;
   agentCount: number;
 }): AppError => {
-  const usageLabels = [
-    projectCount > 0
-      ? formatTemplate(
-          getFallbackMessage('skills.inUse.projectBindingUnit'),
-          { count: String(projectCount) },
-        )
-      : null,
-    agentCount > 0
-      ? formatTemplate(
-          getFallbackMessage('skills.inUse.agentBindingUnit'),
-          { count: String(agentCount) },
-        )
-      : null,
-  ].filter((label): label is string => Boolean(label));
-  const actionLabel = getFallbackMessage(
-    action === 'delete'
-      ? 'skills.inUse.action.delete'
-      : 'skills.inUse.action.unpublish',
-  );
-  const message = formatTemplate(getFallbackMessage('skills.inUse.message'), {
-    usage: usageLabels.join('、'),
-    action: actionLabel,
+  const message = getFallbackMessage('skills.inUse.message', {
+    projectCount,
+    agentCount,
+    action,
   });
 
   return new AppError({
     statusCode: 409,
     code: 'SKILL_IN_USE',
     message,
-    messageKey: 'skills.inUse',
-    preserveMessage: true,
+    messageKey: 'skills.inUse.message',
+    messageParams: {
+      projectCount,
+      agentCount,
+      action,
+    },
     details: {
       action,
       projectCount,
       agentCount,
-      usageLabels,
-      actionLabel,
     },
   });
 };
