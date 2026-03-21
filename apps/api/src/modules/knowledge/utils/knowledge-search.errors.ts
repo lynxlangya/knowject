@@ -1,45 +1,59 @@
 import { AppError } from "@lib/app-error.js";
+import type { MessageKey } from "@lib/locale.messages.js";
 import { getFallbackMessage } from "@lib/locale.messages.js";
 import type { EffectiveEmbeddingConfig } from "@modules/settings/settings.types.js";
 
 export const createServiceUnavailableError = (
   code: string,
-  message: string,
+  messageKey: MessageKey,
 ): AppError => {
   return new AppError({
     statusCode: 503,
     code,
-    message,
+    message: getFallbackMessage(messageKey),
+    messageKey,
   });
 };
 
 export const createGatewayError = (
-  message: string,
-  cause?: unknown,
+  messageKey: MessageKey,
+  options: {
+    cause?: unknown;
+    details?: unknown;
+    message?: string;
+  } = {},
 ): AppError => {
   return new AppError({
     statusCode: 502,
     code: "KNOWLEDGE_SEARCH_UPSTREAM_ERROR",
-    message,
-    cause,
+    message: options.message ?? getFallbackMessage(messageKey),
+    messageKey,
+    cause: options.cause,
+    details: options.details,
   });
+};
+
+export const getEmbeddingErrorMessageKey = (
+  provider: EffectiveEmbeddingConfig["provider"],
+): MessageKey => {
+  switch (provider) {
+    case "aliyun":
+      return "knowledge.search.embedding.aliyun.failed";
+    case "zhipu":
+      return "knowledge.search.embedding.zhipu.failed";
+    case "voyage":
+      return "knowledge.search.embedding.voyage.failed";
+    case "custom":
+      return "knowledge.search.embedding.custom.failed";
+    default:
+      return "knowledge.search.embedding.openai.failed";
+  }
 };
 
 export const getEmbeddingErrorPrefix = (
   provider: EffectiveEmbeddingConfig["provider"],
 ): string => {
-  switch (provider) {
-    case "aliyun":
-      return "阿里云 embedding 请求失败";
-    case "zhipu":
-      return "智谱 embedding 请求失败";
-    case "voyage":
-      return "Voyage embedding 请求失败";
-    case "custom":
-      return "兼容 embedding 请求失败";
-    default:
-      return "OpenAI embedding 请求失败";
-  }
+  return getFallbackMessage(getEmbeddingErrorMessageKey(provider));
 };
 
 export const resolveDiagnosticsErrorMessage = (error: unknown): string => {

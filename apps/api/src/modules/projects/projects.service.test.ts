@@ -4416,10 +4416,11 @@ test('createProjectConversationRuntime fails when the stream stays idle past tim
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.code, 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR');
-        assert.equal(
-          error.message,
-          '项目对话流式生成超时（20ms 内未收到新内容）',
-        );
+        assert.equal(error.messageKey, 'project.conversation.timeout');
+        assert.equal(error.message, '项目对话流式生成超时，请稍后重试');
+        assert.deepEqual(error.details, {
+          timeoutMs: 20,
+        });
         return true;
       },
     );

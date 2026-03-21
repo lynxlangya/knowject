@@ -128,6 +128,29 @@ export const messages = {
       'A document with the same content already exists',
     'knowledge.search.diagnosticsFailed':
       'Chroma diagnostics failed',
+    'knowledge.search.chroma.unavailable':
+      'Chroma is not configured; knowledge indexing and search are unavailable',
+    'knowledge.search.chroma.requestFailed': 'Chroma request failed',
+    'knowledge.search.indexer.healthFailed':
+      'Python indexer health check failed',
+    'knowledge.search.indexer.requestFailed':
+      'Python indexer request failed',
+    'knowledge.search.embedding.unavailable':
+      'Embedding API key is not configured; knowledge indexing and search are unavailable',
+    'knowledge.search.embedding.aliyun.failed':
+      'Aliyun embedding request failed',
+    'knowledge.search.embedding.zhipu.failed':
+      'Zhipu embedding request failed',
+    'knowledge.search.embedding.voyage.failed':
+      'Voyage embedding request failed',
+    'knowledge.search.embedding.custom.failed':
+      'Compatible embedding request failed',
+    'knowledge.search.embedding.openai.failed':
+      'OpenAI embedding request failed',
+    'knowledge.search.embedding.responseInvalid':
+      'Embedding response format is invalid',
+    'knowledge.search.embedding.missingEmbedding':
+      'Embedding response is missing embedding data',
     'memberships.userNotFound': 'Target user does not exist',
     'memberships.memberNotFound': 'Project member does not exist',
     'memberships.memberAlreadyExists':
@@ -308,6 +331,21 @@ export const messages = {
     'knowledge.document.duplicateVersion':
       '相同内容的文档已存在，请直接重试或重建现有文档',
     'knowledge.search.diagnosticsFailed': 'Chroma 诊断失败',
+    'knowledge.search.chroma.unavailable':
+      'Chroma 未配置，当前无法执行知识索引和检索',
+    'knowledge.search.chroma.requestFailed': 'Chroma 请求失败',
+    'knowledge.search.indexer.healthFailed': 'Python indexer 健康检查失败',
+    'knowledge.search.indexer.requestFailed': 'Python indexer 请求失败',
+    'knowledge.search.embedding.unavailable':
+      'Embedding API Key 未配置，当前无法执行知识索引和检索',
+    'knowledge.search.embedding.aliyun.failed': '阿里云 embedding 请求失败',
+    'knowledge.search.embedding.zhipu.failed': '智谱 embedding 请求失败',
+    'knowledge.search.embedding.voyage.failed': 'Voyage embedding 请求失败',
+    'knowledge.search.embedding.custom.failed': '兼容 embedding 请求失败',
+    'knowledge.search.embedding.openai.failed': 'OpenAI embedding 请求失败',
+    'knowledge.search.embedding.responseInvalid': 'embedding 响应格式不合法',
+    'knowledge.search.embedding.missingEmbedding':
+      'embedding 响应缺少 embedding 字段',
     'memberships.userNotFound': '目标用户不存在',
     'memberships.memberNotFound': '项目成员不存在',
     'memberships.memberAlreadyExists': '该用户已在当前项目中',

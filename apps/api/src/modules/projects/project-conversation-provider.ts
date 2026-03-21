@@ -67,18 +67,16 @@ const createProjectConversationLlmUpstreamError = (
   message: string,
   cause?: unknown,
   messageKey?: MessageKey,
+  details?: unknown,
 ): AppError => {
   return new AppError({
     statusCode: 502,
     code: "PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR",
     message,
     messageKey,
+    details,
     cause,
   });
-};
-
-const buildProjectConversationTimeoutMessage = (timeoutMs: number): string => {
-  return `项目对话流式生成超时（${timeoutMs}ms 内未收到新内容）`;
 };
 
 const extractOpenAiCompatibleTextContent = (content: unknown): string => {
@@ -354,8 +352,14 @@ export const createProjectConversationProviderAdapter =
             throw createProjectConversationLlmUpstreamError(
               normalizeOpenAiCompatibleErrorMessage(
                 responseBody,
-                `项目对话生成失败（HTTP ${response.status}）`,
+                getFallbackMessage("project.conversation.generationFailed"),
               ),
+              undefined,
+              "project.conversation.generationFailed",
+              {
+                status: response.status,
+                responseBody,
+              },
             );
           }
         } catch (error) {
@@ -420,9 +424,12 @@ export const createProjectConversationProviderAdapter =
 
           if (timeoutController.didTimeout()) {
             throw createProjectConversationLlmUpstreamError(
-              buildProjectConversationTimeoutMessage(llmConfig.requestTimeoutMs),
+              getFallbackMessage("project.conversation.timeout"),
               error,
               "project.conversation.timeout",
+              {
+                timeoutMs: llmConfig.requestTimeoutMs,
+              },
             );
           }
 
@@ -443,8 +450,14 @@ export const createProjectConversationProviderAdapter =
           throw createProjectConversationLlmUpstreamError(
             normalizeOpenAiCompatibleErrorMessage(
               responseBody,
-              `项目对话流式生成失败（HTTP ${response.status}）`,
+              getFallbackMessage("project.conversation.streamFailed"),
             ),
+            undefined,
+            "project.conversation.streamFailed",
+            {
+              status: response.status,
+              responseBody,
+            },
           );
         }
 
@@ -560,9 +573,12 @@ export const createProjectConversationProviderAdapter =
 
           if (timeoutController.didTimeout()) {
             throw createProjectConversationLlmUpstreamError(
-              buildProjectConversationTimeoutMessage(llmConfig.requestTimeoutMs),
+              getFallbackMessage("project.conversation.timeout"),
               error,
               "project.conversation.timeout",
+              {
+                timeoutMs: llmConfig.requestTimeoutMs,
+              },
             );
           }
 

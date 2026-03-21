@@ -9,6 +9,7 @@ import type { KnowledgeEmbeddingService } from "../types/knowledge.search.types.
 import {
   createGatewayError,
   createServiceUnavailableError,
+  getEmbeddingErrorMessageKey,
   getEmbeddingErrorPrefix,
 } from "../utils/knowledge-search.errors.js";
 
@@ -89,10 +90,13 @@ export const createKnowledgeEmbeddingService = ({
       if (!embeddingConfig.apiKey) {
         throw createServiceUnavailableError(
           "KNOWLEDGE_SEARCH_EMBEDDING_UNAVAILABLE",
-          "Embedding API Key 未配置，当前无法执行知识索引和检索",
+          "knowledge.search.embedding.unavailable",
         );
       }
 
+      const errorMessageKey = getEmbeddingErrorMessageKey(
+        embeddingConfig.provider,
+      );
       const errorPrefix = getEmbeddingErrorPrefix(embeddingConfig.provider);
       let responseBody: unknown = null;
 
@@ -118,10 +122,17 @@ export const createKnowledgeEmbeddingService = ({
 
         if (!response.ok) {
           throw createGatewayError(
-            normalizeOpenAiCompatibleErrorMessage(
-              responseBody,
-              `${errorPrefix}（HTTP ${response.status}）`,
-            ),
+            errorMessageKey,
+            {
+              message: normalizeOpenAiCompatibleErrorMessage(
+                responseBody,
+                `${errorPrefix}（HTTP ${response.status}）`,
+              ),
+              details: {
+                status: response.status,
+                responseBody,
+              },
+            },
           );
         }
 
@@ -131,7 +142,15 @@ export const createKnowledgeEmbeddingService = ({
           !("data" in responseBody) ||
           !Array.isArray(responseBody.data)
         ) {
-          throw createGatewayError(`${errorPrefix}：响应格式不合法`);
+          throw createGatewayError(
+            "knowledge.search.embedding.responseInvalid",
+            {
+              details: {
+                provider: embeddingConfig.provider,
+                responseBody,
+              },
+            },
+          );
         }
 
         return responseBody.data.map((item) => {
@@ -141,7 +160,15 @@ export const createKnowledgeEmbeddingService = ({
             !("embedding" in item) ||
             !Array.isArray(item.embedding)
           ) {
-            throw createGatewayError(`${errorPrefix}：响应缺少 embedding`);
+            throw createGatewayError(
+              "knowledge.search.embedding.missingEmbedding",
+              {
+                details: {
+                  provider: embeddingConfig.provider,
+                  responseBody,
+                },
+              },
+            );
           }
 
           return item.embedding.map((value: unknown) => Number(value));
@@ -151,7 +178,9 @@ export const createKnowledgeEmbeddingService = ({
           throw error;
         }
 
-        throw createGatewayError(errorPrefix, error);
+        throw createGatewayError(errorMessageKey, {
+          cause: error,
+        });
       }
     },
   };

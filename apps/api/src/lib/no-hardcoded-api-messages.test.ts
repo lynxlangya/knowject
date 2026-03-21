@@ -9,6 +9,9 @@ const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/knowledge/knowledge.service.catalog.ts',
   'apps/api/src/modules/knowledge/knowledge.service.documents.ts',
   'apps/api/src/modules/knowledge/knowledge.service.helpers.ts',
+  'apps/api/src/modules/knowledge/search/knowledge-chroma-collection.service.ts',
+  'apps/api/src/modules/knowledge/search/knowledge-chroma-mutation.service.ts',
+  'apps/api/src/modules/knowledge/search/knowledge-embedding.service.ts',
   'apps/api/src/modules/knowledge/utils/knowledge-search.errors.ts',
   'apps/api/src/modules/memberships/memberships.service.ts',
   'apps/api/src/modules/projects/project-conversation-provider.ts',
@@ -25,6 +28,8 @@ const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/lib/mutation-input.ts',
 ] as const;
 
+const MESSAGE_KEY_LITERAL_PATTERN = /^[A-Za-z0-9.-]+$/;
+
 const RUNTIME_MESSAGE_PATTERNS = [
   {
     label: 'message literal',
@@ -33,6 +38,24 @@ const RUNTIME_MESSAGE_PATTERNS = [
   {
     label: 'createValidationAppError literal',
     regex: /\bcreateValidationAppError\(\s*(['"`])/g,
+  },
+  {
+    label: 'createGatewayError literal',
+    regex:
+      /\bcreateGatewayError\(\s*(['"`])((?:(?!\1)[\s\S])*?)\1/g,
+    allowMessageKeyLiteral: true,
+  },
+  {
+    label: 'createProjectConversationLlmUpstreamError literal',
+    regex:
+      /\bcreateProjectConversationLlmUpstreamError\(\s*(['"`])((?:(?!\1)[\s\S])*?)\1/g,
+    allowMessageKeyLiteral: true,
+  },
+  {
+    label: 'createServiceUnavailableError literal message',
+    regex:
+      /\bcreateServiceUnavailableError\(\s*[^,]+,\s*(['"`])((?:(?!\1)[\s\S])*?)\1/g,
+    allowMessageKeyLiteral: true,
   },
 ];
 
@@ -53,10 +76,41 @@ test('api runtime modules do not hardcode user-facing messages', () => {
 
     for (const pattern of RUNTIME_MESSAGE_PATTERNS) {
       for (const match of source.matchAll(pattern.regex)) {
+        if (
+          pattern.allowMessageKeyLiteral &&
+          MESSAGE_KEY_LITERAL_PATTERN.test(match[2] ?? '')
+        ) {
+          continue;
+        }
+
         violations.push(`${relativePath}: ${pattern.label}`);
       }
     }
   }
 
   assert.deepEqual(violations, []);
+});
+
+test('knowledge search error helpers do not return hardcoded literal messages', () => {
+  const workspaceRoot = join(process.cwd(), '..', '..');
+  const source = stripComments(
+    readFileSync(
+      join(
+        workspaceRoot,
+        'apps/api/src/modules/knowledge/utils/knowledge-search.errors.ts',
+      ),
+      'utf8',
+    ),
+  );
+
+  const literalReturns = Array.from(
+    source.matchAll(/\breturn\s*(['"`])((?:(?!\1)[\s\S])*?)\1/g),
+  )
+    .filter((match) => !MESSAGE_KEY_LITERAL_PATTERN.test(match[2] ?? ''))
+    .map(
+      () =>
+        'apps/api/src/modules/knowledge/utils/knowledge-search.errors.ts: return literal',
+    );
+
+  assert.deepEqual(literalReturns, []);
 });

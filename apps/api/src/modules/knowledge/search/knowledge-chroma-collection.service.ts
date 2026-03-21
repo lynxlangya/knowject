@@ -26,7 +26,7 @@ export const createKnowledgeChromaCollectionService = ({
     if (!env.chroma.url) {
       throw createServiceUnavailableError(
         "KNOWLEDGE_SEARCH_CHROMA_UNAVAILABLE",
-        "Chroma 未配置，当前无法执行知识索引和检索",
+        "knowledge.search.chroma.unavailable",
       );
     }
 
@@ -66,22 +66,31 @@ export const createKnowledgeChromaCollectionService = ({
 
       if (!response.ok) {
         throw createGatewayError(
-          `Chroma 请求失败（HTTP ${response.status}）`,
-          responseBody,
+          "knowledge.search.chroma.requestFailed",
+          {
+            details: {
+              status: response.status,
+              responseBody,
+            },
+          },
         );
       }
 
       return (responseBody ?? null) as T;
     } catch (error) {
       if (error instanceof Error && error.name === "TimeoutError") {
-        throw createGatewayError("Chroma 请求失败", error);
+        throw createGatewayError("knowledge.search.chroma.requestFailed", {
+          cause: error,
+        });
       }
 
       if (error instanceof Error && "statusCode" in error) {
         throw error;
       }
 
-      throw createGatewayError("Chroma 请求失败", error);
+      throw createGatewayError("knowledge.search.chroma.requestFailed", {
+        cause: error,
+      });
     }
   };
 

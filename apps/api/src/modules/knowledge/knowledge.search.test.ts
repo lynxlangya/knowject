@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AppEnv } from "@config/env.js";
+import { AppError } from "@lib/app-error.js";
 import { encryptApiKey } from "@lib/crypto.js";
+import {
+  createGatewayError,
+  createServiceUnavailableError,
+  getEmbeddingErrorPrefix,
+} from "./utils/knowledge-search.errors.js";
 import { createKnowledgeSearchService } from "./knowledge.search.js";
 
 const createTestEnv = (): AppEnv => {
@@ -501,7 +507,8 @@ test("searchDocuments reports provider-aware embedding errors for aliyun", async
         topK: 3,
       }),
       (error: unknown) => {
-        assert.ok(error instanceof Error);
+        assert.ok(error instanceof AppError);
+        assert.equal(error.messageKey, "knowledge.search.embedding.aliyun.failed");
         assert.equal(error.message, "阿里云 embedding 请求失败（HTTP 400）");
         return true;
       },
@@ -510,6 +517,22 @@ test("searchDocuments reports provider-aware embedding errors for aliyun", async
     globalThis.fetch = originalFetch;
     process.env.SETTINGS_ENCRYPTION_KEY = originalEncryptionKey;
   }
+});
+
+test("knowledge search error helpers attach localized message keys", () => {
+  const serviceUnavailableError = createServiceUnavailableError(
+    "KNOWLEDGE_SEARCH_EMBEDDING_UNAVAILABLE",
+    "knowledge.search.embedding.unavailable",
+  );
+  const gatewayError = createGatewayError(
+    "knowledge.search.chroma.requestFailed",
+  );
+
+  assert.equal(serviceUnavailableError.messageKey, "knowledge.search.embedding.unavailable");
+  assert.equal(serviceUnavailableError.message, "Embedding API Key 未配置，当前无法执行知识索引和检索");
+  assert.equal(gatewayError.messageKey, "knowledge.search.chroma.requestFailed");
+  assert.equal(gatewayError.message, "Chroma 请求失败");
+  assert.equal(getEmbeddingErrorPrefix("aliyun"), "阿里云 embedding 请求失败");
 });
 
 test("searchDocuments falls back to local development embedding in development without api key", async () => {

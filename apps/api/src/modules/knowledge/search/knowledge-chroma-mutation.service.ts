@@ -65,8 +65,13 @@ export const createKnowledgeChromaMutationService = ({
 
       if (!response.ok) {
         throw createGatewayError(
-          `Python indexer 健康检查失败（HTTP ${response.status}）`,
-          responseBody,
+          "knowledge.search.indexer.healthFailed",
+          {
+            details: {
+              status: response.status,
+              responseBody,
+            },
+          },
         );
       }
     } catch (error) {
@@ -74,7 +79,9 @@ export const createKnowledgeChromaMutationService = ({
         throw error;
       }
 
-      throw createGatewayError("Python indexer 健康检查失败", error);
+      throw createGatewayError("knowledge.search.indexer.healthFailed", {
+        cause: error,
+      });
     }
   };
 
@@ -120,14 +127,20 @@ export const createKnowledgeChromaMutationService = ({
           throw new AppError({
             statusCode: 404,
             code: "KNOWLEDGE_SEARCH_INDEXER_ROUTE_NOT_FOUND",
-            message: `${failureMessage}（HTTP 404）`,
+            message: failureMessage,
             details: responseBody,
           });
         }
 
         throw createGatewayError(
-          `${failureMessage}（HTTP ${response.status}）`,
-          responseBody,
+          "knowledge.search.indexer.requestFailed",
+          {
+            details: {
+              status: response.status,
+              responseBody,
+              failureMessage,
+            },
+          },
         );
       }
 
@@ -137,7 +150,12 @@ export const createKnowledgeChromaMutationService = ({
         throw error;
       }
 
-      throw createGatewayError(failureMessage, error);
+      throw createGatewayError("knowledge.search.indexer.requestFailed", {
+        cause: error,
+        details: {
+          failureMessage,
+        },
+      });
     }
   };
 
