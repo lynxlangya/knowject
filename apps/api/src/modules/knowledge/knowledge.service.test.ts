@@ -1064,8 +1064,8 @@ test('uploadDocument rejects files disabled by indexing supportedTypes before pe
       getSettings: async () => ({
         singleton: 'default',
         indexing: {
-          chunkSize: 1000,
-          chunkOverlap: 200,
+          chunkSize: 960,
+          chunkOverlap: 160,
           supportedTypes: ['md', 'txt'],
           indexerTimeoutMs: 30000,
         },

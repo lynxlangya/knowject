@@ -25,6 +25,7 @@ export const DEFAULT_INDEXING_SUPPORTED_TYPES = ['md', 'txt', 'pdf', 'docx', 'xl
 export const DEFAULT_INDEXING_TIMEOUT_MS = 30000;
 export const DEFAULT_WORKSPACE_NAME = '知项 · Knowject';
 export const DEFAULT_WORKSPACE_DESCRIPTION = '让项目知识，真正为团队所用。';
+const LEGACY_DEFAULT_INDEXING_SUPPORTED_TYPES = ['md', 'txt'] as const;
 
 const readOptionalEnvironmentPositiveInteger = (
   name: string,
@@ -143,6 +144,8 @@ export const getSettingsResponseFromDocument = (
   env: AppEnv,
   settings: WorkspaceSettingsDocument | null,
 ) => {
+  const normalizedIndexing = normalizeStoredIndexingSettings(settings?.indexing);
+
   return {
     embedding: settings?.embedding?.apiKeyEncrypted
       ? toStoredAiSettingsResponse(settings.embedding)
@@ -150,13 +153,44 @@ export const getSettingsResponseFromDocument = (
     llm: settings?.llm?.apiKeyEncrypted
       ? toStoredAiSettingsResponse(settings.llm)
       : getEnvironmentLlmSettings(env),
-    indexing: settings?.indexing
+    indexing: normalizedIndexing
       ? {
-          ...settings.indexing,
+          ...normalizedIndexing,
           source: 'database' as const,
         }
       : getEnvironmentIndexingSettings(env),
     workspace: getStoredWorkspaceSection(settings),
+  };
+};
+
+const normalizeStoredIndexingSettings = (
+  indexing: WorkspaceSettingsDocument['indexing'] | undefined,
+) => {
+  if (!indexing) {
+    return undefined;
+  }
+
+  const supportedTypes = Array.from(
+    new Set(
+      indexing.supportedTypes
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+  const isLegacyDefaultIndexingConfig =
+    indexing.chunkSize === DEFAULT_INDEXING_CHUNK_SIZE &&
+    indexing.chunkOverlap === DEFAULT_INDEXING_CHUNK_OVERLAP &&
+    indexing.indexerTimeoutMs === DEFAULT_INDEXING_TIMEOUT_MS &&
+    supportedTypes.length === LEGACY_DEFAULT_INDEXING_SUPPORTED_TYPES.length &&
+    LEGACY_DEFAULT_INDEXING_SUPPORTED_TYPES.every((item) =>
+      supportedTypes.includes(item),
+    );
+
+  return {
+    ...indexing,
+    supportedTypes: isLegacyDefaultIndexingConfig
+      ? [...DEFAULT_INDEXING_SUPPORTED_TYPES]
+      : supportedTypes,
   };
 };
 
@@ -258,14 +292,15 @@ export const getEffectiveIndexingConfig = async ({
 }): Promise<EffectiveIndexingConfig> => {
   try {
     const settings = await repository.getSettings();
+    const normalizedIndexing = normalizeStoredIndexingSettings(settings?.indexing);
 
-    if (settings?.indexing) {
+    if (normalizedIndexing) {
       return {
         source: 'database',
-        chunkSize: settings.indexing.chunkSize,
-        chunkOverlap: settings.indexing.chunkOverlap,
-        supportedTypes: [...settings.indexing.supportedTypes],
-        indexerTimeoutMs: settings.indexing.indexerTimeoutMs,
+        chunkSize: normalizedIndexing.chunkSize,
+        chunkOverlap: normalizedIndexing.chunkOverlap,
+        supportedTypes: [...normalizedIndexing.supportedTypes],
+        indexerTimeoutMs: normalizedIndexing.indexerTimeoutMs,
       };
     }
   } catch (error) {
