@@ -14,6 +14,9 @@ Start from the concrete change, then gather only the documents needed to judge i
 - `AGENTS.md`
 - `.codex/README.md`
 - `.codex/MIGRATION.md`
+- `.codex/packs/README.md`
+- `.codex/packs/chatgpt-projects/README.md`
+- `.codex/skills/README.md`
 - `docs/README.md`
 - `docs/exports/README.md`
 - `docs/exports/chatgpt-projects/README.md`
@@ -71,12 +74,15 @@ Use `AGENTS.md` section 5 as the first sync matrix. If a change affects Codex ma
 
 Treat `docs/*` as the source of truth.
 Treat `docs/exports/*` as the live derived export layer.
+Treat `.codex/*` as compatibility layer shells that must stay aligned with live roots.
 
 When referenced source docs changed, verify whether `docs/exports/*` needs sync. Apply these rules:
 
 - update source docs first
 - then update `docs/exports/*` if the changed source is mirrored or summarized there
 - if source and derived exports disagree, source wins
+- verify compatibility shell pointers still match live roots (`.codex/packs/chatgpt-projects/README.md`, `.codex/skills/README.md`)
+- if compatibility shell and live roots disagree, live roots win and shell text must be updated
 
 ### 5. Check for stale "current facts"
 
@@ -90,6 +96,7 @@ Look for now-false statements in collaboration docs, especially:
 
 If a statement describes the current repository state, it must be updated or explicitly marked historical.
 Treat `.codex/*` as a compatibility layer in this process, not as the active docs root.
+Also flag compatibility shell drift when `.codex/*` stubs still describe pre-migration live paths.
 
 ## Output
 
