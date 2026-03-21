@@ -33,8 +33,8 @@ Use this skill when the change touches one or more of these areas:
 - `apps/platform/src/pages/knowledge/*`
 - `apps/platform/src/pages/project/*` when project-private knowledge behavior changes
 - `docs/current/architecture.md`
-- `docs/contracts/chroma-decision.md`
-- `docs/plans/tasks-index-ops-project-consumption.md`
+- `docs/contracts/*` (优先检查当前存在的索引相关契约文档；若缺失需在审查结果中标注)
+- `docs/plans/tasks-service-indexing-refactor.md`
 - verify scripts or tests that prove the indexing path still works
 
 ## Audit Workflow
@@ -89,8 +89,8 @@ Use this skill when the change touches one or more of these areas:
 
 - Check whether these files need sync when boundary behavior changes:
   - `docs/current/architecture.md`
-  - `docs/contracts/chroma-decision.md`
-  - `docs/plans/tasks-index-ops-project-consumption.md`
+  - `docs/contracts/*`（按当前存在文件检查，至少覆盖 `docs/contracts/README.md`）
+  - `docs/plans/tasks-service-indexing-refactor.md`
   - `apps/api/README.md`
   - `apps/indexer-py/README.md`
 - Confirm relevant API tests, Python tests, and verify scripts still cover the changed path.
@@ -122,8 +122,8 @@ If there are no findings, say so explicitly and still mention remaining validati
 Read these only as needed:
 
 - `docs/current/architecture.md`
-- `docs/contracts/chroma-decision.md`
-- `docs/plans/tasks-index-ops-project-consumption.md`
+- `docs/contracts/README.md`
+- `docs/plans/tasks-service-indexing-refactor.md`
 - `apps/api/src/modules/knowledge/knowledge.service.ts`
 - `apps/indexer-py/app/api/routes/indexing.py`
 - `apps/indexer-py/README.md`
