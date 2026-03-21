@@ -41,7 +41,7 @@ packages/
   ui/         Shared UI package (@knowject/ui)
 docker/       Compose files, image builds, reverse proxy, init scripts
 scripts/      Reusable command entrypoints and shell helpers
-.agents/      Agent-facing assets and project skills (`.agents/skills/`)
+# Task 3 target: skill-root migration will land at `.agents/skills/`
 .codex/       Codex configuration + compatibility notes only
 ```
 
