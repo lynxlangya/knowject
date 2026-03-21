@@ -10,7 +10,7 @@
 
 - `AGENTS.md` 仍是项目级长期指令入口。
 - `docs/` 是唯一正式文档主源；truth surface 按目录边界管理。
-- `docs/exports/` 仅作为派生导出目录，不承担事实源职责。
+- `docs/exports/` 是正在建立的派生导出目标根目录，不承担事实源职责；Task 4 前导出包 live 入口仍为 `.codex/packs/chatgpt-projects/*`。
 - 项目级 Skill 根目录正在迁移到 `.agents/skills/`（Task 3 目标路径，当前任务尚未完成实际迁移）。
 - `.codex/` 仅保留项目 Codex 配置与兼容说明，不再承载正式文档、导出包与 Skill 主内容。
 - 取舍依据：优先单一真相源与可维护性，避免多入口并行导致漂移。
@@ -29,7 +29,7 @@ docker/      本地与线上容器化基线（compose、构建、反代、初始
 scripts/     仓库命令统一入口与 shell helper
 files/       按知识库分类的 Markdown 文档库
 docs/        项目文档主根目录（current/contracts/standards/plans/handoff/roadmap/...）
-docs/exports/ 派生导出目录（非事实源）
+docs/exports/ 派生导出目标根目录（非事实源，Task 4 前 live 入口仍在 `.codex/packs/chatgpt-projects/*`）
 .agents/skills/ 项目级 Skill 迁移目标路径（Task 3，当前未落地）
 .codex/      项目 Codex 配置与兼容层（非文档主根目录）
 ```
@@ -81,7 +81,7 @@ docs/exports/ 派生导出目录（非事实源）
   - Mock 数据源、示例路径、存储键变化：同步 `docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
   - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
   - 仓库级命令包装或脚本入口变化：同步 `README.md`、`docker/README.md`、`docs/current/architecture.md`、必要时同步本文件。
-  - Root governance、工程治理 `standards/`、导出映射或 Skill 根目录变化：同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`docs/README.md`，必要时同步 `docs/exports/README.md`；若 Skill 根目录迁移已落地，再同步 `.agents/skills/README.md`。
+  - Root governance、工程治理 `standards/`、导出映射或 Skill 根目录变化：同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`docs/README.md`，必要时同步 `docs/exports/README.md`；导出包 active 引用切换在 Task 4 落地后执行，Skill 根目录 active 引用切换在 Task 3 落地后执行。
   - 工程治理规则、协作规范或评审清单变化（`docs/standards/*`）：同步 `docs/README.md`、必要时同步 `docs/current/architecture.md` 与本文件，避免入口与事实源漂移。
   - 模块边界、目录结构、协作规则变化：同步本文件、`.codex/README.md`、`.codex/MIGRATION.md` 与 `docs/current/architecture.md`。
 
