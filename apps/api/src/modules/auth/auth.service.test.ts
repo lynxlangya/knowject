@@ -3,7 +3,7 @@ import test from 'node:test';
 import argon2 from 'argon2';
 import { ObjectId, type WithId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
-import type { SupportedLocale } from '@knowject/request';
+import type { SupportedLocale } from './auth.types.js';
 import type { AuthRepository } from './auth.repository.js';
 import { createAuthService } from './auth.service.js';
 import type { AuthUserDocument, AuthUserProfile } from './auth.types.js';

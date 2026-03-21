@@ -1,5 +1,6 @@
 import type { ObjectId } from 'mongodb';
-import type { SupportedLocale } from '@knowject/request';
+
+export type SupportedLocale = 'en' | 'zh-CN';
 
 export interface AuthUserDocument {
   _id?: ObjectId;

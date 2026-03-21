@@ -22,9 +22,9 @@ import type {
   RegisterInput,
   SearchUsersInput,
   SearchUsersResult,
+  SupportedLocale,
   UpdateAuthPreferencesInput,
 } from './auth.types.js';
-import type { SupportedLocale } from '@knowject/request';
 
 export interface AuthService {
   register(input: RegisterInput): Promise<AuthSuccessResponse>;
