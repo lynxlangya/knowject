@@ -1,6 +1,6 @@
 ---
 name: docs-boundary-guard
-description: Audit Knowject's docs boundaries and required sync work. Use when changes touch `docs/*`, `docs/exports/*`, `.codex/packs/chatgpt-projects/*`, `.agents/skills`, `AGENTS.md`, `README.md`, `.codex/README.md`, `.codex/MIGRATION.md`, or any feature that may require current/contracts/plans/handoff boundary checks and export synchronization.
+description: Audit Knowject's docs boundaries and required sync work. Use when changes touch `docs/*`, `docs/exports/*`, `.agents/skills/*`, `AGENTS.md`, `README.md`, `.codex/README.md`, `.codex/MIGRATION.md`, or any feature that may require current/contracts/plans/handoff boundary checks and export synchronization.
 ---
 
 # Docs Boundary Guard
@@ -16,7 +16,7 @@ Start from the concrete change, then gather only the documents needed to judge i
 - `.codex/MIGRATION.md`
 - `docs/README.md`
 - `docs/exports/README.md`
-- `.codex/packs/chatgpt-projects/README.md`
+- `docs/exports/chatgpt-projects/README.md`
 - affected files under `docs/*`
 - affected entry docs such as `README.md`
 
@@ -67,17 +67,15 @@ Review whether the change should update these entry documents:
 
 Use `AGENTS.md` section 5 as the first sync matrix. If a change affects Codex main-directory responsibilities, pack mapping, skill root rules, or structure governance, verify `AGENTS.md`, `.codex/README.md`, and `.codex/MIGRATION.md` together.
 
-### 4. Check export synchronization (transition-aware)
+### 4. Check export synchronization
 
 Treat `docs/*` as the source of truth.
-Treat `docs/exports/*` as the target derived layer being established.
-Before Task 4 lands, also treat `.codex/packs/chatgpt-projects/*` as the live ChatGPT Projects export package to keep in sync.
+Treat `docs/exports/*` as the live derived export layer.
 
-When referenced source docs changed, verify whether `docs/exports/*` and current live pack files need sync. Apply these rules:
+When referenced source docs changed, verify whether `docs/exports/*` needs sync. Apply these rules:
 
 - update source docs first
 - then update `docs/exports/*` if the changed source is mirrored or summarized there
-- until Task 4, also update `.codex/packs/chatgpt-projects/*` when that export path is still consumed
 - if source and derived exports disagree, source wins
 
 ### 5. Check for stale "current facts"
@@ -100,7 +98,7 @@ Return a concise audit report with these sections:
 - `Judgment`: pass / needs sync / boundary violation
 - `Required Updates`: exact files that must change now
 - `Boundary Risks`: misplaced content or mixed truth surfaces
-- `Export Sync`: whether `docs/exports/*` and (pre-Task 4) `.codex/packs/chatgpt-projects/*` need updates
+- `Export Sync`: whether `docs/exports/*` needs updates
 - `Notes`: optional low-priority cleanup suggestions
 
 Prefer file-path-specific findings over generic writing advice.
@@ -115,7 +113,7 @@ Prefer file-path-specific findings over generic writing advice.
 
 ## Typical Triggers
 
-- adding or moving files under `docs/`, `docs/exports/`, `.codex/packs/chatgpt-projects/`, or `.agents/skills/`
+- adding or moving files under `docs/`, `docs/exports/`, or `.agents/skills/`
 - changing routes, module boundaries, data sources, or Canonical entry points
 - migrating content away from legacy agent directories
 - updating handoff docs after a stage transition

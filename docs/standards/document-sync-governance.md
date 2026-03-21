@@ -12,9 +12,9 @@
 - Mock 数据源、示例路径、项目本地存储的键、配置模板或授权 token 组织方式调整，按照 AGENTS 的规划必须同步 `docs/current/architecture.md`、相关 README，必要时同步 `AGENTS.md` 确保协作约定清楚。
 - Docker/compose/容器端口、网络、环境变量、secrets 暴露面发生变化，要同步 `README.md`、`docs/current/docker-usage.md`、`docs/current/architecture.md`、`docker/README.md` 与 `apps/api/README.md` 并验证手册和部署文档一致。
 - 仓库级命令包装、新增脚本、部署辅助命令、镜像构建变化时，要同步 README、`docker/README.md`、`docs/current/architecture.md`，并在必要时把控制路径写进 `AGENTS.md` 或相关计划。
-- Codex 根目录职责、`docs` 上传包映射、Skill 根目录变化必须同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`.codex/packs/chatgpt-projects/README.md`、`.agents/skills/README.md`（live root）与 `.codex/skills/README.md`（compatibility stub），避免后续导入/上传包与事实源脱节。
+- Codex 根目录职责、`docs` 上传包映射、Skill 根目录变化必须同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`docs/exports/chatgpt-projects/README.md`、`.agents/skills/README.md`（live root）以及 `.codex/` 兼容说明，避免后续导入/上传包与事实源脱节。
 - 模块边界、目录结构、协作规则等核心架构变化，要同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md` 与 `docs/current/architecture.md`，并更新任何引用这些边界的 `plans/` 或 `tasks-*` 文档。
-- 任何 contracts、contracts 相关接口、roadmap 目标、plans 进度、handoff 内容、templates 或 pack 副本被更新的场景，都必须反推是否要同步 `docs/contracts/*`、`docs/roadmap/*`、`docs/plans/*`、`docs/handoff/*`、`docs/templates/PLANS.md`、`.codex/packs/chatgpt-projects/*` 这些依赖文档。
+- 任何 contracts、contracts 相关接口、roadmap 目标、plans 进度、handoff 内容、templates 或导出副本被更新的场景，都必须反推是否要同步 `docs/contracts/*`、`docs/roadmap/*`、`docs/plans/*`、`docs/handoff/*`、`docs/templates/PLANS.md`、`docs/exports/chatgpt-projects/*` 这些依赖文档。
 
 ## 3. 同步矩阵
 
@@ -25,16 +25,16 @@
 | `AGENTS.md` | 关键路径、模块边界、协作机制、例外收束、Codex 角色发生调整 | AGENTS §5-6 列出必须同步 AGENTS 及相关 doc 的前提，避免规则藏在隐式约定里。 |
 | `docs/current/architecture.md` | 路由、data flow、API 依赖、mock 用例、localStorage 键、模块归属、Default behavior 变更 | 该文件是“当前事实源”；任何代码侧事实变更都应先同步这里，再回写入口导航。 |
 | `.codex/README.md` | `docs` 目录职责、标准流程、上传包/Skill 目录职责变化 | AGENTS §5 强调 Codex 根目录职责调整需同步 `.codex/README.md`，保持入口说明与治理规则一致。 |
-| `.codex/MIGRATION.md` | `docs` 与 `.agent/` 收口策略变更、目录迁移、结构职责调整 | AGENTS §5/§0.1 要求 `.codex/MIGRATION.md` 与 `.codex/README.md` 同步体现迁移规则，避免交接歧义。 |
-| `.codex/packs/chatgpt-projects/README.md` | `docs` 中的 source 文档 (current/contracts/plans) 被上传包引用的内容发生变化 | AGENTS §5 规定派生上传包必须与事实源同步，相关 README 也应更新以反映最新可上传快照。 |
+| `.codex/MIGRATION.md` | `docs` 与 legacy agent 目录收口策略变更、目录迁移、结构职责调整 | AGENTS §5/§0.1 要求 `.codex/MIGRATION.md` 与 `.codex/README.md` 同步体现迁移规则，避免交接歧义。 |
+| `docs/exports/chatgpt-projects/README.md` | `docs` 中的 source 文档 (current/contracts/plans) 被导出包引用的内容发生变化 | AGENTS §5 规定派生导出包必须与事实源同步，相关 README 也应更新以反映最新可上传快照。 |
 | `.agents/skills/README.md` | 项目级 Skill live 根目录职责、Skill 包目录治理流程、导入/发布政策变更 | 当前 skill-root governance 的主入口，需与 AGENTS §5 和 root entry docs 保持一致。 |
-| `.codex/skills/README.md` | 兼容 stub 跳转说明、历史链接兼容策略变更 | 该文件不再承载 live 根目录职责；仅用于兼容入口与迁移指引说明。 |
+| `.codex/` 兼容说明 | 兼容 stub 跳转说明、历史链接兼容策略变更 | 兼容层不承载 live 根目录职责；仅用于兼容入口与迁移指引说明。 |
 | `docs/current/docker-usage.md` | Docker/compose 文件变化、新增镜像、端口/网络/secret/vault 方案修改 | 与 `docs/current/architecture.md` 的当前拓扑描述保持一致；冲突时以 current facts 为准。 |
 | `docs/contracts/*.md` | APIs、接口约定、错误/状态码、身份校验、Chat/Knowledge/Indexer 约定发生变化 | 与当前后端行为和 `docs/current/architecture.md` 中的接口边界保持一致。 |
 | `docs/roadmap/*.md` | 产品目标、gap 分析、阶段优先级调整 | 仅记录目标态与差距；不得覆盖当前事实，需与 `docs/current/*` 区分。 |
 | `docs/plans/*.md` | 阶段状态、DoD、里程碑、资源绑定、计划实施方法更新 | 作为执行层文档，需引用 `docs/standards/*` 并与 `docs/current/*` 的事实保持可追踪关系。 |
 | `docs/handoff/*` & `docs/templates/PLANS.md` | 交接顺序、handoff prompt、模板结构或引用路径变化 | 与 `docs/README.md` 的阅读顺序和目录映射保持一致，避免交接入口失真。 |
-| `.codex/packs/chatgpt-projects/*` | 被上传包引用的 `docs/*` 源文档内容变更 | 该目录为派生层；同步顺序始终是先更新 `docs/*`，再更新 `packs/*`。 |
+| `docs/exports/chatgpt-projects/*` | 被导出包引用的 `docs/*` 源文档内容变更 | 该目录为派生层；同步顺序始终是先更新 `docs/*`，再更新导出副本。 |
 
 ## 4. 推荐动作
 
@@ -42,7 +42,7 @@
 2. 如果触发多个文档，先更新事实源（`docs/current/...`、contracts 等），再更新入口/目录说明（README、AGENTS、`.codex/README.md`），确保“事实→入口”顺序一致。
 3. 更新时在 PR 描述、review note、plans 或 documentation ticket 中指出“哪个触发项导致了同步”（引用 matrix row），方便后续 audit。
 4. 更新完成后，运行 `rg` 或 `grep` 检查入口文档中指涉的路径、名称、命令是否与源码一致，必要时让 review checklist 中的“文档同步”条目负责验收。
-5. 若同步影响到了 `.codex/packs/chatgpt-projects/*`，在汇总列表里提交一个同步记录，提醒上传副本必须重新生成。
+5. 若同步影响到了 `docs/exports/chatgpt-projects/*`，在汇总列表里提交一个同步记录，提醒导出副本必须重新生成。
 
 ## 5. 允许例外
 

@@ -325,7 +325,7 @@ Both docs must clearly state that:
 
 - `docs/standards/` now holds long-lived engineering governance rules;
 - `docs/plans/` remains the execution-plan layer;
-- `.agent/` still stays deprecated and out of the new governance flow.
+- legacy `.agent` still stays deprecated and out of the new governance flow.
 
 - [ ] **Step 3: Update `AGENTS.md` and `docs/current/architecture.md`**
 

@@ -43,7 +43,7 @@ docker/       Compose files, image builds, reverse proxy, init scripts
 scripts/      Reusable command entrypoints and shell helpers
 docs/         Current documentation root (source of truth)
 .agents/      Live project skill root (`.agents/skills/*`)
-.codex/       Codex configuration + compatibility notes only (`.codex/skills/README.md` is a stub)
+.codex/       Codex configuration + compatibility notes only (includes compatibility stubs)
 ```
 
 ## Product Surface
@@ -133,7 +133,7 @@ pnpm knowject:help
 
 ## Documentation
 
-`docs/` is the project documentation root. `docs/exports/` is the new derived-layer root, while the current ChatGPT Projects export package content still lives under `.codex/packs/chatgpt-projects/*` until Task 4 lands. Project skills now live under `.agents/skills/`, and `.codex/skills/README.md` remains only as a compatibility stub.
+`docs/` is the project documentation root. `docs/exports/` is the derived export root, and `docs/exports/chatgpt-projects/*` is the live ChatGPT Projects export package path. Project skills live under `.agents/skills/`, while `.codex/` keeps compatibility stubs only.
 
 - [Project Rules](./AGENTS.md)
 - [Codex Workspace](./.codex/README.md)

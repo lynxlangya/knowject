@@ -151,14 +151,14 @@
 - `AGENTS.md`
 - `.codex/README.md`
 - `.codex/MIGRATION.md`
-- `.codex/packs/chatgpt-projects/*`
+- `docs/exports/chatgpt-projects/*`
 - 根 `README.md`
 
 ### 4.3 判断依据
 
 - 本次只是新增前端重构执行计划，没有改动已落地事实、目录职责或上传包映射。
 - `docs/current/architecture.md` 只记录“当前是什么”，不记录未来重构方案。
-- `.codex/packs/chatgpt-projects/*` 当前没有镜像这份计划，不需要派生同步。
+- `docs/exports/chatgpt-projects/*` 当前没有镜像这份计划，不需要派生同步。
 
 ## 五、范围
 

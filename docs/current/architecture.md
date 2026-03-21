@@ -86,7 +86,7 @@ files/
 .codex/
   config.toml                   项目级 Codex 配置
   README.md                     Codex 入口与维护说明
-  MIGRATION.md                  `.agent/` -> `.codex/` 迁移规则与映射
+  MIGRATION.md                  legacy `.agent` -> `.codex` 迁移规则与映射
   docs/
     README.md                   兼容 stub，主文档根已迁移到 `docs/`
   packs/chatgpt-projects/
@@ -394,7 +394,7 @@ docs/
 ## 9. 相关文档
 
 - `.codex/README.md`：Codex 工作区入口与维护规则。
-- `.codex/MIGRATION.md`：`.agent/` 收口到 `.codex/` 的迁移映射与后续维护方式。
+- `.codex/MIGRATION.md`：legacy `.agent` 收口到 `.codex` 的迁移映射与后续维护方式。
 - `docs/README.md`：文档索引、分类导航与维护边界。
 - `docs/standards/engineering-governance-overview.md`：长期工程治理与协作规则总览。
 - `docs/standards/review-checklist.md`：工程治理评审清单与默认门禁。
