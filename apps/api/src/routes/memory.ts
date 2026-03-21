@@ -23,7 +23,7 @@ const DEMO_ITEMS: MemoryItem[] = [
     title: "项目架构总览",
     type: "document",
     snippet: "记录当前 Monorepo 结构、前后端边界、路由矩阵与兼容策略。",
-    source: ".codex/docs/current/architecture.md",
+    source: "docs/current/architecture.md",
     updatedAt: "2026-03-09",
     score: 0.95,
   },
@@ -43,7 +43,7 @@ const DEMO_ITEMS: MemoryItem[] = [
     type: "design",
     snippet:
       "品牌名为“知项 · Knowject”，slogan 为“让项目知识，真正为团队所用”。",
-    source: ".codex/docs/design/knowject-wordmark-philosophy.md",
+    source: "docs/design/knowject-wordmark-philosophy.md",
     updatedAt: "2026-03-09",
     score: 0.88,
   },

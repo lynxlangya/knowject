@@ -90,7 +90,7 @@ export const createKnowledgeSearchService = ({
     ensureCollections: mutationService.ensureCollections,
 
     // NOTE: Node 直连 Chroma 读侧 query 是已确认的架构例外条款
-    // 参见 .codex/docs/contracts/chroma-decision.md
+    // 参见 docs/contracts/chroma-decision.md
     searchDocuments: async (input) => {
       const result = await queryService.searchDocuments(input);
       const resultGuard = knowledgeSearchResultGuardRegistry.get(service);
