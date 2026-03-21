@@ -1,10 +1,14 @@
 import type { ObjectId } from 'mongodb';
+import type { SupportedLocale } from '@knowject/request';
 
 export interface AuthUserDocument {
   _id?: ObjectId;
   username: string;
   name: string;
   passwordHash: string;
+  preferences?: {
+    locale?: SupportedLocale;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -13,6 +17,7 @@ export interface AuthUserProfile {
   id: string;
   username: string;
   name: string;
+  locale?: SupportedLocale;
 }
 
 export interface AuthSuccessResponse {
@@ -29,11 +34,13 @@ export interface RegisterInput {
   username?: string;
   password?: string;
   name?: string;
+  locale?: SupportedLocale;
 }
 
 export interface LoginInput {
   username?: string;
   password?: string;
+  locale?: SupportedLocale;
 }
 
 export interface SearchUsersInput {
@@ -49,4 +56,8 @@ export interface SearchUsersResult {
 export interface AccessTokenPayload {
   sub: string;
   username: string;
+}
+
+export interface UpdateAuthPreferencesInput {
+  locale?: SupportedLocale;
 }

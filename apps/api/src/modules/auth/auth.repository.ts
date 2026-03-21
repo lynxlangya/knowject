@@ -6,12 +6,17 @@ import {
 } from "mongodb";
 import type { MongoDatabaseManager } from "@db/mongo.js";
 import { toObjectId } from "@lib/mongo-id.js";
-import type { AuthUserDocument, AuthUserProfile } from "./auth.types.js";
+import type {
+  AuthUserDocument,
+  AuthUserProfile,
+  UpdateAuthPreferencesInput,
+} from "./auth.types.js";
 
 interface CreateUserRecordInput {
   username: string;
   name: string;
   passwordHash: string;
+  preferences?: AuthUserDocument["preferences"];
 }
 
 const REGEX_ESCAPE_PATTERN = /[.*+?^${}()|[\]\\]/g;
@@ -21,6 +26,7 @@ const toAuthUserProfile = (user: WithId<AuthUserDocument>): AuthUserProfile => {
     id: user._id.toHexString(),
     username: user.username,
     name: user.name,
+    locale: user.preferences?.locale,
   };
 };
 
@@ -97,6 +103,7 @@ export class AuthRepository {
       username: input.username,
       name: input.name,
       passwordHash: input.passwordHash,
+      preferences: input.preferences,
       createdAt: now,
       updatedAt: now,
     };
@@ -107,6 +114,37 @@ export class AuthRepository {
       ...document,
       _id: result.insertedId,
     } as WithId<AuthUserDocument>;
+  }
+
+  async updatePreferences(
+    userId: string,
+    input: UpdateAuthPreferencesInput,
+  ): Promise<AuthUserProfile> {
+    const collection = await this.getCollection();
+    const objectId = toObjectId(userId);
+
+    if (!objectId) {
+      throw new Error("Invalid user id for preferences update");
+    }
+
+    const updated = await collection.findOneAndUpdate(
+      { _id: objectId },
+      {
+        $set: {
+          "preferences.locale": input.locale,
+          updatedAt: new Date(),
+        },
+      },
+      {
+        returnDocument: "after",
+      },
+    );
+
+    if (!updated) {
+      throw new Error("User preferences update failed");
+    }
+
+    return toAuthUserProfile(updated);
   }
 
   private async getCollection(): Promise<Collection<AuthUserDocument>> {

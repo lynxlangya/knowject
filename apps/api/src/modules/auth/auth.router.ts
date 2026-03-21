@@ -8,6 +8,7 @@ import type {
   LoginInput,
   RegisterInput,
   SearchUsersInput,
+  UpdateAuthPreferencesInput,
 } from './auth.types.js';
 
 export const createAuthRouter = (
@@ -42,6 +43,19 @@ export const createAuthRouter = (
 
       const result = await authService.searchUsers(req.query as SearchUsersInput);
       sendSuccess(res, result);
+    }),
+  );
+
+  authRouter.patch(
+    '/me/preferences',
+    requireAuth,
+    asyncHandler(async (req, res) => {
+      const authUser = getRequiredAuthUser(req);
+      const result = await authService.updatePreferences(
+        authUser.id,
+        req.body as UpdateAuthPreferencesInput,
+      );
+      sendSuccess(res, { user: result });
     }),
   );
 

@@ -5,6 +5,7 @@ import { AppError } from '@lib/app-error.js';
 import {
   createRequiredFieldError,
   createValidationAppError,
+  readOptionalStringField,
 } from '@lib/validation.js';
 import { signAccessToken, verifyAccessToken } from './auth.jwt.js';
 import {
@@ -16,17 +17,24 @@ import type {
   AuthSuccessResponse,
   AuthUserDocument,
   AuthenticatedRequestUser,
+  AuthUserProfile,
   LoginInput,
   RegisterInput,
   SearchUsersInput,
   SearchUsersResult,
+  UpdateAuthPreferencesInput,
 } from './auth.types.js';
+import type { SupportedLocale } from '@knowject/request';
 
 export interface AuthService {
   register(input: RegisterInput): Promise<AuthSuccessResponse>;
   login(input: LoginInput): Promise<AuthSuccessResponse>;
   searchUsers(input: SearchUsersInput): Promise<SearchUsersResult>;
   verifyAccessToken(token: string): Promise<AuthenticatedRequestUser>;
+  updatePreferences(
+    userId: string,
+    input: UpdateAuthPreferencesInput,
+  ): Promise<AuthUserProfile>;
 }
 
 const createUsernameConflictError = (cause?: unknown): AppError => {
@@ -78,6 +86,32 @@ const normalizeSearchLimit = (value: unknown): number => {
   return 10;
 };
 
+const SUPPORTED_LOCALES: SupportedLocale[] = ['en', 'zh-CN'];
+const DEFAULT_LOCALE: SupportedLocale = 'en';
+
+const readLocale = (
+  value: unknown,
+  { fallback, required }: { fallback?: SupportedLocale; required?: boolean } = {},
+): SupportedLocale | undefined => {
+  const normalized = readOptionalStringField(value, 'locale');
+
+  if (!normalized) {
+    if (required) {
+      throw new AppError(createRequiredFieldError('locale'));
+    }
+
+    return fallback;
+  }
+
+  if (!SUPPORTED_LOCALES.includes(normalized as SupportedLocale)) {
+    throw createValidationAppError('locale 不受支持', {
+      locale: 'locale 不受支持',
+    });
+  }
+
+  return normalized as SupportedLocale;
+};
+
 const validatePassword = (password: string | undefined): string => {
   if (!password) {
     throw new AppError(createRequiredFieldError('password'));
@@ -92,12 +126,24 @@ const validatePassword = (password: string | undefined): string => {
   return password;
 };
 
+const toAuthProfile = (
+  user: WithId<AuthUserDocument>,
+  localeOverride?: SupportedLocale,
+): AuthUserProfile => {
+  return {
+    id: user._id.toHexString(),
+    username: user.username,
+    name: user.name,
+    locale: localeOverride ?? user.preferences?.locale,
+  };
+};
+
 const toAuthResponse = async (
   env: AppEnv,
-  user: WithId<AuthUserDocument>,
+  user: AuthUserProfile,
 ): Promise<AuthSuccessResponse> => {
   const tokenPayload: AccessTokenPayload = {
-    sub: user._id.toHexString(),
+    sub: user.id,
     username: user.username,
   };
 
@@ -105,11 +151,7 @@ const toAuthResponse = async (
 
   return {
     token,
-    user: {
-      id: tokenPayload.sub,
-      username: user.username,
-      name: user.name,
-    },
+    user,
   };
 };
 
@@ -147,15 +189,19 @@ export const createAuthService = ({
         timeCost: env.argon2.timeCost,
         parallelism: env.argon2.parallelism,
       });
+      const locale = readLocale(input.locale, { fallback: DEFAULT_LOCALE });
 
       try {
         const user = await repository.createUser({
           username,
           name,
           passwordHash,
+          preferences: {
+            locale,
+          },
         });
 
-        return toAuthResponse(env, user);
+        return toAuthResponse(env, toAuthProfile(user));
       } catch (error) {
         if (isDuplicateUsernameError(error)) {
           throw createUsernameConflictError(error);
@@ -187,7 +233,15 @@ export const createAuthService = ({
         throw createInvalidCredentialsError();
       }
 
-      return toAuthResponse(env, user);
+      if (!user.preferences?.locale) {
+        const locale = readLocale(input.locale, { fallback: DEFAULT_LOCALE });
+        const updated = await repository.updatePreferences(user._id.toHexString(), {
+          locale: locale ?? DEFAULT_LOCALE,
+        });
+        return toAuthResponse(env, updated);
+      }
+
+      return toAuthResponse(env, toAuthProfile(user));
     },
 
     searchUsers: async (input) => {
@@ -208,6 +262,13 @@ export const createAuthService = ({
         id: payload.sub,
         username: payload.username,
       };
+    },
+
+    updatePreferences: async (userId, input) => {
+      const locale = readLocale(input.locale, { required: true });
+      return repository.updatePreferences(userId, {
+        locale: locale ?? DEFAULT_LOCALE,
+      });
     },
   };
 };
