@@ -276,7 +276,7 @@ export const createProjectsService = ({
         knowledgeBaseIds,
         agentIds,
         skillIds,
-        conversations: [createDefaultProjectConversation({ name }, locale)],
+        conversations: [createDefaultProjectConversation({ name })],
         createdAt: now,
         updatedAt: now,
       });

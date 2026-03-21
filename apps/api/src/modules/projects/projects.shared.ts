@@ -22,6 +22,9 @@ import type {
 } from './projects.types.js';
 
 type ProjectMemberProfileMap = Map<string, AuthUserProfile>;
+const DEFAULT_PROJECT_CONVERSATION_MESSAGE_ID = 'msg-default-assistant';
+const STORED_DEFAULT_PROJECT_CONVERSATION_TITLE = '新对话';
+const DEFAULT_PROJECT_CONVERSATION_ID = 'chat-default';
 
 const createUnknownMemberProfile = (
   userId: string,
@@ -135,21 +138,15 @@ const trimStringArray = (values: string[] | undefined): string[] => {
 
 const buildDefaultConversationMessages = (
   projectName: string,
-  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationMessageDocument[] => {
   const now = new Date();
+  void projectName;
 
   return [
     {
-      id: 'msg-default-assistant',
+      id: DEFAULT_PROJECT_CONVERSATION_MESSAGE_ID,
       role: 'assistant',
-      content:
-        getMessage('project.conversation.defaultIntro', locale, {
-          projectName,
-        }) ??
-        getFallbackMessage('project.conversation.defaultIntro', {
-          projectName,
-        }),
+      content: '',
       createdAt: now,
     },
   ];
@@ -167,15 +164,15 @@ export const getProjectResourceBinding = (
 
 export const createDefaultProjectConversation = (
   project: Pick<ProjectDocument, 'name'>,
-  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationDocument => {
   const now = new Date();
+  void project;
 
   return {
     id: 'chat-default',
-    title: buildDefaultProjectConversationTitle(project.name, locale),
+    title: STORED_DEFAULT_PROJECT_CONVERSATION_TITLE,
     titleOrigin: 'default',
-    messages: buildDefaultConversationMessages(project.name, locale),
+    messages: buildDefaultConversationMessages(project.name),
     createdAt: now,
     updatedAt: now,
   };
@@ -239,7 +236,6 @@ export const createProjectConversationMessage = ({
 
 export const getProjectConversations = (
   project: Pick<ProjectDocument, 'name' | 'conversations'>,
-  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationDocument[] => {
   if (Array.isArray(project.conversations) && project.conversations.length > 0) {
     return [...project.conversations].sort(
@@ -247,22 +243,45 @@ export const getProjectConversations = (
     );
   }
 
-  return [createDefaultProjectConversation(project, locale)];
+  return [createDefaultProjectConversation(project)];
 };
 
 export const getProjectConversation = (
   project: Pick<ProjectDocument, 'name' | 'conversations'>,
   conversationId: string,
-  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationDocument | null => {
   return (
-    getProjectConversations(project, locale).find(
+    getProjectConversations(project).find(
       (conversation) => conversation.id === conversationId,
     ) ?? null
   );
 };
 
+const resolveProjectConversationTitle = (
+  projectName: string,
+  conversation: ProjectConversationDocument,
+  locale: SupportedLocale,
+): string => {
+  if (
+    conversation.id === DEFAULT_PROJECT_CONVERSATION_ID &&
+    conversation.titleOrigin === 'default' &&
+    (!conversation.title || conversation.title === STORED_DEFAULT_PROJECT_CONVERSATION_TITLE)
+  ) {
+    return (
+      getMessage('project.conversation.defaultTitle', locale, {
+        projectName,
+      }) ??
+      getFallbackMessage('project.conversation.defaultTitle', {
+        projectName,
+      })
+    );
+  }
+
+  return conversation.title;
+};
+
 const getConversationPreview = (
+  projectName: string,
   conversation: ProjectConversationDocument,
   locale: SupportedLocale = DEFAULT_LOCALE,
 ): string => {
@@ -273,6 +292,21 @@ const getConversationPreview = (
     return (
       getMessage('project.conversation.emptyPreview', locale) ??
       getFallbackMessage('project.conversation.emptyPreview')
+    );
+  }
+
+  if (
+    conversation.id === DEFAULT_PROJECT_CONVERSATION_ID &&
+    latestMessage.id === DEFAULT_PROJECT_CONVERSATION_MESSAGE_ID &&
+    latestMessage.role === 'assistant'
+  ) {
+    return (
+      getMessage('project.conversation.defaultIntro', locale, {
+        projectName,
+      }) ??
+      getFallbackMessage('project.conversation.defaultIntro', {
+        projectName,
+      })
     );
   }
 
@@ -296,12 +330,38 @@ const toProjectConversationSourceResponse = (
 export const toProjectConversationMessageResponse = (
   conversationId: string,
   message: ProjectConversationMessageDocument,
+  options?: {
+    conversationId?: string;
+    projectName?: string;
+    locale?: SupportedLocale;
+    titleOrigin?: ProjectConversationTitleOrigin;
+  },
 ): ProjectConversationMessageResponse => {
+  const localizedContent =
+    options?.conversationId === DEFAULT_PROJECT_CONVERSATION_ID &&
+    options?.titleOrigin === 'default' &&
+    options.projectName &&
+    message.id === DEFAULT_PROJECT_CONVERSATION_MESSAGE_ID &&
+    message.role === 'assistant'
+      ? (
+          getMessage(
+            'project.conversation.defaultIntro',
+            options.locale ?? DEFAULT_LOCALE,
+            {
+              projectName: options.projectName,
+            },
+          ) ??
+          getFallbackMessage('project.conversation.defaultIntro', {
+            projectName: options.projectName,
+          })
+        )
+      : message.content;
+
   return {
     id: message.id,
     conversationId,
     role: message.role,
-    content: message.content,
+    content: localizedContent,
     createdAt: message.createdAt.toISOString(),
     starred: Boolean(message.starredAt),
     starredAt: message.starredAt?.toISOString() ?? null,
@@ -318,27 +378,39 @@ export const toProjectConversationMessageResponse = (
 
 export const toProjectConversationSummaryResponse = (
   projectId: string,
+  projectName: string,
   conversation: ProjectConversationDocument,
   locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationSummaryResponse => {
   return {
     id: conversation.id,
     projectId,
-    title: conversation.title,
+    title: resolveProjectConversationTitle(projectName, conversation, locale),
     updatedAt: conversation.updatedAt.toISOString(),
-    preview: getConversationPreview(conversation, locale),
+    preview: getConversationPreview(projectName, conversation, locale),
   };
 };
 
 export const toProjectConversationDetailResponse = (
   projectId: string,
+  projectName: string,
   conversation: ProjectConversationDocument,
   locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationDetailResponse => {
   return {
-    ...toProjectConversationSummaryResponse(projectId, conversation, locale),
+    ...toProjectConversationSummaryResponse(
+      projectId,
+      projectName,
+      conversation,
+      locale,
+    ),
     messages: conversation.messages.map((message) =>
-      toProjectConversationMessageResponse(conversation.id, message),
+      toProjectConversationMessageResponse(conversation.id, message, {
+        conversationId: conversation.id,
+        projectName,
+        locale,
+        titleOrigin: conversation.titleOrigin,
+      }),
     ),
   };
 };

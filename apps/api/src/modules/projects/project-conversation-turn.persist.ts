@@ -110,11 +110,14 @@ export const readPersistedConversationTarget = async (
 export const createProjectConversationDetailEnvelope = (
   project: WithId<ProjectDocument>,
   conversation: ProjectConversationDocument,
+  locale?: import("@lib/locale.js").SupportedLocale,
 ): ProjectConversationDetailEnvelope => {
   return {
     conversation: toProjectConversationDetailResponse(
       project._id.toHexString(),
+      project.name,
       conversation,
+      locale,
     ),
   };
 };

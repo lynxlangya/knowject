@@ -39,6 +39,7 @@ export const createSynchronousProjectConversationTurn = async ({
     return createProjectConversationDetailEnvelope(
       preparedTurn.project,
       preparedTurn.conversation,
+      context.locale,
     );
   }
 

@@ -4,7 +4,7 @@ import { AppError } from '@lib/app-error.js';
 import { createErrorEnvelope } from '@lib/api-response.js';
 import type { SupportedLocale } from '@lib/locale.js';
 import { DEFAULT_LOCALE } from '@lib/locale.js';
-import { getMessage } from '@lib/locale.messages.js';
+import { getFallbackMessage, getMessage } from '@lib/locale.messages.js';
 
 interface JsonParseError extends SyntaxError {
   status?: number;
@@ -63,7 +63,36 @@ const normalizeError = (error: unknown): AppError => {
 };
 
 const resolveErrorMessage = (error: AppError, locale: SupportedLocale): string => {
-  return getMessage(error.messageKey, locale, error.messageParams) ?? error.message;
+  const localizedMessage = getMessage(
+    error.messageKey,
+    locale,
+    error.messageParams,
+  );
+
+  if (!localizedMessage) {
+    return error.message;
+  }
+
+  if (error.messageParams) {
+    return localizedMessage;
+  }
+
+  const fallbackMessage = getMessage(error.messageKey, DEFAULT_LOCALE);
+  const fallbackZhMessage = error.messageKey
+    ? getFallbackMessage(error.messageKey, error.messageParams)
+    : undefined;
+  const sourceMessage = error.message.trim();
+
+  if (
+    sourceMessage &&
+    sourceMessage !== localizedMessage &&
+    sourceMessage !== fallbackMessage &&
+    sourceMessage !== fallbackZhMessage
+  ) {
+    return error.message;
+  }
+
+  return localizedMessage;
 };
 
 const resolveErrorDetails = (

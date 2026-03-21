@@ -126,6 +126,15 @@ const createProtocolTestApp = (exposeDetails: boolean) => {
     }
   });
 
+  app.get('/specific-upstream-error', () => {
+    throw new AppError({
+      statusCode: 502,
+      code: 'KNOWLEDGE_SEARCH_UPSTREAM_ERROR',
+      message: 'Chroma request failed (HTTP 503)',
+      messageKey: 'knowledge.search.chroma.requestFailed',
+    });
+  });
+
   app.get('/internal-error', () => {
     throw new Error('boom');
   });
@@ -352,6 +361,25 @@ test('dynamic upload-size errors keep rendered limit content', async () => {
     assert.deepEqual(body.meta.details, {
       maxUploadSize: '50 MB',
     });
+  });
+});
+
+test('specific upstream errors keep rendered dynamic context when messageKey is generic', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/specific-upstream-error`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      data: null;
+    };
+
+    assert.equal(response.status, 502);
+    assert.equal(body.code, 'KNOWLEDGE_SEARCH_UPSTREAM_ERROR');
+    assert.equal(body.message, 'Chroma request failed (HTTP 503)');
   });
 });
 
