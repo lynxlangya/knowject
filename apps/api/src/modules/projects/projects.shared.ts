@@ -262,7 +262,10 @@ const resolveProjectConversationTitle = (
   conversation: ProjectConversationDocument,
   locale: SupportedLocale,
 ): string => {
-  if (conversation.titleOrigin === 'default') {
+  if (
+    conversation.id === DEFAULT_PROJECT_CONVERSATION_ID &&
+    conversation.titleOrigin === 'default'
+  ) {
     return (
       getMessage('project.conversation.defaultTitle', locale, {
         projectName,

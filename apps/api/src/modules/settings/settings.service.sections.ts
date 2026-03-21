@@ -2,6 +2,7 @@ import {
   getDefaultWorkspaceSettings,
 } from "@config/ai-config.js";
 import { encryptApiKey, maskApiKey } from "@lib/crypto.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import { createValidationAppError } from "@lib/validation.js";
 import type {
   SettingsAiConfigResponse,
@@ -107,9 +108,15 @@ export const buildIndexingSection = ({
     input.chunkOverlap ?? current?.chunkOverlap ?? fallback.chunkOverlap;
 
   if (chunkOverlap >= chunkSize) {
-    throw createValidationAppError("chunkOverlap 必须小于 chunkSize", {
-      chunkOverlap: "chunkOverlap 必须小于 chunkSize",
-    });
+    throw createValidationAppError(
+      getFallbackMessage("validation.chunkOverlap.lessThanChunkSize"),
+      {
+        chunkOverlap: getFallbackMessage(
+          "validation.chunkOverlap.lessThanChunkSize",
+        ),
+      },
+      "validation.chunkOverlap.lessThanChunkSize",
+    );
   }
 
   return {

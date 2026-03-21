@@ -22,6 +22,7 @@ const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/projects/projects.service.ts',
   'apps/api/src/modules/projects/projects.shared.ts',
   'apps/api/src/modules/projects/validators/project-conversation-turn.validator.ts',
+  'apps/api/src/modules/settings/settings.service.sections.ts',
   'apps/api/src/modules/settings/settings.service.validation.ts',
   'apps/api/src/modules/skills/skills.binding.ts',
   'apps/api/src/modules/skills/skills.import.ts',
@@ -133,6 +134,9 @@ const REMAINING_SWEEP_CHECKLIST: Record<string, string[]> = {
   'apps/api/src/modules/knowledge/search/knowledge-chroma-mutation.service.ts': [
     'Python indexer 删除知识库向量失败',
     'Python indexer 删除文档向量失败',
+  ],
+  'apps/api/src/modules/settings/settings.service.sections.ts': [
+    'chunkOverlap 必须小于 chunkSize',
   ],
 };
 

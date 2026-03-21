@@ -563,7 +563,7 @@ test('createProjectConversation creates a persisted thread with a default title 
     appendedConversation as ProjectDocument['conversations'][number];
   assert.equal(persistedCreatedConversation.title, '新对话');
   assert.match(persistedCreatedConversation.id, /^chat-/);
-  assert.equal(result.conversation.title, '对话写入基线 project context');
+  assert.equal(result.conversation.title, '新对话');
   assert.deepEqual(result.conversation.messages, []);
 });
 

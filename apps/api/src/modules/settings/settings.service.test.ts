@@ -665,6 +665,48 @@ test('updateIndexing rejects unsupported supportedTypes entry', async () => {
   );
 });
 
+test('updateIndexing rejects merged chunkSize changes that invalidate existing chunkOverlap', async () => {
+  const service = createSettingsService({
+    env: createTestEnv(),
+    repository: {
+      getSettings: async () => ({
+        _id: 'settings-1',
+        singleton: 'default',
+        indexing: {
+          chunkSize: 1000,
+          chunkOverlap: 400,
+          supportedTypes: ['md', 'txt'],
+          indexerTimeoutMs: 30000,
+        },
+        updatedAt: new Date('2026-03-18T00:00:00.000Z'),
+        updatedBy: ACTOR.id,
+      }),
+      upsertSettings: async () => {
+        throw new Error('upsertSettings should not be called for invalid merged input');
+      },
+    } as unknown as SettingsRepository,
+  });
+
+  await assert.rejects(
+    async () =>
+      service.updateIndexing(
+        {
+          actor: ACTOR,
+        },
+        {
+          chunkSize: 300,
+        },
+      ),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.equal(error.statusCode, 400);
+      assert.equal(error.code, 'VALIDATION_ERROR');
+      assert.equal(error.messageKey, 'validation.chunkOverlap.lessThanChunkSize');
+      return true;
+    },
+  );
+});
+
 test('testIndexing returns success when indexer diagnostics and Chroma are reachable', async () => {
   const service = createSettingsService({
     env: createTestEnv(),
