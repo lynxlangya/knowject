@@ -546,6 +546,7 @@ test('createProjectConversation creates a persisted thread with a default title 
         id: 'user-1',
         username: 'langya',
       },
+      locale: 'en',
     },
     project._id.toHexString(),
     {
@@ -562,7 +563,7 @@ test('createProjectConversation creates a persisted thread with a default title 
     appendedConversation as ProjectDocument['conversations'][number];
   assert.equal(persistedCreatedConversation.title, '新对话');
   assert.match(persistedCreatedConversation.id, /^chat-/);
-  assert.equal(result.conversation.title, '新对话');
+  assert.equal(result.conversation.title, '对话写入基线 project context');
   assert.deepEqual(result.conversation.messages, []);
 });
 
@@ -1514,6 +1515,7 @@ test('createProjectConversationMessage auto-generates a concise title from the f
       persistedConversation = {
         ...persistedConversation,
         title,
+        titleOrigin: 'manual',
         updatedAt,
       };
 
@@ -2868,6 +2870,7 @@ test('updateProjectConversation updates the current thread title', async () => {
       persistedConversation = {
         ...persistedConversation,
         title,
+        titleOrigin: 'manual',
         updatedAt,
       };
 
@@ -3195,6 +3198,7 @@ test('createProjectConversationMessage materializes the fallback default thread 
       persistedConversation = {
         ...persistedConversation,
         title,
+        titleOrigin: 'manual',
         updatedAt,
       };
 
