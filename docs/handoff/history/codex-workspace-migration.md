@@ -1,5 +1,7 @@
 # `.agent/` -> `.codex/` 迁移说明
 
+> 历史归档说明：本文件仅用于保留当时迁移过程记录，部分表述在当前仓库已过时；当前治理请以根目录 `AGENTS.md`、`README.md` 与 `.codex/*` 兼容 stub 为准。
+
 ## 为什么要收口到 `.codex/`
 
 Knowject 之前把项目主文档放在 `.agent/docs/`，把 ChatGPT Projects 上传副本放在 `.agent/gpt/`。这种结构在历史阶段可用，但会让 Codex 配置、项目文档、上传副本与技能目录分散在多处，容易形成双主源。
