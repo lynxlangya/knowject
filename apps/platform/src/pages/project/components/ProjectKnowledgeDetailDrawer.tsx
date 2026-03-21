@@ -212,7 +212,7 @@ export const ProjectKnowledgeDetailDrawer = ({
             className="mt-4"
             type="error"
             showIcon
-            message="处理失败"
+            title="处理失败"
             description={document.errorMessage}
           />
         ) : null}
@@ -326,7 +326,7 @@ export const ProjectKnowledgeDetailDrawer = ({
         <Alert
           type="error"
           showIcon
-          message="加载知识库详情失败"
+          title="加载知识库详情失败"
           description={error}
         />
       ) : knowledge ? (
@@ -371,7 +371,7 @@ export const ProjectKnowledgeDetailDrawer = ({
             <Alert
               type="info"
               showIcon
-              message="当前项目内对全局知识库保持只读"
+              title="当前项目内对全局知识库保持只读"
               description="你可以在这里查看文档和状态，但全局知识库的编辑、删除和运维动作仍然回到全局知识库页面处理。"
             />
           ) : null}
@@ -421,7 +421,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                   <Alert
                     type="warning"
                     showIcon
-                    message="加载诊断信息失败"
+                    title="加载诊断信息失败"
                     description={diagnosticsError}
                     action={
                       <Button size="small" onClick={onRefreshDiagnostics}>
@@ -484,7 +484,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                       <Alert
                         type="warning"
                         showIcon
-                        message="Collection 状态异常"
+                        title="Collection 状态异常"
                         description={diagnostics.collection.errorMessage}
                       />
                     ) : null}
@@ -493,7 +493,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                       <Alert
                         type="warning"
                         showIcon
-                        message="Indexer 返回了降级信息"
+                        title="Indexer 返回了降级信息"
                         description={diagnostics.indexer.errorMessage}
                       />
                     ) : null}

@@ -309,6 +309,9 @@ export const getKnowledgeDiagnostics = async (
 ): Promise<KnowledgeDiagnosticsResponse> => {
   const response = await client.get<ApiEnvelope<KnowledgeDiagnosticsResponse>>(
     `/knowledge/${encodeURIComponent(knowledgeId)}/diagnostics`,
+    {
+      timeout: 20000,
+    },
   );
 
   return unwrapApiData(response.data);

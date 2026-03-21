@@ -14,6 +14,17 @@ interface UseProjectKnowledgeDetailControllerOptions {
   refreshProjectKnowledge: () => void | Promise<void>;
 }
 
+export const safelyRefreshProjectKnowledge = (
+  refreshProjectKnowledge: () => void | Promise<void>,
+) => {
+  Promise.resolve(refreshProjectKnowledge()).catch((error) => {
+    console.error(
+      "[ProjectKnowledgeDetailController] 刷新项目知识目录失败:",
+      error,
+    );
+  });
+};
+
 export const useProjectKnowledgeDetailController = ({
   knowledgeItems,
   refreshProjectKnowledge,
@@ -43,7 +54,7 @@ export const useProjectKnowledgeDetailController = ({
       reloadDiagnostics?: boolean;
     },
   ) => {
-    void refreshProjectKnowledge();
+    safelyRefreshProjectKnowledge(refreshProjectKnowledge);
 
     if (knowledgeId === activeKnowledgeId) {
       void refreshKnowledgeState({
@@ -57,7 +68,7 @@ export const useProjectKnowledgeDetailController = ({
 
   const refreshActiveKnowledge = () => {
     if (activeKnowledgeItem?.source === "project") {
-      void refreshProjectKnowledge();
+      safelyRefreshProjectKnowledge(refreshProjectKnowledge);
     }
 
     void refreshKnowledgeState({

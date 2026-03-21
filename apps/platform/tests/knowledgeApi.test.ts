@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+
+test('getKnowledgeDiagnostics 为诊断请求配置更长 timeout', () => {
+  const apiSource = readFileSync(
+    new URL('../src/api/knowledge.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    apiSource,
+    /client\.get<ApiEnvelope<KnowledgeDiagnosticsResponse>>\([\s\S]*\/diagnostics[\s\S]*timeout:\s*20000/,
+  );
+});
