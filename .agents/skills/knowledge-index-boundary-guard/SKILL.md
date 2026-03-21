@@ -121,9 +121,9 @@ If there are no findings, say so explicitly and still mention remaining validati
 
 Read these only as needed:
 
-- `/Users/langya/Documents/CodeHub/ai/knowject/docs/current/architecture.md`
-- `/Users/langya/Documents/CodeHub/ai/knowject/docs/contracts/chroma-decision.md`
-- `/Users/langya/Documents/CodeHub/ai/knowject/docs/plans/tasks-index-ops-project-consumption.md`
-- `/Users/langya/Documents/CodeHub/ai/knowject/apps/api/src/modules/knowledge/knowledge.service.ts`
-- `/Users/langya/Documents/CodeHub/ai/knowject/apps/indexer-py/app/api/routes/indexing.py`
-- `/Users/langya/Documents/CodeHub/ai/knowject/apps/indexer-py/README.md`
+- `docs/current/architecture.md`
+- `docs/contracts/chroma-decision.md`
+- `docs/plans/tasks-index-ops-project-consumption.md`
+- `apps/api/src/modules/knowledge/knowledge.service.ts`
+- `apps/indexer-py/app/api/routes/indexing.py`
+- `apps/indexer-py/README.md`
