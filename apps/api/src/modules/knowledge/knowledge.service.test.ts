@@ -9,6 +9,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
+import { AppError } from '@lib/app-error.js';
 import { decryptApiKey, encryptApiKey } from '@lib/crypto.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { ProjectsRepository } from '@modules/projects/projects.repository.js';
@@ -225,6 +226,7 @@ const waitForJsonFile = async (
 
 const startIndexerCaptureServer = async (
   capturePath: string,
+  storageRoot: string,
 ): Promise<{ baseUrl: string; stop: () => Promise<void> }> => {
   const port = await reserveAvailablePort();
   const stderrChunks: string[] = [];
@@ -246,6 +248,7 @@ const startIndexerCaptureServer = async (
       cwd: indexerPyPackageRoot,
       env: {
         ...process.env,
+        KNOWLEDGE_STORAGE_ROOT: storageRoot,
         PYTHONPATH: [indexerPyPackageRoot, process.env.PYTHONPATH]
           .filter((value): value is string => Boolean(value))
           .join(delimiter),
@@ -928,7 +931,10 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
 test('uploadProjectKnowledgeDocument payload is accepted by Python indexer override route', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-project-knowledge-boundary-'));
   const capturePath = join(storageRoot, 'indexer-capture.json');
-  const { baseUrl, stop } = await startIndexerCaptureServer(capturePath);
+  const { baseUrl, stop } = await startIndexerCaptureServer(
+    capturePath,
+    storageRoot,
+  );
   const env = createTestEnv(storageRoot);
   env.knowledge.indexerUrl = baseUrl;
 
@@ -3693,7 +3699,7 @@ test('deleteKnowledge uses project collection name during Chroma cleanup', async
   await assert.rejects(access(knowledgeDir));
 });
 
-test('deleteKnowledge continues when Chroma cleanup fails', async () => {
+test('deleteKnowledge stops deleting records when Chroma cleanup fails', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-service-'));
   const knowledgeId = '507f1f77bcf86cd799439011';
   const knowledgeDir = join(storageRoot, knowledgeId);
@@ -3746,21 +3752,28 @@ test('deleteKnowledge continues when Chroma cleanup fails', async () => {
     authRepository,
   });
 
-  await assert.doesNotReject(() =>
-    service.deleteKnowledge(
-      {
-        actor: {
-          id: 'user-1',
-          username: 'langya',
+  await assert.rejects(
+    () =>
+      service.deleteKnowledge(
+        {
+          actor: {
+            id: 'user-1',
+            username: 'langya',
+          },
         },
-      },
-      knowledgeId,
-    ),
+        knowledgeId,
+      ),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.equal(error.code, 'KNOWLEDGE_VECTOR_DELETE_FAILED');
+      assert.equal(error.statusCode, 502);
+      return true;
+    },
   );
 
-  assert.equal(deletedDocuments, true);
-  assert.equal(deletedKnowledge, true);
-  await assert.rejects(access(knowledgeDir));
+  assert.equal(deletedDocuments, false);
+  assert.equal(deletedKnowledge, false);
+  await access(knowledgeDir);
 });
 
 test('deleteKnowledge cleans up empty namespace state and collections after removing the last knowledge base', async () => {
@@ -6476,7 +6489,7 @@ test('getKnowledgeDiagnostics accepts legacy /health fallback when versioned dia
   }
 });
 
-test('deleteDocument deletes record and syncs knowledge summary even if Chroma cleanup fails', async () => {
+test('deleteDocument stops deleting records when Chroma cleanup fails', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-document-delete-'));
   const knowledgeId = '507f1f77bcf86cd799439011';
   const documentId = '507f1f77bcf86cd799439099';
@@ -6553,22 +6566,29 @@ test('deleteDocument deletes record and syncs knowledge summary even if Chroma c
     authRepository,
   });
 
-  await assert.doesNotReject(() =>
-    service.deleteDocument(
-      {
-        actor: {
-          id: '507f1f77bcf86cd799439012',
-          username: 'langya',
+  await assert.rejects(
+    () =>
+      service.deleteDocument(
+        {
+          actor: {
+            id: '507f1f77bcf86cd799439012',
+            username: 'langya',
+          },
         },
-      },
-      knowledgeId,
-      documentId,
-    ),
+        knowledgeId,
+        documentId,
+      ),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.equal(error.code, 'KNOWLEDGE_DOCUMENT_VECTOR_DELETE_FAILED');
+      assert.equal(error.statusCode, 502);
+      return true;
+    },
   );
 
-  assert.equal(deletedDocument, true);
-  assert.equal(summarySynced, true);
-  await assert.rejects(access(documentDir));
+  assert.equal(deletedDocument, false);
+  assert.equal(summarySynced, false);
+  await access(documentDir);
 });
 
 test('deleteDocument prefers incremental summary adjustment over full reconciliation', async () => {

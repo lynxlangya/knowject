@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
+from app.domain.indexing.parser import resolve_knowledge_storage_root
 from app.domain.indexing.pipeline import IndexerError
 from app.main import app
 from app.schemas.indexing import (
@@ -14,6 +17,10 @@ from app.services.indexing_service import IndexingService, get_indexing_service
 
 
 client = TestClient(app, raise_server_exceptions=False)
+
+
+def build_storage_path(file_name: str) -> str:
+    return str(resolve_knowledge_storage_root() / file_name)
 
 
 class StubIndexingService(IndexingService):
@@ -120,7 +127,7 @@ def test_index_documents_success_response_keeps_existing_shape():
                 "sourceType": "global_docs",
                 "fileName": "demo.md",
                 "mimeType": "text/markdown",
-                "storagePath": "/tmp/demo.md",
+                "storagePath": build_storage_path("demo.md"),
                 "documentVersionHash": "hash-1",
             },
         )
@@ -161,7 +168,7 @@ def test_legacy_index_documents_route_still_works_for_backward_compatibility():
                 "sourceType": "global_docs",
                 "fileName": "demo.txt",
                 "mimeType": "text/plain",
-                "storagePath": "/tmp/demo.txt",
+                "storagePath": build_storage_path("demo.txt"),
                 "documentVersionHash": "hash-1",
             },
         )
@@ -215,7 +222,7 @@ def test_index_documents_returns_unified_failure_for_missing_field():
             "sourceType": "global_docs",
             "fileName": "demo.md",
             "mimeType": "text/markdown",
-            "storagePath": "/tmp/demo.md",
+            "storagePath": build_storage_path("demo.md"),
             "documentVersionHash": "hash-1",
         },
     )
@@ -241,7 +248,7 @@ def test_index_documents_maps_indexer_error_to_failed_response():
                 "sourceType": "global_docs",
                 "fileName": "demo.md",
                 "mimeType": "text/markdown",
-                "storagePath": "/tmp/demo.md",
+                "storagePath": build_storage_path("demo.md"),
                 "documentVersionHash": "hash-1",
             },
         )
@@ -269,7 +276,7 @@ def test_index_documents_maps_unexpected_error_to_failed_response():
                 "sourceType": "global_docs",
                 "fileName": "demo.md",
                 "mimeType": "text/markdown",
-                "storagePath": "/tmp/demo.md",
+                "storagePath": build_storage_path("demo.md"),
                 "documentVersionHash": "hash-1",
             },
         )
@@ -321,7 +328,7 @@ def test_index_documents_accepts_override_payload_fields():
                 "sourceType": "global_docs",
                 "fileName": "demo.md",
                 "mimeType": "text/markdown",
-                "storagePath": "/tmp/demo.md",
+                "storagePath": build_storage_path("demo.md"),
                 "documentVersionHash": "hash-1",
                 "embeddingConfig": {
                     "provider": "custom",
@@ -371,7 +378,7 @@ def test_rebuild_document_uses_document_scoped_internal_route():
                 "sourceType": "global_docs",
                 "fileName": "demo.md",
                 "mimeType": "text/markdown",
-                "storagePath": "/tmp/demo.md",
+                "storagePath": build_storage_path("demo.md"),
                 "documentVersionHash": "hash-1",
             },
         )

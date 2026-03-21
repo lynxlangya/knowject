@@ -4,8 +4,13 @@ from http.client import IncompleteRead
 import unittest
 from unittest.mock import Mock, patch
 
+from app.domain.indexing.parser import resolve_knowledge_storage_root
 from app.domain.indexing import pipeline
 from app.schemas.indexing import DeleteChunksRequestPayload, IndexDocumentRequestPayload
+
+
+def build_storage_path(file_name: str) -> str:
+    return str(resolve_knowledge_storage_root() / file_name)
 
 
 class BuildChunksTest(unittest.TestCase):
@@ -207,7 +212,7 @@ class ProcessDocumentTest(unittest.TestCase):
             collection_name="proj_project-1_docs",
             file_name="demo.md",
             mime_type="text/markdown",
-            storage_path="/tmp/demo.md",
+            storage_path=build_storage_path("demo.md"),
             document_version_hash="hash-1",
         )
         domain_request = request.to_domain_request()
@@ -222,7 +227,7 @@ class ProcessDocumentTest(unittest.TestCase):
                 "sourceType": "global_docs",
                 "fileName": "demo.md",
                 "mimeType": "text/markdown",
-                "storagePath": "/tmp/demo.md",
+                "storagePath": build_storage_path("demo.md"),
                 "documentVersionHash": "hash-1",
                 "embeddingConfig": {
                     "provider": "custom",
@@ -304,7 +309,7 @@ class ProcessDocumentTest(unittest.TestCase):
                     "sourceType": "global_docs",
                     "fileName": "demo.md",
                     "mimeType": "text/markdown",
-                    "storagePath": "/tmp/demo.md",
+                    "storagePath": build_storage_path("demo.md"),
                     "documentVersionHash": "hash-1",
                     "embeddingConfig": {
                         "provider": "custom",
