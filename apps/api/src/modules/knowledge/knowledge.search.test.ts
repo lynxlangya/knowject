@@ -8,6 +8,7 @@ import {
   createServiceUnavailableError,
   getEmbeddingErrorPrefix,
 } from "./utils/knowledge-search.errors.js";
+import { resolveLocalizedDiagnosticsErrorMessage } from "./knowledge.diagnostics.js";
 import { createKnowledgeSearchService } from "./knowledge.search.js";
 
 const createTestEnv = (): AppEnv => {
@@ -533,6 +534,34 @@ test("knowledge search error helpers attach localized message keys", () => {
   assert.equal(gatewayError.messageKey, "knowledge.search.chroma.requestFailed");
   assert.equal(gatewayError.message, "Chroma 请求失败");
   assert.equal(getEmbeddingErrorPrefix("aliyun"), "阿里云 embedding 请求失败");
+});
+
+test("diagnostics helpers localize AppError message keys but preserve specific upstream context", () => {
+  assert.equal(
+    resolveLocalizedDiagnosticsErrorMessage(
+      new AppError({
+        statusCode: 503,
+        code: "KNOWLEDGE_SEARCH_EMBEDDING_UNAVAILABLE",
+        message: "Embedding API Key 未配置，当前无法执行知识索引和检索",
+        messageKey: "knowledge.search.embedding.unavailable",
+      }),
+      "en",
+    ),
+    "Embedding API key is not configured; knowledge indexing and search are unavailable",
+  );
+
+  assert.equal(
+    resolveLocalizedDiagnosticsErrorMessage(
+      new AppError({
+        statusCode: 502,
+        code: "KNOWLEDGE_SEARCH_UPSTREAM_ERROR",
+        message: "Chroma request failed (HTTP 503)",
+        messageKey: "knowledge.search.chroma.requestFailed",
+      }),
+      "en",
+    ),
+    "Chroma request failed (HTTP 503)",
+  );
 });
 
 test("searchDocuments falls back to local development embedding in development without api key", async () => {

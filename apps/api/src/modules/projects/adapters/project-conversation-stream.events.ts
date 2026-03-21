@@ -1,4 +1,5 @@
 import { AppError } from "@lib/app-error.js";
+import { resolveLocalizedAppErrorMessage } from "@lib/app-error-message.js";
 import { DEFAULT_LOCALE, type SupportedLocale } from "@lib/locale.js";
 import { getMessage } from "@lib/locale.messages.js";
 import { RETRYABLE_PROJECT_CONVERSATION_STREAM_ERROR_CODES } from "../constants/project-conversation-turn.constants.js";
@@ -46,12 +47,7 @@ export const createProjectConversationStreamErrorEvent = ({
     conversationId,
     clientRequestId,
     code: normalizedError.code,
-    message:
-      getMessage(
-        normalizedError.messageKey,
-        locale,
-        normalizedError.messageParams,
-      ) ?? normalizedError.message,
+    message: resolveLocalizedAppErrorMessage(normalizedError, locale),
     retryable: isProjectConversationStreamRetryableError(normalizedError),
   };
 };

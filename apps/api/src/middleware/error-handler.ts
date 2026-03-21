@@ -1,10 +1,11 @@
 import type { ErrorRequestHandler } from 'express';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import { resolveLocalizedAppErrorMessage } from '@lib/app-error-message.js';
 import { createErrorEnvelope } from '@lib/api-response.js';
 import type { SupportedLocale } from '@lib/locale.js';
 import { DEFAULT_LOCALE } from '@lib/locale.js';
-import { getFallbackMessage, getMessage } from '@lib/locale.messages.js';
+import { getMessage } from '@lib/locale.messages.js';
 
 interface JsonParseError extends SyntaxError {
   status?: number;
@@ -63,36 +64,7 @@ const normalizeError = (error: unknown): AppError => {
 };
 
 const resolveErrorMessage = (error: AppError, locale: SupportedLocale): string => {
-  const localizedMessage = getMessage(
-    error.messageKey,
-    locale,
-    error.messageParams,
-  );
-
-  if (!localizedMessage) {
-    return error.message;
-  }
-
-  if (error.messageParams) {
-    return localizedMessage;
-  }
-
-  const fallbackMessage = getMessage(error.messageKey, DEFAULT_LOCALE);
-  const fallbackZhMessage = error.messageKey
-    ? getFallbackMessage(error.messageKey, error.messageParams)
-    : undefined;
-  const sourceMessage = error.message.trim();
-
-  if (
-    sourceMessage &&
-    sourceMessage !== localizedMessage &&
-    sourceMessage !== fallbackMessage &&
-    sourceMessage !== fallbackZhMessage
-  ) {
-    return error.message;
-  }
-
-  return localizedMessage;
+  return resolveLocalizedAppErrorMessage(error, locale);
 };
 
 const resolveErrorDetails = (

@@ -172,6 +172,7 @@ export const messages = {
     'project.conversation.defaultIntro':
       'This is the project conversation entry for "{projectName}". The formal backend read path is already enabled; real message writes, knowledge retrieval, and context persistence will be connected here next.',
     'project.conversation.defaultTitle': '{projectName} project context',
+    'project.conversation.newTitle': 'New conversation',
     'project.conversation.emptyPreview':
       'There are no messages in this conversation yet.',
     'project.conversation.lastThreadForbidden':
@@ -377,6 +378,7 @@ export const messages = {
     'project.conversation.defaultIntro':
       '这里是「{projectName}」的项目对话入口。当前已经切到正式后端读链路，后续会在这里接入真实消息写入、知识检索与上下文沉淀。',
     'project.conversation.defaultTitle': '{projectName} 项目上下文',
+    'project.conversation.newTitle': '新对话',
     'project.conversation.emptyPreview': '当前对话暂无消息。',
     'project.conversation.lastThreadForbidden': '项目至少保留一个对话线程',
     'project.conversation.streamingUnavailable':

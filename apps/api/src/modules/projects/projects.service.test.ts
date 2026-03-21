@@ -563,7 +563,7 @@ test('createProjectConversation creates a persisted thread with a default title 
     appendedConversation as ProjectDocument['conversations'][number];
   assert.equal(persistedCreatedConversation.title, '新对话');
   assert.match(persistedCreatedConversation.id, /^chat-/);
-  assert.equal(result.conversation.title, '新对话');
+  assert.equal(result.conversation.title, 'New conversation');
   assert.deepEqual(result.conversation.messages, []);
 });
 
@@ -3567,9 +3567,9 @@ test('streamProjectConversationMessage emits an error event and skips assistant 
         await onDelta('半截回复');
 
         throw new AppError({
-          statusCode: 502,
+          statusCode: 429,
           code: 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR',
-          message: '项目对话流式生成失败，请稍后重试',
+          message: 'rate limit exceeded (HTTP 429)',
           messageKey: 'project.conversation.streamFailed',
         });
       },
@@ -3609,10 +3609,7 @@ test('streamProjectConversationMessage emits an error event and skips assistant 
 
   assert.equal(errorEvent.code, 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR');
   assert.equal(errorEvent.retryable, true);
-  assert.equal(
-    errorEvent.message,
-    'Project conversation streaming failed; try again later',
-  );
+  assert.equal(errorEvent.message, 'rate limit exceeded (HTTP 429)');
   assert.equal(persistedProject.conversations[0]?.messages.length, 1);
   assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
 });

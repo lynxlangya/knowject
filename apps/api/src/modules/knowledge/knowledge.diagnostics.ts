@@ -1,5 +1,7 @@
 import { getEffectiveIndexingConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
+import { AppError } from "@lib/app-error.js";
+import { resolveLocalizedAppErrorMessage } from "@lib/app-error-message.js";
 import { DEFAULT_LOCALE, type SupportedLocale } from "@lib/locale.js";
 import {
   buildApiUrl,
@@ -48,6 +50,10 @@ export const resolveLocalizedDiagnosticsErrorMessage = (
   error: unknown,
   locale: SupportedLocale = DEFAULT_LOCALE,
 ): string => {
+  if (error instanceof AppError) {
+    return resolveLocalizedAppErrorMessage(error, locale);
+  }
+
   if (error instanceof Error && error.message.trim()) {
     return error.message.trim();
   }

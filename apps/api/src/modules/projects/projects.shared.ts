@@ -276,6 +276,13 @@ const resolveProjectConversationTitle = (
     );
   }
 
+  if (conversation.titleOrigin === 'default') {
+    return (
+      getMessage('project.conversation.newTitle', locale) ??
+      getFallbackMessage('project.conversation.newTitle')
+    );
+  }
+
   return conversation.title;
 };
 

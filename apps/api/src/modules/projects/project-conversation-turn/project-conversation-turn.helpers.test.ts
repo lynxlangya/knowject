@@ -129,3 +129,26 @@ test("createProjectConversationStreamErrorEvent normalizes unknown errors and re
   assert.equal(normalizedEvent.code, "INTERNAL_SERVER_ERROR");
   assert.equal(normalizedEvent.message, "Service temporarily unavailable");
 });
+
+test("createProjectConversationStreamErrorEvent preserves more specific upstream messages", () => {
+  const event = createProjectConversationStreamErrorEvent({
+    conversationId: "chat-stream",
+    clientRequestId: "request-stream-2",
+    sequence: 5,
+    locale: "en",
+    error: new AppError({
+      statusCode: 429,
+      code: "PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR",
+      message: "rate limit exceeded (HTTP 429)",
+      messageKey: "project.conversation.streamFailed",
+    }),
+  });
+
+  assert.equal(event.type, "error");
+  if (event.type !== "error") {
+    throw new Error("event should be an error event");
+  }
+
+  assert.equal(event.message, "rate limit exceeded (HTTP 429)");
+  assert.equal(event.retryable, true);
+});
