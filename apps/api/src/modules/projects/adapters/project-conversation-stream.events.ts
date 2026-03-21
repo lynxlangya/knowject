@@ -1,4 +1,6 @@
 import { AppError } from "@lib/app-error.js";
+import { DEFAULT_LOCALE, type SupportedLocale } from "@lib/locale.js";
+import { getMessage } from "@lib/locale.messages.js";
 import { RETRYABLE_PROJECT_CONVERSATION_STREAM_ERROR_CODES } from "../constants/project-conversation-turn.constants.js";
 import type { ProjectConversationStreamEvent } from "../projects.types.js";
 import type { ProjectConversationStreamEmission } from "../types/project-conversation-turn.types.js";
@@ -17,11 +19,13 @@ export const createProjectConversationStreamErrorEvent = ({
   conversationId,
   clientRequestId,
   sequence,
+  locale = DEFAULT_LOCALE,
   error,
 }: {
   conversationId: string;
   clientRequestId: string;
   sequence: number;
+  locale?: SupportedLocale;
   error: unknown;
 }): ProjectConversationStreamEvent => {
   const normalizedError =
@@ -30,7 +34,8 @@ export const createProjectConversationStreamErrorEvent = ({
       : new AppError({
           statusCode: 500,
           code: "INTERNAL_SERVER_ERROR",
-          message: "服务暂时不可用",
+          message: getMessage("api.internalError", DEFAULT_LOCALE) ?? "",
+          messageKey: "api.internalError",
           cause: error,
         });
 
@@ -41,7 +46,12 @@ export const createProjectConversationStreamErrorEvent = ({
     conversationId,
     clientRequestId,
     code: normalizedError.code,
-    message: normalizedError.message,
+    message:
+      getMessage(
+        normalizedError.messageKey,
+        locale,
+        normalizedError.messageParams,
+      ) ?? normalizedError.message,
     retryable: isProjectConversationStreamRetryableError(normalizedError),
   };
 };

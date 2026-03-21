@@ -3464,7 +3464,8 @@ test('streamProjectConversationMessage emits an error event and skips assistant 
         throw new AppError({
           statusCode: 502,
           code: 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR',
-          message: '上游流式响应失败',
+          message: '项目对话流式生成失败，请稍后重试',
+          messageKey: 'project.conversation.streamFailed',
         });
       },
     }),
@@ -3476,6 +3477,7 @@ test('streamProjectConversationMessage emits an error event and skips assistant 
         id: 'user-1',
         username: 'langya',
       },
+      locale: 'en',
     },
     persistedProject._id.toHexString(),
     'chat-streaming-error',
@@ -3502,6 +3504,10 @@ test('streamProjectConversationMessage emits an error event and skips assistant 
 
   assert.equal(errorEvent.code, 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR');
   assert.equal(errorEvent.retryable, true);
+  assert.equal(
+    errorEvent.message,
+    'Project conversation streaming failed; try again later',
+  );
   assert.equal(persistedProject.conversations[0]?.messages.length, 1);
   assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
 });
@@ -3576,6 +3582,7 @@ test('streamProjectConversationMessage marks setup failures as non-retryable', a
           statusCode: 503,
           code: 'PROJECT_CONVERSATION_LLM_UNAVAILABLE',
           message: '当前未配置可用的对话模型，请先完成 LLM 设置',
+          messageKey: 'project.conversation.llmUnavailable',
         });
       },
     }),
@@ -3587,6 +3594,7 @@ test('streamProjectConversationMessage marks setup failures as non-retryable', a
         id: 'user-1',
         username: 'langya',
       },
+      locale: 'en',
     },
     persistedProject._id.toHexString(),
     'chat-streaming-setup-error',
@@ -3613,6 +3621,10 @@ test('streamProjectConversationMessage marks setup failures as non-retryable', a
 
   assert.equal(errorEvent.code, 'PROJECT_CONVERSATION_LLM_UNAVAILABLE');
   assert.equal(errorEvent.retryable, false);
+  assert.equal(
+    errorEvent.message,
+    'No available conversation model is configured yet',
+  );
   assert.equal(persistedProject.conversations[0]?.messages.length, 1);
   assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
 });

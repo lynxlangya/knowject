@@ -163,6 +163,7 @@ export const createStreamingProjectConversationTurn = async ({
         conversationId: preparedTurn.conversationId,
         clientRequestId,
         sequence: eventEmitter.getNextSequence(),
+        locale: context.locale,
         error,
       }),
     );

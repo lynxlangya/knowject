@@ -93,10 +93,12 @@ test("createProjectConversationStreamErrorEvent normalizes unknown errors and re
     conversationId: "chat-stream",
     clientRequestId: "request-stream-1",
     sequence: 3,
+    locale: "en",
     error: new AppError({
       statusCode: 502,
       code: "PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR",
-      message: "上游失败",
+      message: "项目对话流式生成失败，请稍后重试",
+      messageKey: "project.conversation.streamFailed",
     }),
   });
 
@@ -106,11 +108,16 @@ test("createProjectConversationStreamErrorEvent normalizes unknown errors and re
   }
   assert.equal(retryableEvent.retryable, true);
   assert.equal(retryableEvent.code, "PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR");
+  assert.equal(
+    retryableEvent.message,
+    "Project conversation streaming failed; try again later",
+  );
 
   const normalizedEvent = createProjectConversationStreamErrorEvent({
     conversationId: "chat-stream",
     clientRequestId: "request-stream-1",
     sequence: 4,
+    locale: "en",
     error: new Error("boom"),
   });
 
@@ -120,5 +127,5 @@ test("createProjectConversationStreamErrorEvent normalizes unknown errors and re
   }
   assert.equal(normalizedEvent.retryable, true);
   assert.equal(normalizedEvent.code, "INTERNAL_SERVER_ERROR");
-  assert.equal(normalizedEvent.message, "服务暂时不可用");
+  assert.equal(normalizedEvent.message, "Service temporarily unavailable");
 });

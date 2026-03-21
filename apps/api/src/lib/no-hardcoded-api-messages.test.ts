@@ -14,6 +14,7 @@ const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/knowledge/search/knowledge-embedding.service.ts',
   'apps/api/src/modules/knowledge/utils/knowledge-search.errors.ts',
   'apps/api/src/modules/memberships/memberships.service.ts',
+  'apps/api/src/modules/projects/adapters/project-conversation-stream.events.ts',
   'apps/api/src/modules/projects/project-conversation-provider.ts',
   'apps/api/src/modules/projects/project-conversation-service.ts',
   'apps/api/src/modules/projects/projects.service.ts',
@@ -91,6 +92,9 @@ const REMAINING_SWEEP_CHECKLIST: Record<string, string[]> = {
     '项目对话入口',
     '项目上下文',
     '当前对话暂无消息。',
+  ],
+  'apps/api/src/modules/projects/adapters/project-conversation-stream.events.ts': [
+    '服务暂时不可用',
   ],
   'apps/api/src/modules/agents/agents.service.ts': [
     '以下知识库不存在：',
