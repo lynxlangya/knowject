@@ -1,4 +1,5 @@
 import type { ObjectId } from 'mongodb';
+import type { SupportedLocale } from '@lib/locale.js';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 
 export type ProjectRole = 'admin' | 'member';
@@ -230,4 +231,5 @@ export interface ProjectConversationMessageEnvelope {
 
 export interface ProjectCommandContext {
   actor: AuthenticatedRequestUser;
+  locale?: SupportedLocale;
 }

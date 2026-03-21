@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { WithId } from 'mongodb';
 import { AppError } from '@lib/app-error.js';
-import { getFallbackMessage } from '@lib/locale.messages.js';
+import { DEFAULT_LOCALE, type SupportedLocale } from '@lib/locale.js';
+import { getFallbackMessage, getMessage } from '@lib/locale.messages.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { AuthenticatedRequestUser, AuthUserProfile } from '@modules/auth/auth.types.js';
 import type { ProjectsRepository } from './projects.repository.js';
@@ -22,20 +23,16 @@ import type {
 
 type ProjectMemberProfileMap = Map<string, AuthUserProfile>;
 
-const formatTemplate = (
-  template: string,
-  values: Record<string, string>,
-): string => {
-  return Object.entries(values).reduce((result, [key, value]) => {
-    return result.replaceAll(`{${key}}`, value);
-  }, template);
-};
-
-const createUnknownMemberProfile = (userId: string): AuthUserProfile => {
+const createUnknownMemberProfile = (
+  userId: string,
+  locale: SupportedLocale = DEFAULT_LOCALE,
+): AuthUserProfile => {
   return {
     id: userId,
     username: 'unknown',
-    name: getFallbackMessage('project.member.unknownName'),
+    name:
+      getMessage('project.member.unknownName', locale) ??
+      getFallbackMessage('project.member.unknownName'),
   };
 };
 
@@ -138,6 +135,7 @@ const trimStringArray = (values: string[] | undefined): string[] => {
 
 const buildDefaultConversationMessages = (
   projectName: string,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationMessageDocument[] => {
   const now = new Date();
 
@@ -145,12 +143,13 @@ const buildDefaultConversationMessages = (
     {
       id: 'msg-default-assistant',
       role: 'assistant',
-      content: formatTemplate(
-        getFallbackMessage('project.conversation.defaultIntro'),
-        {
+      content:
+        getMessage('project.conversation.defaultIntro', locale, {
           projectName,
-        },
-      ),
+        }) ??
+        getFallbackMessage('project.conversation.defaultIntro', {
+          projectName,
+        }),
       createdAt: now,
     },
   ];
@@ -168,14 +167,15 @@ export const getProjectResourceBinding = (
 
 export const createDefaultProjectConversation = (
   project: Pick<ProjectDocument, 'name'>,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationDocument => {
   const now = new Date();
 
   return {
     id: 'chat-default',
-    title: buildDefaultProjectConversationTitle(project.name),
+    title: buildDefaultProjectConversationTitle(project.name, locale),
     titleOrigin: 'default',
-    messages: buildDefaultConversationMessages(project.name),
+    messages: buildDefaultConversationMessages(project.name, locale),
     createdAt: now,
     updatedAt: now,
   };
@@ -183,12 +183,15 @@ export const createDefaultProjectConversation = (
 
 export const buildDefaultProjectConversationTitle = (
   projectName: string,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): string => {
-  return formatTemplate(
-    getFallbackMessage('project.conversation.defaultTitle'),
-    {
+  return (
+    getMessage('project.conversation.defaultTitle', locale, {
       projectName,
-    },
+    }) ??
+    getFallbackMessage('project.conversation.defaultTitle', {
+      projectName,
+    })
   );
 };
 
@@ -236,6 +239,7 @@ export const createProjectConversationMessage = ({
 
 export const getProjectConversations = (
   project: Pick<ProjectDocument, 'name' | 'conversations'>,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationDocument[] => {
   if (Array.isArray(project.conversations) && project.conversations.length > 0) {
     return [...project.conversations].sort(
@@ -243,15 +247,16 @@ export const getProjectConversations = (
     );
   }
 
-  return [createDefaultProjectConversation(project)];
+  return [createDefaultProjectConversation(project, locale)];
 };
 
 export const getProjectConversation = (
   project: Pick<ProjectDocument, 'name' | 'conversations'>,
   conversationId: string,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationDocument | null => {
   return (
-    getProjectConversations(project).find(
+    getProjectConversations(project, locale).find(
       (conversation) => conversation.id === conversationId,
     ) ?? null
   );
@@ -259,12 +264,16 @@ export const getProjectConversation = (
 
 const getConversationPreview = (
   conversation: ProjectConversationDocument,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): string => {
   const latestMessage =
     conversation.messages[conversation.messages.length - 1] ?? null;
 
   if (!latestMessage) {
-    return getFallbackMessage('project.conversation.emptyPreview');
+    return (
+      getMessage('project.conversation.emptyPreview', locale) ??
+      getFallbackMessage('project.conversation.emptyPreview')
+    );
   }
 
   return latestMessage.content;
@@ -310,22 +319,24 @@ export const toProjectConversationMessageResponse = (
 export const toProjectConversationSummaryResponse = (
   projectId: string,
   conversation: ProjectConversationDocument,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationSummaryResponse => {
   return {
     id: conversation.id,
     projectId,
     title: conversation.title,
     updatedAt: conversation.updatedAt.toISOString(),
-    preview: getConversationPreview(conversation),
+    preview: getConversationPreview(conversation, locale),
   };
 };
 
 export const toProjectConversationDetailResponse = (
   projectId: string,
   conversation: ProjectConversationDocument,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectConversationDetailResponse => {
   return {
-    ...toProjectConversationSummaryResponse(projectId, conversation),
+    ...toProjectConversationSummaryResponse(projectId, conversation, locale),
     messages: conversation.messages.map((message) =>
       toProjectConversationMessageResponse(conversation.id, message),
     ),
@@ -336,6 +347,7 @@ export const toProjectResponse = (
   project: WithId<ProjectDocument>,
   actorId: string,
   memberProfileMap: ProjectMemberProfileMap,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): ProjectResponse => {
   const actorMember = getProjectMember(project, actorId);
   if (!actorMember) {
@@ -350,7 +362,7 @@ export const toProjectResponse = (
     members: project.members.map((projectMember) => {
       const profile =
         memberProfileMap.get(projectMember.userId) ??
-        createUnknownMemberProfile(projectMember.userId);
+        createUnknownMemberProfile(projectMember.userId, locale);
 
       return {
         userId: projectMember.userId,

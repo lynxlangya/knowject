@@ -94,6 +94,7 @@ export const createProjectsRouter = (
     asyncHandler(async (req, res) => {
       const result = await projectsService.listProjects({
         actor: getRequiredAuthUser(req),
+        locale: req.locale,
       });
 
       sendSuccess(res, result);
@@ -106,6 +107,7 @@ export const createProjectsRouter = (
       const project = await projectsService.createProject(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         req.body as CreateProjectInput,
       );
@@ -122,6 +124,7 @@ export const createProjectsRouter = (
       const result = await projectsService.listProjectConversations(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
       );
@@ -136,6 +139,7 @@ export const createProjectsRouter = (
       const result = await projectsService.createProjectConversation(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
         req.body as CreateProjectConversationInput,
@@ -151,6 +155,7 @@ export const createProjectsRouter = (
       const result = await projectsService.getProjectConversationDetail(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
         getRequiredConversationId(req),
@@ -166,6 +171,7 @@ export const createProjectsRouter = (
       const result = await projectsService.updateProjectConversation(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
         getRequiredConversationId(req),
@@ -182,6 +188,7 @@ export const createProjectsRouter = (
       const result = await projectsService.updateProjectConversationMessageMetadata(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
         getRequiredConversationId(req),
@@ -199,6 +206,7 @@ export const createProjectsRouter = (
       await projectsService.deleteProjectConversation(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
         getRequiredConversationId(req),
@@ -214,6 +222,7 @@ export const createProjectsRouter = (
       const result = await projectsService.createProjectConversationMessage(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
         getRequiredConversationId(req),
@@ -266,6 +275,7 @@ export const createProjectsRouter = (
         await projectsService.streamProjectConversationMessage(
           {
             actor: getRequiredAuthUser(req),
+            locale: req.locale,
           },
           getRequiredProjectId(req),
           getRequiredConversationId(req),
@@ -304,6 +314,7 @@ export const createProjectsRouter = (
       const project = await projectsService.updateProject(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
         req.body as UpdateProjectInput,
@@ -321,6 +332,7 @@ export const createProjectsRouter = (
       await projectsService.deleteProject(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredProjectId(req),
       );

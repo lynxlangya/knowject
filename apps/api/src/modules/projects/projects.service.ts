@@ -246,7 +246,7 @@ export const createProjectsService = ({
   return {
     ...conversationService,
 
-    listProjects: async ({ actor }) => {
+    listProjects: async ({ actor, locale }) => {
       const projects = await repository.listByMemberUserId(actor.id);
       const memberProfileMap = await buildProjectMemberProfileMap(
         authRepository,
@@ -256,12 +256,12 @@ export const createProjectsService = ({
       return {
         total: projects.length,
         items: projects.map((project) =>
-          toProjectResponse(project, actor.id, memberProfileMap),
+          toProjectResponse(project, actor.id, memberProfileMap, locale),
         ),
       };
     },
 
-    createProject: async ({ actor }, input) => {
+    createProject: async ({ actor, locale }, input) => {
       const { name, description, knowledgeBaseIds, agentIds, skillIds } =
         validateCreateProjectInput(input);
       await skillBindingValidator.assertBindableSkillIds(skillIds, {
@@ -276,7 +276,7 @@ export const createProjectsService = ({
         knowledgeBaseIds,
         agentIds,
         skillIds,
-        conversations: [createDefaultProjectConversation({ name })],
+        conversations: [createDefaultProjectConversation({ name }, locale)],
         createdAt: now,
         updatedAt: now,
       });
@@ -285,10 +285,10 @@ export const createProjectsService = ({
         authRepository,
         [project],
       );
-      return toProjectResponse(project, actor.id, memberProfileMap);
+      return toProjectResponse(project, actor.id, memberProfileMap, locale);
     },
 
-    updateProject: async ({ actor }, projectId, input) => {
+    updateProject: async ({ actor, locale }, projectId, input) => {
       const currentProject = await requireAdminProject(
         repository,
         projectId,
@@ -315,7 +315,7 @@ export const createProjectsService = ({
         authRepository,
         [updatedProject],
       );
-      return toProjectResponse(updatedProject, actor.id, memberProfileMap);
+      return toProjectResponse(updatedProject, actor.id, memberProfileMap, locale);
     },
 
     deleteProject: async ({ actor }, projectId) => {

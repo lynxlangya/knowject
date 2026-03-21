@@ -14,6 +14,7 @@ import {
   createGatewayError,
   isIndexerRouteNotFoundError,
 } from "../utils/knowledge-search.errors.js";
+import type { MessageKey } from "@lib/locale.messages.js";
 import { getFallbackMessage } from "@lib/locale.messages.js";
 
 const NOOP_SETTINGS_REPOSITORY = {
@@ -202,12 +203,12 @@ export const createKnowledgeChromaMutationService = ({
     path,
     collectionName,
     where,
-    failureMessage,
+    failureMessageKey,
   }: {
     path: string;
     collectionName: string;
     where: Record<string, unknown>;
-    failureMessage: string;
+    failureMessageKey: MessageKey;
   }): Promise<void> => {
     if (env.knowledge.indexerUrl) {
       try {
@@ -217,7 +218,7 @@ export const createKnowledgeChromaMutationService = ({
           body: {
             collectionName,
           },
-          failureMessage: getFallbackMessage(failureMessage),
+          failureMessage: getFallbackMessage(failureMessageKey),
         });
         return;
       } catch (error) {
@@ -248,7 +249,7 @@ export const createKnowledgeChromaMutationService = ({
         where: {
           knowledgeId,
         },
-        failureMessage: "knowledge.search.indexer.requestFailed",
+        failureMessageKey: "knowledge.search.indexer.requestFailed",
       });
     },
     deleteDocumentChunks: async (documentId, { collectionName }) => {
@@ -258,7 +259,7 @@ export const createKnowledgeChromaMutationService = ({
         where: {
           documentId,
         },
-        failureMessage: "knowledge.search.indexer.requestFailed",
+        failureMessageKey: "knowledge.search.indexer.requestFailed",
       });
     },
     deleteCollection: async (collectionName) => {

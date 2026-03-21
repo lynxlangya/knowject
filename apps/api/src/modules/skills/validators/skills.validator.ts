@@ -1,4 +1,3 @@
-import { AppError } from "@lib/app-error.js";
 import { getFallbackMessage } from "@lib/locale.messages.js";
 import { readMutationInput } from "@lib/mutation-input.js";
 import {

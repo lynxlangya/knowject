@@ -424,14 +424,70 @@ test('listProjectConversations returns a default formal conversation when the pr
         id: 'user-1',
         username: 'langya',
       },
+      locale: 'en',
     },
     project._id.toHexString(),
   );
 
   assert.equal(result.total, 1);
   assert.equal(result.items[0]?.id, 'chat-default');
-  assert.match(result.items[0]?.title ?? '', /项目对话正式化/);
-  assert.match(result.items[0]?.preview ?? '', /正式后端读链路/);
+  assert.equal(result.items[0]?.title, '项目对话正式化 project context');
+  assert.match(result.items[0]?.preview ?? '', /project conversation entry/);
+});
+
+test('listProjects localizes unknown member fallback names when locale is en', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd7994390aa'),
+    name: 'Locale Members',
+    description: '验证未知成员名称本地化',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-13T00:00:00.000Z'),
+      },
+      {
+        userId: 'user-2',
+        role: 'member',
+        joinedAt: new Date('2026-03-13T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [],
+    createdAt: new Date('2026-03-13T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-13T00:00:00.000Z'),
+  };
+
+  const service = createProjectsService({
+    repository: {
+      listByMemberUserId: async () => [project],
+    } as unknown as ProjectsRepository,
+    authRepository: {
+      findProfilesByIds: async () => [
+        {
+          id: 'user-1',
+          username: 'langya',
+          name: 'Langya',
+        },
+      ],
+    } as unknown as AuthRepository,
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await service.listProjects({
+    actor: {
+      id: 'user-1',
+      username: 'langya',
+    },
+    locale: 'en',
+  });
+
+  assert.equal(result.items[0]?.members[1]?.name, 'Unknown member');
 });
 
 test('createProjectConversation creates a persisted thread with a default title fallback', async () => {
