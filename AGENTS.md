@@ -6,48 +6,32 @@
 - 本文件仅定义 Knowject 项目的覆盖规则与项目上下文补充。
 - 全局规则与本文件不冲突时，按全局规则执行。
 
-## 0.1 Codex 单主源约定
+## 0.1 Root Governance（2026-03-21）
 
-- `.codex/` 是 Knowject 当前唯一的 Codex 协作主目录；`AGENTS.md` 仍是项目级长期指令入口。
-- 项目级 Codex 配置放在 `.codex/config.toml`；正式文档主源在 `.codex/docs/`；上传派生包在 `.codex/packs/`；项目级 Skills 在 `.codex/skills/`。
-- `.agent/` 已废弃，仅保留历史说明与兼容提示；禁止继续在 `.agent/*` 新增主内容、主文档或主配置。
-- 任何结构调整都必须保持单一真相源，避免 `.agent/*` 与 `.codex/*` 并列承担正式维护职责。
+- `AGENTS.md` 仍是项目级长期指令入口。
+- `docs/` 是唯一正式文档主源；truth surface 按目录边界管理。
+- `docs/exports/` 仅作为派生导出目录，不承担事实源职责。
+- `.agents/skills/` 是项目级 Skill 根目录。
+- `.codex/` 仅保留项目 Codex 配置与兼容说明，不再承载正式文档、导出包与 Skill 主内容。
+- 取舍依据：优先单一真相源与可维护性，避免多入口并行导致漂移。
 
-## 1. 当前项目架构（2026-03-19）
+## 1. 当前项目架构（2026-03-21）
 
 ```text
 apps/
   platform/  前端应用（React + Vite + Ant Design）
   api/       基础框架 API（Express + TypeScript）
-  indexer-py/ Python 索引服务（FastAPI + uv 内部控制面，负责解析 / 分块 / Chroma 写删侧）
+  indexer-py/ Python 索引服务（FastAPI + uv，负责解析 / 分块 / 向量写删）
 packages/
   request/   请求库（@knowject/request）
   ui/        UI 组件库（@knowject/ui）
-docker/
-  api/       API 容器构建与启动脚本
-  indexer-py/ Python indexer 容器构建入口
-  platform/  前端容器构建与 Nginx 入口
-  mongo/     MongoDB 初始化脚本
-  caddy/     线上 HTTPS 入口
-scripts/     常用命令统一入口与 shell helper
-files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设计文档）
-.codex/
-  config.toml       项目级 Codex 配置
-  README.md         Codex 入口与维护说明
-  MIGRATION.md      `.agent/` -> `.codex/` 迁移规则与映射
-  docs/
-    current/        当前事实与架构文档
-    contracts/      实施契约
-    roadmap/        目标蓝图与 gap 分析
-    standards/      长期工程治理与协作规范（长期规则与评审清单）
-    plans/          阶段任务与文档计划
-    handoff/        接手与交接文档
-    inputs/         输入材料与认知原稿
-    design/         品牌与视觉设计资料
-  packs/
-    chatgpt-projects/ ChatGPT Projects 上传副本（派生包，不是事实源）
-  skills/           项目级 Skill 根目录（当前已落地 3 个项目私有审查 Skill）
-.agent/             已废弃的历史目录，仅保留迁移说明与兼容提示
+docker/      本地与线上容器化基线（compose、构建、反代、初始化）
+scripts/     仓库命令统一入口与 shell helper
+files/       按知识库分类的 Markdown 文档库
+docs/        项目文档主根目录（current/contracts/standards/plans/handoff/roadmap/...）
+docs/exports/ 派生导出目录（非事实源）
+.agents/skills/ 项目级 Skill 根目录
+.codex/      项目 Codex 配置与兼容层（非文档主根目录）
 ```
 
 ## 2. 模块职责边界
@@ -57,13 +41,6 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 - `packages/request`：提供 HTTP 基础能力（拦截器、错误封装、去重、下载）。
 - `packages/ui`：提供可复用 UI 组件；业务字段策略优先下沉到 helper，而不是堆积在页面层。
 - `apps/indexer-py`：承载内部 Python 索引控制面，当前采用 FastAPI + uv，已提供 `md / txt` 解析、清洗、分块、embedding，以及文档 / 知识库级 Chroma 写删侧 HTTP 入口；`/internal/*` 当前支持可选 internal token 校验（仅在设置 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN` 时启用），非 `development` 默认关闭 `/docs`、`/redoc`、`/openapi.json`，并把 `storagePath` 限制在 `KNOWLEDGE_STORAGE_ROOT` 下。
-- `docker`：提供本地 / 线上容器化部署基线，包括 compose 编排、`api / indexer-py / platform` 镜像构建、Mongo 初始化与 HTTPS 入口。
-- `scripts`：提供仓库级常用命令包装，优先承接启动、检查、Docker 运维等重复操作。
-- `files`：承载按知识库分类的 Markdown 文档库，当前覆盖全局文档、产品规范、用户研究、市场竞品、项目决策、技术协作、发布运营与独立架构设计八类文档。
-- `.codex/docs`：项目文档统一根目录；`.codex/docs/current/architecture.md` 是项目结构与路由事实的主文档。
-- `.codex/packs/chatgpt-projects`：给 ChatGPT Projects 使用的上传副本目录；内容来自 `.codex/docs` 与项目规则的派生同步，不作为新的事实源。
-- `.codex/skills`：项目级 Skill 唯一主目录；当前已落地 `docs-boundary-guard`、`knowledge-index-boundary-guard` 与 `api-contract-align-review` 三个项目私有审查 Skill，后续新增统一放在 `.codex/skills/<skill>/SKILL.md`。
-- `.agent/`：历史兼容层，仅保留废弃说明，不再作为事实源、技能源或上传包主目录。
 
 ## 3. 当前产品信息架构（2026-03-10）
 
@@ -81,8 +58,6 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 - 旧路径 `/home/project/*` 仅做兼容跳转，不作为业务 canonical。
 - 项目内一级导航固定为：`概览`、`对话`、`资源`、`成员`。
 - 资产分为两层：`全局资产` 与 `项目资源`。
-- 全局 `知识库 / 技能 / 智能体` 页面负责跨项目资产治理、目录、版本与复用。
-- 项目内 `资源` 页负责展示和编排当前项目的知识、技能与智能体，并区分“绑定的全局知识”与“项目私有知识”；它只承载项目内消费态和最小入口，不承担全局治理职责。
 
 ## 4. 状态与数据来源约定
 
@@ -93,7 +68,6 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 - `apps/platform/src/app/project/project.storage.ts` 仅负责 `knowject_project_pins` 置顶偏好的本地持久化。
 - `apps/platform/src/pages/project/projectWorkspaceSnapshot.mock.ts` 负责项目概览补充文案与成员协作快照；它只承载演示补充层，不作为正式成员关系主数据源。
 - `apps/platform/src/pages/project/projectResourceMappers.ts` 负责项目资源展示映射；知识库 / Skill / Agent 元数据优先来自正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`，未知资源 ID 会渲染占位项而不是静默丢失。
-- 项目资源数据当前由“项目绑定的全局资产 + 项目私有知识”共同组成；知识库、Skill 与 Agent 元数据优先来自正式 `/api/knowledge`、`/api/projects/:projectId/knowledge`、`/api/skills`、`/api/agents`。
 - `apps/api` 已经承载 auth、项目主数据、成员关系、知识库、Skill 资产治理与 Agent 配置正式接口；当前仍保留演示性质的部分主要是 `memory` 与项目概览 / 资源相关的前端 Mock 补充数据。
 
 ## 5. 开发与文档同步约束
@@ -103,40 +77,32 @@ files/       按知识库分类的 Markdown 文档库（模板 + 独立架构设
 - 涉及品牌文本必须使用：`知项 · Knowject` 与 `让项目知识，真正为团队所用。`
 - Tailwind 类名必须使用 canonical 写法：`!` 重要标记使用后缀形式（如 `mb-1!`），禁止前缀形式（如 `!mb-1`）。
 - 涉及以下变化时，必须同步检查并更新文档：
-  - 路由、重定向、页面命名变化：同步 `README.md`、`.codex/docs/current/architecture.md`、相关子模块 README。
-  - Mock 数据源、示例路径、存储键变化：同步 `.codex/docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
-  - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`.codex/docs/current/docker-usage.md`、`.codex/docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
-  - 仓库级命令包装或脚本入口变化：同步 `README.md`、`docker/README.md`、`.codex/docs/current/architecture.md`、必要时同步本文件。
-  - Codex 主目录职责、工程治理 `standards/` 目录职责、上传包映射或 Skill 根目录变化：同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`.codex/docs/README.md`，必要时同步 `.codex/packs/chatgpt-projects/README.md` 与 `.codex/skills/README.md`。
-  - 工程治理规则、协作规范或评审清单变化（`.codex/docs/standards/*`）：同步 `.codex/docs/README.md`、必要时同步 `.codex/docs/current/architecture.md` 与本文件，避免入口与事实源漂移。
-  - 模块边界、目录结构、协作规则变化：同步本文件、`.codex/README.md`、`.codex/MIGRATION.md` 与 `.codex/docs/current/architecture.md`。
+  - 路由、重定向、页面命名变化：同步 `README.md`、`docs/current/architecture.md`、相关子模块 README。
+  - Mock 数据源、示例路径、存储键变化：同步 `docs/current/architecture.md`、相关 README、必要时同步 `AGENTS.md`。
+  - Docker / compose / 端口暴露 / secrets / 容器网络变化：同步 `README.md`、`docs/current/docker-usage.md`、`docs/current/architecture.md`、`docker/README.md`、`apps/api/README.md`。
+  - 仓库级命令包装或脚本入口变化：同步 `README.md`、`docker/README.md`、`docs/current/architecture.md`、必要时同步本文件。
+  - Root governance、工程治理 `standards/`、导出映射或 Skill 根目录变化：同步 `AGENTS.md`、`.codex/README.md`、`.codex/MIGRATION.md`、`docs/README.md`，必要时同步 `docs/exports/README.md` 与 `.agents/skills/README.md`。
+  - 工程治理规则、协作规范或评审清单变化（`docs/standards/*`）：同步 `docs/README.md`、必要时同步 `docs/current/architecture.md` 与本文件，避免入口与事实源漂移。
+  - 模块边界、目录结构、协作规则变化：同步本文件、`.codex/README.md`、`.codex/MIGRATION.md` 与 `docs/current/architecture.md`。
 
 ## 6. 页面与组件分层约定
 
-- 登录页采用“编排 + 视图组件 + 常量配置”分层：
-  - `apps/platform/src/pages/login/LoginPage.tsx` 仅负责状态、副作用与提交流程。
-  - `apps/platform/src/pages/login/components/*` 负责纯展示结构。
-  - `apps/platform/src/pages/login/constants.ts` 维护动画、文案、样式常量与本地存储工具函数。
-- `apps/platform/src/pages/settings/SettingsPage.tsx` 采用“页面壳层 + `useSettingsPageController.ts` + tab components + `constants.ts`”分层；页面文件只保留权限分流、tabs 装配与顶层布局。
-- `apps/platform/src/pages/knowledge/KnowledgeManagementPage.tsx` 采用“页面壳层 + `useKnowledgeListState.ts` + sidebar/detail tab components + 现有 domain hooks”分层；列表状态、详情头、文档 tab 与运维 tab 不再堆在单文件中。
-- `apps/platform/src/pages/project/ProjectChatPage.tsx` 采用“页面壳层 + `useProjectChatSettings.ts` + `useProjectConversationDetail.ts` + `useProjectConversationTurn.ts` + `useProjectChatActions.ts` + adapters/components”分层；页面文件只保留路由上下文、布局与 composer 级编排。
-- `SearchPanel` 的字段渲染与显示策略统一沉淀到 `packages/ui/src/components/SearchPanel/searchPanel.helpers.tsx`，主组件仅保留状态编排与事件处理。
-- 全局 `知识库 / 技能 / 智能体` 页面当前分别由 `KnowledgeManagementPage.tsx`、`SkillsManagementPage.tsx` 与 `AgentsManagementPage.tsx` 承载；`GlobalAssetManagementPage.tsx` 保留为历史壳层组件，项目内 `资源` 页只负责展示和编排当前项目资源。
-- `apps/api/src/modules/settings/settings.service.ts` 维持 facade；字段归一化/校验、section 组装与连通性测试分别下沉到 `settings.service.validation.ts`、`settings.service.sections.ts` 与 `settings.service.connection-test.ts`。
-- `apps/api/src/modules/knowledge/knowledge.service.ts` 与 `knowledge.repository.ts` 维持 facade；service 内部职责拆到 `helpers/read/catalog/documents/rebuild/diagnostics/upload`，repository 内部职责拆到 `base/documents/namespace`，优先通过薄委托控制知识域复杂度。
+- 登录页采用“编排 + 视图组件 + 常量配置”分层：`LoginPage.tsx` 只做状态/副作用/提交流程，`components/*` 只做展示，`constants.ts` 维护动画与文案常量。
+- `SettingsPage.tsx` 采用“页面壳层 + controller hook + tab components + constants”分层。
+- `KnowledgeManagementPage.tsx` 采用“页面壳层 + 列表状态 hook + sidebar/detail tab components + domain hooks”分层。
+- `ProjectChatPage.tsx` 采用“页面壳层 + settings/detail/turn/actions hooks + adapters/components”分层。
+- `SearchPanel` 字段渲染与显示策略沉淀到 `packages/ui/src/components/SearchPanel/searchPanel.helpers.tsx`，主组件仅保留状态编排与事件处理。
+- `apps/api/src/modules/settings/settings.service.ts` 与 `apps/api/src/modules/knowledge/knowledge.service.ts` 保持 facade；复杂逻辑下沉到 helper 子模块。
 
 ## 7. 文档与协作入口
 
-- `README.md`：面向仓库协作者的总入口，说明当前定位、启动方式、信息架构与文档索引。
-- `.codex/README.md`：Knowject 当前唯一 Codex 工作区入口，说明配置、主文档、派生包与 Skill 根目录职责。
-- `.codex/MIGRATION.md`：`.agent/` 向 `.codex/` 收口迁移的规则、映射关系与后续维护方式。
-- `files/README.md`：知识库模板总导航，说明各知识库的用途、推荐使用顺序与通用元数据规则。
-- `.codex/docs/current/architecture.md`：项目结构、路由矩阵、数据来源、兼容策略的事实源。
-- `.codex/packs/chatgpt-projects/README.md`：ChatGPT Projects 上传包说明与推荐上传顺序。
-- `.codex/skills/README.md`：项目级 Skill 根目录说明；后续项目私有 Skill 统一从这里扩展。
-- `.codex/docs/design/*`：品牌与视觉设计资料。
-- `apps/platform/README.md`、`apps/api/README.md`：分别说明前端与 API 子系统的当前职责与边界。
-- `.codex/docs/templates/PLANS.md`：复杂功能、迁移或高风险任务的执行计划模板。
+- `README.md`：仓库总入口与阅读导航。
+- `docs/README.md`：文档主根目录与 truth surface 边界入口。
+- `docs/current/architecture.md`：项目结构、路由矩阵、数据来源、兼容策略事实源。
+- `docs/exports/README.md`：导出包目录说明（派生，不是事实源）。
+- `.codex/README.md`：Codex 配置与兼容层入口说明。
+- `.codex/MIGRATION.md`：迁移文档历史归档入口（stub）。
+- `apps/platform/README.md`、`apps/api/README.md`：前后端子系统职责边界。
 
 ## 8. 提交信息协作约定
 

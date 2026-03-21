@@ -41,8 +41,8 @@ packages/
   ui/         Shared UI package (@knowject/ui)
 docker/       Compose files, image builds, reverse proxy, init scripts
 scripts/      Reusable command entrypoints and shell helpers
-.codex/       Codex workspace (config, docs, packs, skills)
-.agent/       Legacy compatibility notes only (deprecated)
+.agents/      Agent-facing assets and project skills (`.agents/skills/`)
+.codex/       Codex configuration + compatibility notes only
 ```
 
 ## Product Surface
@@ -132,20 +132,18 @@ pnpm knowject:help
 
 ## Documentation
 
-`.codex/` is now the only maintained Codex workspace root for this repository. `.agent/` remains only as a legacy compatibility layer.
+`docs/` is the project documentation root, `docs/exports/` is the derived export directory, and `.agents/skills/` is the project Skill root.
 
 - [Project Rules](./AGENTS.md)
 - [Codex Workspace](./.codex/README.md)
 - [Migration Guide](./.codex/MIGRATION.md)
-- [Documentation Index](./.codex/docs/README.md)
-- [Current Architecture Facts](./.codex/docs/current/architecture.md)
-- [Docker Current Usage](./.codex/docs/current/docker-usage.md)
-- [Docker Operation Checklist](./.codex/docs/current/docker-operation-checklist.md)
-- [Auth and Environment Contract](./.codex/docs/contracts/auth-contract.md)
-- [Chroma Decision Record](./.codex/docs/contracts/chroma-decision.md)
-- [Handoff Guide](./.codex/docs/handoff/handoff-guide.md)
-- [ChatGPT / External Model Brief](./.codex/docs/handoff/chatgpt-project-brief.md)
-- [ChatGPT Projects Pack](./.codex/packs/chatgpt-projects/README.md)
+- [Documentation Index](./docs/README.md)
+- [Current Architecture Facts](./docs/current/architecture.md)
+- [Auth and Environment Contract](./docs/contracts/README.md)
+- [Handoff Notes](./docs/handoff/README.md)
+- [Roadmap Notes](./docs/roadmap/README.md)
+- [Exports Index](./docs/exports/README.md)
+- [Project Skills Root](./.agents/skills/README.md)
 - [Platform README](./apps/platform/README.md)
 - [API README](./apps/api/README.md)
 - [Docker Command Portal](./docker/README.md)
