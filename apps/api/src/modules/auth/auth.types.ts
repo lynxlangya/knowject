@@ -18,12 +18,15 @@ export interface AuthUserProfile {
   id: string;
   username: string;
   name: string;
-  locale?: SupportedLocale;
+}
+
+export interface AuthSessionUser extends AuthUserProfile {
+  locale: SupportedLocale;
 }
 
 export interface AuthSuccessResponse {
   token: string;
-  user: AuthUserProfile;
+  user: AuthSessionUser;
 }
 
 export interface AuthenticatedRequestUser {

@@ -14,6 +14,7 @@ import {
 } from './auth.repository.js';
 import type {
   AccessTokenPayload,
+  AuthSessionUser,
   AuthSuccessResponse,
   AuthUserDocument,
   AuthenticatedRequestUser,
@@ -34,7 +35,7 @@ export interface AuthService {
   updatePreferences(
     userId: string,
     input: UpdateAuthPreferencesInput,
-  ): Promise<AuthUserProfile>;
+  ): Promise<AuthSessionUser>;
 }
 
 const createUsernameConflictError = (cause?: unknown): AppError => {
@@ -126,21 +127,31 @@ const validatePassword = (password: string | undefined): string => {
   return password;
 };
 
-const toAuthProfile = (
+const toAuthUserProfile = (
+  user: Pick<AuthUserProfile, 'id' | 'username' | 'name'>,
+): AuthUserProfile => {
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+  };
+};
+
+const toAuthSessionUser = (
   user: WithId<AuthUserDocument>,
   localeOverride?: SupportedLocale,
-): AuthUserProfile => {
+): AuthSessionUser => {
   return {
     id: user._id.toHexString(),
     username: user.username,
     name: user.name,
-    locale: localeOverride ?? user.preferences?.locale,
+    locale: localeOverride ?? user.preferences?.locale ?? DEFAULT_LOCALE,
   };
 };
 
 const toAuthResponse = async (
   env: AppEnv,
-  user: AuthUserProfile,
+  user: AuthSessionUser,
 ): Promise<AuthSuccessResponse> => {
   const tokenPayload: AccessTokenPayload = {
     sub: user.id,
@@ -201,7 +212,7 @@ export const createAuthService = ({
           },
         });
 
-        return toAuthResponse(env, toAuthProfile(user));
+        return toAuthResponse(env, toAuthSessionUser(user));
       } catch (error) {
         if (isDuplicateUsernameError(error)) {
           throw createUsernameConflictError(error);
@@ -235,13 +246,24 @@ export const createAuthService = ({
 
       if (!user.preferences?.locale) {
         const locale = readLocale(input.locale, { fallback: DEFAULT_LOCALE });
-        const updated = await repository.updatePreferences(user._id.toHexString(), {
-          locale: locale ?? DEFAULT_LOCALE,
-        });
-        return toAuthResponse(env, updated);
+        const resolvedLocale = locale ?? DEFAULT_LOCALE;
+
+        try {
+          const updated = await repository.updatePreferences(user._id.toHexString(), {
+            locale: resolvedLocale,
+          });
+          return toAuthResponse(env, updated);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Unknown locale backfill failure';
+          console.warn(
+            `[auth] locale backfill failed for user ${user._id.toHexString()}: ${message}`,
+          );
+          return toAuthResponse(env, toAuthSessionUser(user, resolvedLocale));
+        }
       }
 
-      return toAuthResponse(env, toAuthProfile(user));
+      return toAuthResponse(env, toAuthSessionUser(user));
     },
 
     searchUsers: async (input) => {
@@ -251,7 +273,7 @@ export const createAuthService = ({
 
       return {
         total: items.length,
-        items,
+        items: items.map(toAuthUserProfile),
       };
     },
 

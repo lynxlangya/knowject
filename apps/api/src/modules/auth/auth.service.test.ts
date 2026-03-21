@@ -6,7 +6,10 @@ import type { AppEnv } from '@config/env.js';
 import type { SupportedLocale } from './auth.types.js';
 import type { AuthRepository } from './auth.repository.js';
 import { createAuthService } from './auth.service.js';
-import type { AuthUserDocument, AuthUserProfile } from './auth.types.js';
+import type {
+  AuthSessionUser,
+  AuthUserDocument,
+} from './auth.types.js';
 
 const createTestEnv = (): AppEnv => {
   return {
@@ -87,7 +90,7 @@ type AuthServiceWithPreferences = ReturnType<typeof createAuthService> & {
   updatePreferences: (
     userId: string,
     input: { locale?: SupportedLocale },
-  ) => Promise<AuthUserProfile>;
+  ) => Promise<AuthSessionUser>;
 };
 
 test('register initializes locale from provided source', async () => {
@@ -213,4 +216,87 @@ test('updatePreferences updates locale', async () => {
 
   assert.equal(updated.user.locale, 'en');
   assert.equal(updateCalls.length, 1);
+});
+
+test('legacy user login still succeeds when locale backfill persistence fails', async () => {
+  const env = createTestEnv();
+  const passwordHash = await argon2.hash('password123', {
+    type: argon2.argon2id,
+    memoryCost: env.argon2.memoryCost,
+    timeCost: env.argon2.timeCost,
+    parallelism: env.argon2.parallelism,
+  });
+  const user = createUserDocument({
+    username: 'legacy',
+    name: 'Legacy',
+    passwordHash,
+    preferences: undefined,
+  });
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (message?: unknown, ...args: unknown[]) => {
+    warnings.push(
+      [message, ...args].filter((value) => value !== undefined).join(' '),
+    );
+  };
+
+  const repository = {
+    findByUsername: async () => user,
+    updatePreferences: async () => {
+      throw new Error('write failed');
+    },
+  } as unknown as AuthRepository;
+
+  const service = createAuthService({
+    env,
+    repository,
+  });
+
+  try {
+    const loginResult = await service.login({
+      username: 'legacy',
+      password: 'password123',
+      locale: 'zh-CN',
+    });
+
+    assert.equal(loginResult.user.locale, 'zh-CN');
+    assert.equal(loginResult.user.username, 'legacy');
+    assert.equal(typeof loginResult.token, 'string');
+    assert.ok(loginResult.token.length > 0);
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0] ?? '', /locale backfill/i);
+});
+
+test('searchUsers keeps shared profile shape without locale', async () => {
+  const repository = {
+    searchProfiles: async () => [
+      {
+        id: 'user-1',
+        username: 'langya',
+        name: 'Langya',
+        locale: 'zh-CN',
+      },
+    ],
+  } as unknown as AuthRepository;
+
+  const service = createAuthService({
+    env: createTestEnv(),
+    repository,
+  });
+
+  const result = await service.searchUsers({
+    query: 'lang',
+    limit: 10,
+  });
+
+  assert.deepEqual(result.items[0], {
+    id: 'user-1',
+    username: 'langya',
+    name: 'Langya',
+  });
+  assert.equal('locale' in (result.items[0] ?? {}), false);
 });

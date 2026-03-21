@@ -7,9 +7,10 @@ import {
 import type { MongoDatabaseManager } from "@db/mongo.js";
 import { toObjectId } from "@lib/mongo-id.js";
 import type {
+  AuthSessionUser,
   AuthUserDocument,
   AuthUserProfile,
-  UpdateAuthPreferencesInput,
+  SupportedLocale,
 } from "./auth.types.js";
 
 interface CreateUserRecordInput {
@@ -26,7 +27,16 @@ const toAuthUserProfile = (user: WithId<AuthUserDocument>): AuthUserProfile => {
     id: user._id.toHexString(),
     username: user.username,
     name: user.name,
-    locale: user.preferences?.locale,
+  };
+};
+
+const toAuthSessionUser = (
+  user: WithId<AuthUserDocument>,
+  locale: SupportedLocale,
+): AuthSessionUser => {
+  return {
+    ...toAuthUserProfile(user),
+    locale,
   };
 };
 
@@ -118,8 +128,8 @@ export class AuthRepository {
 
   async updatePreferences(
     userId: string,
-    input: UpdateAuthPreferencesInput,
-  ): Promise<AuthUserProfile> {
+    input: { locale: SupportedLocale },
+  ): Promise<AuthSessionUser> {
     const collection = await this.getCollection();
     const objectId = toObjectId(userId);
 
@@ -144,7 +154,7 @@ export class AuthRepository {
       throw new Error("User preferences update failed");
     }
 
-    return toAuthUserProfile(updated);
+    return toAuthSessionUser(updated, input.locale);
   }
 
   private async getCollection(): Promise<Collection<AuthUserDocument>> {
