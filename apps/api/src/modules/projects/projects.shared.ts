@@ -22,11 +22,20 @@ import type {
 
 type ProjectMemberProfileMap = Map<string, AuthUserProfile>;
 
+const formatTemplate = (
+  template: string,
+  values: Record<string, string>,
+): string => {
+  return Object.entries(values).reduce((result, [key, value]) => {
+    return result.replaceAll(`{${key}}`, value);
+  }, template);
+};
+
 const createUnknownMemberProfile = (userId: string): AuthUserProfile => {
   return {
     id: userId,
     username: 'unknown',
-    name: '未知成员',
+    name: getFallbackMessage('project.member.unknownName'),
   };
 };
 
@@ -136,7 +145,12 @@ const buildDefaultConversationMessages = (
     {
       id: 'msg-default-assistant',
       role: 'assistant',
-      content: `这里是「${projectName}」的项目对话入口。当前已经切到正式后端读链路，后续会在这里接入真实消息写入、知识检索与上下文沉淀。`,
+      content: formatTemplate(
+        getFallbackMessage('project.conversation.defaultIntro'),
+        {
+          projectName,
+        },
+      ),
       createdAt: now,
     },
   ];
@@ -170,7 +184,12 @@ export const createDefaultProjectConversation = (
 export const buildDefaultProjectConversationTitle = (
   projectName: string,
 ): string => {
-  return `${projectName} 项目上下文`;
+  return formatTemplate(
+    getFallbackMessage('project.conversation.defaultTitle'),
+    {
+      projectName,
+    },
+  );
 };
 
 export const createProjectConversation = ({
@@ -245,7 +264,7 @@ const getConversationPreview = (
     conversation.messages[conversation.messages.length - 1] ?? null;
 
   if (!latestMessage) {
-    return '当前对话暂无消息。';
+    return getFallbackMessage('project.conversation.emptyPreview');
   }
 
   return latestMessage.content;

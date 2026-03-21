@@ -15,6 +15,15 @@ import type {
 export const SKILLS_COLLECTION_NAME = 'skills';
 export const SKILL_ENTRY_FILE_NAME = 'SKILL.md';
 
+const formatTemplate = (
+  template: string,
+  values: Record<string, string>,
+): string => {
+  return Object.entries(values).reduce((result, [key, value]) => {
+    return result.replaceAll(`{${key}}`, value);
+  }, template);
+};
+
 export const createSkillNotFoundError = (): AppError => {
   return new AppError({
     statusCode: 404,
@@ -55,11 +64,28 @@ export const createSkillInUseError = ({
   agentCount: number;
 }): AppError => {
   const usageLabels = [
-    projectCount > 0 ? `${projectCount} 个项目` : null,
-    agentCount > 0 ? `${agentCount} 个智能体` : null,
+    projectCount > 0
+      ? formatTemplate(
+          getFallbackMessage('skills.inUse.projectBindingUnit'),
+          { count: String(projectCount) },
+        )
+      : null,
+    agentCount > 0
+      ? formatTemplate(
+          getFallbackMessage('skills.inUse.agentBindingUnit'),
+          { count: String(agentCount) },
+        )
+      : null,
   ].filter((label): label is string => Boolean(label));
-  const actionLabel = action === 'delete' ? '删除' : '回退为草稿';
-  const message = `Skill 已被${usageLabels.join('、')}绑定，暂不可${actionLabel}`;
+  const actionLabel = getFallbackMessage(
+    action === 'delete'
+      ? 'skills.inUse.action.delete'
+      : 'skills.inUse.action.unpublish',
+  );
+  const message = formatTemplate(getFallbackMessage('skills.inUse.message'), {
+    usage: usageLabels.join('、'),
+    action: actionLabel,
+  });
 
   return new AppError({
     statusCode: 409,
@@ -132,7 +158,7 @@ export const assertSafeBundleRelativePath = (relativePath: string): string => {
     throw createValidationAppError(
       getFallbackMessage('validation.skillBundlePath.invalid'),
       {
-        skillMarkdown: `非法文件路径：${relativePath}`,
+        skillMarkdown: getFallbackMessage('validation.skillBundlePath.invalid'),
       },
       'validation.skillBundlePath.invalid',
     );

@@ -307,7 +307,7 @@ const validateBoundKnowledgeIds = async (
     throw createValidationAppError(
       getFallbackMessage("validation.knowledgeBindings.unregistered"),
       {
-        boundKnowledgeIds: `以下知识库不存在：${invalidKnowledgeIds.join(", ")}`,
+        boundKnowledgeIds: invalidKnowledgeIds.join(", "),
       },
       "validation.knowledgeBindings.unregistered",
     );

@@ -208,7 +208,7 @@ export const createKnowledgeCatalogHandlers = ({
             collectionName,
             reason: normalizeIndexerErrorMessage(
               error,
-              "Chroma 知识库向量清理失败",
+              getFallbackMessage("knowledge.search.chroma.requestFailed"),
             ),
           },
         });

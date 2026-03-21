@@ -161,9 +161,15 @@ export const messages = {
       'Project does not exist or is not visible to the current user',
     'project.forbidden':
       'Current user does not have admin permission for this project',
+    'project.member.unknownName': 'Unknown member',
     'project.conversation.notFound': 'Project conversation does not exist',
     'project.conversation.message.notFound':
       'Project conversation message does not exist',
+    'project.conversation.defaultIntro':
+      'This is the project conversation entry for "{projectName}". The formal backend read path is already enabled; real message writes, knowledge retrieval, and context persistence will be connected here next.',
+    'project.conversation.defaultTitle': '{projectName} project context',
+    'project.conversation.emptyPreview':
+      'There are no messages in this conversation yet.',
     'project.conversation.lastThreadForbidden':
       'At least one conversation thread must remain in the project',
     'project.conversation.streamingUnavailable':
@@ -197,6 +203,12 @@ export const messages = {
       'Built-in system skills cannot be edited or deleted',
     'skills.slugConflict': 'Skill slug already exists',
     'skills.inUse': 'Skill is still bound and cannot be changed right now',
+    'skills.inUse.projectBindingUnit': '{count} project(s)',
+    'skills.inUse.agentBindingUnit': '{count} agent(s)',
+    'skills.inUse.action.delete': 'delete',
+    'skills.inUse.action.unpublish': 'revert to draft',
+    'skills.inUse.message':
+      'Skill is bound by {usage} and cannot be {action} right now',
     'skills.import.fetch.invalidUrl': 'Remote URL is invalid',
     'skills.import.fetch.httpsOnly': 'Remote resources only support HTTPS',
     'skills.import.fetch.authUnsupported':
@@ -352,8 +364,13 @@ export const messages = {
     'memberships.lastAdminRequired': '项目至少需要保留一位 admin',
     'project.notFound': '项目不存在或当前用户不可见',
     'project.forbidden': '当前用户没有该项目的管理权限',
+    'project.member.unknownName': '未知成员',
     'project.conversation.notFound': '项目对话不存在',
     'project.conversation.message.notFound': '项目对话消息不存在',
+    'project.conversation.defaultIntro':
+      '这里是「{projectName}」的项目对话入口。当前已经切到正式后端读链路，后续会在这里接入真实消息写入、知识检索与上下文沉淀。',
+    'project.conversation.defaultTitle': '{projectName} 项目上下文',
+    'project.conversation.emptyPreview': '当前对话暂无消息。',
     'project.conversation.lastThreadForbidden': '项目至少保留一个对话线程',
     'project.conversation.streamingUnavailable':
       '当前项目对话流式能力暂不可用',
@@ -382,6 +399,11 @@ export const messages = {
     'skills.systemReadonly': '系统内置 Skill 不可编辑或删除',
     'skills.slugConflict': 'Skill slug 已存在',
     'skills.inUse': 'Skill 已被绑定，暂不可操作',
+    'skills.inUse.projectBindingUnit': '{count} 个项目',
+    'skills.inUse.agentBindingUnit': '{count} 个智能体',
+    'skills.inUse.action.delete': '删除',
+    'skills.inUse.action.unpublish': '回退为草稿',
+    'skills.inUse.message': 'Skill 已被{usage}绑定，暂不可{action}',
     'skills.import.fetch.invalidUrl': '远程 URL 不合法',
     'skills.import.fetch.httpsOnly': '远程资源仅支持 HTTPS',
     'skills.import.fetch.authUnsupported': '远程 URL 不支持携带认证信息',

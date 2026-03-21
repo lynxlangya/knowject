@@ -87,7 +87,7 @@ export const createKnowledgeDocumentHandlers = ({
             collectionName,
             reason: normalizeIndexerErrorMessage(
               error,
-              "Chroma 文档向量清理失败",
+              getFallbackMessage("knowledge.search.chroma.requestFailed"),
             ),
           },
         });

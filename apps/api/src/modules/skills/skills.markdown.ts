@@ -74,7 +74,9 @@ const parseFrontmatterBlock = (
       throw createValidationAppError(
         getFallbackMessage('validation.skillMarkdown.frontmatter.parse'),
         {
-          skillMarkdown: `无法解析 frontmatter 行：${trimmed}`,
+          skillMarkdown: getFallbackMessage(
+            'validation.skillMarkdown.frontmatter.parse',
+          ),
         },
         'validation.skillMarkdown.frontmatter.parse',
       );
@@ -104,7 +106,9 @@ const parseFrontmatterBlock = (
           throw createValidationAppError(
             getFallbackMessage('validation.skillMarkdown.frontmatter.parse'),
             {
-              skillMarkdown: `frontmatter 多行字段 ${key} 缩进不合法`,
+              skillMarkdown: getFallbackMessage(
+                'validation.skillMarkdown.frontmatter.parse',
+              ),
             },
             'validation.skillMarkdown.frontmatter.parse',
           );
@@ -161,7 +165,9 @@ const parseFrontmatterBlock = (
         throw createValidationAppError(
           getFallbackMessage('validation.skillMarkdown.frontmatter.parse'),
           {
-            skillMarkdown: `frontmatter 字段 ${key} 格式不合法`,
+            skillMarkdown: getFallbackMessage(
+              'validation.skillMarkdown.frontmatter.parse',
+            ),
           },
           'validation.skillMarkdown.frontmatter.parse',
         );
@@ -223,7 +229,9 @@ export const parseSkillMarkdown = (value: string): ParsedSkillMarkdown => {
     throw createValidationAppError(
       getFallbackMessage('validation.skillMarkdown.frontmatter.required'),
       {
-        skillMarkdown: 'SKILL.md 顶部必须以 --- frontmatter 开头',
+        skillMarkdown: getFallbackMessage(
+          'validation.skillMarkdown.frontmatter.required',
+        ),
       },
       'validation.skillMarkdown.frontmatter.required',
     );
@@ -237,7 +245,9 @@ export const parseSkillMarkdown = (value: string): ParsedSkillMarkdown => {
     throw createValidationAppError(
       getFallbackMessage('validation.skillMarkdown.frontmatter.unclosed'),
       {
-        skillMarkdown: '请补齐 frontmatter 结束分隔线 ---',
+        skillMarkdown: getFallbackMessage(
+          'validation.skillMarkdown.frontmatter.unclosed',
+        ),
       },
       'validation.skillMarkdown.frontmatter.unclosed',
     );
@@ -254,7 +264,9 @@ export const parseSkillMarkdown = (value: string): ParsedSkillMarkdown => {
     throw createValidationAppError(
       getFallbackMessage('validation.skillMarkdown.frontmatter.nameRequired'),
       {
-        skillMarkdown: 'frontmatter 必须包含非空 name',
+        skillMarkdown: getFallbackMessage(
+          'validation.skillMarkdown.frontmatter.nameRequired',
+        ),
       },
       'validation.skillMarkdown.frontmatter.nameRequired',
     );
@@ -266,7 +278,9 @@ export const parseSkillMarkdown = (value: string): ParsedSkillMarkdown => {
         'validation.skillMarkdown.frontmatter.descriptionRequired',
       ),
       {
-        skillMarkdown: 'frontmatter 必须包含非空 description',
+        skillMarkdown: getFallbackMessage(
+          'validation.skillMarkdown.frontmatter.descriptionRequired',
+        ),
       },
       'validation.skillMarkdown.frontmatter.descriptionRequired',
     );

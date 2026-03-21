@@ -29,6 +29,10 @@ const ALLOWED_GITHUB_RAW_HOSTS = new Set([
   "gist.githubusercontent.com",
 ]);
 const ALLOWED_DIRECT_IMPORT_HOSTS = ALLOWED_GITHUB_RAW_HOSTS;
+const GITHUB_API_LABEL = "github_api";
+const GITHUB_METADATA_LABEL = "github_metadata";
+const SKILL_BUNDLE_FILE_LABEL = "skill_bundle_file";
+const SKILL_MARKDOWN_LABEL = "skill_markdown";
 
 interface ImportedSkillBundleFile {
   path: string;
@@ -346,7 +350,7 @@ const fetchJson = async (url: string): Promise<unknown> => {
   const normalizedUrl = assertAllowedRemoteUrl(
     url,
     ALLOWED_GITHUB_API_HOSTS,
-    "GitHub API",
+    GITHUB_API_LABEL,
   );
   const response = await fetch(normalizedUrl, {
     headers: {
@@ -371,7 +375,7 @@ const fetchJson = async (url: string): Promise<unknown> => {
     response,
     normalizedUrl.toString(),
     IMPORT_MAX_METADATA_BYTES,
-    "GitHub 元数据",
+    GITHUB_METADATA_LABEL,
   );
 
   try {
@@ -512,7 +516,9 @@ const parseGitHubUrl = (value: string): GitHubImportTarget => {
       throw createValidationAppError(
         getFallbackMessage("validation.skills.import.githubUrl.invalid"),
         {
-          githubUrl: "无法识别 raw.githubusercontent.com URL",
+          githubUrl: getFallbackMessage(
+            "validation.skills.import.githubUrl.invalid",
+          ),
         },
         "validation.skills.import.githubUrl.invalid",
       );
@@ -541,7 +547,9 @@ const parseGitHubUrl = (value: string): GitHubImportTarget => {
     throw createValidationAppError(
       getFallbackMessage("validation.skills.import.githubUrl.invalid"),
       {
-        githubUrl: "仅支持 github.com 或 raw.githubusercontent.com URL",
+        githubUrl: getFallbackMessage(
+          "validation.skills.import.githubUrl.invalid",
+        ),
       },
       "validation.skills.import.githubUrl.invalid",
     );
@@ -553,7 +561,9 @@ const parseGitHubUrl = (value: string): GitHubImportTarget => {
     throw createValidationAppError(
       getFallbackMessage("validation.skills.import.githubUrl.invalid"),
       {
-        githubUrl: "无法识别 owner/repo",
+        githubUrl: getFallbackMessage(
+          "validation.skills.import.githubUrl.invalid",
+        ),
       },
       "validation.skills.import.githubUrl.invalid",
     );
@@ -579,7 +589,9 @@ const parseGitHubUrl = (value: string): GitHubImportTarget => {
     throw createValidationAppError(
       getFallbackMessage("validation.skills.import.githubUrl.invalid"),
       {
-        githubUrl: "仅支持 GitHub tree/blob URL",
+        githubUrl: getFallbackMessage(
+          "validation.skills.import.githubUrl.invalid",
+        ),
       },
       "validation.skills.import.githubUrl.invalid",
     );
@@ -589,7 +601,9 @@ const parseGitHubUrl = (value: string): GitHubImportTarget => {
     throw createValidationAppError(
       getFallbackMessage("validation.skills.import.githubUrl.invalid"),
       {
-        githubUrl: "GitHub URL 必须包含 ref",
+        githubUrl: getFallbackMessage(
+          "validation.skills.import.githubUrl.invalid",
+        ),
       },
       "validation.skills.import.githubUrl.invalid",
     );
@@ -818,7 +832,7 @@ const collectGitHubBundleFiles = async (
       const { buffer } = await fetchBuffer(entry.download_url, {
         allowedHosts: ALLOWED_GITHUB_RAW_HOSTS,
         maxBytes: IMPORT_MAX_SINGLE_FILE_BYTES,
-        label: "Skill bundle 文件",
+        label: SKILL_BUNDLE_FILE_LABEL,
       });
       const relativePath = assertSafeBundleRelativePath(
         bundleRootPath
@@ -891,7 +905,7 @@ const importFromUrl = async (url: string): Promise<ImportedSkillBundle> => {
   const { text, contentType } = await fetchText(url, {
     allowedHosts: ALLOWED_DIRECT_IMPORT_HOSTS,
     maxBytes: IMPORT_MAX_SINGLE_FILE_BYTES,
-    label: "Skill Markdown",
+    label: SKILL_MARKDOWN_LABEL,
   });
 
   if (contentType?.includes("text/html") || looksLikeHtmlDocument(text)) {

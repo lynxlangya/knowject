@@ -14,6 +14,7 @@ import {
   createGatewayError,
   isIndexerRouteNotFoundError,
 } from "../utils/knowledge-search.errors.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 
 const NOOP_SETTINGS_REPOSITORY = {
   getSettings: async () => null,
@@ -216,7 +217,7 @@ export const createKnowledgeChromaMutationService = ({
           body: {
             collectionName,
           },
-          failureMessage,
+          failureMessage: getFallbackMessage(failureMessage),
         });
         return;
       } catch (error) {
@@ -247,7 +248,7 @@ export const createKnowledgeChromaMutationService = ({
         where: {
           knowledgeId,
         },
-        failureMessage: "Python indexer 删除知识库向量失败",
+        failureMessage: "knowledge.search.indexer.requestFailed",
       });
     },
     deleteDocumentChunks: async (documentId, { collectionName }) => {
@@ -257,7 +258,7 @@ export const createKnowledgeChromaMutationService = ({
         where: {
           documentId,
         },
-        failureMessage: "Python indexer 删除文档向量失败",
+        failureMessage: "knowledge.search.indexer.requestFailed",
       });
     },
     deleteCollection: async (collectionName) => {

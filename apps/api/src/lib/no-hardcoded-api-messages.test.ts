@@ -65,6 +65,55 @@ const stripComments = (source: string): string => {
     .replace(/^\s*\/\/.*$/gm, '');
 };
 
+const REMAINING_SWEEP_CHECKLIST: Record<string, string[]> = {
+  'apps/api/src/modules/skills/skills.import.ts': [
+    'GitHub 元数据',
+    '无法识别 raw.githubusercontent.com URL',
+    '仅支持 github.com 或 raw.githubusercontent.com URL',
+    '无法识别 owner/repo',
+    '仅支持 GitHub tree/blob URL',
+    'GitHub URL 必须包含 ref',
+    'Skill bundle 文件',
+    'Skill Markdown',
+  ],
+  'apps/api/src/modules/skills/skills.markdown.ts': [
+    '无法解析 frontmatter 行',
+    'frontmatter 多行字段',
+    'frontmatter 字段',
+    'SKILL.md 顶部必须以 --- frontmatter 开头',
+    '请补齐 frontmatter 结束分隔线 ---',
+    'frontmatter 必须包含非空 name',
+    'frontmatter 必须包含非空 description',
+  ],
+  'apps/api/src/modules/projects/projects.shared.ts': [
+    '未知成员',
+    '项目对话入口',
+    '项目上下文',
+    '当前对话暂无消息。',
+  ],
+  'apps/api/src/modules/agents/agents.service.ts': [
+    '以下知识库不存在：',
+  ],
+  'apps/api/src/modules/skills/skills.shared.ts': [
+    '个项目',
+    '个智能体',
+    '删除',
+    '回退为草稿',
+    'Skill 已被',
+    '非法文件路径：',
+  ],
+  'apps/api/src/modules/knowledge/knowledge.service.catalog.ts': [
+    'Chroma 知识库向量清理失败',
+  ],
+  'apps/api/src/modules/knowledge/knowledge.service.documents.ts': [
+    'Chroma 文档向量清理失败',
+  ],
+  'apps/api/src/modules/knowledge/search/knowledge-chroma-mutation.service.ts': [
+    'Python indexer 删除知识库向量失败',
+    'Python indexer 删除文档向量失败',
+  ],
+};
+
 test('api runtime modules do not hardcode user-facing messages', () => {
   const workspaceRoot = join(process.cwd(), '..', '..');
   const violations: string[] = [];
@@ -113,4 +162,23 @@ test('knowledge search error helpers do not return hardcoded literal messages', 
     );
 
   assert.deepEqual(literalReturns, []);
+});
+
+test('remaining task-4 sweep checklist has no known hardcoded runtime/detail literals', () => {
+  const workspaceRoot = join(process.cwd(), '..', '..');
+  const violations: string[] = [];
+
+  for (const [relativePath, snippets] of Object.entries(REMAINING_SWEEP_CHECKLIST)) {
+    const source = stripComments(
+      readFileSync(join(workspaceRoot, relativePath), 'utf8'),
+    );
+
+    for (const snippet of snippets) {
+      if (source.includes(snippet)) {
+        violations.push(`${relativePath}: ${snippet}`);
+      }
+    }
+  }
+
+  assert.deepEqual(violations, []);
 });
