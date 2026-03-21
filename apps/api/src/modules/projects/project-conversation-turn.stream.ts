@@ -56,6 +56,7 @@ export const createSynchronousProjectConversationTurn = async ({
         repository,
         preparedTurn,
         assistantReply,
+        locale: context.locale,
       });
 
     return persistedAssistantReply.detail;
@@ -141,6 +142,7 @@ export const createStreamingProjectConversationTurn = async ({
           content: streamReply.content,
           sources: streamReply.sources,
         },
+        locale: context.locale,
       });
     assistantPersisted = true;
 

@@ -1,4 +1,6 @@
 import type { AppEnv } from "@config/env.js";
+import { DEFAULT_LOCALE } from "@lib/locale.js";
+import { getFallbackMessage, getMessage } from "@lib/locale.messages.js";
 import { createKnowledgeChromaCollectionService } from "./knowledge-chroma-collection.service.js";
 import type {
   KnowledgeChromaCollectionService,
@@ -18,13 +20,16 @@ export const createKnowledgeSearchDiagnosticsService = ({
   return {
     getDiagnostics: async ({
       collectionName,
+      locale = DEFAULT_LOCALE,
     }: SearchDiagnosticsInput): Promise<KnowledgeSearchDiagnosticsResponse> => {
       if (!env.chroma.url) {
         return {
           collection: {
             name: collectionName,
             exists: false,
-            errorMessage: "Chroma 未配置，当前无法执行知识索引和检索",
+            errorMessage:
+              getMessage("knowledge.search.chroma.unavailable", locale) ??
+              getFallbackMessage("knowledge.search.chroma.unavailable"),
           },
         };
       }
@@ -49,7 +54,7 @@ export const createKnowledgeSearchDiagnosticsService = ({
           collection: {
             name: collectionName,
             exists: false,
-            errorMessage: resolveDiagnosticsErrorMessage(error),
+            errorMessage: resolveDiagnosticsErrorMessage(error, locale),
           },
         };
       }

@@ -27,6 +27,7 @@ export const createKnowledgeRouter = (
     asyncHandler(async (req, res) => {
       const result = await knowledgeService.listKnowledge({
         actor: getRequiredAuthUser(req),
+        locale: req.locale,
       });
 
       sendSuccess(res, result);
@@ -39,6 +40,7 @@ export const createKnowledgeRouter = (
       const result = await knowledgeService.searchDocuments(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         req.body as SearchKnowledgeDocumentsInput,
       );
@@ -53,6 +55,7 @@ export const createKnowledgeRouter = (
       const result = await knowledgeService.getKnowledgeDetail(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
       );
@@ -67,6 +70,7 @@ export const createKnowledgeRouter = (
       const result = await knowledgeService.createKnowledge(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         req.body as CreateKnowledgeInput,
       );
@@ -81,6 +85,7 @@ export const createKnowledgeRouter = (
       const result = await knowledgeService.updateKnowledge(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
         req.body as UpdateKnowledgeInput,
@@ -96,6 +101,7 @@ export const createKnowledgeRouter = (
       await knowledgeService.deleteKnowledge(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
       );
@@ -111,6 +117,7 @@ export const createKnowledgeRouter = (
       const result = await knowledgeService.uploadDocument(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
         file,
@@ -126,6 +133,7 @@ export const createKnowledgeRouter = (
       await knowledgeService.retryDocument(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
         getRequiredRouteParam(req, 'documentId'),
@@ -141,6 +149,7 @@ export const createKnowledgeRouter = (
       await knowledgeService.rebuildDocument(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
         getRequiredRouteParam(req, 'documentId'),
@@ -156,6 +165,7 @@ export const createKnowledgeRouter = (
       await knowledgeService.rebuildKnowledge(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
       );
@@ -170,6 +180,7 @@ export const createKnowledgeRouter = (
       const result = await knowledgeService.getKnowledgeDiagnostics(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
       );
@@ -184,6 +195,7 @@ export const createKnowledgeRouter = (
       await knowledgeService.deleteDocument(
         {
           actor: getRequiredAuthUser(req),
+          locale: req.locale,
         },
         getRequiredRouteParam(req, 'knowledgeId'),
         getRequiredRouteParam(req, 'documentId'),

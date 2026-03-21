@@ -1,3 +1,4 @@
+import type { SupportedLocale } from "@lib/locale.js";
 import type { AppEnv } from "@config/env.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type { EffectiveEmbeddingConfig } from "@modules/settings/settings.types.js";
@@ -23,6 +24,7 @@ export interface SearchDocumentsInput {
 
 export interface SearchDiagnosticsInput {
   collectionName: string;
+  locale?: SupportedLocale;
 }
 
 export interface KnowledgeSearchDiagnosticsResponse {

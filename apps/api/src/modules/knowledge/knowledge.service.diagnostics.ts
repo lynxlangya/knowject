@@ -2,7 +2,7 @@ import { getEffectiveIndexingConfig } from "@config/ai-config.js";
 import {
   isStaleProcessingDocument,
   readKnowledgeIndexerDiagnostics,
-  resolveDiagnosticsErrorMessage,
+  resolveLocalizedDiagnosticsErrorMessage,
 } from "./knowledge.diagnostics.js";
 import { resolveNamespaceIndexContext } from "./knowledge.namespace.js";
 import { readDocumentStoragePresence } from "./knowledge.storage.js";
@@ -24,7 +24,7 @@ export const createKnowledgeDiagnosticsHandlers = ({
 }: KnowledgeServiceDependencies) => {
   return {
     getKnowledgeDiagnostics: async (
-      { actor }: KnowledgeCommandContext,
+      { actor, locale }: KnowledgeCommandContext,
       knowledgeId: string,
     ): Promise<KnowledgeDiagnosticsResponse> => {
       await repository.ensureMetadataModel();
@@ -65,6 +65,7 @@ export const createKnowledgeDiagnosticsHandlers = ({
           namespaceContext.mode === "versioned"
             ? namespaceContext.state.activeCollectionName
             : namespaceContext.namespace.namespaceKey,
+        locale,
       });
       const effectiveEmbeddingConfig = namespaceContext.currentEmbeddingConfig;
       const effectiveIndexingConfig = await getEffectiveIndexingConfig({
@@ -77,6 +78,7 @@ export const createKnowledgeDiagnosticsHandlers = ({
         const diagnostics = await readKnowledgeIndexerDiagnostics(
           env,
           settingsRepository,
+          locale,
         );
         indexerDiagnostics = {
           status: diagnostics.status,
@@ -103,7 +105,7 @@ export const createKnowledgeDiagnosticsHandlers = ({
           chunkOverlap: null,
           embeddingProvider: null,
           chromaReachable: null,
-          errorMessage: resolveDiagnosticsErrorMessage(error),
+          errorMessage: resolveLocalizedDiagnosticsErrorMessage(error, locale),
           expected: {
             supportedFormats: [...effectiveIndexingConfig.supportedTypes],
             chunkSize: effectiveIndexingConfig.chunkSize,

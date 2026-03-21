@@ -6349,11 +6349,12 @@ test('getKnowledgeDiagnostics degrades gracefully when collection or indexer che
     env: createTestEnv(storageRoot),
     repository,
     searchService: createSearchServiceStub({
-      getDiagnostics: async ({ collectionName }) => ({
+      getDiagnostics: async ({ collectionName, locale }) => ({
         collection: {
           name: collectionName,
           exists: false,
-          errorMessage: 'Chroma 请求失败',
+          errorMessage:
+            locale === 'en' ? 'Chroma request failed' : 'Chroma 请求失败',
         },
       }),
     }),
@@ -6372,6 +6373,7 @@ test('getKnowledgeDiagnostics degrades gracefully when collection or indexer che
           id: '507f1f77bcf86cd799439012',
           username: 'langya',
         },
+        locale: 'en',
       },
       knowledgeId,
     );
@@ -6389,7 +6391,7 @@ test('getKnowledgeDiagnostics degrades gracefully when collection or indexer che
     assert.deepEqual(response.collection, {
       name: buildExpectedCollectionName('global_docs'),
       exists: false,
-      errorMessage: 'Chroma 请求失败',
+      errorMessage: 'Chroma request failed',
     });
     assert.equal(response.indexer.status, 'degraded');
     assert.equal(response.indexer.service, null);
@@ -6398,7 +6400,10 @@ test('getKnowledgeDiagnostics degrades gracefully when collection or indexer che
     assert.equal(response.indexer.chunkOverlap, null);
     assert.equal(response.indexer.embeddingProvider, null);
     assert.equal(response.indexer.chromaReachable, null);
-    assert.equal(response.indexer.errorMessage?.includes('Python indexer 诊断不可达'), true);
+    assert.equal(
+      response.indexer.errorMessage?.includes('Python indexer health check failed'),
+      true,
+    );
     assert.deepEqual(response.indexer.expected, {
       supportedFormats: ['md', 'txt', 'pdf', 'docx', 'xlsx'],
       chunkSize: 1000,

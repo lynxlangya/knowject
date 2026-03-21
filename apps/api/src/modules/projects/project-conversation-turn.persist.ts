@@ -19,6 +19,7 @@ import type {
   PersistedProjectConversationAssistantReply,
 } from "./types/project-conversation-turn.types.js";
 import { findProjectConversationRetryState } from "./utils/project-conversation-turn.retry.js";
+import type { SupportedLocale } from "@lib/locale.js";
 
 export const getRequiredPersistedConversation = (
   project: Pick<ProjectDocument, "name" | "conversations">,
@@ -153,10 +154,12 @@ export const persistProjectConversationAssistantReply = async ({
   repository,
   preparedTurn,
   assistantReply,
+  locale,
 }: {
   repository: ProjectsRepository;
   preparedTurn: PreparedProjectConversationTurn;
   assistantReply: ProjectConversationAssistantReply;
+  locale?: SupportedLocale;
 }): Promise<PersistedProjectConversationAssistantReply> => {
   if (preparedTurn.clientRequestId) {
     const latestConversationTarget = await readPersistedConversationTarget(
@@ -179,6 +182,7 @@ export const persistProjectConversationAssistantReply = async ({
         detail: createProjectConversationDetailEnvelope(
           latestConversationTarget.project,
           latestConversationTarget.conversation,
+          locale,
         ),
         assistantMessageId: retryState.assistantMessage.id,
       };
@@ -214,6 +218,7 @@ export const persistProjectConversationAssistantReply = async ({
     detail: createProjectConversationDetailEnvelope(
       ensuredAssistantProject,
       conversation,
+      locale,
     ),
     assistantMessageId: assistantMessage.id,
   };

@@ -1,4 +1,5 @@
 import type { ObjectId } from 'mongodb';
+import type { SupportedLocale } from '@lib/locale.js';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 import type { RuntimeEmbeddingProvider } from '@modules/settings/settings.types.js';
 
@@ -42,6 +43,7 @@ export type KnowledgeEmbeddingModel = string;
 
 export interface KnowledgeCommandContext {
   actor: AuthenticatedRequestUser;
+  locale?: SupportedLocale;
 }
 
 export interface CreateKnowledgeInput {

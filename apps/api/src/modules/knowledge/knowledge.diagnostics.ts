@@ -1,10 +1,12 @@
 import { getEffectiveIndexingConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
+import { DEFAULT_LOCALE, type SupportedLocale } from "@lib/locale.js";
 import {
   buildApiUrl,
   normalizeIndexerErrorMessage,
   parseResponseBody,
 } from "@lib/http.js";
+import { getFallbackMessage, getMessage } from "@lib/locale.messages.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type {
   KnowledgeDocumentRecord,
@@ -39,15 +41,26 @@ export const isStaleProcessingDocument = (
 };
 
 export const resolveDiagnosticsErrorMessage = (error: unknown): string => {
+  return resolveLocalizedDiagnosticsErrorMessage(error, DEFAULT_LOCALE);
+};
+
+export const resolveLocalizedDiagnosticsErrorMessage = (
+  error: unknown,
+  locale: SupportedLocale = DEFAULT_LOCALE,
+): string => {
   if (error instanceof Error && error.message.trim()) {
     return error.message.trim();
   }
 
-  return "诊断请求失败";
+  return (
+    getMessage("knowledge.search.diagnosticsFailed", locale) ??
+    getFallbackMessage("knowledge.search.diagnosticsFailed")
+  );
 };
 
 const parseKnowledgeIndexerDiagnosticsResponse = (
   responseBody: unknown,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): KnowledgeIndexerDiagnosticsResponse => {
   if (
     !responseBody ||
@@ -63,7 +76,10 @@ const parseKnowledgeIndexerDiagnosticsResponse = (
     !("supportedFormats" in responseBody) ||
     !Array.isArray(responseBody.supportedFormats)
   ) {
-    throw new Error("Python indexer 诊断响应格式不合法");
+    throw new Error(
+      getMessage("knowledge.search.indexer.diagnosticsInvalid", locale) ??
+      getFallbackMessage("knowledge.search.indexer.diagnosticsInvalid"),
+    );
   }
 
   return {
@@ -95,6 +111,7 @@ const parseKnowledgeIndexerDiagnosticsResponse = (
 export const readKnowledgeIndexerDiagnostics = async (
   env: AppEnv,
   settingsRepository: SettingsRepository,
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): Promise<KnowledgeIndexerDiagnosticsResponse> => {
   const diagnosticsUrls = buildKnowledgeIndexerDiagnosticsUrls(
     env.knowledge.indexerUrl,
@@ -126,7 +143,10 @@ export const readKnowledgeIndexerDiagnostics = async (
       }
 
       throw new Error(
-        `Python indexer 诊断不可达，请确认本地索引服务已启动（${diagnosticsUrl}）。原始错误：${normalizeIndexerErrorMessage(
+        `${
+          getMessage("knowledge.search.indexer.healthFailed", locale) ??
+          getFallbackMessage("knowledge.search.indexer.healthFailed")
+        } (${diagnosticsUrl}): ${normalizeIndexerErrorMessage(
           error,
           "unknown fetch error",
         )}`,
@@ -143,13 +163,21 @@ export const readKnowledgeIndexerDiagnostics = async (
       throw new Error(
         normalizeIndexerErrorMessage(
           responseBody,
-          `Python indexer 请求失败（HTTP ${response.status}）`,
+          `${
+            getMessage("knowledge.search.indexer.requestFailed", locale) ??
+            getFallbackMessage("knowledge.search.indexer.requestFailed")
+          } (HTTP ${response.status})`,
         ),
       );
     }
 
-    return parseKnowledgeIndexerDiagnosticsResponse(responseBody);
+    return parseKnowledgeIndexerDiagnosticsResponse(responseBody, locale);
   }
 
-  throw new Error("Python indexer 诊断请求失败（HTTP 404）");
+  throw new Error(
+    `${
+      getMessage("knowledge.search.diagnosticsFailed", locale) ??
+      getFallbackMessage("knowledge.search.diagnosticsFailed")
+    } (HTTP 404)`,
+  );
 };

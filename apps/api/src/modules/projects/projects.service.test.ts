@@ -642,6 +642,7 @@ test('createProjectConversationMessage appends persisted user and assistant mess
         id: 'user-1',
         username: 'langya',
       },
+      locale: 'en',
     },
     project._id.toHexString(),
     'chat-existing',
@@ -3285,6 +3286,106 @@ test('createProjectConversationMessage materializes the fallback default thread 
   assert.equal(result.conversation.title, '给默认会话写第一条消息');
   assert.equal(result.conversation.messages.length, 3);
   assert.equal(result.conversation.messages[2]?.sources?.[0]?.knowledgeId, 'kb-1');
+});
+
+test('createProjectConversationMessage localizes canonical default-thread content in sync detail envelopes', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd7994390bb'),
+    name: '默认线程英文回包',
+    description: '验证 sync detail locale',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T00:00:00.000Z'),
+  };
+
+  let persistedProject = project;
+  let persistedConversation: ProjectConversationDocument | null = null;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? persistedProject : null,
+    materializeDefaultProjectConversation: async (
+      _projectId: string,
+      conversation: ProjectConversationDocument,
+      updatedAt: Date,
+    ) => {
+      persistedConversation = conversation;
+      persistedProject = {
+        ...project,
+        conversations: [conversation],
+        updatedAt,
+        _id: project._id,
+      };
+      return persistedProject;
+    },
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      assert.equal(conversationId, 'chat-default');
+      if (!persistedConversation) {
+        return null;
+      }
+
+      persistedConversation = {
+        ...persistedConversation,
+        messages: [...persistedConversation.messages, message],
+        updatedAt,
+      };
+      persistedProject = {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+
+      return persistedProject;
+    },
+    updateProjectConversationTitle: async () => null,
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub(),
+  });
+
+  const result = await service.createProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+      locale: 'en',
+    },
+    project._id.toHexString(),
+    'chat-default',
+    {
+      content: 'Please summarize the project status',
+    },
+  );
+
+  assert.equal(result.conversation.title, '默认线程英文回包 project context');
+  assert.match(
+    result.conversation.messages[0]?.content ?? '',
+    /project conversation entry/,
+  );
 });
 
 test('streamProjectConversationMessage emits ack delta done and persists the final assistant reply', async () => {

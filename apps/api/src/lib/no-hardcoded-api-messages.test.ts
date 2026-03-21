@@ -6,7 +6,9 @@ import test from 'node:test';
 const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/agents/agents.service.ts',
   'apps/api/src/modules/knowledge/knowledge.router.shared.ts',
+  'apps/api/src/modules/knowledge/knowledge.diagnostics.ts',
   'apps/api/src/modules/knowledge/knowledge.service.catalog.ts',
+  'apps/api/src/modules/knowledge/knowledge.service.diagnostics.ts',
   'apps/api/src/modules/knowledge/knowledge.service.documents.ts',
   'apps/api/src/modules/knowledge/knowledge.service.helpers.ts',
   'apps/api/src/modules/knowledge/search/knowledge-chroma-collection.service.ts',
@@ -114,6 +116,16 @@ const REMAINING_SWEEP_CHECKLIST: Record<string, string[]> = {
   ],
   'apps/api/src/modules/knowledge/knowledge.service.catalog.ts': [
     'Chroma 知识库向量清理失败',
+  ],
+  'apps/api/src/modules/knowledge/knowledge.diagnostics.ts': [
+    '诊断请求失败',
+    'Python indexer 诊断不可达',
+    'Python indexer 请求失败',
+    'Python indexer 诊断请求失败',
+    'Python indexer 诊断响应格式不合法',
+  ],
+  'apps/api/src/modules/knowledge/knowledge.service.diagnostics.ts': [
+    'Python indexer 诊断不可达',
   ],
   'apps/api/src/modules/knowledge/knowledge.service.documents.ts': [
     'Chroma 文档向量清理失败',
