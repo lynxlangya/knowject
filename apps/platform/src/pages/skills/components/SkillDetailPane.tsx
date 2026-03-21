@@ -99,7 +99,7 @@ export const SkillDetailPane = ({
         return (
           <article
             key={skill.id}
-            className={`group flex h-full flex-col rounded-shell border border-slate-200 bg-linear-to-br ${sourceMeta.cardTintClass} p-5 shadow-card`}
+            className="group flex h-full flex-col rounded-shell border border-slate-200 bg-white p-5 shadow-card"
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-3">

@@ -19,22 +19,19 @@ export const lifecycleOptions = [
 
 export const SOURCE_META: Record<
   SkillSource,
-  { label: string; accentClass: string; cardTintClass: string }
+  { label: string; accentClass: string }
 > = {
   system: {
     label: '系统内置',
     accentClass: 'border-sky-200 bg-sky-50 text-sky-700',
-    cardTintClass: 'from-sky-50/70 via-white to-white',
   },
   custom: {
     label: '自建 Skill',
     accentClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    cardTintClass: 'from-emerald-50/60 via-white to-white',
   },
   imported: {
     label: '公网导入',
     accentClass: 'border-amber-200 bg-amber-50 text-amber-700',
-    cardTintClass: 'from-amber-50/60 via-white to-white',
   },
 };
 
