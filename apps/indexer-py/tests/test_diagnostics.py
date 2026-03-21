@@ -15,7 +15,7 @@ class DiagnosticsTest(unittest.TestCase):
             handled_error_type=IndexerError,
             chunk_size=860,
             chunk_overlap=120,
-            supported_formats=["md"],
+            supported_formats=["md", "txt", "pdf", "docx", "xlsx"],
         )
 
         diagnostics = collector.collect_diagnostics()
@@ -24,7 +24,9 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(diagnostics["embeddingProvider"], "voyage")
         self.assertEqual(diagnostics["chunkSize"], 860)
         self.assertEqual(diagnostics["chunkOverlap"], 120)
-        self.assertEqual(diagnostics["supportedFormats"], ["md"])
+        self.assertEqual(
+            diagnostics["supportedFormats"], ["md", "txt", "pdf", "docx", "xlsx"]
+        )
 
     def test_collect_diagnostics_merges_embedding_and_chroma_errors(self):
         collector = DiagnosticsCollector(
@@ -34,7 +36,7 @@ class DiagnosticsTest(unittest.TestCase):
             handled_error_type=IndexerError,
             chunk_size=1000,
             chunk_overlap=200,
-            supported_formats=["md", "txt"],
+            supported_formats=["md", "txt", "pdf", "docx", "xlsx"],
         )
 
         diagnostics = collector.collect_diagnostics()

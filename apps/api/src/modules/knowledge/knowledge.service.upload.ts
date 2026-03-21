@@ -44,7 +44,15 @@ export const uploadKnowledgeDocument = async ({
   knowledge: WithId<KnowledgeBaseDocument>;
   file: UploadedKnowledgeFile;
 }): Promise<KnowledgeDocumentUploadResponse> => {
-  validateUploadFile(knowledge.sourceType, file);
+  const indexingConfig = await getEffectiveIndexingConfig({
+    env,
+    repository: settingsRepository,
+  });
+  validateUploadFile(
+    knowledge.sourceType,
+    file,
+    indexingConfig.supportedTypes,
+  );
 
   const documentId = new ObjectId();
   const documentVersionHash = buildDocumentVersionHash(file);
@@ -58,18 +66,12 @@ export const uploadKnowledgeDocument = async ({
     throw createDuplicateKnowledgeDocumentVersionError(duplicatedDocument);
   }
 
-  const [namespaceContext, indexingConfig] = await Promise.all([
-    resolveNamespaceIndexContext({
-      env,
-      repository,
-      settingsRepository,
-      knowledge,
-    }),
-    getEffectiveIndexingConfig({
-      env,
-      repository: settingsRepository,
-    }),
-  ]);
+  const namespaceContext = await resolveNamespaceIndexContext({
+    env,
+    repository,
+    settingsRepository,
+    knowledge,
+  });
   const activeState = assertNamespaceReadyForMutation(namespaceContext);
   const collectionName = activeState.activeCollectionName;
   const embeddingMetadata = await resolveEmbeddingMetadata({

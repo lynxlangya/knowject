@@ -2,14 +2,21 @@ import { normalizeMarkdownFileName } from '../project/projectConversationMessage
 
 const DOCUMENT_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 const DOCUMENT_UPLOAD_SOFT_WARNING_BYTES = 20 * 1024 * 1024;
-const SUPPORTED_DOCUMENT_EXTENSIONS = ['.md', '.markdown', '.txt'] as const;
+const SUPPORTED_DOCUMENT_EXTENSIONS = [
+  '.md',
+  '.markdown',
+  '.txt',
+  '.pdf',
+  '.docx',
+  '.xlsx',
+] as const;
 const FILE_ISSUE_PREVIEW_LIMIT = 2;
 
 export const DOCUMENT_UPLOAD_ACCEPT =
-  '.md,.markdown,.txt,text/markdown,text/plain';
+  '.md,.markdown,.txt,.pdf,.docx,.xlsx,text/markdown,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 export const KNOWLEDGE_UPLOAD_MAX_FILES = 10;
 export const KNOWLEDGE_UPLOAD_TOOLTIP =
-  '支持 .md /.txt 上传，单文件上限 50 MB，单次最多 10 个文件，20 MB 以上建议拆分上传。';
+  '支持 .md /.markdown /.txt /.pdf /.docx /.xlsx 上传（不支持 .doc /.xls）。PDF 仅支持数字文本 PDF，暂不支持 OCR / 扫描件；单文件上限 50 MB，单次最多 10 个文件，20 MB 以上建议拆分上传。';
 
 export interface KnowledgeSourceFileIssue {
   fileName: string;
@@ -41,7 +48,7 @@ export const validateKnowledgeSourceFile = (file: File): string | null => {
       extension as (typeof SUPPORTED_DOCUMENT_EXTENSIONS)[number],
     )
   ) {
-    return '仅支持 md、markdown、txt 文件';
+    return '仅支持 md、markdown、txt、pdf、docx、xlsx 文件（不支持 doc、xls）';
   }
 
   if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {

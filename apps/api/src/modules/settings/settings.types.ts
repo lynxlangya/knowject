@@ -14,7 +14,7 @@ export const SETTINGS_LLM_PROVIDERS = [
 ] as const;
 export const SETTINGS_TEST_STATUSES = ['ok', 'failed'] as const;
 export const SETTINGS_SOURCES = ['database', 'environment'] as const;
-export const SETTINGS_INDEXING_SUPPORTED_TYPES = ['md', 'txt'] as const;
+export const SETTINGS_INDEXING_SUPPORTED_TYPES = ['md', 'txt', 'pdf', 'docx', 'xlsx'] as const;
 
 export type SettingsEmbeddingProvider = (typeof SETTINGS_EMBEDDING_PROVIDERS)[number];
 export type SettingsLlmProvider = (typeof SETTINGS_LLM_PROVIDERS)[number];

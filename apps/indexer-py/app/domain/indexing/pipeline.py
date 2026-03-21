@@ -10,7 +10,7 @@ from urllib import request as urllib_request
 
 from app.core.runtime_env import read_optional_positive_integer, read_optional_string
 from app.domain.indexing.chroma_client import ChromaClient
-from app.domain.indexing.chunking import ChunkBlock, ChunkBuilder, ChunkRecord
+from app.domain.indexing.chunking import ChunkBlock, ChunkBuilder, ChunkRecord, SegmentChunk
 from app.domain.indexing.diagnostics import DiagnosticsCollector
 from app.domain.indexing.embedding_client import (
     DEFAULT_LOCAL_EMBEDDING_DIMENSION,
@@ -22,6 +22,7 @@ from app.domain.indexing.embedding_client import (
     EmbeddingRuntimeConfig,
 )
 from app.domain.indexing.parser import DocumentParser
+from app.domain.indexing.segments import ParsedSegment
 from app.domain.indexing.runtime_config import (
     DEFAULT_CHUNK_OVERLAP,
     DEFAULT_CHUNK_SIZE,
@@ -77,22 +78,20 @@ _CHROMA_CLIENT: ChromaClient | None = None
 
 
 def process_document(request: IndexDocumentRequest) -> dict[str, Any]:
-    text = parse_document_text(request)
-    cleaned_text = clean_text(text)
-
-    if not cleaned_text.strip():
+    segments = parse_document_segments(request)
+    if not segments:
         raise IndexerError("文档清洗后内容为空，无法分块")
 
-    chunk_texts = build_chunks(
-        cleaned_text,
+    segment_chunks = build_segment_chunks(
+        segments,
         chunk_size=request.indexing_config.chunk_size,
         overlap=request.indexing_config.chunk_overlap,
     )
 
-    if not chunk_texts:
+    if not segment_chunks:
         raise IndexerError("文档未生成有效分块")
 
-    chunk_records = build_chunk_records(request, chunk_texts)
+    chunk_records = build_chunk_records_from_segment_chunks(request, segment_chunks)
     collection = ensure_collection(request.collection_name)
     embeddings = create_embeddings(
         [chunk.text for chunk in chunk_records],
@@ -106,7 +105,7 @@ def process_document(request: IndexDocumentRequest) -> dict[str, Any]:
         "knowledgeId": request.knowledge_id,
         "documentId": request.document_id,
         "chunkCount": len(chunk_records),
-        "characterCount": len(cleaned_text),
+        "characterCount": count_segment_characters(segments),
         "parser": detect_parser_name(request.file_name),
         "collectionName": collection["name"],
     }
@@ -185,6 +184,10 @@ def parse_document_text(request: IndexDocumentRequest) -> str:
     return create_document_parser().parse_document_text(request)
 
 
+def parse_document_segments(request: IndexDocumentRequest) -> list[ParsedSegment]:
+    return create_document_parser().parse_document_segments(request)
+
+
 def clean_text(text: str) -> str:
     return create_document_parser().clean_text(text)
 
@@ -210,6 +213,39 @@ def build_chunk_records(
     chunk_texts: list[str],
 ) -> list[ChunkRecord]:
     return create_chunk_builder().build_chunk_records(request, chunk_texts)
+
+
+def build_segment_chunks(
+    segments: list[ParsedSegment],
+    chunk_size: int,
+    overlap: int,
+) -> list[SegmentChunk]:
+    return create_chunk_builder().build_segment_chunks(segments, chunk_size, overlap)
+
+
+def build_chunk_records_from_segment_chunks(
+    request: IndexDocumentRequest,
+    segment_chunks: list[SegmentChunk],
+) -> list[ChunkRecord]:
+    return create_chunk_builder().build_chunk_records_from_segment_chunks(
+        request,
+        segment_chunks,
+    )
+
+
+def build_chunk_records_from_segments(
+    request: IndexDocumentRequest,
+    segments: list[ParsedSegment],
+    *,
+    chunk_size: int,
+    overlap: int,
+) -> list[ChunkRecord]:
+    segment_chunks = build_segment_chunks(segments, chunk_size=chunk_size, overlap=overlap)
+    return build_chunk_records_from_segment_chunks(request, segment_chunks)
+
+
+def count_segment_characters(segments: list[ParsedSegment]) -> int:
+    return len("\n\n".join(segment.text for segment in segments).strip())
 
 
 def resolve_collection_name(source_type: str) -> str:

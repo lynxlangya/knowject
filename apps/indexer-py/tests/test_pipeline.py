@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 from app.domain.indexing.parser import resolve_knowledge_storage_root
 from app.domain.indexing import pipeline
 from app.schemas.indexing import DeleteChunksRequestPayload, IndexDocumentRequestPayload
+from app.domain.indexing.segments import ParsedSegment
 
 
 def build_storage_path(file_name: str) -> str:
@@ -31,6 +32,185 @@ class BuildChunksTest(unittest.TestCase):
 
         self.assertEqual(len(chunks), 2)
         self.assertEqual(chunks[1].split("\n\n", 1)[0], chunks[0][-200:])
+
+    def test_build_segment_chunks_preserves_single_md_segment_behavior(self):
+        text = ("a" * 450) + "\n\n" + ("b" * 450) + "\n\n" + ("c" * 300)
+        segments = [ParsedSegment(text=text, source_kind="md", order=0)]
+
+        segment_chunks = pipeline.build_segment_chunks(segments, chunk_size=1000, overlap=200)
+        chunks = pipeline.build_chunks(text, chunk_size=1000, overlap=200)
+
+        self.assertEqual([item.text for item in segment_chunks], chunks)
+
+    def test_build_chunk_records_from_segments_adds_foundation_metadata(self):
+        request = pipeline.IndexDocumentRequest(
+            knowledge_id="knowledge-1",
+            document_id="document-1",
+            source_type="global_docs",
+            collection_name="global_docs",
+            file_name="demo.md",
+            mime_type="text/markdown",
+            storage_path=build_storage_path("demo.md"),
+            document_version_hash="hash-1",
+            embedding_config=pipeline.EmbeddingRuntimeConfig(
+                provider="local_dev",
+                api_key=None,
+                base_url="https://api.openai.com/v1",
+                model="text-embedding-3-small",
+            ),
+            indexing_config=pipeline.IndexingRuntimeConfig(
+                chunk_size=1000,
+                chunk_overlap=200,
+                supported_types=("md", "txt", "pdf", "docx", "xlsx"),
+                indexer_timeout_ms=30000,
+            ),
+        )
+        segments = [ParsedSegment(text="hello world", source_kind="md", order=0)]
+
+        records = pipeline.build_chunk_records_from_segments(
+            request,
+            segments,
+            chunk_size=1000,
+            overlap=200,
+        )
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].metadata["sourceKind"], "md")
+        self.assertEqual(records[0].metadata["fileName"], "demo.md")
+        self.assertEqual(records[0].metadata["chunkAnchorLabel"], "段落 1")
+        self.assertEqual(records[0].metadata["order"], 0)
+
+    def test_build_chunk_records_from_segments_adds_pdf_page_metadata(self):
+        request = pipeline.IndexDocumentRequest(
+            knowledge_id="knowledge-1",
+            document_id="document-1",
+            source_type="global_docs",
+            collection_name="global_docs",
+            file_name="demo.pdf",
+            mime_type="application/pdf",
+            storage_path=build_storage_path("demo.pdf"),
+            document_version_hash="hash-1",
+            embedding_config=pipeline.EmbeddingRuntimeConfig(
+                provider="local_dev",
+                api_key=None,
+                base_url="https://api.openai.com/v1",
+                model="text-embedding-3-small",
+            ),
+            indexing_config=pipeline.IndexingRuntimeConfig(
+                chunk_size=1000,
+                chunk_overlap=200,
+                supported_types=("md", "txt", "pdf", "docx", "xlsx"),
+                indexer_timeout_ms=30000,
+            ),
+        )
+        segments = [
+            ParsedSegment(
+                text="pdf page 1",
+                source_kind="pdf",
+                order=0,
+                page_number=1,
+            )
+        ]
+
+        records = pipeline.build_chunk_records_from_segments(
+            request,
+            segments,
+            chunk_size=1000,
+            overlap=200,
+        )
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].metadata["sourceKind"], "pdf")
+        self.assertEqual(records[0].metadata["chunkAnchorLabel"], "第 1 页")
+        self.assertEqual(records[0].metadata["pageNumber"], 1)
+
+    def test_build_chunk_records_from_segments_adds_docx_section_metadata(self):
+        request = pipeline.IndexDocumentRequest(
+            knowledge_id="knowledge-1",
+            document_id="document-1",
+            source_type="global_docs",
+            collection_name="global_docs",
+            file_name="demo.docx",
+            mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            storage_path=build_storage_path("demo.docx"),
+            document_version_hash="hash-1",
+            embedding_config=pipeline.EmbeddingRuntimeConfig(
+                provider="local_dev",
+                api_key=None,
+                base_url="https://api.openai.com/v1",
+                model="text-embedding-3-small",
+            ),
+            indexing_config=pipeline.IndexingRuntimeConfig(
+                chunk_size=1000,
+                chunk_overlap=200,
+                supported_types=("md", "txt", "pdf", "docx", "xlsx"),
+                indexer_timeout_ms=30000,
+            ),
+        )
+        segments = [
+            ParsedSegment(
+                text="Overview\n\nIntro",
+                source_kind="docx",
+                order=0,
+                section_title="Overview",
+                heading_level=1,
+            )
+        ]
+
+        records = pipeline.build_chunk_records_from_segments(
+            request,
+            segments,
+            chunk_size=1000,
+            overlap=200,
+        )
+
+        self.assertEqual(records[0].metadata["sectionTitle"], "Overview")
+        self.assertEqual(records[0].metadata["headingLevel"], 1)
+
+    def test_build_chunk_records_from_segments_adds_xlsx_row_metadata(self):
+        request = pipeline.IndexDocumentRequest(
+            knowledge_id="knowledge-1",
+            document_id="document-1",
+            source_type="global_docs",
+            collection_name="global_docs",
+            file_name="demo.xlsx",
+            mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            storage_path=build_storage_path("demo.xlsx"),
+            document_version_hash="hash-1",
+            embedding_config=pipeline.EmbeddingRuntimeConfig(
+                provider="local_dev",
+                api_key=None,
+                base_url="https://api.openai.com/v1",
+                model="text-embedding-3-small",
+            ),
+            indexing_config=pipeline.IndexingRuntimeConfig(
+                chunk_size=1000,
+                chunk_overlap=200,
+                supported_types=("md", "txt", "pdf", "docx", "xlsx"),
+                indexer_timeout_ms=30000,
+            ),
+        )
+        segments = [
+            ParsedSegment(
+                text="Roadmap | 第 2 行\nFeature: Upload",
+                source_kind="xlsx",
+                order=0,
+                sheet_name="Roadmap",
+                row_index=2,
+                header_path=("Feature",),
+            )
+        ]
+
+        records = pipeline.build_chunk_records_from_segments(
+            request,
+            segments,
+            chunk_size=1000,
+            overlap=200,
+        )
+
+        self.assertEqual(records[0].metadata["sheetName"], "Roadmap")
+        self.assertEqual(records[0].metadata["rowIndex"], 2)
+        self.assertEqual(records[0].metadata["headerPath"], ["Feature"])
 
 
 class EmbeddingsTest(unittest.TestCase):
@@ -178,13 +358,23 @@ class ProcessDocumentTest(unittest.TestCase):
         )
         create_embeddings = Mock(return_value=[[0.1]])
 
-        with patch.object(pipeline, "parse_document_text", return_value="demo"), patch.object(
-            pipeline, "clean_text", return_value="demo"
-        ), patch.object(
-            pipeline, "build_chunks", return_value=["demo chunk"]
+        with patch.object(
+            pipeline,
+            "parse_document_segments",
+            return_value=[ParsedSegment(text="demo", source_kind="md", order=0)],
         ), patch.object(
             pipeline,
-            "build_chunk_records",
+            "build_segment_chunks",
+            return_value=[
+                pipeline.SegmentChunk(
+                    text="demo chunk",
+                    segment=ParsedSegment(text="demo", source_kind="md", order=0),
+                    order=0,
+                )
+            ],
+        ), patch.object(
+            pipeline,
+            "build_chunk_records_from_segment_chunks",
             return_value=[
                 pipeline.ChunkRecord(
                     chunk_id="document-1:0",
@@ -258,26 +448,30 @@ class ProcessDocumentTest(unittest.TestCase):
         self.assertEqual(domain_request.indexing_config.indexer_timeout_ms, 45000)
 
     def test_process_document_uses_request_level_overrides(self):
-        build_chunks = Mock(return_value=["demo chunk"])
+        build_segment_chunks = Mock(
+            return_value=[
+                pipeline.SegmentChunk(
+                    text="demo chunk",
+                    segment=ParsedSegment(text="demo", source_kind="md", order=0),
+                    order=0,
+                )
+            ]
+        )
         create_embeddings = Mock(return_value=[[0.1]])
         delete_document_chunks = Mock(return_value=None)
         upsert_chunk_records = Mock(return_value=None)
 
         with patch.object(
             pipeline,
-            "parse_document_text",
-            return_value="demo",
+            "parse_document_segments",
+            return_value=[ParsedSegment(text="demo", source_kind="md", order=0)],
         ), patch.object(
             pipeline,
-            "clean_text",
-            return_value="demo",
+            "build_segment_chunks",
+            build_segment_chunks,
         ), patch.object(
             pipeline,
-            "build_chunks",
-            build_chunks,
-        ), patch.object(
-            pipeline,
-            "build_chunk_records",
+            "build_chunk_records_from_segment_chunks",
             return_value=[
                 pipeline.ChunkRecord(
                     chunk_id="document-1:0",
@@ -329,7 +523,11 @@ class ProcessDocumentTest(unittest.TestCase):
                 request
             )
 
-        build_chunks.assert_called_once_with("demo", chunk_size=860, overlap=120)
+        build_segment_chunks.assert_called_once_with(
+            [ParsedSegment(text="demo", source_kind="md", order=0)],
+            chunk_size=860,
+            overlap=120,
+        )
         create_embeddings.assert_called_once()
         self.assertEqual(create_embeddings.call_args.args[0], ["demo chunk"])
         self.assertEqual(

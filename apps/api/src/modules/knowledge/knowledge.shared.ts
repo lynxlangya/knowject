@@ -23,11 +23,31 @@ export const SUPPORTED_KNOWLEDGE_UPLOAD_TYPES = [
   {
     sourceType: 'global_docs' satisfies KnowledgeSourceType,
     extensions: ['.md', '.markdown', '.txt'],
-    // PDF 支持待 indexer-py 正式覆盖后再统一加回，见 pipeline.py
     mimeTypes: [
       'text/markdown',
       'text/x-markdown',
       'text/plain',
+      'application/octet-stream',
+    ],
+  },
+  {
+    sourceType: 'global_docs' satisfies KnowledgeSourceType,
+    extensions: ['.pdf'],
+    mimeTypes: ['application/pdf', 'application/octet-stream'],
+  },
+  {
+    sourceType: 'global_docs' satisfies KnowledgeSourceType,
+    extensions: ['.docx'],
+    mimeTypes: [
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/octet-stream',
+    ],
+  },
+  {
+    sourceType: 'global_docs' satisfies KnowledgeSourceType,
+    extensions: ['.xlsx'],
+    mimeTypes: [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/octet-stream',
     ],
   },

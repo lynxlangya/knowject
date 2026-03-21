@@ -95,7 +95,7 @@ def test_health_returns_current_service_metadata():
         "service": "knowject-indexer-py",
         "chunkSize": 1000,
         "chunkOverlap": 200,
-        "supportedFormats": ["md", "txt"],
+        "supportedFormats": ["md", "txt", "pdf", "docx", "xlsx"],
     }
 
 
@@ -458,7 +458,7 @@ def test_index_diagnostics_returns_current_runtime_state():
             service="knowject-indexer-py",
             chunk_size=1000,
             chunk_overlap=200,
-            supported_formats=["md", "txt"],
+            supported_formats=["md", "txt", "pdf", "docx", "xlsx"],
             embedding_provider="local_dev",
             chroma_reachable=False,
             error_message="Chroma 诊断失败: connection refused",
@@ -476,7 +476,7 @@ def test_index_diagnostics_returns_current_runtime_state():
         "service": "knowject-indexer-py",
         "chunkSize": 1000,
         "chunkOverlap": 200,
-        "supportedFormats": ["md", "txt"],
+        "supportedFormats": ["md", "txt", "pdf", "docx", "xlsx"],
         "embeddingProvider": "local_dev",
         "chromaReachable": False,
         "errorMessage": "Chroma 诊断失败: connection refused",

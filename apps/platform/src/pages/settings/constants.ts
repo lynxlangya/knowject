@@ -186,7 +186,13 @@ export const getInitialIndexingDraft = (
     chunkSize: settings?.indexing.chunkSize ?? 1000,
     chunkOverlap: settings?.indexing.chunkOverlap ?? 200,
     supportedTypes:
-      (settings?.indexing.supportedTypes as SettingsSupportedType[] | undefined) ?? ['md', 'txt'],
+      (settings?.indexing.supportedTypes as SettingsSupportedType[] | undefined) ?? [
+        'md',
+        'txt',
+        'pdf',
+        'docx',
+        'xlsx',
+      ],
     indexerTimeoutMs: settings?.indexing.indexerTimeoutMs ?? 30000,
   };
 };

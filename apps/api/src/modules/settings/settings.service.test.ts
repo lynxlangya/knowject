@@ -636,6 +636,35 @@ test('updateIndexing rejects empty supportedTypes', async () => {
   );
 });
 
+test('updateIndexing rejects unsupported supportedTypes entry', async () => {
+  const service = createSettingsService({
+    env: createTestEnv(),
+    repository: createRepositoryStub(),
+  });
+
+  await assert.rejects(
+    async () =>
+      service.updateIndexing(
+        {
+          actor: ACTOR,
+        },
+        {
+          chunkSize: 1000,
+          chunkOverlap: 200,
+          supportedTypes: ['md', 'csv'],
+          indexerTimeoutMs: 30000,
+        },
+      ),
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.equal(error.statusCode, 400);
+      assert.equal(error.code, 'VALIDATION_ERROR');
+      assert.equal(error.message, 'supportedTypes 只支持 md、txt、pdf、docx、xlsx');
+      return true;
+    },
+  );
+});
+
 test('testIndexing returns success when indexer diagnostics and Chroma are reachable', async () => {
   const service = createSettingsService({
     env: createTestEnv(),
@@ -661,7 +690,7 @@ test('testIndexing returns success when indexer diagnostics and Chroma are reach
         service: 'knowject-indexer-py',
         chunkSize: 1000,
         chunkOverlap: 200,
-        supportedFormats: ['md', 'txt'],
+        supportedFormats: ['md', 'txt', 'pdf', 'docx', 'xlsx'],
         embeddingProvider: 'openai',
         chromaReachable: true,
         errorMessage: null,
@@ -688,7 +717,7 @@ test('testIndexing returns success when indexer diagnostics and Chroma are reach
     assert.equal(result.success, true);
     assert.equal(result.indexerStatus, 'ok');
     assert.equal(result.service, 'knowject-indexer-py');
-    assert.deepEqual(result.supportedFormats, ['md', 'txt']);
+    assert.deepEqual(result.supportedFormats, ['md', 'txt', 'pdf', 'docx', 'xlsx']);
     assert.equal(result.chromaReachable, true);
     assert.equal(typeof result.latencyMs, 'number');
     assert.equal(result.error, undefined);
@@ -712,7 +741,7 @@ test('testIndexing reports degraded status when Chroma is unreachable', async ()
         service: 'knowject-indexer-py',
         chunkSize: 1000,
         chunkOverlap: 200,
-        supportedFormats: ['md', 'txt'],
+        supportedFormats: ['md', 'txt', 'pdf', 'docx', 'xlsx'],
         embeddingProvider: 'custom',
         chromaReachable: false,
         errorMessage: 'Chroma 诊断失败: connection refused',

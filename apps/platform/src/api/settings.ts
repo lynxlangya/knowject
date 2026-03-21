@@ -21,7 +21,7 @@ export const SETTINGS_LLM_PROVIDERS = [
 ] as const;
 export type SettingsEmbeddingProvider = (typeof SETTINGS_EMBEDDING_PROVIDERS)[number];
 export type SettingsLlmProvider = (typeof SETTINGS_LLM_PROVIDERS)[number];
-export type SettingsSupportedType = 'md' | 'txt';
+export type SettingsSupportedType = 'md' | 'txt' | 'pdf' | 'docx' | 'xlsx';
 
 export interface SettingsAiConfigResponse<TProvider extends string> {
   provider: TProvider;

@@ -10,8 +10,8 @@ from app.core.runtime_env import read_optional_positive_integer
 DEFAULT_CHUNK_SIZE = int(os.getenv("KNOWLEDGE_CHUNK_SIZE", "1000"))
 DEFAULT_CHUNK_OVERLAP = int(os.getenv("KNOWLEDGE_CHUNK_OVERLAP", "200"))
 DEFAULT_INDEXER_REQUEST_TIMEOUT_MS = 30000
-SUPPORTED_EXTENSIONS = {".md", ".markdown", ".txt"}
-SUPPORTED_FORMAT_LABELS = ["md", "txt"]
+SUPPORTED_EXTENSIONS = {".md", ".markdown", ".txt", ".pdf", ".docx", ".xlsx"}
+SUPPORTED_FORMAT_LABELS = ["md", "txt", "pdf", "docx", "xlsx"]
 
 ErrorFactory = Callable[[str], Exception]
 
@@ -84,8 +84,8 @@ class IndexingRuntimeConfigResolver:
             normalized = item.strip().lower().removeprefix(".")
             if normalized == "markdown":
                 normalized = "md"
-            if normalized not in {"md", "txt"}:
-                raise self.error_factory("indexingConfig.supportedTypes 仅支持 md、txt")
+            if normalized not in {"md", "txt", "pdf", "docx", "xlsx"}:
+                raise self.error_factory("indexingConfig.supportedTypes 仅支持 md、txt、pdf、docx、xlsx")
             normalized_values.append(normalized)
 
         return list(dict.fromkeys(normalized_values))
@@ -97,6 +97,12 @@ class IndexingRuntimeConfigResolver:
                 extensions.update({".md", ".markdown"})
             elif supported_type == "txt":
                 extensions.add(".txt")
+            elif supported_type == "pdf":
+                extensions.add(".pdf")
+            elif supported_type == "docx":
+                extensions.add(".docx")
+            elif supported_type == "xlsx":
+                extensions.add(".xlsx")
         return extensions or set(SUPPORTED_EXTENSIONS)
 
     def _read_optional_positive_integer_field(

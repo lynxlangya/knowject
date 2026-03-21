@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-20，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话同步/流式写链路、消息级 star metadata PATCH、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。项目对话后端现已抽出统一 `ConversationTurnService`、provider capability gate，并新增 `PATCH /api/projects/:projectId/conversations/:conversationId/messages/:messageId` 与 `POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 两条消息级路由；其中流式事件类型冻结为 `ack / delta / done / error`。
+截至 2026-03-20，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话同步/流式写链路、消息级 star metadata PATCH、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；当前知识上传链路已支持 `md / markdown / txt / pdf / docx / xlsx`，其中 `pdf` 仅支持可提取数字文本的文档（OCR/扫描件不支持），`docx / xlsx` 由 Python indexer 做结构感知抽取并产出 chunk anchor 元数据。Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。项目对话后端现已抽出统一 `ConversationTurnService`、provider capability gate，并新增 `PATCH /api/projects/:projectId/conversations/:conversationId/messages/:messageId` 与 `POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 两条消息级路由；其中流式事件类型冻结为 `ack / delta / done / error`。
 
 ## 当前构建与测试约定
 
@@ -125,13 +125,15 @@
 - `POST /api/knowledge/:knowledgeId/documents`
   - 需要 `Authorization: Bearer <token>`。
   - 使用 `multipart/form-data` 上传单个文件，字段名固定为 `file`。
-  - 当前只支持 `md / markdown / txt`，单文件上限为 `50 MB`。
+  - 当前支持 `md / markdown / txt / pdf / docx / xlsx`，单文件上限为 `50 MB`。
+  - `pdf` 仅支持可提取数字文本的文档；OCR/扫描件会在索引阶段返回不支持错误。
+  - `docx / xlsx` 在 Python indexer 中按结构感知方式抽取，并生成 section/sheet/row 等 chunk anchor 元数据。
   - 上传成功后会先创建文档记录并返回 `pending`，随后由 Node 在后台切到 `processing` 并触发 Python indexer。
   - Node 当前调用 Python FastAPI 内部入口 `POST /internal/v1/index/documents`。
-  - 若开发态 Python indexer 仍停在旧进程，Node 会自动回退兼容 `POST /internal/index-documents`，避免重启顺序造成 `txt/md` 上传直接 404。
-  - 当前稳定链路会把 `md / markdown / txt` 推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`；`pdf` 已从前后端上传契约中移除，待 `indexer-py` 正式覆盖后再统一加回。
+  - 若开发态 Python indexer 仍停在旧进程，Node 会自动回退兼容 `POST /internal/index-documents`，避免重启顺序造成上传链路直接 404。
+  - 当前稳定链路会把上述支持格式推进到 `completed` 并写回 `chunkCount / processedAt / lastIndexedAt`。
   - 原始文件会按 `knowledgeId/documentId/documentVersionHash/fileName` 落到本地存储。
-  - `md / markdown / txt` 成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings，并写入当前 namespace 的 active collection；全局 docs 的 namespace key 是 `global_docs`，实际物理 collection 形如 `global_docs__emb_<fingerprint>`。
+  - 支持格式成功处理后会由 Python indexer 生成 OpenAI-compatible embeddings，并写入当前 namespace 的 active collection；全局 docs 的 namespace key 是 `global_docs`，实际物理 collection 形如 `global_docs__emb_<fingerprint>`。
   - Python indexer 当前会按 embedding provider 适配单次 batching 上限与错误前缀；例如阿里云 `/embeddings` 单次最多发送 `10` 条文本，避免大文档分块后触发 provider 侧 `HTTP 400`。
   - 完整 Docker 编排会通过内部 `indexer-py` 服务和共享知识存储卷推进这条链路；默认 `pnpm dev` 也会一并启动本地 `indexer-py`，若单独运行 `pnpm --filter api dev`，仍需额外启动 `pnpm --filter indexer-py dev`。
   - 开发环境下若缺少 `OPENAI_API_KEY`，Node 会把文档记录标记为 `embeddingProvider=local_dev`、`embeddingModel=hash-1536-dev`，Python indexer 会使用 deterministic 本地 embedding 写入 Chroma；Node 侧统一检索也会使用同一套 deterministic 本地 query embedding，保证开发环境上传与检索闭环可用。生产与正式环境仍应使用真实 OpenAI-compatible embedding 配置。
@@ -351,7 +353,7 @@
 - `src/routes/memory.ts`：记忆概览与检索演示接口，当前已复用 JWT 中间件。
 - `src/middleware/*`：请求上下文、404、统一错误处理。
 - `../indexer-py/app/main.py`：FastAPI 应用入口、异常处理与路由注册。
-- `../indexer-py/app/domain/indexing/pipeline.py`：`md / txt` 解析、清洗、`1000 / 200` 分块、OpenAI-compatible embedding 与 Chroma upsert/delete 逻辑。
+- `../indexer-py/app/domain/indexing/pipeline.py`：`md / markdown / txt / pdf / docx / xlsx` 解析、清洗、`1000 / 200` 分块、OpenAI-compatible embedding 与 Chroma upsert/delete 逻辑（`pdf` 仅支持数字文本，OCR/扫描件不支持）。
 - `../indexer-py/app/domain/indexing/embedding_client.py`：provider-aware embedding batching、错误前缀与本地 fallback 适配。
 - `../indexer-py/app/core/runtime_env.py`：Python indexer 对仓库根 `.env / .env.local` 的最小环境加载能力。
 - `../indexer-py/README.md`：Python 索引服务目录边界、运行方式与 Node / Python 集成约束说明。

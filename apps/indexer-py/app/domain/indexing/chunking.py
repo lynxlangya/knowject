@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
+from app.domain.indexing.segments import ParsedSegment, build_chunk_anchor_label
+
 
 ErrorFactory = Callable[[str], Exception]
 
@@ -18,6 +20,13 @@ class ChunkRecord:
     chunk_id: str
     text: str
     metadata: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SegmentChunk:
+    text: str
+    segment: ParsedSegment
+    order: int
 
 
 class ChunkRequestLike(Protocol):
@@ -143,5 +152,71 @@ class ChunkBuilder:
                     },
                 )
             )
+
+        return records
+
+    def build_segment_chunks(
+        self,
+        segments: list[ParsedSegment],
+        chunk_size: int,
+        overlap: int,
+    ) -> list[SegmentChunk]:
+        segment_chunks: list[SegmentChunk] = []
+        order = 0
+
+        for segment in segments:
+            for chunk_text in self.build_chunks(segment.text, chunk_size, overlap):
+                segment_chunks.append(
+                    SegmentChunk(
+                        text=chunk_text,
+                        segment=segment,
+                        order=order,
+                    )
+                )
+                order += 1
+
+        return segment_chunks
+
+    def build_chunk_records_from_segment_chunks(
+        self,
+        request: ChunkRequestLike,
+        segment_chunks: list[SegmentChunk],
+    ) -> list[ChunkRecord]:
+        records: list[ChunkRecord] = []
+
+        for chunk in segment_chunks:
+            chunk_id = f"{request.document_id}:{chunk.order}"
+            records.append(
+                ChunkRecord(
+                    chunk_id=chunk_id,
+                    text=chunk.text,
+                    metadata={
+                        "knowledgeId": request.knowledge_id,
+                        "documentId": request.document_id,
+                        "type": request.source_type,
+                        "source": request.file_name,
+                        "chunkIndex": chunk.order,
+                        "chunkId": chunk_id,
+                        "documentVersionHash": request.document_version_hash,
+                        "collectionName": request.collection_name,
+                        "sourceKind": chunk.segment.source_kind,
+                        "fileName": request.file_name,
+                        "chunkAnchorLabel": build_chunk_anchor_label(chunk.segment),
+                        "order": chunk.order,
+                    },
+                )
+            )
+            if chunk.segment.page_number is not None:
+                records[-1].metadata["pageNumber"] = chunk.segment.page_number
+            if chunk.segment.section_title:
+                records[-1].metadata["sectionTitle"] = chunk.segment.section_title
+            if chunk.segment.heading_level is not None:
+                records[-1].metadata["headingLevel"] = chunk.segment.heading_level
+            if chunk.segment.sheet_name:
+                records[-1].metadata["sheetName"] = chunk.segment.sheet_name
+            if chunk.segment.row_index is not None:
+                records[-1].metadata["rowIndex"] = chunk.segment.row_index
+            if chunk.segment.header_path:
+                records[-1].metadata["headerPath"] = list(chunk.segment.header_path)
 
         return records

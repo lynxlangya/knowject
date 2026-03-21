@@ -179,8 +179,8 @@ const readOptionalSupportedTypes = (value: unknown): string[] | undefined => {
         ),
     )
   ) {
-    throw createValidationAppError("supportedTypes 只支持 md、txt", {
-      supportedTypes: "supportedTypes 只支持 md、txt",
+    throw createValidationAppError("supportedTypes 只支持 md、txt、pdf、docx、xlsx", {
+      supportedTypes: "supportedTypes 只支持 md、txt、pdf、docx、xlsx",
     });
   }
 

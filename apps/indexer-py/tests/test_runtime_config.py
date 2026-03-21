@@ -13,13 +13,13 @@ class RuntimeConfigTest(unittest.TestCase):
         config = resolver.build_runtime_config(
             chunk_size=860,
             chunk_overlap=120,
-            supported_types=["markdown", "txt"],
+            supported_types=["markdown", "txt", "pdf", "docx", "xlsx"],
             indexer_timeout_ms=45000,
         )
 
         self.assertEqual(config.chunk_size, 860)
         self.assertEqual(config.chunk_overlap, 120)
-        self.assertEqual(config.supported_types, ("md", "txt"))
+        self.assertEqual(config.supported_types, ("md", "txt", "pdf", "docx", "xlsx"))
         self.assertEqual(config.indexer_timeout_ms, 45000)
 
     def test_build_runtime_config_rejects_overlap_ge_chunk_size(self):
@@ -35,6 +35,14 @@ class RuntimeConfigTest(unittest.TestCase):
 
         self.assertEqual(config.chunk_size, 860)
         self.assertEqual(config.chunk_overlap, 0)
+
+    def test_build_runtime_config_rejects_unsupported_type(self):
+        resolver = IndexingRuntimeConfigResolver(error_factory=IndexerError)
+
+        with self.assertRaisesRegex(
+            IndexerError, "indexingConfig.supportedTypes 仅支持 md、txt、pdf、docx、xlsx"
+        ):
+            resolver.build_runtime_config(supported_types=["md", "csv"])
 
 
 if __name__ == "__main__":

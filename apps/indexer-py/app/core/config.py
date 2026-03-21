@@ -29,5 +29,5 @@ def get_app_config() -> AppConfig:
         port=int(raw_port or "8001"),
         chunk_size=DEFAULT_CHUNK_SIZE,
         chunk_overlap=DEFAULT_CHUNK_OVERLAP,
-        supported_formats=("md", "txt"),
+        supported_formats=("md", "txt", "pdf", "docx", "xlsx"),
     )

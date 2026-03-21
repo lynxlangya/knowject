@@ -189,10 +189,11 @@ export const SettingsIndexingTab = ({
               options={[
                 { label: 'Markdown (.md)', value: 'md' },
                 { label: '纯文本 (.txt)', value: 'txt' },
+                { label: 'PDF (.pdf)', value: 'pdf' },
+                { label: 'Word (.docx)', value: 'docx' },
+                { label: 'Excel (.xlsx)', value: 'xlsx' },
               ]}
             />
-            <Checkbox disabled>PDF (.pdf) 即将支持</Checkbox>
-            <Checkbox disabled>Word (.docx) 即将支持</Checkbox>
           </Space>
           <Text type="secondary" style={{ display: 'block', marginTop: 10 }}>
             `.markdown` 会继续作为 Markdown 的解析别名，不单独暴露成设置项。

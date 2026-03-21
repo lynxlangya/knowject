@@ -2,7 +2,7 @@
 
 状态：截至 2026-03-15，已切到 FastAPI + uv 的内部索引控制面基线。
 
-本目录承接 Knowject 的 Python 索引处理链路，当前已完成 `global_docs` 的“解析、清洗、分块、embedding、Chroma 写入/删除、结果回传”最小闭环；`global_code` 仍只保留命名空间契约，不做真实导入。
+本目录承接 Knowject 的 Python 索引处理链路，当前已完成 `global_docs` 与项目私有 docs 的“解析、清洗、分块、embedding、Chroma 写入/删除、结果回传”最小闭环；`global_code` 仍只保留命名空间契约，不做真实导入。
 
 ## 当前已实现
 
@@ -19,7 +19,9 @@
 - `app/domain/indexing/runtime_config.py`
   - 负责 chunk size / overlap、supported types、`indexerTimeoutMs` 的默认值、请求级 override 与校验；`chunkOverlap=0` 现在会按显式配置生效，不再被默认值静默覆盖。
 - `app/domain/indexing/parser.py`
-  - 负责 `md / txt` 解析、文本清洗和 parser 识别。
+  - 负责 `md / markdown / txt / pdf / docx / xlsx` 解析、文本清洗和 parser 识别。
+  - `pdf` 当前仅支持可提取数字文本的文档；OCR/扫描件会返回不支持错误。
+  - `docx / xlsx` 走结构感知抽取，保留标题层级、sheet/row、表头路径等元数据用于 chunk anchor。
 - `app/domain/indexing/chunking.py`
   - 负责按 `1000 字符 / 200 重叠 / 尽量保留段落边界` 进行分块，并构建 `ChunkRecord`。
 - `app/domain/indexing/embedding_client.py`
@@ -42,11 +44,11 @@
 
 - 运行时：Python 独立索引服务 / 内部控制面。
 - 当前负责内容：
-  - 文档解析
+  - 文档解析（`md / markdown / txt / pdf / docx / xlsx`）
   - 文本清洗
   - 分块
   - OpenAI-compatible embedding 生成（含 provider-aware batching / 错误前缀）
-  - Chroma `global_docs` 写入 / 删除
+  - Chroma `global_docs` 与项目私有 docs 写入 / 删除
   - 结果通过 HTTP 响应交回 Node
 - 当前内部组织：
   - `pipeline.py` 已退回 orchestration 层。

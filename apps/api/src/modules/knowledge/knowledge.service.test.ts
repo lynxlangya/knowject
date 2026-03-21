@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
@@ -20,6 +20,7 @@ import {
   buildKnowledgeEmbeddingFingerprint,
   buildVersionedKnowledgeCollectionName,
 } from './knowledge.shared.js';
+import { validateUploadFile } from './knowledge.service.helpers.js';
 import { createKnowledgeService } from './knowledge.service.js';
 import type {
   KnowledgeBaseDocument,
@@ -926,6 +927,178 @@ test('uploadProjectKnowledgeDocument writes project storage path and project col
     indexerTimeoutMs: 45000,
   });
   assert.equal(completedChunkCount, 4);
+});
+
+test('validateUploadFile allows modern text and office formats while rejecting legacy office extensions', () => {
+  const allowedFiles = [
+    { originalName: 'README.md', mimeType: 'text/markdown' },
+    { originalName: 'README.markdown', mimeType: 'text/x-markdown' },
+    { originalName: 'notes.txt', mimeType: 'text/plain' },
+    { originalName: 'guide.pdf', mimeType: 'application/pdf' },
+    {
+      originalName: 'spec.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    },
+    {
+      originalName: 'metrics.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    },
+  ] as const;
+
+  for (const file of allowedFiles) {
+    assert.doesNotThrow(() =>
+      validateUploadFile('global_docs', {
+        ...file,
+        size: 16,
+        buffer: Buffer.from('content', 'utf-8'),
+      }),
+    );
+  }
+
+  const rejectedLegacyFiles = [
+    {
+      originalName: 'legacy.doc',
+      mimeType: 'application/msword',
+    },
+    {
+      originalName: 'legacy.xls',
+      mimeType: 'application/vnd.ms-excel',
+    },
+  ] as const;
+
+  for (const file of rejectedLegacyFiles) {
+    assert.throws(
+      () =>
+        validateUploadFile('global_docs', {
+          ...file,
+          size: 16,
+          buffer: Buffer.from('legacy', 'utf-8'),
+        }),
+      (error) =>
+        error instanceof AppError &&
+        error.code === 'KNOWLEDGE_UPLOAD_UNSUPPORTED_TYPE',
+    );
+  }
+});
+
+test('validateUploadFile rejects mismatched MIME for modern extensions', () => {
+  assert.throws(
+    () =>
+      validateUploadFile('global_docs', {
+        originalName: 'guide.pdf',
+        mimeType: 'text/plain',
+        size: 16,
+        buffer: Buffer.from('content', 'utf-8'),
+      }),
+    (error) =>
+      error instanceof AppError &&
+      error.code === 'KNOWLEDGE_UPLOAD_UNSUPPORTED_TYPE',
+  );
+
+  assert.throws(
+    () =>
+      validateUploadFile('global_docs', {
+        originalName: 'spec.docx',
+        mimeType: 'application/msword',
+        size: 16,
+        buffer: Buffer.from('content', 'utf-8'),
+      }),
+    (error) =>
+      error instanceof AppError &&
+      error.code === 'KNOWLEDGE_UPLOAD_UNSUPPORTED_TYPE',
+  );
+
+  assert.throws(
+    () =>
+      validateUploadFile('global_docs', {
+        originalName: 'metrics.xlsx',
+        mimeType: 'application/vnd.ms-excel',
+        size: 16,
+        buffer: Buffer.from('content', 'utf-8'),
+      }),
+    (error) =>
+      error instanceof AppError &&
+      error.code === 'KNOWLEDGE_UPLOAD_UNSUPPORTED_TYPE',
+  );
+});
+
+test('uploadDocument rejects files disabled by indexing supportedTypes before persistence', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-upload-supported-types-'));
+  const knowledgeId = '507f1f77bcf86cd7994392a1';
+  const actorId = '507f1f77bcf86cd7994392a2';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库 A',
+    description: '用于验证 supportedTypes 上传门禁',
+    sourceType: 'global_docs',
+    indexStatus: 'idle',
+    documentCount: 0,
+    chunkCount: 0,
+    maintainerId: actorId,
+    createdBy: actorId,
+    createdAt: new Date('2026-03-21T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-21T00:00:00.000Z'),
+  };
+  let createKnowledgeDocumentCalled = false;
+
+  const repository = {
+    ensureMetadataModel: async () => undefined,
+    findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+    findKnowledgeDocumentByVersionHash: async () => null,
+    createKnowledgeDocument: async () => {
+      createKnowledgeDocumentCalled = true;
+      throw new Error('createKnowledgeDocument should not be called');
+    },
+  } as unknown as KnowledgeRepository;
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+    settingsRepository: createSettingsRepositoryStub({
+      getSettings: async () => ({
+        singleton: 'default',
+        indexing: {
+          chunkSize: 1000,
+          chunkOverlap: 200,
+          supportedTypes: ['md', 'txt'],
+          indexerTimeoutMs: 30000,
+        },
+        updatedAt: new Date('2026-03-21T00:00:00.000Z'),
+        updatedBy: actorId,
+      }),
+    }),
+  });
+
+  await assert.rejects(
+    () =>
+      service.uploadDocument(
+        {
+          actor: {
+            id: actorId,
+            username: 'langya',
+          },
+        },
+        knowledgeId,
+        {
+          originalName: 'guide.pdf',
+          mimeType: 'application/pdf',
+          size: 16,
+          buffer: Buffer.from('content', 'utf-8'),
+        },
+      ),
+    (error) =>
+      error instanceof AppError &&
+      error.code === 'KNOWLEDGE_UPLOAD_UNSUPPORTED_TYPE',
+  );
+
+  assert.equal(createKnowledgeDocumentCalled, false);
+  assert.deepEqual(await readdir(storageRoot), []);
 });
 
 test('uploadProjectKnowledgeDocument payload is accepted by Python indexer override route', async () => {
@@ -6227,7 +6400,7 @@ test('getKnowledgeDiagnostics degrades gracefully when collection or indexer che
     assert.equal(response.indexer.chromaReachable, null);
     assert.equal(response.indexer.errorMessage?.includes('Python indexer 诊断不可达'), true);
     assert.deepEqual(response.indexer.expected, {
-      supportedFormats: ['md', 'txt'],
+      supportedFormats: ['md', 'txt', 'pdf', 'docx', 'xlsx'],
       chunkSize: 1000,
       chunkOverlap: 200,
       embeddingProvider: 'openai',
@@ -6338,7 +6511,7 @@ test('getKnowledgeDiagnostics preserves indexer actual embedding provider when s
       'OPENAI_API_KEY 未配置，无法生成 embedding',
     );
     assert.deepEqual(response.indexer.expected, {
-      supportedFormats: ['md', 'txt'],
+      supportedFormats: ['md', 'txt', 'pdf', 'docx', 'xlsx'],
       chunkSize: 1000,
       chunkOverlap: 200,
       embeddingProvider: 'voyage',

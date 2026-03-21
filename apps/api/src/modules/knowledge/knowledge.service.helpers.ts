@@ -100,7 +100,7 @@ const createUploadNotSupportedError = (): AppError => {
   return new AppError({
     statusCode: 400,
     code: "KNOWLEDGE_UPLOAD_UNSUPPORTED_TYPE",
-    message: "当前只支持上传 md、markdown、txt 文件",
+    message: "当前只支持上传 md、markdown、txt、pdf、docx、xlsx 文件",
   });
 };
 
@@ -393,6 +393,7 @@ export const validateSearchProjectDocumentsInput = (
 export const validateUploadFile = (
   sourceType: KnowledgeSourceType,
   file: UploadedKnowledgeFile,
+  supportedTypes?: string[],
 ): void => {
   if (sourceType !== "global_docs") {
     throw createUploadSourceTypeError();
@@ -411,6 +412,31 @@ export const validateUploadFile = (
 
   if (!supported) {
     throw createUploadNotSupportedError();
+  }
+
+  if (supportedTypes) {
+    const normalizedSupportedTypes = new Set(
+      supportedTypes.map((item) => item.trim().toLowerCase()),
+    );
+    const requiredSupportedType =
+      extension === ".md" || extension === ".markdown"
+        ? "md"
+        : extension === ".txt"
+          ? "txt"
+          : extension === ".pdf"
+            ? "pdf"
+            : extension === ".docx"
+              ? "docx"
+              : extension === ".xlsx"
+                ? "xlsx"
+                : null;
+
+    if (
+      requiredSupportedType !== null &&
+      !normalizedSupportedTypes.has(requiredSupportedType)
+    ) {
+      throw createUploadNotSupportedError();
+    }
   }
 
   if (
