@@ -4,6 +4,7 @@ export interface HttpClientOptions {
   baseURL?: string;
   timeout?: number;
   getToken?: () => string | null;
+  getLocale?: () => string | null;
   onUnauthorized?: () => void;
   dedupe?: boolean;
 }

@@ -5,6 +5,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import test from "node:test";
 import { createHttpClient } from "./client";
+import { normalizeLocale } from "./locale";
 import { ApiError, unwrapApiData } from "./types";
 
 const withServer = async (
@@ -23,6 +24,7 @@ const withServer = async (
             ok: true,
             authorization: req.headers.authorization ?? null,
             requestId: req.headers["x-request-id"] ?? null,
+            locale: req.headers["accept-language"] ?? null,
           },
           meta: {
             requestId: "server-request-id",
@@ -93,6 +95,7 @@ test("createHttpClient injects auth token and unwrapApiData returns envelope dat
     const client = createHttpClient({
       baseURL: baseUrl,
       getToken: () => "test-token",
+      getLocale: () => "zh-CN",
     });
     const response = await client.get<{
       code: string;
@@ -101,6 +104,7 @@ test("createHttpClient injects auth token and unwrapApiData returns envelope dat
         ok: boolean;
         authorization: string | null;
         requestId: string | string[] | null;
+        locale: string | string[] | null;
       };
       meta: {
         requestId: string;
@@ -113,6 +117,7 @@ test("createHttpClient injects auth token and unwrapApiData returns envelope dat
     assert.equal(data.authorization, "Bearer test-token");
     assert.equal(typeof data.requestId, "string");
     assert.ok((data.requestId as string).length > 0);
+    assert.equal(data.locale, "zh-CN");
   });
 });
 
@@ -146,4 +151,10 @@ test("createHttpClient normalizes ApiError and triggers unauthorized hook", asyn
 
     assert.equal(unauthorizedTriggered, true);
   });
+});
+
+test("normalizeLocale maps raw locale values", () => {
+  assert.equal(normalizeLocale("zh"), "zh-CN");
+  assert.equal(normalizeLocale("en-US"), "en");
+  assert.equal(normalizeLocale("fr"), "en");
 });

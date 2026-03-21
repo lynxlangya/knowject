@@ -5,6 +5,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import { RequestDeduper } from "./dedupe";
+import { LOCALE_HEADER, normalizeLocale } from "./locale";
 import {
   ApiError,
   extractApiErrorPayload,
@@ -16,6 +17,7 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
     baseURL,
     timeout = 10000,
     getToken,
+    getLocale,
     onUnauthorized,
     dedupe = false,
   } = options;
@@ -38,6 +40,10 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+    }
+
+    if (getLocale && config.headers) {
+      config.headers[LOCALE_HEADER] = normalizeLocale(getLocale());
     }
 
     // Add x-request-id
