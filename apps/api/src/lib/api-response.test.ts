@@ -305,6 +305,27 @@ test('internal errors localize the shared 500 envelope message', async () => {
   });
 });
 
+test('not-found responses localize the shared 404 envelope message', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/missing`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      data: null;
+      meta: { requestId: string; timestamp: string; details?: unknown };
+    };
+
+    assert.equal(response.status, 404);
+    assert.equal(body.code, 'NOT_FOUND');
+    assert.equal(body.message, 'Requested endpoint does not exist');
+    assert.equal(body.data, null);
+  });
+});
+
 test('invalid JSON is normalized into the shared error envelope', async () => {
   await withServer(createProtocolTestApp(true), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/echo`, {
