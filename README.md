@@ -132,7 +132,7 @@ pnpm knowject:help
 
 ## Documentation
 
-`docs/` is the project documentation root, `docs/exports/` is the derived export directory, and `.agents/skills/` is the project Skill root.
+`docs/` is the project documentation root and `docs/exports/` is the derived export directory. Skill-root migration to `.agents/skills/` is planned for Task 3 and is not a current live path in this worktree.
 
 - [Project Rules](./AGENTS.md)
 - [Codex Workspace](./.codex/README.md)
@@ -143,7 +143,6 @@ pnpm knowject:help
 - [Handoff Notes](./docs/handoff/README.md)
 - [Roadmap Notes](./docs/roadmap/README.md)
 - [Exports Index](./docs/exports/README.md)
-- [Project Skills Root](./.agents/skills/README.md)
 - [Platform README](./apps/platform/README.md)
 - [API README](./apps/api/README.md)
 - [Docker Command Portal](./docker/README.md)
