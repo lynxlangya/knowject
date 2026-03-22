@@ -4061,6 +4061,7 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
     projectId: string;
     query: string;
     topK?: number;
+    locale?: string;
   }> = [];
   let capturedLlmRequest: CapturedLlmRequest | null = null;
   const originalFetch = global.fetch;
@@ -4095,11 +4096,12 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
       env: createTestEnv(),
       settingsRepository: createSettingsRepositoryStub(),
       knowledgeSearch: {
-        searchProjectDocuments: async (_context, runtimeProjectId, input) => {
+        searchProjectDocuments: async (context, runtimeProjectId, input) => {
           capturedSearchCalls.push({
             projectId: runtimeProjectId,
             query: input.query,
             topK: input.topK,
+            locale: context.locale,
           });
 
           return {
@@ -4129,6 +4131,7 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
         id: 'user-1',
         username: 'langya',
       },
+      locale: 'en',
       project,
       conversation,
       userMessage: conversation.messages[1]!,
@@ -4139,6 +4142,7 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
         projectId,
         query: '请总结当前项目知识基线',
         topK: 5,
+        locale: 'en',
       },
     ]);
     assert.notEqual(capturedLlmRequest, null);

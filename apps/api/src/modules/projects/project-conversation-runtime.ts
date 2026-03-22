@@ -265,11 +265,13 @@ export const createProjectConversationRuntime = ({
 
   const prepareAssistantReplyContext = async ({
     actor,
+    locale,
     project,
     conversation,
     userMessage,
   }: {
     actor: KnowledgeCommandContext["actor"];
+    locale?: KnowledgeCommandContext["locale"];
     project: WithId<ProjectDocument>;
     conversation: ProjectConversationDocument;
     userMessage: ProjectConversationMessageDocument;
@@ -283,7 +285,7 @@ export const createProjectConversationRuntime = ({
   }> => {
     const [retrieval, llmConfig] = await Promise.all([
       knowledgeSearch.searchProjectDocuments(
-        { actor },
+        { actor, locale },
         project._id.toHexString(),
         {
           query: userMessage.content,
@@ -319,12 +321,14 @@ export const createProjectConversationRuntime = ({
   return {
     generateAssistantReply: async ({
       actor,
+      locale,
       project,
       conversation,
       userMessage,
     }) => {
       const { llmConfig, messages, sources } = await prepareAssistantReplyContext({
         actor,
+        locale,
         project,
         conversation,
         userMessage,
@@ -342,6 +346,7 @@ export const createProjectConversationRuntime = ({
 
     streamAssistantReply: async ({
       actor,
+      locale,
       project,
       conversation,
       userMessage,
@@ -350,6 +355,7 @@ export const createProjectConversationRuntime = ({
     }) => {
       const { llmConfig, messages, sources } = await prepareAssistantReplyContext({
         actor,
+        locale,
         project,
         conversation,
         userMessage,

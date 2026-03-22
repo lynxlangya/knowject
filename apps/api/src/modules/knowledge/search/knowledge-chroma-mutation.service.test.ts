@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AppEnv } from "@config/env.js";
+import { AppError } from "@lib/app-error.js";
 
 const createTestEnv = (): AppEnv => {
   return {
@@ -158,6 +159,66 @@ test("createKnowledgeChromaMutationService falls back to direct Chroma delete wh
       "http://127.0.0.1:8001/internal/v1/index/documents/document-1/delete",
       "http://127.0.0.1:8000/api/v2/tenants/default_tenant/databases/default_database/collections/collection-1/delete",
     ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createKnowledgeChromaMutationService tags indexer 404 errors with a message key", async () => {
+  const { createKnowledgeChromaMutationService } = await import(
+    "./knowledge-chroma-mutation.service.js"
+  );
+  const env = createTestEnv();
+  const service = createKnowledgeChromaMutationService({
+    env: {
+      ...env,
+      chroma: {
+        ...env.chroma,
+        url: null,
+      },
+    },
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+    if (
+      url === "http://127.0.0.1:8001/internal/v1/index/documents/document-404/delete" &&
+      init?.method === "POST"
+    ) {
+      return new Response(JSON.stringify({ status: "not_found" }), {
+        status: 404,
+        headers: {
+          "content-type": "application/json",
+        },
+      });
+    }
+
+    throw new Error(`Unexpected fetch: ${init?.method ?? "GET"} ${url}`);
+  };
+
+  try {
+    await assert.rejects(
+      () =>
+        service.deleteDocumentChunks("document-404", {
+          collectionName: "global_docs",
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, "KNOWLEDGE_SEARCH_INDEXER_ROUTE_NOT_FOUND");
+        assert.equal(
+          error.messageKey,
+          "knowledge.search.indexer.requestFailed",
+        );
+        return true;
+      },
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

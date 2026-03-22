@@ -109,6 +109,20 @@ const createProtocolTestApp = (exposeDetails: boolean) => {
     throw new AppError(createRequiredFieldError('username'));
   });
 
+  app.get('/validation-context', () => {
+    throw new AppError({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+      message: '字段校验失败',
+      messageKey: 'api.validation.failed',
+      details: {
+        fields: {
+          messageId: 'msg-invalid-123',
+        },
+      },
+    });
+  });
+
   app.get('/dynamic-skill-error', () => {
     throw createSkillInUseError({
       action: 'delete',
@@ -308,6 +322,31 @@ test('required field validation localizes shared messages', async () => {
     assert.deepEqual(body.meta.details, {
       fields: {
         username: 'Username is required',
+      },
+    });
+  });
+});
+
+test('validation details preserve contextual field values for english responses', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/validation-context`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      data: null;
+      meta: { details?: unknown };
+    };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.code, 'VALIDATION_ERROR');
+    assert.equal(body.message, 'Validation failed');
+    assert.deepEqual(body.meta.details, {
+      fields: {
+        messageId: 'msg-invalid-123',
       },
     });
   });

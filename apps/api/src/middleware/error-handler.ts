@@ -103,9 +103,20 @@ const resolveErrorDetails = (
     }
 
     const localizedFields: Record<string, string> = {};
+    const fallbackMessage = getMessage(error.messageKey, DEFAULT_LOCALE);
+    const fallbackZhMessage = getMessage(error.messageKey, 'zh-CN');
 
-    for (const field of Object.keys(details.fields)) {
-      localizedFields[field] = localizedMessage;
+    for (const [field, fieldValue] of Object.entries(details.fields)) {
+      if (
+        fieldValue === error.message ||
+        fieldValue === fallbackMessage ||
+        fieldValue === fallbackZhMessage
+      ) {
+        localizedFields[field] = localizedMessage;
+        continue;
+      }
+
+      localizedFields[field] = fieldValue;
     }
 
     return {

@@ -130,6 +130,7 @@ export const createKnowledgeChromaMutationService = ({
             statusCode: 404,
             code: "KNOWLEDGE_SEARCH_INDEXER_ROUTE_NOT_FOUND",
             message: failureMessage,
+            messageKey: "knowledge.search.indexer.requestFailed",
             details: responseBody,
           });
         }
