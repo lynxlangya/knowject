@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
 import { AppError } from '@lib/app-error.js';
+import { getFallbackMessage } from '@lib/locale.messages.js';
 import type { AuthService } from './auth.service.js';
 
 const getTokenFromHeader = (authorization: string | undefined): string | null => {
@@ -19,7 +20,8 @@ export const createRequireAuth = (authService: AuthService): RequestHandler => {
         new AppError({
           statusCode: 401,
           code: 'AUTH_TOKEN_INVALID',
-          message: '未提供有效的访问令牌',
+          message: getFallbackMessage('auth.token.invalid'),
+          messageKey: 'auth.token.invalid',
         }),
       );
       return;
@@ -33,7 +35,8 @@ export const createRequireAuth = (authService: AuthService): RequestHandler => {
         new AppError({
           statusCode: 401,
           code: 'AUTH_TOKEN_INVALID',
-          message: '未提供有效的访问令牌',
+          message: getFallbackMessage('auth.token.invalid'),
+          messageKey: 'auth.token.invalid',
           cause: error,
         }),
       );

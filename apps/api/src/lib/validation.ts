@@ -1,11 +1,13 @@
 import { AppError } from './app-error.js';
-import type { MessageKey } from './locale.messages.js';
+import { getFallbackMessage } from './locale.messages.js';
+import type { MessageKey, MessageParams } from './locale.messages.js';
 
 export interface ApiErrorShape {
   statusCode: number;
   code: string;
   message: string;
   messageKey?: MessageKey;
+  messageParams?: MessageParams;
   details: {
     fields: Record<string, string>;
   };
@@ -27,12 +29,14 @@ export const createValidationErrorShape = (
   message: string,
   fields: Record<string, string>,
   messageKey?: MessageKey,
+  messageParams?: MessageParams,
 ): ApiErrorShape => {
   return {
     statusCode: 400,
     code: 'VALIDATION_ERROR',
     message,
     messageKey,
+    messageParams,
     details: {
       fields,
     },
@@ -43,18 +47,38 @@ export const createValidationAppError = (
   message: string,
   fields: Record<string, string>,
   messageKey?: MessageKey,
+  messageParams?: MessageParams,
 ): AppError => {
-  return new AppError(createValidationErrorShape(message, fields, messageKey));
+  return new AppError(
+    createValidationErrorShape(message, fields, messageKey, messageParams),
+  );
 };
 
 export const createRequiredFieldError = (field: string): ApiErrorShape => {
-  const message = REQUIRED_FIELD_MESSAGES[field] ?? `${field} 为必填项`;
-  const messageKey =
-    REQUIRED_FIELD_MESSAGE_KEYS[field] ?? 'validation.required.generic';
+  const messageKey = REQUIRED_FIELD_MESSAGE_KEYS[field];
 
-  return createValidationErrorShape(message, {
-    [field]: message,
-  }, messageKey);
+  if (messageKey) {
+    const message = REQUIRED_FIELD_MESSAGES[field] ?? getFallbackMessage(messageKey);
+
+    return createValidationErrorShape(message, {
+      [field]: message,
+    }, messageKey);
+  }
+
+  const genericMessage = getFallbackMessage('validation.required.field', {
+    field,
+  });
+
+  return createValidationErrorShape(
+    genericMessage,
+    {
+      [field]: genericMessage,
+    },
+    'validation.required.field',
+    {
+      field,
+    },
+  );
 };
 
 export const readOptionalStringField = (
@@ -66,9 +90,19 @@ export const readOptionalStringField = (
   }
 
   if (typeof body !== 'string') {
-    throw createValidationAppError(`${field} 必须为字符串`, {
-      [field]: `${field} 必须为字符串`,
-    }, 'validation.string');
+    const message = getFallbackMessage('validation.string.field', {
+      field,
+    });
+    throw createValidationAppError(
+      message,
+      {
+        [field]: message,
+      },
+      'validation.string.field',
+      {
+        field,
+      },
+    );
   }
 
   return body.trim();

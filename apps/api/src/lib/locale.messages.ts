@@ -15,6 +15,7 @@ export const messages = {
     'validation.required.password': 'Password is required',
     'validation.required.query': 'Query is required',
     'validation.required.generic': 'Field is required',
+    'validation.required.field': '{field} is required',
     'validation.required.agentName': 'Agent name is required',
     'validation.required.systemPrompt': 'System prompt is required',
     'validation.required.projectName': 'Project name is required',
@@ -25,6 +26,7 @@ export const messages = {
     'validation.required.markdownUrl': 'Raw Markdown URL is required',
     'validation.required.githubRepository': 'GitHub repository is required',
     'validation.string': 'Must be a string',
+    'validation.string.field': '{field} must be a string',
     'validation.object': 'Request body must be an object',
     'validation.stringArray': 'Must be an array of strings',
     'validation.boolean': 'Must be a boolean',
@@ -201,6 +203,12 @@ export const messages = {
       'Project conversation streaming returned an invalid response format',
     'settings.llmTestProvider.unsupported':
       'The current provider does not support online testing',
+    'auth.usernameConflict': 'Username already exists',
+    'auth.invalidCredentials': 'Invalid username or password',
+    'auth.localeUnsupported': 'Locale is not supported',
+    'auth.password.minLength': 'Password must be at least 8 characters',
+    'auth.displayName.required': 'Display name is required',
+    'auth.token.invalid': 'A valid access token is required',
     'settings.apiKey.required':
       'API key is missing; enter or save it before testing',
     'settings.apiKey.reentryRequired':
@@ -253,6 +261,7 @@ export const messages = {
     'validation.required.password': '请输入密码',
     'validation.required.query': 'query 为必填项',
     'validation.required.generic': '字段为必填项',
+    'validation.required.field': '{field} 为必填项',
     'validation.required.agentName': '请输入智能体名称',
     'validation.required.systemPrompt': '请输入 systemPrompt',
     'validation.required.projectName': '请输入项目名称',
@@ -263,6 +272,7 @@ export const messages = {
     'validation.required.markdownUrl': '请输入原始 Markdown URL',
     'validation.required.githubRepository': '请输入 GitHub 仓库信息',
     'validation.string': '必须为字符串',
+    'validation.string.field': '{field} 必须为字符串',
     'validation.object': '请求体必须为对象',
     'validation.stringArray': '必须为字符串数组',
     'validation.boolean': '必须为布尔值',
@@ -404,6 +414,12 @@ export const messages = {
     'project.conversation.invalidStreamFormat':
       '项目对话流式响应格式非法',
     'settings.llmTestProvider.unsupported': '当前 provider 暂不支持在线测试',
+    'auth.usernameConflict': '用户名已存在',
+    'auth.invalidCredentials': '用户名或密码错误',
+    'auth.localeUnsupported': 'locale 不受支持',
+    'auth.password.minLength': '密码至少需要 8 位',
+    'auth.displayName.required': '请输入显示名称',
+    'auth.token.invalid': '未提供有效的访问令牌',
     'settings.apiKey.required': 'API Key 未配置，请先输入或保存后再测试',
     'settings.apiKey.reentryRequired':
       '切换 Provider 或 Base URL 后，请重新输入新的 API Key',

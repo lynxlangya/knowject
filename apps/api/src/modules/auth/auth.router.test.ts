@@ -2,12 +2,16 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import test from 'node:test';
+import argon2 from 'argon2';
 import express, { type RequestHandler } from 'express';
 import type { AppEnv } from '@config/env.js';
+import { createRequireAuth } from './auth.middleware.js';
+import { createAuthService } from './auth.service.js';
 import { createValidationAppError } from '@lib/validation.js';
 import { requestContextMiddleware } from '@middleware/request-context.js';
 import { createErrorHandler } from '@middleware/error-handler.js';
 import { createAuthRouter } from './auth.router.js';
+import type { AuthRepository } from './auth.repository.js';
 import type { AuthService } from './auth.service.js';
 
 const createTestEnv = (): AppEnv => {
@@ -172,5 +176,127 @@ test('PATCH /api/auth/me/preferences rejects invalid locale', async () => {
 
     assert.equal(response.status, 400);
     assert.equal(body.code, 'VALIDATION_ERROR');
+  });
+});
+
+test('POST /api/auth/register localizes username conflict in english', async () => {
+  const authService = createAuthService({
+    env: createTestEnv(),
+    repository: {
+      findByUsername: async () => ({
+        _id: { toHexString: () => 'user-1' },
+      }),
+    } as unknown as AuthRepository,
+  });
+  const app = createTestApp(authService, createRequireAuth(authService));
+
+  await withServer(app, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'Accept-Language': 'en',
+      },
+      body: JSON.stringify({
+        username: 'langya',
+        name: 'Langya',
+        password: 'password123',
+      }),
+    });
+    const body = (await response.json()) as { message: string; code: string };
+
+    assert.equal(response.status, 409);
+    assert.equal(body.code, 'AUTH_USERNAME_CONFLICT');
+    assert.equal(body.message, 'Username already exists');
+  });
+});
+
+test('POST /api/auth/login localizes invalid credentials in english', async () => {
+  const env = createTestEnv();
+  const passwordHash = await argon2.hash('correct-password', {
+    type: argon2.argon2id,
+    memoryCost: env.argon2.memoryCost,
+    timeCost: env.argon2.timeCost,
+    parallelism: env.argon2.parallelism,
+  });
+  const authService = createAuthService({
+    env,
+    repository: {
+      findByUsername: async () => ({
+        _id: { toHexString: () => 'user-1' },
+        username: 'langya',
+        name: 'Langya',
+        passwordHash,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    } as unknown as AuthRepository,
+  });
+  const app = createTestApp(authService, createRequireAuth(authService));
+
+  await withServer(app, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'Accept-Language': 'en',
+      },
+      body: JSON.stringify({
+        username: 'langya',
+        password: 'wrong-password',
+      }),
+    });
+    const body = (await response.json()) as { message: string; code: string };
+
+    assert.equal(response.status, 401);
+    assert.equal(body.code, 'AUTH_INVALID_CREDENTIALS');
+    assert.equal(body.message, 'Invalid username or password');
+  });
+});
+
+test('PATCH /api/auth/me/preferences localizes invalid locale in english', async () => {
+  const authService = createAuthService({
+    env: createTestEnv(),
+    repository: {} as AuthRepository,
+  });
+  const app = createTestApp(authService, createRequireAuthStub());
+
+  await withServer(app, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/auth/me/preferences`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        'Accept-Language': 'en',
+      },
+      body: JSON.stringify({ locale: 'fr' }),
+    });
+    const body = (await response.json()) as { message: string; code: string };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.code, 'VALIDATION_ERROR');
+    assert.equal(body.message, 'Locale is not supported');
+  });
+});
+
+test('GET /api/auth/users without bearer token localizes auth error in english', async () => {
+  const authService = {
+    verifyAccessToken: async () => ({
+      id: 'user-1',
+      username: 'langya',
+    }),
+  } as unknown as AuthService;
+  const app = createTestApp(authService, createRequireAuth(authService));
+
+  await withServer(app, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/auth/users`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as { message: string; code: string };
+
+    assert.equal(response.status, 401);
+    assert.equal(body.code, 'AUTH_TOKEN_INVALID');
+    assert.equal(body.message, 'A valid access token is required');
   });
 });

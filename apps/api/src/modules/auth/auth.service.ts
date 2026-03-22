@@ -2,6 +2,7 @@ import argon2 from 'argon2';
 import type { WithId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import { getFallbackMessage } from '@lib/locale.messages.js';
 import {
   createRequiredFieldError,
   createValidationAppError,
@@ -42,10 +43,11 @@ const createUsernameConflictError = (cause?: unknown): AppError => {
   return new AppError({
     statusCode: 409,
     code: 'AUTH_USERNAME_CONFLICT',
-    message: '用户名已存在',
+    message: getFallbackMessage('auth.usernameConflict'),
+    messageKey: 'auth.usernameConflict',
     details: {
       fields: {
-        username: '用户名已存在',
+        username: getFallbackMessage('auth.usernameConflict'),
       },
     },
     cause,
@@ -56,7 +58,8 @@ const createInvalidCredentialsError = (): AppError => {
   return new AppError({
     statusCode: 401,
     code: 'AUTH_INVALID_CREDENTIALS',
-    message: '用户名或密码错误',
+    message: getFallbackMessage('auth.invalidCredentials'),
+    messageKey: 'auth.invalidCredentials',
   });
 };
 
@@ -105,9 +108,13 @@ const readLocale = (
   }
 
   if (!SUPPORTED_LOCALES.includes(normalized as SupportedLocale)) {
-    throw createValidationAppError('locale 不受支持', {
-      locale: 'locale 不受支持',
-    });
+    throw createValidationAppError(
+      getFallbackMessage('auth.localeUnsupported'),
+      {
+        locale: getFallbackMessage('auth.localeUnsupported'),
+      },
+      'auth.localeUnsupported',
+    );
   }
 
   return normalized as SupportedLocale;
@@ -119,9 +126,13 @@ const validatePassword = (password: string | undefined): string => {
   }
 
   if (password.length < 8) {
-    throw createValidationAppError('密码至少需要 8 位', {
-      password: '密码至少需要 8 位',
-    });
+    throw createValidationAppError(
+      getFallbackMessage('auth.password.minLength'),
+      {
+        password: getFallbackMessage('auth.password.minLength'),
+      },
+      'auth.password.minLength',
+    );
   }
 
   return password;
@@ -184,9 +195,13 @@ export const createAuthService = ({
       }
 
       if (!name) {
-        throw createValidationAppError('请输入显示名称', {
-          name: '请输入显示名称',
-        });
+        throw createValidationAppError(
+          getFallbackMessage('auth.displayName.required'),
+          {
+            name: getFallbackMessage('auth.displayName.required'),
+          },
+          'auth.displayName.required',
+        );
       }
 
       const existing = await repository.findByUsername(username);

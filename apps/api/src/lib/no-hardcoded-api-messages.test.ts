@@ -5,6 +5,8 @@ import test from 'node:test';
 
 const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/agents/agents.service.ts',
+  'apps/api/src/modules/auth/auth.middleware.ts',
+  'apps/api/src/modules/auth/auth.service.ts',
   'apps/api/src/modules/knowledge/knowledge.router.shared.ts',
   'apps/api/src/modules/knowledge/knowledge.diagnostics.ts',
   'apps/api/src/modules/knowledge/knowledge.service.catalog.ts',
@@ -29,7 +31,9 @@ const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/skills/skills.markdown.ts',
   'apps/api/src/modules/skills/skills.shared.ts',
   'apps/api/src/modules/skills/validators/skills.validator.ts',
+  'apps/api/src/routes/memory.ts',
   'apps/api/src/middleware/secure-transport.ts',
+  'apps/api/src/lib/validation.ts',
   'apps/api/src/lib/mutation-input.ts',
 ] as const;
 
@@ -38,7 +42,7 @@ const MESSAGE_KEY_LITERAL_PATTERN = /^[A-Za-z0-9.-]+$/;
 const RUNTIME_MESSAGE_PATTERNS = [
   {
     label: 'message literal',
-    regex: /\bmessage\s*:\s*(['"`])/g,
+    regex: /(?:^|[,{]\s*)message\s*:\s*(['"`])/gm,
   },
   {
     label: 'createValidationAppError literal',
@@ -137,6 +141,10 @@ const REMAINING_SWEEP_CHECKLIST: Record<string, string[]> = {
   ],
   'apps/api/src/modules/settings/settings.service.sections.ts': [
     'chunkOverlap 必须小于 chunkSize',
+  ],
+  'apps/api/src/lib/validation.ts': [
+    '${field} 为必填项',
+    '${field} 必须为字符串',
   ],
 };
 

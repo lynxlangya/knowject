@@ -96,7 +96,11 @@ const resolveErrorDetails = (
       return error.details;
     }
 
-    const localizedMessage = getMessage(error.messageKey, locale);
+    const localizedMessage = getMessage(
+      error.messageKey,
+      locale,
+      error.messageParams,
+    );
 
     if (!localizedMessage) {
       return error.details;

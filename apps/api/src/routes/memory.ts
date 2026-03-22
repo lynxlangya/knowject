@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from "express";
 import { AppError } from "@lib/app-error.js";
 import { sendSuccess } from "@lib/api-response.js";
+import { createRequiredFieldError } from "@lib/validation.js";
 
 interface MemoryQueryBody {
   query?: string;
@@ -92,16 +93,7 @@ export const createMemoryRouter = (requireAuth: RequestHandler): Router => {
     const { query, topK = 3 } = req.body as MemoryQueryBody;
 
     if (!query || !query.trim()) {
-      throw new AppError({
-        statusCode: 400,
-        code: "VALIDATION_ERROR",
-        message: "query 为必填项",
-        details: {
-          fields: {
-            query: "query 为必填项",
-          },
-        },
-      });
+      throw new AppError(createRequiredFieldError("query"));
     }
 
     const keyword = query.trim().toLowerCase();

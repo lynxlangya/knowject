@@ -5,7 +5,7 @@ import test from 'node:test';
 import express from 'express';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
-import { createRequiredFieldError } from '@lib/validation.js';
+import { createRequiredFieldError, readOptionalStringField } from '@lib/validation.js';
 import { createErrorHandler } from '@middleware/error-handler.js';
 import { notFoundHandler } from '@middleware/not-found.js';
 import { requestContextMiddleware } from '@middleware/request-context.js';
@@ -107,6 +107,18 @@ const createProtocolTestApp = (exposeDetails: boolean) => {
 
   app.get('/required', () => {
     throw new AppError(createRequiredFieldError('username'));
+  });
+
+  app.get('/required-generic', () => {
+    throw new AppError(createRequiredFieldError('locale'));
+  });
+
+  app.get('/string-generic', () => {
+    readOptionalStringField(123 as never, 'locale');
+  });
+
+  app.get('/string-username', () => {
+    readOptionalStringField(123 as never, 'username');
   });
 
   app.get('/validation-context', () => {
@@ -322,6 +334,78 @@ test('required field validation localizes shared messages', async () => {
     assert.deepEqual(body.meta.details, {
       fields: {
         username: 'Username is required',
+      },
+    });
+  });
+});
+
+test('generic required field validation localizes unknown field names', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/required-generic`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      meta: { details?: unknown };
+    };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.code, 'VALIDATION_ERROR');
+    assert.equal(body.message, 'locale is required');
+    assert.deepEqual(body.meta.details, {
+      fields: {
+        locale: 'locale is required',
+      },
+    });
+  });
+});
+
+test('generic string validation localizes locale field in english', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/string-generic`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      meta: { details?: unknown };
+    };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.code, 'VALIDATION_ERROR');
+    assert.equal(body.message, 'locale must be a string');
+    assert.deepEqual(body.meta.details, {
+      fields: {
+        locale: 'locale must be a string',
+      },
+    });
+  });
+});
+
+test('generic string validation localizes username field in english', async () => {
+  await withServer(createProtocolTestApp(true), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/string-username`, {
+      headers: {
+        'Accept-Language': 'en',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      message: string;
+      meta: { details?: unknown };
+    };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.code, 'VALIDATION_ERROR');
+    assert.equal(body.message, 'username must be a string');
+    assert.deepEqual(body.meta.details, {
+      fields: {
+        username: 'username must be a string',
       },
     });
   });
