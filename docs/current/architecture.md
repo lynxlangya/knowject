@@ -181,15 +181,20 @@ docs/
 
 - `knowject_token`：登录 token。
 - `knowject_auth_user`：当前登录用户信息。
+- `knowject_locale_guest`：未登录态 guest locale，本机语言偏好缓存。
 - `knowject_remembered_username`：登录页“记住用户名”缓存。
 - `knowject_project_pins`：项目置顶偏好。
 
 ### 5.2 鉴权与登录态
 
 - 前端通过 `apps/platform/src/api/auth.ts` 调用 `POST /api/auth/register` 与 `POST /api/auth/login`。
+- 前端当前还会通过 `PATCH /api/auth/me/preferences` 持久化账号级 `locale` 偏好。
 - `/login` 页面当前已支持同页登录 / 注册模式切换，不新增 `/register` 路由。
+- `/login` 页面当前已提供未登录态语言切换入口；guest locale 会写入 `knowject_locale_guest`，默认回退到 `en`。
 - `/login` 页面可选记住用户名，并通过 `knowject_remembered_username` 回填下次登录表单。
-- 登录成功或注册成功后会写入 `knowject_token` 与 `knowject_auth_user`，再由受保护路由守卫控制登录后访问。
+- 登录成功或注册成功后会写入 `knowject_token` 与 `knowject_auth_user`，再由受保护路由守卫控制登录后访问；`knowject_auth_user` 当前已包含 `locale`。
+- 登录态 locale 当前遵循“账号优先、guest 回退”规则：启动时优先读取 `auth.user.locale`，不存在时回退到 `knowject_locale_guest`；登录成功后会用服务端返回的 `result.user.locale` 接管当前 locale。
+- 登录后左侧栏底部账号面板当前已提供 hover 展开的“语言”二级面板，切换后会立即更新前端 locale，并异步写回账号级偏好。
 - 当前 token 已切到正式 JWT，不再使用演示 token 前缀。
 - 登录 / 注册请求体中的 `password` 保持原始口令语义，由 HTTPS 负责传输保护；服务端在落库前使用 `argon2id` 做哈希。
 
@@ -233,6 +238,12 @@ docs/
   - 页面继续通过 `/api/projects/:projectId/conversations/:conversationId` 读取详情，并额外读取 `/api/settings`；当 `llm.hasKey=false`、provider 不在支持集，或运行时返回可修复的 LLM 错误时，渲染页内提示并提供跳转 `/settings` 的入口。当前页面默认发送已切到流式 `messages/stream` 接口，同步 `messages` 接口保留为共享后端基线与回滚路径；消息 Rail 只作用于当前 conversation，可对 persisted message 做 star/unstar、滚动定位、共享 selection Markdown 导出，以及“选择已有项目私有知识库后上传 Markdown 文档；若目录为空，则先在聊天页内创建空知识库”的 knowledge draft 闭环。desktop rail 当前采用显式展开 / 收起，selection mode 会强制保持展开，drawer 关闭时保留 selection，保存成功后清空 selection。
 - `apps/platform/src/index.css`
   - 当前已建立 Tailwind v4 theme token 基线，提供 `rounded-(panel/card/card-lg/shell/hero)`、`text-(caption/label/body/title/display-*)` 与 `shadow-(surface/card/float/shell/hero)` 等高频 token，并已承接第一批页面迁移。
+- `apps/platform/src/app/providers/LocaleProvider.tsx`
+  - 当前已作为平台 locale 单一事实源，负责 guest/account locale 选择、`i18next.changeLanguage(...)` 与登录态 `auth.user.locale` 同步。
+- `apps/platform/src/app/providers/AntdProvider.tsx`
+  - 当前会根据 locale 在 `en_US / zh_CN` 间切换 Ant Design locale。
+- `apps/platform/src/i18n/*`
+  - 当前已落地 `auth / navigation / pages / project / api-errors / common` 六组 namespace 资源；登录页、侧栏、global pages 与 settings 已切到 i18n 资源，资产域与项目域剩余页面仍在继续迁移。
 - 根 `eslint.config.mjs`
   - 当前已对 `apps/platform/src/**/*.{ts,tsx}` 启用 type-aware ESLint，并新增 `@typescript-eslint/await-thenable` 与 `@typescript-eslint/no-floating-promises`；前端 fire-and-forget Promise 现在必须显式 `void`。
 
@@ -345,8 +356,10 @@ docs/
 - `auth/users`、`projects`、`memberships`、`knowledge`、`skills`、`agents`、`settings` 与 `memory` 路由要求 `Authorization: Bearer <token>`。
 - 服务端当前通过 JWT 中间件校验 `iss / aud / exp / sub / username`。
 - 当前所有 JSON API 响应统一为 `code / message / data / meta`。
+- API 请求当前已统一接受 `Accept-Language`，服务端会优先按该请求头协商 locale；若缺失，再回退到登录态用户的账号级 `locale`，最终回退到默认 `en`。
 - 成功响应中，`HTTP 200` 默认映射为 `SUCCESS / 请求成功`，`HTTP 201` 默认映射为 `CREATED / 创建成功`。
 - 失败响应统一返回 `data: null`，并继续沿用现有业务错误码；`meta` 当前固定包含 `requestId` 与 `timestamp`，仅在 `API_ERROR_EXPOSE_DETAILS=true` 时才返回 `meta.details`。
+- success/error envelope 当前都会按 locale 输出 `message`；字段级 validation 详情也会在 `meta.details.fields` 中一起本地化，而不是只翻译顶层 `message`。
 - `DELETE /api/projects/:projectId` 与 `DELETE /api/knowledge/:knowledgeId` 当前已从 `204 No Content` 调整为 `HTTP 200 + data:null`，以保持 envelope 一致性。
 - 前端通过 `apps/platform/src/api/*` 在 API 层统一解包 `data`，页面层继续消费业务数据，不直接感知 envelope。
 - 当前已具备正式用户体系、`argon2id` 密码哈希、JWT、最小项目权限模型和成员管理接口。

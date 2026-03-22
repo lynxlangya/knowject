@@ -1,8 +1,8 @@
+import type { TFunction } from 'i18next';
 import type { MemberOverviewResponseItem } from '@api/members';
 import type { ProjectRole } from '@api/projects';
 import type { SkillSummaryResponse } from '@api/skills';
 import {
-  GLOBAL_ASSET_TITLES,
   getCatalogMembers,
   getGlobalAssetById,
 } from '@app/project/project.catalog';
@@ -23,54 +23,47 @@ import type {
   MemberViewModel,
 } from './members.types';
 
-const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  dateStyle: 'medium',
-});
-
-const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
-
-export const MEMBER_STATUS_META: Record<
+export const getMemberStatusMeta = (
+  t: TFunction<'pages'>,
+): Record<
   ProjectMemberStatus,
   { label: string; className: string }
-> = {
+> => ({
   active: {
-    label: '活跃中',
-    className:
-      'border-emerald-200 bg-emerald-50 text-emerald-700',
+    label: t('members.status.active'),
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   },
   syncing: {
-    label: '同步中',
-    className:
-      'border-sky-200 bg-sky-50 text-sky-700',
+    label: t('members.status.syncing'),
+    className: 'border-sky-200 bg-sky-50 text-sky-700',
   },
   blocked: {
-    label: '有阻塞',
-    className:
-      'border-rose-200 bg-rose-50 text-rose-700',
+    label: t('members.status.blocked'),
+    className: 'border-rose-200 bg-rose-50 text-rose-700',
   },
   idle: {
-    label: '空闲',
-    className:
-      'border-slate-200 bg-slate-100 text-slate-600',
+    label: t('members.status.idle'),
+    className: 'border-slate-200 bg-slate-100 text-slate-600',
   },
-};
+});
 
-export const PROJECT_ACCESS_ROLE_LABELS: Record<ProjectRole, string> = {
-  admin: '项目管理员',
-  member: '项目成员',
-};
+export const getProjectAccessRoleLabels = (
+  t: TFunction<'pages'>,
+): Record<ProjectRole, string> => ({
+  admin: t('members.accessRole.admin'),
+  member: t('members.accessRole.member'),
+});
 
-export const COLLABORATION_ROLE_LABELS: Record<ProjectMemberRole, string> = {
-  owner: '负责人',
-  product: '产品',
-  design: '设计',
-  frontend: '前端',
-  backend: '后端',
-  marketing: '市场',
-};
+export const getCollaborationRoleLabels = (
+  t: TFunction<'pages'>,
+): Record<ProjectMemberRole, string> => ({
+  owner: t('members.collaborationRole.owner'),
+  product: t('members.collaborationRole.product'),
+  design: t('members.collaborationRole.design'),
+  frontend: t('members.collaborationRole.frontend'),
+  backend: t('members.collaborationRole.backend'),
+  marketing: t('members.collaborationRole.marketing'),
+});
 
 const STATUS_ORDER: ProjectMemberStatus[] = [
   'active',
@@ -84,20 +77,31 @@ const buildFallbackFocusSummary = (
     MemberOverviewResponseItem,
     'visibleProjectCount' | 'adminProjectCount'
   >,
+  t: TFunction<'pages'>,
 ): string => {
   if (item.visibleProjectCount === 0) {
-    return '当前账号还没有加入可见项目，可先在项目成员页完成成员加入。';
+    return t('members.focus.noVisibleProject');
   }
 
   if (item.adminProjectCount > 0) {
-    return `当前参与 ${item.visibleProjectCount} 个可见项目，其中 ${item.adminProjectCount} 个项目具备管理员权限。`;
+    return t('members.focus.adminProjects', {
+      visibleProjectCount: item.visibleProjectCount,
+      adminProjectCount: item.adminProjectCount,
+    });
   }
 
-  return `当前参与 ${item.visibleProjectCount} 个可见项目，主要以协作成员身份参与推进。`;
+  return t('members.focus.memberProjects', {
+    visibleProjectCount: item.visibleProjectCount,
+  });
 };
 
-const buildFallbackProjectFocusSummary = (projectName: string): string => {
-  return `当前已加入 ${projectName}，该项目的详细协作快照待补充。`;
+const buildFallbackProjectFocusSummary = (
+  projectName: string,
+  t: TFunction<'pages'>,
+): string => {
+  return t('members.focus.projectFallback', {
+    projectName,
+  });
 };
 
 const getActivityTimestamp = (
@@ -149,14 +153,17 @@ const pickPrimaryProject = (
 const buildUnknownAssetItem = (
   type: ProjectResourceFocus,
   id: string,
+  t: TFunction<'pages'>,
 ): GlobalAssetItem => {
+  const typeLabel = getAssetGroupTitle(t, type === 'knowledge' ? 'knowledge' : type);
+
   return {
     id,
     type,
-    name: `未知资源（${id}）`,
-    description: `该${GLOBAL_ASSET_TITLES[type]}已绑定到当前成员可见项目，但本地尚未拿到完整元数据。`,
-    updatedAt: '未记录',
-    owner: '未指定',
+    name: t('members.assets.unknownName', { id }),
+    description: t('members.assets.unknownDescription', { typeLabel }),
+    updatedAt: t('members.assets.notRecorded'),
+    owner: t('members.assets.unspecifiedOwner'),
     usageCount: 0,
   };
 };
@@ -164,18 +171,21 @@ const buildUnknownAssetItem = (
 const resolveMemberAsset = (
   type: ProjectResourceFocus,
   id: string,
+  t: TFunction<'pages'>,
 ): GlobalAssetItem => {
-  return getGlobalAssetById(type, id) ?? buildUnknownAssetItem(type, id);
+  return getGlobalAssetById(type, id) ?? buildUnknownAssetItem(type, id, t);
 };
 
 const resolveSkillAsset = (
   id: string,
   skillsCatalog: SkillSummaryResponse[],
+  t: TFunction<'pages'>,
+  locale: string,
 ): GlobalAssetItem => {
   const skill = skillsCatalog.find((item) => item.id === id);
 
   if (!skill) {
-    return buildUnknownAssetItem('skills', id);
+    return buildUnknownAssetItem('skills', id, t);
   }
 
   return {
@@ -183,13 +193,13 @@ const resolveSkillAsset = (
     type: 'skills',
     name: skill.name,
     description: skill.description,
-    updatedAt: dateTimeFormatter.format(new Date(skill.updatedAt)),
+    updatedAt: formatDisplayDateTime(skill.updatedAt, locale, t),
     owner:
       skill.source === 'system'
-        ? '系统内置'
+        ? t('members.assets.system')
         : skill.source === 'imported'
-          ? '公网导入'
-          : '当前团队',
+          ? t('members.assets.imported')
+          : t('members.assets.team'),
     usageCount: 0,
   };
 };
@@ -222,6 +232,7 @@ const buildMemberProjects = (
   item: MemberOverviewResponseItem,
   projects: ProjectSummary[],
   snapshotIndex: Map<string, ProjectMember>,
+  t: TFunction<'pages'>,
 ): MemberProjectViewModel[] => {
   const projectMap = new Map(projects.map((project) => [project.id, project] as const));
 
@@ -244,7 +255,7 @@ const buildMemberProjects = (
       status: snapshot?.status ?? 'idle',
       focusSummary:
         snapshot?.focusSummary ??
-        buildFallbackProjectFocusSummary(visibleProject.name),
+        buildFallbackProjectFocusSummary(visibleProject.name, t),
       responsibilityTags: snapshot?.responsibilityTags ?? [],
       recentActivity: snapshot?.recentActivity ?? null,
     };
@@ -255,6 +266,8 @@ const buildMemberAssets = (
   memberProjects: MemberProjectViewModel[],
   projects: ProjectSummary[],
   skillsCatalog: SkillSummaryResponse[],
+  t: TFunction<'pages'>,
+  locale: string,
 ): MemberAssetSummary => {
   const projectMap = new Map(projects.map((project) => [project.id, project] as const));
   const knowledgeIds = new Set<string>();
@@ -280,13 +293,13 @@ const buildMemberAssets = (
 
   return {
     knowledge: dedupeAssets(
-      Array.from(knowledgeIds).map((id) => resolveMemberAsset('knowledge', id)),
+      Array.from(knowledgeIds).map((id) => resolveMemberAsset('knowledge', id, t)),
     ),
     skills: dedupeAssets(
-      Array.from(skillIds).map((id) => resolveSkillAsset(id, skillsCatalog)),
+      Array.from(skillIds).map((id) => resolveSkillAsset(id, skillsCatalog, t, locale)),
     ),
     agents: dedupeAssets(
-      Array.from(agentIds).map((id) => resolveMemberAsset('agents', id)),
+      Array.from(agentIds).map((id) => resolveMemberAsset('agents', id, t)),
     ),
   };
 };
@@ -296,11 +309,15 @@ export const buildMemberViewModels = ({
   projects,
   currentUserId,
   skillsCatalog,
+  t,
+  locale,
 }: {
   items: MemberOverviewResponseItem[];
   projects: ProjectSummary[];
   currentUserId: string | null;
   skillsCatalog: SkillSummaryResponse[];
+  t: TFunction<'pages'>;
+  locale: string;
 }): MemberViewModel[] => {
   const avatarMap = new Map(
     getCatalogMembers().map((member) => [member.id, member.avatarUrl] as const),
@@ -308,9 +325,9 @@ export const buildMemberViewModels = ({
   const snapshotIndex = buildProjectSnapshotIndex(projects);
 
   return items.map((item) => {
-    const memberProjects = buildMemberProjects(item, projects, snapshotIndex);
+    const memberProjects = buildMemberProjects(item, projects, snapshotIndex, t);
     const primaryProject = pickPrimaryProject(memberProjects);
-    const assets = buildMemberAssets(memberProjects, projects, skillsCatalog);
+    const assets = buildMemberAssets(memberProjects, projects, skillsCatalog, t, locale);
     const responsibilityTags = Array.from(
       new Set(memberProjects.flatMap((project) => project.responsibilityTags)),
     ).slice(0, 6);
@@ -335,7 +352,7 @@ export const buildMemberViewModels = ({
         primaryProject?.status ?? getFallbackStatus(memberProjects),
       primaryRole: primaryProject?.collaborationRole ?? null,
       focusSummary:
-        primaryProject?.focusSummary ?? buildFallbackFocusSummary(item),
+        primaryProject?.focusSummary ?? buildFallbackFocusSummary(item, t),
       responsibilityTags,
       recentActivity: primaryProject?.recentActivity ?? null,
       activeProjectCount: statusBreakdown.active,
@@ -436,32 +453,46 @@ export const filterMemberViewModels = (
   });
 };
 
-export const formatDisplayDate = (value: string | null): string => {
+export const formatDisplayDate = (
+  value: string | null,
+  locale: string,
+  t: TFunction<'pages'>,
+): string => {
   if (!value) {
-    return '—';
+    return t('members.date.empty');
   }
 
-  return dateFormatter.format(new Date(value));
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+  }).format(new Date(value));
 };
 
-export const formatDisplayDateTime = (value: string | null): string => {
+export const formatDisplayDateTime = (
+  value: string | null,
+  locale: string,
+  t: TFunction<'pages'>,
+): string => {
   if (!value) {
-    return '—';
+    return t('members.date.empty');
   }
 
-  return dateTimeFormatter.format(new Date(value));
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 };
 
 export const getAssetGroupTitle = (
+  t: TFunction<'pages'>,
   key: keyof MemberAssetSummary,
 ): string => {
   if (key === 'knowledge') {
-    return GLOBAL_ASSET_TITLES.knowledge;
+    return t('members.assets.knowledge');
   }
 
   if (key === 'skills') {
-    return GLOBAL_ASSET_TITLES.skills;
+    return t('members.assets.skills');
   }
 
-  return GLOBAL_ASSET_TITLES.agents;
+  return t('members.assets.agents');
 };

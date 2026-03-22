@@ -1,20 +1,21 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { ApiOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert, Button, Col, Flex, Input, Row, Select, Space, Tag, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type {
   SettingsEmbeddingProvider,
   SettingsLlmProvider,
   SettingsResponse,
 } from '@api/settings';
 import {
-  EMBEDDING_PROVIDER_OPTIONS,
   EMBEDDING_PROVIDER_PRESETS,
+  getEmbeddingProviderOptions,
   getAiKeyPlaceholder,
   getAiKeyStatusTag,
   getAiTestHint,
   hasAiDefinitionChanged,
   hasAiServiceTargetChanged,
-  LLM_PROVIDER_OPTIONS,
+  getLlmProviderOptions,
   type AiDraft,
   type SaveSection,
   type SettingsConnectionFeedbackState,
@@ -66,6 +67,7 @@ export const SettingsAiTab = ({
   onSaveLlm,
   onOpenKnowledge,
 }: SettingsAiTabProps) => {
+  const { t } = useTranslation('pages');
   const embeddingServiceTargetChanged = hasAiServiceTargetChanged(
     embeddingDraft,
     settings.embedding,
@@ -109,41 +111,43 @@ export const SettingsAiTab = ({
   return (
     <Space orientation="vertical" size={20} style={{ width: '100%' }}>
       <SectionBlock
-        title="向量模型（Embedding）"
-        description="用于知识库索引与检索。修改 provider 或 model 后，已有知识库需要重建索引才能使用新的向量语义。"
+        title={t('settings.summary.embeddingModel')}
+        description={t('settings.alerts.embeddingRebuild')}
         extra={
           <Space size={8} wrap>
             <Tag color={settings.embedding.source === 'database' ? 'blue' : 'gold'}>
-              {settings.embedding.source === 'database' ? '数据库配置' : '环境变量回退'}
+              {settings.embedding.source === 'database'
+                ? t('settings.sources.database')
+                : t('settings.sources.environment')}
             </Tag>
             <Tag color={embeddingKeyTag.color}>{embeddingKeyTag.label}</Tag>
           </Space>
         }
       >
         <Space orientation="vertical" size={16} style={{ width: '100%' }}>
-          {settings.embedding.source === 'environment' && !embeddingServiceTargetChanged ? (
-            <Alert
-              type="info"
-              showIcon
-              title="当前使用环境变量配置"
-              description="如果你要把向量模型正式保存为工作区配置，请重新输入新的 API Key。环境变量中的 Key 不会被自动迁移入库。"
-            />
-          ) : null}
+        {settings.embedding.source === 'environment' && !embeddingServiceTargetChanged ? (
+          <Alert
+            type="info"
+            showIcon
+            title={t('settings.alerts.envConfig')}
+            description={t('settings.alerts.envEmbeddingDescription')}
+          />
+        ) : null}
 
           {embeddingRebuildPending ? (
             <Alert
-              type="warning"
-              showIcon
-              icon={<WarningOutlined />}
-              title="向量模型已变更，已有知识库需重建索引"
-              description={
-                <Space size={8} wrap>
-                  <span>新的 provider / model 只会影响后续索引任务。</span>
-                  <Button type="link" style={{ paddingInline: 0 }} onClick={onOpenKnowledge}>
-                    前往知识库管理
-                  </Button>
-                </Space>
-              }
+            type="warning"
+            showIcon
+            icon={<WarningOutlined />}
+            title={t('settings.alerts.embeddingRebuild')}
+            description={
+              <Space size={8} wrap>
+                <span>{t('settings.alerts.embeddingRebuildDraft')}</span>
+                <Button type="link" style={{ paddingInline: 0 }} onClick={onOpenKnowledge}>
+                  {t('settings.actions.openKnowledge')}
+                </Button>
+              </Space>
+            }
               closable
               onClose={() => setEmbeddingRebuildPending(false)}
             />
@@ -151,17 +155,17 @@ export const SettingsAiTab = ({
 
           {showEmbeddingServiceChangeNotice ? (
             <Alert
-              type="info"
-              showIcon
-              title={
+            type="info"
+            showIcon
+            title={
                 embeddingDraft.apiKey.trim()
-                  ? '新的模型服务待验证'
-                  : '已切换到新的模型服务，请重新输入 API Key'
+                  ? t('settings.alerts.embeddingServicePending')
+                  : t('settings.alerts.embeddingServiceKeyRequired')
               }
               description={
                 embeddingDraft.apiKey.trim()
-                  ? '请先测试连接，确认新配置可用后再保存。'
-                  : '切换 Provider 或 Base URL 后，不会继续沿用之前保存的 Key。'
+                  ? t('settings.alerts.embeddingServicePendingDescription')
+                  : t('settings.alerts.embeddingServiceKeyRequiredDescription')
               }
             />
           ) : null}
@@ -170,8 +174,8 @@ export const SettingsAiTab = ({
             <Alert
               type="info"
               showIcon
-              title="新配置测试通过，保存后已有知识库需要重建索引"
-              description="只有在保存之后，新的 provider / model 才会成为实际生效配置。"
+              title={t('settings.alerts.embeddingPreSaveRebuild')}
+              description={t('settings.alerts.embeddingPreSaveRebuildDescription')}
             />
           ) : null}
 
@@ -189,14 +193,14 @@ export const SettingsAiTab = ({
               <SettingField label="Provider">
                 <Select
                   value={embeddingDraft.provider}
-                  options={EMBEDDING_PROVIDER_OPTIONS}
+                  options={getEmbeddingProviderOptions()}
                   onChange={onEmbeddingProviderChange}
                   style={{ width: '100%' }}
                 />
               </SettingField>
             </Col>
             <Col xs={24} lg={10}>
-              <SettingField label="Base URL">
+              <SettingField label={t('settings.fields.baseUrl')}>
                 <Input
                   value={embeddingDraft.baseUrl}
                   placeholder="https://api.openai.com/v1"
@@ -211,7 +215,7 @@ export const SettingsAiTab = ({
               </SettingField>
             </Col>
             <Col xs={24} lg={8}>
-              <SettingField label="模型名称">
+              <SettingField label={t('settings.fields.model')}>
                 <Input
                   value={embeddingDraft.model}
                   placeholder={EMBEDDING_PROVIDER_PRESETS.openai.model}
@@ -226,7 +230,7 @@ export const SettingsAiTab = ({
               </SettingField>
             </Col>
             <Col xs={24}>
-              <SettingField label="API Key" hint={embeddingTestHint}>
+              <SettingField label={t('settings.fields.apiKey')} hint={embeddingTestHint}>
                 <Password
                   value={embeddingDraft.apiKey}
                   placeholder={getAiKeyPlaceholder(embeddingDraft, settings.embedding)}
@@ -244,21 +248,21 @@ export const SettingsAiTab = ({
           </Row>
 
           <Flex justify="space-between" align="center" gap={12} wrap>
-            <Text type="secondary">当前保存后只会写入数据库，不会回填明文 Key。</Text>
+            <Text type="secondary">{t('settings.alerts.saveKeyHint')}</Text>
             <Space>
               <Button
                 icon={<ApiOutlined />}
                 loading={testingSection === 'embedding'}
                 onClick={() => void onTestEmbedding()}
               >
-                测试连接
+                {t('settings.actions.testConnection')}
               </Button>
               <Button
                 type="primary"
                 loading={savingSection === 'embedding'}
                 onClick={() => void onSaveEmbedding()}
               >
-                保存向量模型
+                {t('settings.actions.saveEmbedding')}
               </Button>
             </Space>
           </Flex>
@@ -266,12 +270,14 @@ export const SettingsAiTab = ({
       </SectionBlock>
 
       <SectionBlock
-        title="对话模型（LLM）"
-        description="当前设置会直接驱动项目对话 MVP。当前仅保留已验证的 `/chat/completions` 兼容 Provider，先确保设置页、在线测试与项目对话运行时语义一致。"
+        title={t('settings.summary.chatModel')}
+        description={t('settings.alerts.llmRuntimeDescription')}
         extra={
           <Space size={8} wrap>
             <Tag color={settings.llm.source === 'database' ? 'blue' : 'gold'}>
-              {settings.llm.source === 'database' ? '数据库配置' : '环境变量回退'}
+              {settings.llm.source === 'database'
+                ? t('settings.sources.database')
+                : t('settings.sources.environment')}
             </Tag>
             <Tag color={llmKeyTag.color}>{llmKeyTag.label}</Tag>
           </Space>
@@ -281,16 +287,16 @@ export const SettingsAiTab = ({
           <Alert
             type="info"
             showIcon
-            title="当前 LLM 设置会直接影响项目对话"
-            description="保存并测试通过后，项目页会直接使用当前配置生成 assistant 回复。本期不引入额外对话组件或独立 runtime。"
+            title={t('settings.alerts.llmRuntimeTitle')}
+            description={t('settings.alerts.llmRuntimeDescription')}
           />
 
           {settings.llm.source === 'environment' && !llmServiceTargetChanged ? (
             <Alert
               type="info"
               showIcon
-              title="当前使用环境变量配置"
-              description="如果你要把 LLM 配置正式保存为工作区配置，请重新输入新的 API Key。环境变量中的 Key 不会被自动迁移入库。"
+              title={t('settings.alerts.envConfig')}
+              description={t('settings.alerts.envLlmDescription')}
             />
           ) : null}
 
@@ -298,15 +304,15 @@ export const SettingsAiTab = ({
             <Alert
               type="info"
               showIcon
-              title={
+            title={
                 llmDraft.apiKey.trim()
-                  ? '新的模型服务待验证'
-                  : '已切换到新的模型服务，请重新输入 API Key'
+                  ? t('settings.alerts.llmServicePending')
+                  : t('settings.alerts.llmServiceKeyRequired')
               }
               description={
                 llmDraft.apiKey.trim()
-                  ? '请先测试连接，确认新配置可用后再保存。'
-                  : '切换 Provider 或 Base URL 后，不会继续沿用之前保存的 Key。'
+                  ? t('settings.alerts.llmServicePendingDescription')
+                  : t('settings.alerts.llmServiceKeyRequiredDescription')
               }
             />
           ) : null}
@@ -325,14 +331,14 @@ export const SettingsAiTab = ({
               <SettingField label="Provider">
                 <Select
                   value={llmDraft.provider}
-                  options={LLM_PROVIDER_OPTIONS}
+                  options={getLlmProviderOptions()}
                   onChange={onLlmProviderChange}
                   style={{ width: '100%' }}
                 />
               </SettingField>
             </Col>
             <Col xs={24} lg={10}>
-              <SettingField label="Base URL">
+              <SettingField label={t('settings.fields.baseUrl')}>
                 <Input
                   value={llmDraft.baseUrl}
                   placeholder="https://api.openai.com/v1"
@@ -347,7 +353,7 @@ export const SettingsAiTab = ({
               </SettingField>
             </Col>
             <Col xs={24} lg={8}>
-              <SettingField label="模型名称">
+              <SettingField label={t('settings.fields.model')}>
                 <Input
                   value={llmDraft.model}
                   placeholder="gpt-5.4"
@@ -362,7 +368,7 @@ export const SettingsAiTab = ({
               </SettingField>
             </Col>
             <Col xs={24}>
-              <SettingField label="API Key" hint={llmTestHint}>
+              <SettingField label={t('settings.fields.apiKey')} hint={llmTestHint}>
                 <Password
                   value={llmDraft.apiKey}
                   placeholder={getAiKeyPlaceholder(llmDraft, settings.llm)}
@@ -381,7 +387,7 @@ export const SettingsAiTab = ({
 
           <Flex justify="space-between" align="center" gap={12} wrap>
             <Text type="secondary">
-              在线测试与项目对话当前统一走兼容 `/chat/completions` 协议；若服务商提供多个入口，请填写兼容端点的 Base URL。
+              {t('settings.alerts.llmProtocolHint')}
             </Text>
             <Space>
               <Button
@@ -389,14 +395,14 @@ export const SettingsAiTab = ({
                 loading={testingSection === 'llm'}
                 onClick={() => void onTestLlm()}
               >
-                测试连接
+                {t('settings.actions.testConnection')}
               </Button>
               <Button
                 type="primary"
                 loading={savingSection === 'llm'}
                 onClick={() => void onSaveLlm()}
               >
-                保存对话模型
+                {t('settings.actions.saveLlm')}
               </Button>
             </Space>
           </Flex>

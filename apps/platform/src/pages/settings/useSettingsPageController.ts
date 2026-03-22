@@ -1,5 +1,6 @@
 import { App } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { extractApiErrorMessage } from '@api/error';
 import {
   getSettings,
@@ -38,6 +39,7 @@ import {
 
 export const useSettingsPageController = () => {
   const { message } = App.useApp();
+  const { t } = useTranslation('pages');
   const [activeTab, setActiveTab] = useState<SettingsTabKey>('ai');
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,12 +89,12 @@ export const useSettingsPageController = () => {
       const response = await getSettings();
       syncDrafts(response);
     } catch (currentError) {
-      console.error('[SettingsPage] 加载设置失败:', currentError);
-      setError(extractApiErrorMessage(currentError, '加载设置失败，请稍后重试'));
+      console.error('[SettingsPage] settings loading failed:', currentError);
+      setError(extractApiErrorMessage(currentError, t('settings.reload')));
     } finally {
       setLoading(false);
     }
-  }, [syncDrafts]);
+  }, [syncDrafts, t]);
 
   useEffect(() => {
     void loadSettings();
@@ -153,7 +155,7 @@ export const useSettingsPageController = () => {
     }
 
     if (!embeddingDraft.baseUrl.trim() || !embeddingDraft.model.trim()) {
-      message.error('请先完善向量模型的 Base URL 和模型名称');
+      message.error(t('settings.validation.completeEmbedding'));
       return;
     }
 
@@ -163,8 +165,8 @@ export const useSettingsPageController = () => {
     if (requiresFreshApiKey(embeddingDraft, settings.embedding) && !embeddingDraft.apiKey.trim()) {
       message.error(
         serviceTargetChanged
-          ? '你已切换到新的模型服务，请重新输入新的 API Key'
-          : '当前仍使用环境变量 Key，如需保存为工作区配置，请重新输入新的 API Key',
+          ? t('settings.validation.newServiceApiKey')
+          : t('settings.validation.envApiKey'),
       );
       return;
     }
@@ -187,12 +189,12 @@ export const useSettingsPageController = () => {
       setEmbeddingRebuildPending((current) => current || definitionChanged);
       message.success(
         definitionChanged
-          ? '向量模型配置已保存，已有知识库需要重建索引'
-          : '向量模型配置已保存',
+          ? t('settings.validation.embeddingSavedRebuild')
+          : t('settings.validation.embeddingSaved'),
       );
     } catch (currentError) {
       message.error(
-        extractApiErrorMessage(currentError, '保存向量模型配置失败，请稍后重试'),
+        extractApiErrorMessage(currentError, t('settings.validation.embeddingSaveFailed')),
       );
     } finally {
       setSavingSection(null);
@@ -205,7 +207,7 @@ export const useSettingsPageController = () => {
     }
 
     if (!llmDraft.baseUrl.trim() || !llmDraft.model.trim()) {
-      message.error('请先完善对话模型的 Base URL 和模型名称');
+      message.error(t('settings.validation.completeLlm'));
       return;
     }
 
@@ -214,8 +216,8 @@ export const useSettingsPageController = () => {
     if (requiresFreshApiKey(llmDraft, settings.llm) && !llmDraft.apiKey.trim()) {
       message.error(
         serviceTargetChanged
-          ? '你已切换到新的模型服务，请重新输入新的 API Key'
-          : '当前仍使用环境变量 Key，如需保存为工作区配置，请重新输入新的 API Key',
+          ? t('settings.validation.newServiceApiKey')
+          : t('settings.validation.envApiKey'),
       );
       return;
     }
@@ -235,10 +237,10 @@ export const useSettingsPageController = () => {
       });
 
       syncDrafts(nextSettings);
-      message.success('对话模型配置已保存');
+      message.success(t('settings.validation.llmSaved'));
     } catch (currentError) {
       message.error(
-        extractApiErrorMessage(currentError, '保存对话模型配置失败，请稍后重试'),
+        extractApiErrorMessage(currentError, t('settings.validation.llmSaveFailed')),
       );
     } finally {
       setSavingSection(null);
@@ -247,12 +249,12 @@ export const useSettingsPageController = () => {
 
   const handleSaveIndexing = async () => {
     if (indexingDraft.chunkOverlap >= indexingDraft.chunkSize) {
-      message.error('Chunk 重叠必须小于 Chunk 大小');
+      message.error(t('settings.validation.chunkOverlap'));
       return;
     }
 
     if (indexingDraft.supportedTypes.length === 0) {
-      message.error('至少需要保留一种可索引文件类型');
+      message.error(t('settings.validation.supportedTypes'));
       return;
     }
 
@@ -267,10 +269,10 @@ export const useSettingsPageController = () => {
       });
 
       syncDrafts(nextSettings);
-      message.success('索引参数已保存');
+      message.success(t('settings.validation.indexingSaved'));
     } catch (currentError) {
       message.error(
-        extractApiErrorMessage(currentError, '保存索引参数失败，请稍后重试'),
+        extractApiErrorMessage(currentError, t('settings.validation.indexingSaveFailed')),
       );
     } finally {
       setSavingSection(null);
@@ -279,12 +281,12 @@ export const useSettingsPageController = () => {
 
   const handleSaveWorkspace = async () => {
     if (!workspaceDraft.name.trim()) {
-      message.error('请输入工作区名称');
+      message.error(t('settings.validation.workspaceName'));
       return;
     }
 
     if (workspaceDraft.description.trim().length > 200) {
-      message.error('工作区描述不能超过 200 个字符');
+      message.error(t('settings.validation.workspaceDescription'));
       return;
     }
 
@@ -297,10 +299,10 @@ export const useSettingsPageController = () => {
       });
 
       syncDrafts(nextSettings);
-      message.success('工作区信息已保存');
+      message.success(t('settings.validation.workspaceSaved'));
     } catch (currentError) {
       message.error(
-        extractApiErrorMessage(currentError, '保存工作区信息失败，请稍后重试'),
+        extractApiErrorMessage(currentError, t('settings.validation.workspaceSaveFailed')),
       );
     } finally {
       setSavingSection(null);
@@ -313,15 +315,15 @@ export const useSettingsPageController = () => {
     }
 
     if (!embeddingDraft.baseUrl.trim() || !embeddingDraft.model.trim()) {
-      message.error('请先完善向量模型的 Base URL 和模型名称');
+      message.error(t('settings.validation.completeEmbedding'));
       return;
     }
 
     if (requiresFreshApiKey(embeddingDraft, settings.embedding) && !embeddingDraft.apiKey.trim()) {
       message.error(
         hasAiServiceTargetChanged(embeddingDraft, settings.embedding)
-          ? '你已切换到新的模型服务，请先输入新的 API Key 再测试连接'
-          : '请先输入新的 API Key 再测试连接',
+          ? t('settings.validation.testApiKeyNewService')
+          : t('settings.validation.testApiKey'),
       );
       return;
     }
@@ -350,8 +352,8 @@ export const useSettingsPageController = () => {
         ...current,
         embedding: {
           status: 'error',
-          message: '连接测试失败',
-          detail: extractApiErrorMessage(currentError, '向量模型连接测试失败'),
+          message: t('settings.feedback.failed'),
+          detail: extractApiErrorMessage(currentError, t('settings.validation.embeddingTestFailed')),
         },
       }));
     } finally {
@@ -365,15 +367,15 @@ export const useSettingsPageController = () => {
     }
 
     if (!llmDraft.baseUrl.trim() || !llmDraft.model.trim()) {
-      message.error('请先完善对话模型的 Base URL 和模型名称');
+      message.error(t('settings.validation.completeLlm'));
       return;
     }
 
     if (requiresFreshApiKey(llmDraft, settings.llm) && !llmDraft.apiKey.trim()) {
       message.error(
         hasAiServiceTargetChanged(llmDraft, settings.llm)
-          ? '你已切换到新的模型服务，请先输入新的 API Key 再测试连接'
-          : '请先输入新的 API Key 再测试连接',
+          ? t('settings.validation.testApiKeyNewService')
+          : t('settings.validation.testApiKey'),
       );
       return;
     }
@@ -402,8 +404,8 @@ export const useSettingsPageController = () => {
         ...current,
         llm: {
           status: 'error',
-          message: '连接测试失败',
-          detail: extractApiErrorMessage(currentError, '对话模型连接测试失败'),
+          message: t('settings.feedback.failed'),
+          detail: extractApiErrorMessage(currentError, t('settings.validation.llmTestFailed')),
         },
       }));
     } finally {
@@ -429,8 +431,8 @@ export const useSettingsPageController = () => {
         ...current,
         indexing: {
           status: 'error',
-          message: '索引链路测试失败',
-          detail: extractApiErrorMessage(currentError, '索引链路测试失败'),
+          message: t('settings.feedback.indexingFailed'),
+          detail: extractApiErrorMessage(currentError, t('settings.validation.indexingTestFailed')),
         },
       }));
     } finally {

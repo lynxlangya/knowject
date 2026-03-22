@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { ApiOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert, Button, Checkbox, Flex, InputNumber, Slider, Space, Tag, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { SettingsResponse } from '@api/settings';
 import type {
   IndexingDraft,
@@ -41,13 +42,17 @@ export const SettingsIndexingTab = ({
   onSaveIndexing,
   onOpenKnowledge,
 }: SettingsIndexingTabProps) => {
+  const { t } = useTranslation('pages');
+
   return (
     <SectionBlock
-      title="知识索引与分块策略"
-      description="这里控制 chunk 切分、支持的稳定文件类型，以及 Node 调用 Python indexer 的请求超时。不会把这个超时误导成 Chroma 或 embedding 的全链路超时。"
+      title={t('settings.tabs.indexing')}
+      description={t('settings.alerts.indexerTimeoutHint')}
       extra={
         <Tag color={settings.indexing.source === 'database' ? 'blue' : 'gold'}>
-          {settings.indexing.source === 'database' ? '数据库配置' : '环境变量回退'}
+          {settings.indexing.source === 'database'
+            ? t('settings.sources.database')
+            : t('settings.sources.environment')}
         </Tag>
       }
     >
@@ -56,8 +61,8 @@ export const SettingsIndexingTab = ({
           <Alert
             type="info"
             showIcon
-            title="当前使用环境变量配置"
-            description="只要还没有在设置页保存过索引参数，知识链路会继续读取环境变量作为默认值。"
+            title={t('settings.alerts.envConfig')}
+            description={t('settings.alerts.indexingEnvDescription')}
           />
         ) : null}
 
@@ -66,12 +71,12 @@ export const SettingsIndexingTab = ({
             type="warning"
             showIcon
             icon={<WarningOutlined />}
-            title="Chunk 策略已变更，已有知识库需重建索引"
+            title={t('settings.alerts.indexingRebuildTitle')}
             description={
               <Space size={8} wrap>
-                <span>新的分块参数只会作用于后续索引任务。</span>
+                <span>{t('settings.alerts.indexingRebuildDescription')}</span>
                 <Button type="link" style={{ paddingInline: 0 }} onClick={onOpenKnowledge}>
-                  前往知识库管理
+                  {t('settings.actions.openKnowledge')}
                 </Button>
               </Space>
             }
@@ -79,7 +84,7 @@ export const SettingsIndexingTab = ({
         ) : null}
 
         <div>
-          <Text strong>Chunk 大小</Text>
+          <Text strong>{t('settings.fields.chunkSize')}</Text>
           <Flex align="center" gap={16} style={{ marginTop: 12 }}>
             <Slider
               min={200}
@@ -112,9 +117,9 @@ export const SettingsIndexingTab = ({
         </div>
 
         <div>
-          <Text strong>Chunk 重叠</Text>
+          <Text strong>{t('settings.fields.chunkOverlap')}</Text>
           <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 12 }}>
-            重叠越大，跨 chunk 的语义连续性越好，但索引体积也会增加。
+            {t('settings.alerts.chunkOverlapHint')}
           </Paragraph>
           <Flex align="center" gap={16}>
             <Slider
@@ -150,8 +155,8 @@ export const SettingsIndexingTab = ({
         </div>
 
         <SettingField
-          label="Indexer 超时（毫秒）"
-          hint="这里只影响 Node 调用 Python indexer 的请求等待时间，不代表整个向量链路的统一全局超时。"
+          label={t('settings.fields.indexerTimeout')}
+          hint={t('settings.alerts.indexerTimeoutHint')}
         >
           <InputNumber
             min={1}
@@ -170,7 +175,7 @@ export const SettingsIndexingTab = ({
         </SettingField>
 
         <div>
-          <Text strong>支持的文件类型</Text>
+          <Text strong>{t('settings.fields.supportedTypes')}</Text>
           <Space
             orientation={compactTabs ? 'vertical' : 'horizontal'}
             size={16}
@@ -188,7 +193,7 @@ export const SettingsIndexingTab = ({
               }}
               options={[
                 { label: 'Markdown (.md)', value: 'md' },
-                { label: '纯文本 (.txt)', value: 'txt' },
+                { label: 'Text (.txt)', value: 'txt' },
                 { label: 'PDF (.pdf)', value: 'pdf' },
                 { label: 'Word (.docx)', value: 'docx' },
                 { label: 'Excel (.xlsx)', value: 'xlsx' },
@@ -196,7 +201,7 @@ export const SettingsIndexingTab = ({
             />
           </Space>
           <Text type="secondary" style={{ display: 'block', marginTop: 10 }}>
-            `.markdown` 会继续作为 Markdown 的解析别名，不单独暴露成设置项。
+            {t('settings.alerts.markdownAlias')}
           </Text>
         </div>
 
@@ -211,25 +216,25 @@ export const SettingsIndexingTab = ({
 
         <Flex justify="space-between" align="center" gap={12} wrap>
           <Text type="secondary">
-            测试会校验当前 Node 到 Python indexer 与 Chroma 的连通性，不会验证未保存的 chunk 草稿已经被运行中的 Python 服务采纳。
+            {t('settings.alerts.indexingTestHint')}
           </Text>
           <Space>
             <Button
               icon={<ApiOutlined />}
               loading={testingSection === 'indexing'}
               onClick={() => void onTestIndexing()}
-            >
-              测试索引链路
-            </Button>
+              >
+                {t('settings.actions.testIndexing')}
+              </Button>
             <Button
               type="primary"
               loading={savingSection === 'indexing'}
               onClick={() => void onSaveIndexing()}
-            >
-              保存索引参数
-            </Button>
-          </Space>
-        </Flex>
+              >
+                {t('settings.actions.saveIndexing')}
+              </Button>
+            </Space>
+          </Flex>
       </Space>
     </SectionBlock>
   );

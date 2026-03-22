@@ -1,5 +1,6 @@
 import { App, Button, Card, Empty, Pagination, Spin, Typography } from 'antd';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { extractApiErrorMessage } from '@api/error';
 import { getMembersOverview, type MemberOverviewResponseItem } from '@api/members';
 import { listSkills, type SkillSummaryResponse } from '@api/skills';
@@ -33,6 +34,7 @@ const MEMBERS_CONTENT_BREATHING_ROOM = 12;
 
 export const MembersPage = () => {
   const { message } = App.useApp();
+  const { t, i18n } = useTranslation('pages');
   const authUser = getAuthUser();
   const { projects } = useProjectContext();
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -67,13 +69,13 @@ export const MembersPage = () => {
         if (skillsResult.status === 'fulfilled') {
           setSkillsCatalog(skillsResult.value.items);
         } else {
-          console.error('[MembersPage] 加载 Skill 目录失败:', skillsResult.reason);
+          console.error('[MembersPage] skill catalog loading failed:', skillsResult.reason);
           setSkillsCatalog([]);
         }
       } catch (currentError) {
-        console.error('[MembersPage] 加载成员概览失败:', currentError);
+        console.error('[MembersPage] member overview loading failed:', currentError);
         setError(
-          extractApiErrorMessage(currentError, '加载成员概览失败，请稍后重试'),
+          extractApiErrorMessage(currentError, t('members.reload')),
         );
       } finally {
         setLoading(false);
@@ -81,7 +83,7 @@ export const MembersPage = () => {
     };
 
     void loadMembers();
-  }, [reloadToken]);
+  }, [reloadToken, t]);
 
   const members = useMemo(() => {
     return buildMemberViewModels({
@@ -89,8 +91,10 @@ export const MembersPage = () => {
       projects,
       currentUserId: authUser?.id ?? null,
       skillsCatalog,
+      t,
+      locale: i18n.language,
     });
-  }, [authUser?.id, items, projects, skillsCatalog]);
+  }, [authUser?.id, i18n.language, items, projects, skillsCatalog, t]);
 
   const filteredMembers = useMemo(() => {
     return filterMemberViewModels(members, filters);
@@ -143,27 +147,27 @@ export const MembersPage = () => {
 
     return [
       {
-        label: '协作成员',
-        value: `${members.length} 位`,
-        hint: '基于当前账号可见项目聚合出的协作成员。',
+        label: t('members.summary.collaborators'),
+        value: t('members.detail.itemCount', { count: members.length }),
+        hint: t('members.summary.collaboratorsHint'),
       },
       {
-        label: '跨项目协作',
-        value: `${crossProjectCount} 位`,
-        hint: '同时参与两个及以上可见项目的成员。',
+        label: t('members.summary.crossProject'),
+        value: t('members.detail.itemCount', { count: crossProjectCount }),
+        hint: t('members.summary.crossProjectHint'),
       },
       {
-        label: '项目管理员',
-        value: `${adminCount} 位`,
-        hint: '在至少一个可见项目中拥有 admin 权限。',
+        label: t('members.summary.projectAdmins'),
+        value: t('members.detail.itemCount', { count: adminCount }),
+        hint: t('members.summary.projectAdminsHint'),
       },
       {
-        label: '存在阻塞',
-        value: `${blockedCount} 位`,
-        hint: '当前协作快照中存在 blocked 状态的成员。',
+        label: t('members.summary.blocked'),
+        value: t('members.detail.itemCount', { count: blockedCount }),
+        hint: t('members.summary.blockedHint'),
       },
     ];
-  }, [members]);
+  }, [members, t]);
 
   const handleFilterChange = (patch: Partial<MemberFiltersState>) => {
     setCurrentPage(1);
@@ -234,13 +238,13 @@ export const MembersPage = () => {
       <section className={GLOBAL_ASSET_PAGE_CLASS_NAME}>
         <Card className="rounded-3xl! border-slate-200! shadow-surface!">
           <Typography.Title level={4} className="text-slate-800!">
-            成员
+            {t('members.title')}
           </Typography.Title>
           <Typography.Paragraph className="text-slate-500!">
             {error}
           </Typography.Paragraph>
           <Button onClick={() => setReloadToken((currentToken) => currentToken + 1)}>
-            重新加载
+            {t('members.reload')}
           </Button>
         </Card>
       </section>
@@ -250,8 +254,8 @@ export const MembersPage = () => {
   return (
     <section ref={sectionRef} className={GLOBAL_ASSET_PAGE_CLASS_NAME}>
       <GlobalAssetPageHeader
-        title="成员"
-        subtitle="这里按你当前可见的项目关系聚合成员基础信息、参与项目、协作快照与权限摘要。当前阶段优先回答“谁在参与、参与了哪些项目、当前状态如何”，组织级邀请与权限矩阵后续接入。"
+        title={t('members.title')}
+        subtitle={t('members.subtitle')}
         summaryItems={summaryItems}
         actions={
           <div className="flex flex-wrap gap-2">
@@ -259,18 +263,18 @@ export const MembersPage = () => {
               type="primary"
               onClick={() =>
                 message.info(
-                  '当前阶段请先让成员完成注册，再在项目成员页把已有用户加入项目。',
+                  t('members.inviteHint'),
                 )
               }
             >
-              邀请成员
+              {t('members.invite')}
             </Button>
             <Button
               onClick={() =>
-                message.info('组织级角色与权限矩阵将在后续阶段接入。')
+                message.info(t('members.rolesAndPermissionsHint'))
               }
             >
-              角色与权限
+              {t('members.rolesAndPermissions')}
             </Button>
           </div>
         }
@@ -307,7 +311,7 @@ export const MembersPage = () => {
             },
           }}
         >
-          <Empty description="当前还没有可见的协作成员" />
+          <Empty description={t('members.empty')} />
         </Card>
       ) : (
         <div
@@ -330,7 +334,7 @@ export const MembersPage = () => {
           >
             <div className="mb-4 flex items-end justify-between gap-3">
               <Typography.Title level={5} className="mb-0! text-slate-800!">
-                当前可见成员
+                {t('members.visibleMembers')}
               </Typography.Title>
             </div>
 

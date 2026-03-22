@@ -1,6 +1,33 @@
 # Knowject Frontend (`apps/platform`)
 
-前端采用 React + Vite + Ant Design，当前职责是提供登录后产品壳、项目态页面与全局资产管理页；截至 2026-03-20，基础框架阶段已完成认证接入、项目主数据接入、项目成员 roster 管理、项目资源绑定正式写回、项目对话读写链路接入、全局成员协作总览接入，以及知识库 / 技能 / 智能体 / 设置中心正式页面接线，其中 `/knowledge` 已补齐 rebuild / diagnostics 运维入口，`/skills` 已升级为正式 Skill 资产治理页，`/settings` 已完成工作区级 AI 与索引配置管理，并已直接驱动项目对话 MVP；`/project/:projectId/chat` 当前已补齐右侧消息 Rail、消息加星、共享选择 Markdown 导出与 knowledge draft drawer。desktop rail 当前默认收起，通过显式按钮展开 / 收起；窄屏继续使用 Drawer fallback。
+前端采用 React + Vite + Ant Design，当前职责是提供登录后产品壳、项目态页面与全局资产管理页；截至 2026-03-22，基础框架阶段已完成认证接入、项目主数据接入、项目成员 roster 管理、项目资源绑定正式写回、项目对话读写链路接入、全局成员协作总览接入，以及知识库 / 技能 / 智能体 / 设置中心正式页面接线，其中 `/knowledge` 已补齐 rebuild / diagnostics 运维入口，`/skills` 已升级为正式 Skill 资产治理页，`/settings` 已完成工作区级 AI 与索引配置管理，并已直接驱动项目对话 MVP；`/project/:projectId/chat` 当前已补齐右侧消息 Rail、消息加星、共享选择 Markdown 导出与 knowledge draft drawer。desktop rail 当前默认收起，通过显式按钮展开 / 收起；窄屏继续使用 Drawer fallback。语言设置第一阶段当前已落地 `English / 简体中文` 双语基础设施、登录页 guest locale 入口，以及侧栏账号面板 hover 语言入口。
+
+## Locale / i18n
+
+- 平台当前通过 `src/app/providers/LocaleProvider.tsx` 维护单一 locale state，并按 `auth.user.locale -> knowject_locale_guest -> en` 的顺序解析当前语言。
+- 未登录态语言偏好写入 `knowject_locale_guest`；登录成功后由服务端返回的 `user.locale` 接管当前 locale。
+- `src/app/providers/AntdProvider.tsx` 当前会根据 locale 在 `en_US / zh_CN` 间切换 Ant Design locale。
+- `src/api/client.ts` 当前会把 `auth.user.locale` 或 guest locale 注入 `Accept-Language`，让后端 envelope message 与前端 UI locale 保持一致。
+- `src/i18n/` 当前承载运行时 i18n 资源与 `i18next` 初始化；已落地 `auth / navigation / pages / project / api-errors / common` 六组 namespace。
+- 当前已迁移到 i18n 的页面面：
+  - 登录页
+  - 左侧栏账号面板与语言入口
+  - `/home`
+  - `/analytics`
+  - `/members`
+  - `/settings`
+  - `/404`
+
+## 文案迁移约束
+
+- 页面组件与 controller 的用户可见文案默认走 `react-i18next`。
+- 会产出用户可见文案的 helper / constants 也必须从 i18n 读取，不能继续保留自然语言字面量。
+- 当前已落地 source guard：
+  - `tests/login.locale.test.ts`
+  - `tests/appSider.locale.test.ts`
+  - `tests/global-pages.locale.test.ts`
+  - `tests/no-hardcoded-platform-copy.test.ts`
+- 修改 global pages、settings、登录页、侧栏文案时，必须同步更新 `src/i18n/locales/en|zh-CN/*`，并保持 guard 通过。
 
 ## 当前路由
 

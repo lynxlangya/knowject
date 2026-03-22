@@ -1,7 +1,21 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-20，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话同步/流式写链路、消息级 star metadata PATCH、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；当前知识上传链路已支持 `md / markdown / txt / pdf / docx / xlsx`，其中 `pdf` 仅支持可提取数字文本的文档（OCR/扫描件不支持），`docx / xlsx` 由 Python indexer 做结构感知抽取并产出 chunk anchor 元数据。Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。项目对话后端现已抽出统一 `ConversationTurnService`、provider capability gate，并新增 `PATCH /api/projects/:projectId/conversations/:conversationId/messages/:messageId` 与 `POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 两条消息级路由；其中流式事件类型冻结为 `ack / delta / done / error`。
+截至 2026-03-22，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话同步/流式写链路、消息级 star metadata PATCH、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；当前知识上传链路已支持 `md / markdown / txt / pdf / docx / xlsx`，其中 `pdf` 仅支持可提取数字文本的文档（OCR/扫描件不支持），`docx / xlsx` 由 Python indexer 做结构感知抽取并产出 chunk anchor 元数据。Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。项目对话后端现已抽出统一 `ConversationTurnService`、provider capability gate，并新增 `PATCH /api/projects/:projectId/conversations/:conversationId/messages/:messageId` 与 `POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 两条消息级路由；其中流式事件类型冻结为 `ack / delta / done / error`。语言设置第一阶段当前还补齐了 request locale 协商、`messageKey + locale dictionary` 本地化，以及账号级 locale 持久化。
+
+## Locale / message localization
+
+- 服务端当前统一把 locale negotiation 收口到请求上下文：
+  - 先读 `Accept-Language`
+  - 若缺失，则回退到 `auth.user.locale`
+  - 最终再回退到默认 `en`
+- `AppError`、validation helper、success/error envelope 当前都走 `messageKey + locale.messages`，而不是直接在业务模块里写最终展示文案。
+- `error-handler` 当前会在输出 envelope 前按 locale 解析最终 `message`，并对字段级 `meta.details.fields` 一并做本地化替换，避免英文请求下细粒度错误仍残留中文。
+- `@knowject/request` 当前已把 locale 注入 `Accept-Language`，且 GET dedupe key 已纳入 locale，避免语言切换时复用错误语种的 inflight 响应。
+- 认证域当前已支持账号级 locale：
+  - 注册时可按请求 locale 初始化
+  - 历史账号首次登录时会回填 locale
+  - `PATCH /api/auth/me/preferences` 可更新当前账号的 `locale`
 
 ## 当前构建与测试约定
 
@@ -20,6 +34,10 @@
 - `POST /api/auth/login`
   - 接收 `username` 和 `password`。
   - 以统一响应壳返回 JWT 与基础用户信息。
+- `PATCH /api/auth/me/preferences`
+  - 需要 `Authorization: Bearer <token>`。
+  - 当前接收 `{ locale }`，支持 `en` 与 `zh-CN`。
+  - 成功返回 `{ user }`，其中 `user.locale` 是最新账号级语言偏好。
 - `GET /api/auth/users`
   - 需要 `Authorization: Bearer <token>`。
   - 按 `username / name` 模糊搜索已有注册用户，供项目成员添加下拉候选使用。

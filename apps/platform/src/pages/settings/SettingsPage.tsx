@@ -7,6 +7,7 @@ import {
   ToolOutlined,
 } from '@ant-design/icons';
 import { Button, Card, Empty, Skeleton, Space, Tabs, Tag, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { PATHS } from '@app/navigation/paths';
 import { GlobalAssetPageHeader } from '@pages/assets/components/GlobalAssetLayout';
@@ -19,6 +20,7 @@ import { useSettingsPageController } from './useSettingsPageController';
 const { Paragraph, Title } = Typography;
 
 export const SettingsPage = () => {
+  const { t } = useTranslation('pages');
   const navigate = useNavigate();
   const {
     activeTab,
@@ -76,9 +78,12 @@ export const SettingsPage = () => {
   if (error || !settings) {
     return (
       <Card style={{ borderRadius: 24 }}>
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={error || '设置数据暂时不可用'}>
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={error || t('settings.unavailable')}
+        >
           <Button type="primary" icon={<ReloadOutlined />} onClick={() => void loadSettings()}>
-            重新加载
+            {t('settings.reload')}
           </Button>
         </Empty>
       </Card>
@@ -88,14 +93,14 @@ export const SettingsPage = () => {
   return (
     <Space orientation="vertical" size={24} style={{ width: '100%' }}>
       <GlobalAssetPageHeader
-        title="设置中心"
-        subtitle="在这里统一接管向量模型、对话模型、索引参数和工作区基本信息。本期设置接口先对所有已登录用户开放，后续如引入工作区管理员权限，再收紧到更严格的访问模型。"
+        title={t('settings.title')}
+        subtitle={t('settings.subtitle')}
         summaryItems={buildAiSummary(settings)}
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => navigate(PATHS.knowledge)}>前往知识库管理</Button>
+            <Button onClick={() => navigate(PATHS.knowledge)}>{t('settings.openKnowledge')}</Button>
             <Button type="primary" icon={<ReloadOutlined />} onClick={() => void loadSettings()}>
-              刷新配置
+              {t('settings.refresh')}
             </Button>
           </div>
         }
@@ -112,7 +117,7 @@ export const SettingsPage = () => {
               label: (
                 <Space size={8}>
                   <RobotOutlined />
-                  AI 模型
+                  {t('settings.tabs.ai')}
                 </Space>
               ),
               children: (
@@ -143,7 +148,7 @@ export const SettingsPage = () => {
               label: (
                 <Space size={8}>
                   <ToolOutlined />
-                  索引配置
+                  {t('settings.tabs.indexing')}
                 </Space>
               ),
               children: (
@@ -168,7 +173,7 @@ export const SettingsPage = () => {
               label: (
                 <Space size={8}>
                   <DatabaseOutlined />
-                  工作区
+                  {t('settings.tabs.workspace')}
                 </Space>
               ),
               children: (
@@ -185,9 +190,9 @@ export const SettingsPage = () => {
               label: (
                 <Space size={8}>
                   <TeamOutlined />
-                  成员与权限
+                  {t('settings.tabs.permissions')}
                   <Tag color="default" style={{ marginInlineStart: 0 }}>
-                    即将开放
+                    {t('settings.tabs.soon')}
                   </Tag>
                 </Space>
               ),
@@ -214,7 +219,7 @@ export const SettingsPage = () => {
                     <Space orientation="vertical" size={16} align="center">
                       <CheckCircleOutlined style={{ fontSize: 28, color: '#94a3b8' }} />
                       <Title level={5} style={{ margin: 0, color: '#0f172a' }}>
-                        成员权限配置即将开放
+                        {t('settings.permissions.title')}
                       </Title>
                       <Paragraph
                         type="secondary"
@@ -226,10 +231,10 @@ export const SettingsPage = () => {
                           lineHeight: 1.7,
                         }}
                       >
-                        当前成员管理请前往成员页。本期设置接口先按“登录即可访问”处理，后续若引入工作区管理员模型，再把权限收紧到更细的角色控制。
+                        {t('settings.permissions.description')}
                       </Paragraph>
                       <Button type="primary" onClick={() => navigate(PATHS.members)}>
-                        前往成员页
+                        {t('settings.permissions.openMembers')}
                       </Button>
                     </Space>
                   </div>

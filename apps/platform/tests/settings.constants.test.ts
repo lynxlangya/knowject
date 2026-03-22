@@ -24,10 +24,11 @@ test('SettingsIndexingTab 不再渲染“即将支持”占位，并包含新增
   );
 
   assert.doesNotMatch(source, /即将支持/);
+  assert.match(source, /useTranslation\(/);
   assert.match(source, /Markdown \(\.md\)/);
-  assert.match(source, /纯文本 \(\.txt\)/);
+  assert.match(source, /Text \(\.txt\)/);
   assert.match(source, /PDF \(\.pdf\)/);
   assert.match(source, /Word \(\.docx\)/);
   assert.match(source, /Excel \(\.xlsx\)/);
-  assert.match(source, /`\.markdown` 会继续作为 Markdown 的解析别名/);
+  assert.match(source, /settings\.alerts\.markdownAlias/);
 });

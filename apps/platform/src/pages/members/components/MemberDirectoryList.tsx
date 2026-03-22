@@ -1,6 +1,10 @@
 import { Avatar, Empty, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { MemberViewModel } from '../members.types';
-import { COLLABORATION_ROLE_LABELS, MEMBER_STATUS_META } from '../members.helpers';
+import {
+  getCollaborationRoleLabels,
+  getMemberStatusMeta,
+} from '../members.helpers';
 
 interface MemberDirectoryListProps {
   members: MemberViewModel[];
@@ -22,10 +26,14 @@ export const MemberDirectoryList = ({
   activeMemberId,
   onSelect,
 }: MemberDirectoryListProps) => {
+  const { t } = useTranslation('pages');
+  const collaborationRoleLabels = getCollaborationRoleLabels(t);
+  const memberStatusMeta = getMemberStatusMeta(t);
+
   if (members.length === 0) {
     return (
       <div className="flex min-h-80 items-center justify-center">
-        <Empty description="没有符合条件的成员" />
+        <Empty description={t('members.directory.empty')} />
       </div>
     );
   }
@@ -34,10 +42,12 @@ export const MemberDirectoryList = ({
     <div className="flex flex-col gap-2">
       {members.map((member) => {
         const isActive = member.id === activeMemberId;
-        const statusMeta = MEMBER_STATUS_META[member.primaryStatus];
-        const compactMeta = `${member.visibleProjectCount} 个项目${
+        const statusMeta = memberStatusMeta[member.primaryStatus];
+        const compactMeta = `${t('members.directory.projectsCount', {
+          count: member.visibleProjectCount,
+        })}${
           member.primaryRole
-            ? ` · ${COLLABORATION_ROLE_LABELS[member.primaryRole]}`
+            ? ` · ${collaborationRoleLabels[member.primaryRole]}`
             : ''
         }`;
 
@@ -68,7 +78,7 @@ export const MemberDirectoryList = ({
                   </Typography.Text>
                   {member.isCurrentUser ? (
                     <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                      我
+                      {t('members.directory.me')}
                     </span>
                   ) : null}
                   <span

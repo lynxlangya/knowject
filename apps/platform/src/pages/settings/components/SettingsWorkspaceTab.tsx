@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { Button, Card, Flex, Input, Space, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { WorkspaceDraft, SaveSection } from '../constants';
 import { SectionBlock, SettingField } from './SettingsPageParts';
 
@@ -19,16 +20,18 @@ export const SettingsWorkspaceTab = ({
   savingSection,
   onSaveWorkspace,
 }: SettingsWorkspaceTabProps) => {
+  const { t } = useTranslation('pages');
+
   return (
     <SectionBlock
-      title="工作区基本信息"
-      description="工作区文案会直接影响品牌呈现和后续设置页说明；Logo 上传本期仍是占位能力。"
+      title={t('settings.tabs.workspace')}
+      description={t('settings.alerts.workspaceDescription')}
     >
       <Space orientation="vertical" size={20} style={{ width: '100%' }}>
-        <SettingField label="工作区名称">
+        <SettingField label={t('settings.fields.workspaceName')}>
           <Input
             value={workspaceDraft.name}
-            placeholder="知项 · Knowject"
+            placeholder={t('settings.workspace.placeholderName')}
             onChange={(event) =>
               setWorkspaceDraft((current) => ({
                 ...current,
@@ -38,13 +41,13 @@ export const SettingsWorkspaceTab = ({
           />
         </SettingField>
 
-        <SettingField label="工作区描述">
+        <SettingField label={t('settings.fields.workspaceDescription')}>
           <TextArea
             rows={4}
             maxLength={200}
             showCount
             value={workspaceDraft.description}
-            placeholder="让项目知识，真正为团队所用。"
+            placeholder={t('settings.workspace.placeholderDescription')}
             onChange={(event) =>
               setWorkspaceDraft((current) => ({
                 ...current,
@@ -64,12 +67,12 @@ export const SettingsWorkspaceTab = ({
         >
           <Flex justify="space-between" align="center" gap={16} wrap>
             <div>
-              <Text strong>Logo 上传</Text>
+              <Text strong>{t('settings.fields.logoUpload')}</Text>
               <Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-                本期只保留占位，后续再接入真实文件存储与裁剪流程。
+                {t('settings.alerts.workspaceLogoDescription')}
               </Paragraph>
             </div>
-            <Button disabled>即将支持</Button>
+            <Button disabled>{t('settings.actions.comingSoon')}</Button>
           </Flex>
         </Card>
 
@@ -79,7 +82,7 @@ export const SettingsWorkspaceTab = ({
             loading={savingSection === 'workspace'}
             onClick={() => void onSaveWorkspace()}
           >
-            保存工作区信息
+            {t('settings.actions.saveWorkspace')}
           </Button>
         </Flex>
       </Space>

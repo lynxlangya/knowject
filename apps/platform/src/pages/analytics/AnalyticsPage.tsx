@@ -1,11 +1,14 @@
 import { Card, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 
 export const AnalyticsPage = () => {
+  const { t } = useTranslation('pages');
+
   return (
     <Card>
-      <Typography.Title level={4}>分析</Typography.Title>
+      <Typography.Title level={4}>{t('analytics.title')}</Typography.Title>
       <Typography.Paragraph>
-        分析模块正在建设中，当前为独立路由占位页，后续将接入项目健康度与协作指标分析。
+        {t('analytics.description')}
       </Typography.Paragraph>
     </Card>
   );

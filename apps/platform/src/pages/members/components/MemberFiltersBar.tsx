@@ -1,7 +1,8 @@
 import { Input, Select, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { ProjectSummary } from '@app/project/project.types';
 import type { MemberFiltersState } from '../members.types';
-import { MEMBER_STATUS_META } from '../members.helpers';
+import { getMemberStatusMeta } from '../members.helpers';
 
 interface MemberFiltersBarProps {
   filters: MemberFiltersState;
@@ -18,15 +19,18 @@ export const MemberFiltersBar = ({
   projects,
   onChange,
 }: MemberFiltersBarProps) => {
+  const { t } = useTranslation('pages');
+  const memberStatusMeta = getMemberStatusMeta(t);
+
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-surface">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <Typography.Title level={5} className="mb-1! text-slate-800!">
-            成员筛选
+            {t('members.filters.title')}
           </Typography.Title>
           <Typography.Text className="text-sm text-slate-500">
-            共 {total} 位成员，当前筛选后 {filteredTotal} 位。
+            {t('members.filters.summary', { total, filteredTotal })}
           </Typography.Text>
         </div>
 
@@ -34,14 +38,14 @@ export const MemberFiltersBar = ({
           <Input
             allowClear
             value={filters.query}
-            placeholder="搜索姓名、用户名或项目"
+            placeholder={t('members.filters.queryPlaceholder')}
             onChange={(event) => onChange({ query: event.target.value })}
           />
           <Select
             value={filters.status}
             options={[
-              { value: 'all', label: '全部状态' },
-              ...Object.entries(MEMBER_STATUS_META).map(([value, meta]) => ({
+              { value: 'all', label: t('members.filters.allStatus') },
+              ...Object.entries(memberStatusMeta).map(([value, meta]) => ({
                 value,
                 label: meta.label,
               })),
@@ -53,9 +57,9 @@ export const MemberFiltersBar = ({
           <Select
             value={filters.adminScope}
             options={[
-              { value: 'all', label: '全部权限' },
-              { value: 'admin', label: '含管理员权限' },
-              { value: 'member', label: '仅协作成员' },
+              { value: 'all', label: t('members.filters.allPermissions') },
+              { value: 'admin', label: t('members.filters.adminOnly') },
+              { value: 'member', label: t('members.filters.memberOnly') },
             ]}
             onChange={(value) =>
               onChange({ adminScope: value as MemberFiltersState['adminScope'] })
@@ -64,7 +68,7 @@ export const MemberFiltersBar = ({
           <Select
             value={filters.projectId}
             options={[
-              { value: 'all', label: '全部项目' },
+              { value: 'all', label: t('members.filters.allProjects') },
               ...projects.map((project) => ({
                 value: project.id,
                 label: project.name,
@@ -75,9 +79,9 @@ export const MemberFiltersBar = ({
           <Select
             value={filters.sortBy}
             options={[
-              { value: 'activity', label: '最近活跃优先' },
-              { value: 'projects', label: '参与项目数优先' },
-              { value: 'joined', label: '最近加入优先' },
+              { value: 'activity', label: t('members.filters.sortByActivity') },
+              { value: 'projects', label: t('members.filters.sortByProjects') },
+              { value: 'joined', label: t('members.filters.sortByJoined') },
             ]}
             onChange={(value) =>
               onChange({ sortBy: value as MemberFiltersState['sortBy'] })

@@ -1,9 +1,10 @@
 import { Avatar, Empty, Tabs, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { MemberAssetSummary, MemberViewModel } from '../members.types';
 import {
-  COLLABORATION_ROLE_LABELS,
-  MEMBER_STATUS_META,
-  PROJECT_ACCESS_ROLE_LABELS,
+  getCollaborationRoleLabels,
+  getMemberStatusMeta,
+  getProjectAccessRoleLabels,
   formatDisplayDate,
   formatDisplayDateTime,
   getAssetGroupTitle,
@@ -23,7 +24,10 @@ const getInitials = (name: string): string => {
     .join('');
 };
 
-const renderAssetGroups = (assets: MemberAssetSummary) => {
+const renderAssetGroups = (
+  assets: MemberAssetSummary,
+  t: ReturnType<typeof useTranslation<'pages'>>['t'],
+) => {
   const groups: Array<keyof MemberAssetSummary> = ['knowledge', 'skills', 'agents'];
 
   return (
@@ -38,16 +42,16 @@ const renderAssetGroups = (assets: MemberAssetSummary) => {
           >
             <div className="flex items-center justify-between gap-3">
               <Typography.Title level={5} className="mb-0! text-slate-800!">
-                {getAssetGroupTitle(groupKey)}
+                {getAssetGroupTitle(t, groupKey)}
               </Typography.Title>
               <span className="rounded-full bg-white px-2.5 py-1 text-xs text-slate-500">
-                {items.length} 个
+                {t('members.assets.count', { count: items.length })}
               </span>
             </div>
 
             {items.length === 0 ? (
               <Typography.Paragraph className="mb-0! mt-4 text-sm! text-slate-500!">
-                当前可见项目里还没有关联这类资产。
+                {t('members.assets.emptyGroup')}
               </Typography.Paragraph>
             ) : (
               <div className="mt-4 flex flex-col gap-3">
@@ -79,15 +83,20 @@ const renderAssetGroups = (assets: MemberAssetSummary) => {
 };
 
 export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
+  const { t, i18n } = useTranslation('pages');
+  const collaborationRoleLabels = getCollaborationRoleLabels(t);
+  const memberStatusMeta = getMemberStatusMeta(t);
+  const projectAccessRoleLabels = getProjectAccessRoleLabels(t);
+
   if (!member) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center">
-        <Empty description="请选择一位成员查看详情" />
+        <Empty description={t('members.detail.selectPrompt')} />
       </div>
     );
   }
 
-  const statusMeta = MEMBER_STATUS_META[member.primaryStatus];
+  const statusMeta = memberStatusMeta[member.primaryStatus];
   const adminProjects = member.projects.filter(
     (project) => project.projectRole === 'admin',
   );
@@ -111,7 +120,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
               </Typography.Title>
               {member.isCurrentUser ? (
                 <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">
-                  当前账号
+                  {t('members.detail.currentAccount')}
                 </span>
               ) : null}
               <span
@@ -128,14 +137,20 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
             <div className="mt-3 flex flex-wrap gap-2">
               {member.primaryRole ? (
                 <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                  主协作角色：{COLLABORATION_ROLE_LABELS[member.primaryRole]}
+                  {t('members.detail.primaryRole', {
+                    role: collaborationRoleLabels[member.primaryRole],
+                  })}
                 </span>
               ) : null}
               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                参与项目：{member.visibleProjectCount}
+                {t('members.detail.visibleProjects', {
+                  count: member.visibleProjectCount,
+                })}
               </span>
               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                管理项目：{member.adminProjectCount}
+                {t('members.detail.adminProjects', {
+                  count: member.adminProjectCount,
+                })}
               </span>
             </div>
           </div>
@@ -144,19 +159,21 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
         <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-105">
           {[
             {
-              label: '首次协作',
-              value: formatDisplayDate(member.firstCollaborationAt),
+              label: t('members.detail.firstCollaboration'),
+              value: formatDisplayDate(member.firstCollaborationAt, i18n.language, t),
             },
             {
-              label: '最近协作',
-              value: member.recentActivity?.displayTime ?? formatDisplayDateTime(member.lastProjectActivityAt),
+              label: t('members.detail.latestCollaboration'),
+              value:
+                member.recentActivity?.displayTime ??
+                formatDisplayDateTime(member.lastProjectActivityAt, i18n.language, t),
             },
             {
-              label: '知识 / 技能 / 智能体',
+              label: t('members.detail.assetsSummary'),
               value: `${member.assets.knowledge.length} / ${member.assets.skills.length} / ${member.assets.agents.length}`,
             },
             {
-              label: '项目状态分布',
+              label: t('members.detail.projectStatusBreakdown'),
               value: `${member.activeProjectCount}/${member.syncingProjectCount}/${member.blockedProjectCount}/${member.idleProjectCount}`,
             },
           ].map((item) => (
@@ -181,12 +198,12 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
             items={[
               {
                 key: 'overview',
-                label: '概览',
+                label: t('members.detail.overview'),
                 children: (
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
                     <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        当前关注
+                        {t('members.detail.currentFocus')}
                       </Typography.Title>
                       <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-7! text-slate-600!">
                         {member.focusSummary}
@@ -204,7 +221,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                           ))
                         ) : (
                           <Typography.Text className="text-sm text-slate-400">
-                            暂无职责标签。
+                            {t('members.detail.noResponsibilityTags')}
                           </Typography.Text>
                         )}
                       </div>
@@ -212,7 +229,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
 
                     <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        最近动作
+                        {t('members.detail.recentActivity')}
                       </Typography.Title>
                       {member.recentActivity ? (
                         <>
@@ -220,12 +237,15 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                             {member.recentActivity.summary}
                           </Typography.Paragraph>
                           <Typography.Text className="mt-2 block text-xs text-slate-400">
-                            类型：{member.recentActivity.type} · {member.recentActivity.displayTime}
+                            {t('members.detail.activityType', {
+                              type: member.recentActivity.type,
+                              time: member.recentActivity.displayTime,
+                            })}
                           </Typography.Text>
                         </>
                       ) : (
                         <Typography.Paragraph className="mb-0! mt-3 text-sm! text-slate-500!">
-                          当前还没有更细的协作动作快照，先以项目最近更新时间作为协作信号。
+                          {t('members.detail.noRecentActivity')}
                         </Typography.Paragraph>
                       )}
                     </div>
@@ -234,7 +254,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
               },
               {
                 key: 'projects',
-                label: '项目',
+                label: t('members.detail.projectsTab'),
                 children: (
                   <div className="flex flex-col gap-3">
                     {member.projects.map((project) => (
@@ -249,23 +269,23 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                                 {project.name}
                               </Typography.Title>
                               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                                {PROJECT_ACCESS_ROLE_LABELS[project.projectRole]}
+                                {projectAccessRoleLabels[project.projectRole]}
                               </span>
                               <span
                                 className={`rounded-full border px-2.5 py-1 text-xs ${
-                                  MEMBER_STATUS_META[project.status].className
+                                  memberStatusMeta[project.status].className
                                 }`}
                               >
-                                {MEMBER_STATUS_META[project.status].label}
+                                {memberStatusMeta[project.status].label}
                               </span>
                               {project.collaborationRole ? (
                                 <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                                  {COLLABORATION_ROLE_LABELS[project.collaborationRole]}
+                                  {collaborationRoleLabels[project.collaborationRole]}
                                 </span>
                               ) : null}
                             </div>
                             <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-                              {project.description.trim() || '当前项目暂无补充描述。'}
+                              {project.description.trim() || t('members.detail.projectDescriptionFallback')}
                             </Typography.Paragraph>
                             <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-500!">
                               {project.focusSummary}
@@ -275,16 +295,16 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                           <div className="grid gap-3 sm:grid-cols-3 xl:min-w-85">
                             {[
                               {
-                                label: '知识库',
-                                value: `${project.knowledgeCount} 个`,
+                                label: t('members.detail.knowledgeCount'),
+                                value: t('members.detail.itemCount', { count: project.knowledgeCount }),
                               },
                               {
-                                label: '技能',
-                                value: `${project.skillCount} 个`,
+                                label: t('members.detail.skillCount'),
+                                value: t('members.detail.itemCount', { count: project.skillCount }),
                               },
                               {
-                                label: '智能体',
-                                value: `${project.agentCount} 个`,
+                                label: t('members.detail.agentCount'),
+                                value: t('members.detail.itemCount', { count: project.agentCount }),
                               },
                             ].map((item) => (
                               <div
@@ -303,10 +323,18 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400">
-                          <span>加入项目：{formatDisplayDateTime(project.joinedAt)}</span>
-                          <span>项目更新：{formatDisplayDateTime(project.updatedAt)}</span>
+                          <span>{t('members.detail.joinedAt', {
+                            time: formatDisplayDateTime(project.joinedAt, i18n.language, t),
+                          })}</span>
+                          <span>{t('members.detail.updatedAt', {
+                            time: formatDisplayDateTime(project.updatedAt, i18n.language, t),
+                          })}</span>
                           <span>
-                            最近动作：{project.recentActivity?.summary ?? '待补充协作动作'}
+                            {t('members.detail.latestAction', {
+                              summary:
+                                project.recentActivity?.summary ??
+                                t('members.detail.latestActionFallback'),
+                            })}
                           </span>
                         </div>
                       </article>
@@ -316,49 +344,49 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
               },
               {
                 key: 'assets',
-                label: '资产',
-                children: renderAssetGroups(member.assets),
+                label: t('members.detail.assetsTab'),
+                children: renderAssetGroups(member.assets, t),
               },
               {
                 key: 'permissions',
-                label: '权限',
+                label: t('members.detail.permissionsTab'),
                 children: (
                   <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
                     <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        权限摘要
+                        {t('members.detail.permissionSummary')}
                       </Typography.Title>
                       <div className="mt-4 flex flex-col gap-3">
                         <div className="rounded-2xl border border-white bg-white px-4 py-3">
                           <Typography.Text className="text-xs text-slate-400">
-                            可管理项目
+                            {t('members.detail.manageableProjects')}
                           </Typography.Text>
                           <Typography.Paragraph className="mb-0! mt-2 text-sm! font-medium text-slate-700!">
-                            {member.adminProjectCount} 个
+                            {t('members.detail.itemCount', { count: member.adminProjectCount })}
                           </Typography.Paragraph>
                         </div>
                         <div className="rounded-2xl border border-white bg-white px-4 py-3">
                           <Typography.Text className="text-xs text-slate-400">
-                            协作成员项目
+                            {t('members.detail.collaboratorProjects')}
                           </Typography.Text>
                           <Typography.Paragraph className="mb-0! mt-2 text-sm! font-medium text-slate-700!">
-                            {member.memberProjectCount} 个
+                            {t('members.detail.itemCount', { count: member.memberProjectCount })}
                           </Typography.Paragraph>
                         </div>
                         <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
-                          当前仅展示你可见项目中的权限关系；真正的组织级角色与权限矩阵将在后续阶段接入。
+                          {t('members.detail.permissionSummaryHint')}
                         </Typography.Paragraph>
                       </div>
                     </div>
 
                     <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        项目访问范围
+                        {t('members.detail.accessScope')}
                       </Typography.Title>
 
                       {member.projects.length === 0 ? (
                         <div className="mt-6">
-                          <Empty description="当前没有可见项目权限" />
+                          <Empty description={t('members.detail.noVisiblePermissions')} />
                         </div>
                       ) : (
                         <div className="mt-4 flex flex-col gap-3">
@@ -372,16 +400,18 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                                   {project.name}
                                 </Typography.Text>
                                 <Typography.Text className="mt-1 block text-xs text-slate-400">
-                                  加入于 {formatDisplayDateTime(project.joinedAt)}
+                                  {t('members.detail.joinedIn', {
+                                    time: formatDisplayDateTime(project.joinedAt, i18n.language, t),
+                                  })}
                                 </Typography.Text>
                               </div>
                               <div className="flex flex-wrap gap-2">
                                 <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
-                                  {PROJECT_ACCESS_ROLE_LABELS[project.projectRole]}
+                                  {projectAccessRoleLabels[project.projectRole]}
                                 </span>
                                 {project.collaborationRole ? (
                                   <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
-                                    {COLLABORATION_ROLE_LABELS[project.collaborationRole]}
+                                    {collaborationRoleLabels[project.collaborationRole]}
                                   </span>
                                 ) : null}
                               </div>
@@ -399,7 +429,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
           {adminProjects.length > 0 ? (
             <div className="rounded-card border border-amber-200 bg-amber-50/60 p-4">
               <Typography.Text className="text-sm font-medium text-amber-800">
-                该成员当前在 {adminProjects.length} 个可见项目中具备管理员权限，需要重点关注成员配置与权限变更带来的协作影响。
+                {t('members.detail.adminImpact', { count: adminProjects.length })}
               </Typography.Text>
             </div>
           ) : null}

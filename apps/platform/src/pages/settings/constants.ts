@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import i18n from '../../i18n';
 import type {
   SettingsAiConfigResponse,
   SettingsConnectionTestResponse,
@@ -47,9 +48,16 @@ export interface SettingsConnectionFeedbackState {
   llm: ConnectionFeedback | null;
 }
 
+const tp = (key: string, options?: Record<string, unknown>): string => {
+  return i18n.t(key, {
+    ns: 'pages',
+    ...options,
+  });
+};
+
 export const EMBEDDING_PROVIDER_PRESETS: Record<
   SettingsEmbeddingProvider,
-  { label: string; baseUrl: string; model: string }
+  { label: string; labelKey?: string; baseUrl: string; model: string }
 > = {
   openai: {
     label: 'OpenAI',
@@ -57,12 +65,14 @@ export const EMBEDDING_PROVIDER_PRESETS: Record<
     model: 'text-embedding-3-small',
   },
   aliyun: {
-    label: '阿里云百炼',
+    label: 'aliyun',
+    labelKey: 'settings.providers.aliyun',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model: 'text-embedding-v3',
   },
   zhipu: {
-    label: '智谱',
+    label: 'zhipu',
+    labelKey: 'settings.providers.zhipu',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     model: 'embedding-3',
   },
@@ -72,7 +82,8 @@ export const EMBEDDING_PROVIDER_PRESETS: Record<
     model: 'voyage-3-large',
   },
   custom: {
-    label: '自定义',
+    label: 'custom',
+    labelKey: 'settings.providers.custom',
     baseUrl: '',
     model: '',
   },
@@ -80,7 +91,7 @@ export const EMBEDDING_PROVIDER_PRESETS: Record<
 
 export const LLM_PROVIDER_PRESETS: Record<
   SettingsLlmProvider,
-  { label: string; baseUrl: string; model: string }
+  { label: string; labelKey?: string; baseUrl: string; model: string }
 > = {
   openai: {
     label: 'OpenAI',
@@ -93,7 +104,8 @@ export const LLM_PROVIDER_PRESETS: Record<
     model: 'gemini-2.5-flash',
   },
   aliyun: {
-    label: '阿里云百炼',
+    label: 'aliyun',
+    labelKey: 'settings.providers.aliyun',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model: 'qwen3.5-plus',
   },
@@ -108,49 +120,60 @@ export const LLM_PROVIDER_PRESETS: Record<
     model: 'kimi-k2-turbo-preview',
   },
   zhipu: {
-    label: '智谱 GLM',
+    label: 'zhipu-glm',
+    labelKey: 'settings.providers.zhipuGlm',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
     model: 'glm-5',
   },
   custom: {
-    label: '自定义',
+    label: 'custom',
+    labelKey: 'settings.providers.custom',
     baseUrl: '',
     model: '',
   },
 };
 
-export const SOURCE_META: Record<
-  SettingsSource,
-  { label: string; color: 'gold' | 'blue' }
-> = {
-  database: {
-    label: '数据库配置',
-    color: 'blue',
-  },
-  environment: {
-    label: '环境变量回退',
-    color: 'gold',
-  },
+const resolvePresetLabel = (preset: { label: string; labelKey?: string }): string => {
+  return preset.labelKey ? tp(preset.labelKey) : preset.label;
 };
 
-const buildProviderOptions = <TProvider extends string>(
-  presets: Record<TProvider, { label: string }>,
-): Array<{ value: TProvider; label: string }> => {
-  return (Object.entries(presets) as Array<[TProvider, { label: string }]>).map(
-    ([value, preset]) => ({
-      value,
-      label: preset.label,
+export const getEmbeddingProviderOptions = (): Array<{
+  value: SettingsEmbeddingProvider;
+  label: string;
+}> => {
+  return (Object.keys(EMBEDDING_PROVIDER_PRESETS) as SettingsEmbeddingProvider[]).map(
+    (provider) => ({
+      value: provider,
+      label: resolvePresetLabel(EMBEDDING_PROVIDER_PRESETS[provider]),
     }),
   );
 };
 
-export const EMBEDDING_PROVIDER_OPTIONS = buildProviderOptions(EMBEDDING_PROVIDER_PRESETS);
-export const LLM_PROVIDER_OPTIONS = (
-  Object.keys(LLM_PROVIDER_PRESETS) as SettingsLlmProvider[]
-).map((provider) => ({
-  value: provider,
-  label: LLM_PROVIDER_PRESETS[provider].label,
-}));
+export const getLlmProviderOptions = (): Array<{
+  value: SettingsLlmProvider;
+  label: string;
+}> => {
+  return (Object.keys(LLM_PROVIDER_PRESETS) as SettingsLlmProvider[]).map(
+    (provider) => ({
+      value: provider,
+      label: resolvePresetLabel(LLM_PROVIDER_PRESETS[provider]),
+    }),
+  );
+};
+
+export const SOURCE_META: Record<
+  SettingsSource,
+  { labelKey: string; color: 'gold' | 'blue' }
+> = {
+  database: {
+    labelKey: 'settings.sources.database',
+    color: 'blue',
+  },
+  environment: {
+    labelKey: 'settings.sources.environment',
+    color: 'gold',
+  },
+};
 
 const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   dateStyle: 'medium',
@@ -201,14 +224,14 @@ export const getInitialWorkspaceDraft = (
   settings: SettingsResponse | null,
 ): WorkspaceDraft => {
   return {
-    name: settings?.workspace.name ?? '知项 · Knowject',
+    name: settings?.workspace.name ?? tp('settings.workspace.placeholderName'),
     description: settings?.workspace.description ?? '',
   };
 };
 
 const formatDateTime = (value: string | null): string => {
   if (!value) {
-    return '尚未记录';
+    return tp('settings.keyStatus.statusUnknown');
   }
 
   return dateTimeFormatter.format(new Date(value));
@@ -220,18 +243,20 @@ export const buildConnectionFeedback = (
   if (result.success) {
     return {
       status: 'success',
-      message: '连接测试通过',
+      message: tp('settings.feedback.success'),
       detail:
         result.latencyMs !== undefined
-          ? `服务响应正常，往返延迟约 ${result.latencyMs}ms。`
-          : '服务响应正常。',
+          ? tp('settings.feedback.successWithLatency', {
+              latencyMs: result.latencyMs,
+            })
+          : tp('settings.feedback.successNoLatency'),
     };
   }
 
   return {
     status: 'error',
-    message: '连接测试失败',
-    detail: result.error || '远端服务返回了失败结果。',
+    message: tp('settings.feedback.failed'),
+    detail: result.error || tp('settings.feedback.remoteFailed'),
   };
 };
 
@@ -239,27 +264,44 @@ export const buildIndexingConnectionFeedback = (
   result: SettingsIndexingConnectionTestResponse,
 ): ConnectionFeedback => {
   const summaryParts = [
-    result.service ? `服务 ${result.service}` : null,
+    result.service
+      ? tp('settings.feedback.serviceLabel', {
+          service: result.service,
+        })
+      : null,
     result.chromaReachable === true
-      ? 'Chroma 可达'
+      ? tp('settings.feedback.chromaReachable')
       : result.chromaReachable === false
-        ? 'Chroma 不可达'
+        ? tp('settings.feedback.chromaUnreachable')
         : null,
     result.supportedFormats.length > 0
-      ? `支持 ${result.supportedFormats.join(' / ')}`
+      ? tp('settings.feedback.supportsFormats', {
+          formats: result.supportedFormats.join(' / '),
+        })
       : null,
     result.chunkSize !== null && result.chunkOverlap !== null
-      ? `runtime chunk ${result.chunkSize} / ${result.chunkOverlap}`
+      ? tp('settings.feedback.runtimeChunk', {
+          chunkSize: result.chunkSize,
+          chunkOverlap: result.chunkOverlap,
+        })
       : null,
-    result.embeddingProvider ? `embedding ${result.embeddingProvider}` : null,
+    result.embeddingProvider
+      ? tp('settings.feedback.embeddingProvider', {
+          provider: result.embeddingProvider,
+        })
+      : null,
   ].filter((item): item is string => Boolean(item));
 
   if (result.success) {
     return {
       status: 'success',
-      message: '索引链路测试通过',
+      message: tp('settings.feedback.indexingSuccess'),
       detail: [
-        result.latencyMs !== undefined ? `Node 到 indexer 往返约 ${result.latencyMs}ms` : null,
+        result.latencyMs !== undefined
+          ? tp('settings.feedback.indexingLatency', {
+              latencyMs: result.latencyMs,
+            })
+          : null,
         ...summaryParts,
       ]
         .filter((item): item is string => Boolean(item))
@@ -269,13 +311,17 @@ export const buildIndexingConnectionFeedback = (
 
   const statusLabel =
     result.indexerStatus === 'degraded'
-      ? 'Python indexer 可达，但链路处于降级状态'
-      : '当前无法完成 Python indexer diagnostics';
+      ? tp('settings.feedback.indexerDegraded')
+      : tp('settings.feedback.indexerUnavailable');
 
   return {
     status: 'error',
-    message: '索引链路测试失败',
-    detail: [statusLabel, ...summaryParts, result.error || '索引链路返回失败结果']
+    message: tp('settings.feedback.indexingFailed'),
+    detail: [
+      statusLabel,
+      ...summaryParts,
+      result.error || tp('settings.feedback.indexingRemoteFailed'),
+    ]
       .filter((item): item is string => Boolean(item))
       .join('，'),
   };
@@ -326,10 +372,14 @@ export const getAiKeyPlaceholder = <TProvider extends string>(
   current: SettingsAiConfigResponse<TProvider>,
 ): string => {
   if (requiresFreshApiKey(draft, current)) {
-    return '请输入新的 API Key';
+    return tp('settings.keyStatus.enterNewApiKey');
   }
 
-  return current.hasKey ? `已配置（${current.apiKeyHint || '****'}）` : '请输入新的 API Key';
+  return current.hasKey
+    ? tp('settings.keyStatus.configuredMask', {
+        hint: current.apiKeyHint || '****',
+      })
+    : tp('settings.keyStatus.enterNewApiKey');
 };
 
 export const getAiKeyStatusTag = <TProvider extends string>({
@@ -345,33 +395,35 @@ export const getAiKeyStatusTag = <TProvider extends string>({
     if (!draft.apiKey.trim()) {
       return {
         color: 'gold',
-        label: '需重新输入 Key',
+        label: tp('settings.keyStatus.newKeyRequired'),
       };
     }
 
     if (feedback?.status === 'success') {
       return {
         color: 'green',
-        label: '新 Key 已测试',
+        label: tp('settings.keyStatus.newKeyTested'),
       };
     }
 
     return {
       color: 'gold',
-      label: '新 Key 待测试',
+      label: tp('settings.keyStatus.newKeyPending'),
     };
   }
 
   if (current.hasKey) {
     return {
       color: 'green',
-      label: `已配置 Key ${current.apiKeyHint || ''}`.trim(),
+      label: tp('settings.keyStatus.configuredKey', {
+        hint: current.apiKeyHint || '',
+      }).trim(),
     };
   }
 
   return {
     color: 'default',
-    label: '未保存 Key',
+    label: tp('settings.keyStatus.unsavedKey'),
   };
 };
 
@@ -385,53 +437,59 @@ export const getAiTestHint = <TProvider extends string>({
   feedback: ConnectionFeedback | null;
 }): ReactNode => {
   if (feedback?.status === 'success') {
-    return '当前草稿测试通过';
+    return tp('settings.keyStatus.currentDraftPassed');
   }
 
   if (feedback?.status === 'error') {
-    return '当前草稿测试失败，请检查 Key、Base URL 与模型名称。';
+    return tp('settings.keyStatus.currentDraftFailed');
   }
 
   if (hasAiUnsavedChanges(draft, current)) {
-    return '当前草稿尚未测试';
+    return tp('settings.keyStatus.currentDraftPending');
   }
 
-  return `最近测试：${formatDateTime(current.testedAt)}，状态 ${
-    current.testStatus === 'ok'
-      ? '通过'
-      : current.testStatus === 'failed'
-        ? '失败'
-        : '未记录'
-  }`;
+  return tp('settings.keyStatus.lastTested', {
+    time: formatDateTime(current.testedAt),
+    status:
+      current.testStatus === 'ok'
+        ? tp('settings.keyStatus.statusOk')
+        : current.testStatus === 'failed'
+          ? tp('settings.keyStatus.statusFailed')
+          : tp('settings.keyStatus.statusUnknown'),
+  });
 };
 
 export const buildAiSummary = (settings: SettingsResponse): GlobalAssetSummaryItem[] => {
   return [
     {
-      label: '向量模型',
-      value: EMBEDDING_PROVIDER_PRESETS[settings.embedding.provider]?.label ?? settings.embedding.provider,
+      label: tp('settings.summary.embeddingModel'),
+      value:
+        resolvePresetLabel(EMBEDDING_PROVIDER_PRESETS[settings.embedding.provider]) ??
+        settings.embedding.provider,
       hint:
         settings.embedding.source === 'database'
-          ? '当前由工作区设置接管'
-          : '当前仍使用环境变量回退',
+          ? tp('settings.summary.embeddingManaged')
+          : tp('settings.summary.embeddingEnvironment'),
     },
     {
-      label: '对话模型',
-      value: LLM_PROVIDER_PRESETS[settings.llm.provider]?.label ?? settings.llm.provider,
+      label: tp('settings.summary.chatModel'),
+      value:
+        resolvePresetLabel(LLM_PROVIDER_PRESETS[settings.llm.provider]) ??
+        settings.llm.provider,
       hint:
         settings.llm.source === 'database'
-          ? '配置已进入数据库'
-          : '当前仍使用环境变量回退',
+          ? tp('settings.summary.chatManaged')
+          : tp('settings.summary.chatEnvironment'),
     },
     {
-      label: '分块策略',
+      label: tp('settings.summary.chunkStrategy'),
       value: `${settings.indexing.chunkSize} / ${settings.indexing.chunkOverlap}`,
-      hint: 'Chunk Size / Chunk Overlap',
+      hint: tp('settings.summary.chunkHint'),
     },
     {
-      label: '访问阶段',
-      value: '登录即可访问',
-      hint: '后续再补工作区权限模型',
+      label: tp('settings.summary.accessStage'),
+      value: tp('settings.summary.signedInAccess'),
+      hint: tp('settings.summary.accessHint'),
     },
   ];
 };
