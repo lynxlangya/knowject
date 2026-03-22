@@ -3,6 +3,7 @@ import type {
   ProjectResourceGroup,
 } from "@app/project/project.types";
 import type { ProjectResourceSummaryItem } from "../types/projectResources.types";
+import { tp } from "../project.i18n";
 
 export const getProjectResourceCountByGroup = (
   groups: ProjectResourceGroup[],
@@ -31,24 +32,33 @@ export const buildProjectResourceSummaryItems = ({
 }): ProjectResourceSummaryItem[] => {
   return [
     {
-      label: "知识库",
-      value: `${resourceCountByGroup.knowledge} 个`,
-      hint: `${globalKnowledgeCount} 个全局绑定 + ${projectKnowledgeCount} 个项目私有`,
+      label: tp('resources.summary.knowledge'),
+      value: tp('resources.summary.countValue', {
+        count: resourceCountByGroup.knowledge,
+      }),
+      hint: tp('resources.summary.knowledgeHint', {
+        global: globalKnowledgeCount,
+        project: projectKnowledgeCount,
+      }),
     },
     {
-      label: "技能",
-      value: `${resourceCountByGroup.skills} 个`,
-      hint: "当前项目可直接复用的工作流能力",
+      label: tp('resources.summary.skills'),
+      value: tp('resources.summary.countValue', {
+        count: resourceCountByGroup.skills,
+      }),
+      hint: tp('resources.summary.skillsHint'),
     },
     {
-      label: "智能体",
-      value: `${resourceCountByGroup.agents} 个`,
-      hint: "当前项目已绑定的协作智能体",
+      label: tp('resources.summary.agents'),
+      value: tp('resources.summary.countValue', {
+        count: resourceCountByGroup.agents,
+      }),
+      hint: tp('resources.summary.agentsHint'),
     },
     {
-      label: "资源分层",
-      value: "2 层",
-      hint: "全局资产治理，项目资源编排与消费",
+      label: tp('resources.summary.layered'),
+      value: tp('resources.summary.layeredValue'),
+      hint: tp('resources.summary.layeredHint'),
     },
   ];
 };

@@ -21,6 +21,7 @@ import {
   type KnowledgeDraftDefaults,
 } from './projectConversationMessageExport';
 import type { ProjectChatAssistantBubbleActions } from './projectChatBubble.components';
+import { tp } from './project.i18n';
 
 export interface ProjectKnowledgeDraftValues extends KnowledgeDraftDefaults {}
 
@@ -252,7 +253,7 @@ export const useProjectConversationMessageActions = ({
   const toggleMessageStar = useCallback(
     async (messageId: string, starred: boolean): Promise<boolean> => {
       if (!currentConversationDetail || !conversationId) {
-        message.warning('当前对话尚未准备完成，暂时无法更新消息星标');
+        message.warning(tp('conversation.assistantActions.starUnavailable'));
         return false;
       }
 
@@ -263,7 +264,7 @@ export const useProjectConversationMessageActions = ({
       });
 
       if (!optimisticResult.previousMessage) {
-        message.warning('目标消息不存在，无法更新星标');
+        message.warning(tp('conversation.assistantActions.starTargetMissing'));
         return false;
       }
 
@@ -306,7 +307,10 @@ export const useProjectConversationMessageActions = ({
           });
         });
         message.error(
-          getErrorMessage(currentError, '更新消息星标失败，请稍后重试'),
+          getErrorMessage(
+            currentError,
+            tp('conversation.assistantActions.starUpdateFailed'),
+          ),
         );
         return false;
       } finally {
@@ -328,11 +332,11 @@ export const useProjectConversationMessageActions = ({
     async (content: string): Promise<boolean> => {
       try {
         await copyProjectChatText(content);
-        message.success('已复制回复');
+        message.success(tp('conversation.assistantActions.copied'));
         return true;
       } catch (currentError) {
         console.error(currentError);
-        message.error('复制回复失败，请稍后重试');
+        message.error(tp('conversation.assistantActions.copyFailed'));
         return false;
       }
     },
@@ -348,7 +352,7 @@ export const useProjectConversationMessageActions = ({
       );
 
       if (!targetAssistantMessage) {
-        message.warning('目标助手回复不存在，无法复制');
+        message.warning(tp('conversation.assistantActions.missingCopy'));
         return false;
       }
 
@@ -364,7 +368,7 @@ export const useProjectConversationMessageActions = ({
       }
 
       if (!currentConversationDetail) {
-        message.warning('当前对话尚未准备完成，暂时无法重试该回复');
+        message.warning(tp('conversation.assistantActions.retryUnavailable'));
         return false;
       }
 
@@ -374,7 +378,7 @@ export const useProjectConversationMessageActions = ({
       });
 
       if (!retryTarget) {
-        message.warning('未找到可重试的上一条用户消息');
+        message.warning(tp('conversation.assistantActions.retryTargetMissing'));
         return false;
       }
 
@@ -463,7 +467,7 @@ export const useProjectConversationMessageActions = ({
       const markdownContent = buildSelectedMessagesMarkdown(selectedMessageIds);
 
       if (!markdownContent || !currentConversationDetail) {
-        message.warning('请先选择至少一条已持久化的消息');
+        message.warning(tp('conversation.assistantActions.selectPersisted'));
         return false;
       }
 
@@ -519,7 +523,7 @@ export const useProjectConversationMessageActions = ({
           status: 'error',
           message: getErrorMessage(
             currentError,
-            '保存知识草稿失败，请稍后重试',
+            tp('conversation.assistantActions.knowledgeSaveFailed'),
           ),
         };
       } finally {

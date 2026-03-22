@@ -1,4 +1,5 @@
 import { App, Button, Card, Tag, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { ProjectResourceFocus } from '@app/project/project.types';
 import { getGlobalAssetsByType } from '@app/project/project.catalog';
 
@@ -14,6 +15,7 @@ export const GlobalAssetManagementPage = ({
   description,
 }: GlobalAssetManagementPageProps) => {
   const { message } = App.useApp();
+  const { t } = useTranslation('pages');
   const assets = getGlobalAssetsByType(assetType);
 
   return (
@@ -22,7 +24,7 @@ export const GlobalAssetManagementPage = ({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              全局资产管理中心
+              {t('assets.eyebrow')}
             </Typography.Text>
             <Typography.Title level={2} className="mb-1! mt-2 text-slate-900!">
               {title}
@@ -32,11 +34,14 @@ export const GlobalAssetManagementPage = ({
             </Typography.Paragraph>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="primary" onClick={() => message.info('后续版本将在此接入全局资产创建能力。')}>
-              新建资产
+            <Button
+              type="primary"
+              onClick={() => message.info(t('assets.createPending'))}
+            >
+              {t('assets.create')}
             </Button>
-            <Button onClick={() => message.info('后续版本将在此选择项目并完成资源引入。')}>
-              引入到项目
+            <Button onClick={() => message.info(t('assets.importPending'))}>
+              {t('assets.importToProject')}
             </Button>
           </div>
         </div>
@@ -52,15 +57,15 @@ export const GlobalAssetManagementPage = ({
               <Typography.Title level={4} className="mb-0! text-slate-900!">
                 {asset.name}
               </Typography.Title>
-              <Tag color="blue">全局资产</Tag>
+              <Tag color="blue">{t('assets.globalTag')}</Tag>
             </div>
             <Typography.Paragraph className="mb-0! mt-3 text-sm! text-slate-500!">
               {asset.description}
             </Typography.Paragraph>
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400">
-              <span>维护方：{asset.owner}</span>
-              <span>最近更新：{asset.updatedAt}</span>
-              <span>使用项目：{asset.usageCount}</span>
+              <span>{t('assets.owner', { value: asset.owner })}</span>
+              <span>{t('assets.updatedAt', { value: asset.updatedAt })}</span>
+              <span>{t('assets.usageCount', { count: asset.usageCount })}</span>
             </div>
           </article>
         ))}

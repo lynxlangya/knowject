@@ -1,5 +1,6 @@
 import { CloudUploadOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { Button, Popconfirm, Tag, Tooltip, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { KnowledgeDetailResponse } from '@api/knowledge';
 import type {
   KnowledgeDetailOverviewStat,
@@ -29,6 +30,8 @@ export const KnowledgeDetailHeader = ({
   onEditKnowledge,
   onDeleteKnowledge,
 }: KnowledgeDetailHeaderProps) => {
+  const { t } = useTranslation('pages');
+
   return (
     <>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -43,7 +46,7 @@ export const KnowledgeDetailHeader = ({
             </Tag>
           </div>
           <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-            {activeKnowledge.description || '当前未填写描述。'}
+            {activeKnowledge.description || t('knowledge.detailHeader.descriptionFallback')}
           </Typography.Paragraph>
         </div>
 
@@ -52,7 +55,7 @@ export const KnowledgeDetailHeader = ({
             title={
               activeKnowledge.sourceType === 'global_docs'
                 ? KNOWLEDGE_UPLOAD_TOOLTIP
-                : 'global_code 当前不支持上传文档。'
+                : t('knowledge.detailHeader.uploadDisabled')
             }
           >
             <span>
@@ -62,18 +65,18 @@ export const KnowledgeDetailHeader = ({
                 disabled={activeKnowledge.sourceType !== 'global_docs'}
                 onClick={onUploadDocument}
               >
-                上传文档
+                {t('knowledge.detailHeader.upload')}
               </Button>
             </span>
           </Tooltip>
           <Button icon={<EditOutlined />} onClick={onEditKnowledge}>
-            编辑
+            {t('knowledge.detailHeader.edit')}
           </Button>
           <Popconfirm
-            title="删除知识库"
-            description="会删除 Mongo 元数据、原始文件，并清理对应 Chroma 向量记录。"
-            okText="删除"
-            cancelText="取消"
+            title={t('knowledge.detailHeader.deleteTitle')}
+            description={t('knowledge.detailHeader.deleteDescription')}
+            okText={t('knowledge.detailHeader.delete')}
+            cancelText={t('knowledge.detailHeader.cancel')}
             okButtonProps={{
               danger: true,
               loading: deletingKnowledgeId === activeKnowledge.id,
@@ -85,7 +88,7 @@ export const KnowledgeDetailHeader = ({
               icon={<DeleteOutlined />}
               loading={deletingKnowledgeId === activeKnowledge.id}
             >
-              删除
+              {t('knowledge.detailHeader.delete')}
             </Button>
           </Popconfirm>
         </div>

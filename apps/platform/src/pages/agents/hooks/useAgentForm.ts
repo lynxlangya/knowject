@@ -7,6 +7,7 @@ import {
 } from '@api/agents';
 import { extractApiErrorMessage } from '@api/error';
 import { createAgentPayload } from '../adapters/agentPayload.adapter';
+import { tp } from '../agents.i18n';
 import { AGENT_FORM_INITIAL_VALUES } from '../constants/agentsManagement.constants';
 import type { AgentFormValues, ModalMode } from '../types/agentsManagement.types';
 
@@ -63,12 +64,14 @@ export const useAgentForm = ({ message, onUpsertAgent }: UseAgentFormParams) => 
           : await createAgent(payload);
 
       onUpsertAgent(result.agent);
-      message.success(modalMode === 'edit' ? '智能体已更新' : '智能体已创建');
+      message.success(
+        modalMode === 'edit' ? tp('feedback.updated') : tp('feedback.created'),
+      );
       closeModal();
     } catch (currentError) {
       console.error('[AgentsManagementPage] 保存智能体失败:', currentError);
       message.error(
-        extractApiErrorMessage(currentError, '保存智能体失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('feedback.saveFailed')),
       );
     } finally {
       setSubmitting(false);

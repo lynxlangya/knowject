@@ -243,7 +243,7 @@ docs/
 - `apps/platform/src/app/providers/AntdProvider.tsx`
   - 当前会根据 locale 在 `en_US / zh_CN` 间切换 Ant Design locale。
 - `apps/platform/src/i18n/*`
-  - 当前已落地 `auth / navigation / pages / project / api-errors / common` 六组 namespace 资源；登录页、侧栏、global pages 与 settings 已切到 i18n 资源，资产域与项目域剩余页面仍在继续迁移。
+  - 当前已落地 `auth / navigation / pages / project / api-errors / common` 六组 namespace 资源；登录页、侧栏、global pages、`/knowledge`、`/skills`、`/agents`、`/settings` 与项目 `chat/resources` 主链路已切到 i18n 资源，项目 `overview/members/layout` 等剩余页面仍在继续迁移。
 - 根 `eslint.config.mjs`
   - 当前已对 `apps/platform/src/**/*.{ts,tsx}` 启用 type-aware ESLint，并新增 `@typescript-eslint/await-thenable` 与 `@typescript-eslint/no-floating-promises`；前端 fire-and-forget Promise 现在必须显式 `void`。
 

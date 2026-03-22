@@ -6,6 +6,7 @@ import type {
 import { Typography, type MenuProps } from 'antd';
 import type { CSSProperties } from 'react';
 import { createElement, type ReactNode } from 'react';
+import i18n from '../../i18n';
 import type { ConversationSummary } from '../../app/project/project.types';
 import type { ProjectConversationMessageResponse } from '../../api/projects';
 import { KNOWJECT_BRAND } from '../../styles/brand';
@@ -19,6 +20,7 @@ import {
   ProjectChatUserFooter,
   ProjectChatUserMessage,
 } from './projectChatBubble.components';
+import { tp } from './project.i18n';
 
 const AI_BUBBLE_STYLE: CSSProperties = {
   padding: 18,
@@ -38,7 +40,7 @@ interface ProjectConversationLabelProps {
 }
 
 const formatConversationUpdatedAt = (value: string): string => {
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -122,7 +124,7 @@ const ProjectConversationLabel = ({
               {
                 className: labelClassName,
               },
-              active ? '当前线程' : '最近活跃',
+              active ? tp('conversation.active') : tp('conversation.recent'),
             ),
           ),
         ),
@@ -247,7 +249,7 @@ export const buildProjectChatBubbleItems = (
     bubbleItems.push({
       key: options.draftAssistantMessage.id,
       role: 'ai',
-      content: options.draftAssistantMessage.content || '正在生成...',
+      content: options.draftAssistantMessage.content || tp('conversation.creatingDraft'),
       extraInfo: {
         createdAt: options.draftAssistantMessage.createdAt,
         sources: [],
@@ -273,17 +275,17 @@ export const buildProjectConversationContextMenuItems = ({
   return [
     {
       key: 'share',
-      label: '分享',
+      label: tp('conversation.menuShare'),
       disabled: actionsLocked,
     },
     {
       key: 'knowledge',
-      label: '沉淀为知识',
+      label: tp('conversation.menuKnowledge'),
       disabled: actionsLocked,
     },
     {
       key: 'resources',
-      label: '查看相关资源',
+      label: tp('conversation.menuResources'),
       disabled: actionsLocked,
     },
     {
@@ -291,12 +293,12 @@ export const buildProjectConversationContextMenuItems = ({
     },
     {
       key: 'rename',
-      label: '重命名',
+      label: tp('conversation.menuRename'),
       disabled: actionsLocked,
     },
     {
       key: 'delete',
-      label: '删除',
+      label: tp('conversation.actions.deleteConfirm'),
       danger: true,
       disabled: actionsLocked || conversationsCount <= 1,
     },
@@ -342,8 +344,8 @@ export const PROJECT_CHAT_BUBBLE_ROLES: BubbleListProps['role'] = {
       editable: userActions
         ? {
             editing: userActions.editing,
-            okText: '保存并重跑',
-            cancelText: '取消',
+            okText: tp('conversation.editSubmit'),
+            cancelText: tp('conversation.actions.cancel'),
           }
         : false,
       onEditConfirm: userActions?.onEditConfirm,

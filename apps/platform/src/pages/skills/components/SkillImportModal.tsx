@@ -1,6 +1,7 @@
 import { Alert, Button, Input, Modal, Tag, Tabs, Typography } from 'antd';
 import { CloudDownloadOutlined } from '@ant-design/icons';
 import type { SkillImportPreview } from '@api/skills';
+import { useTranslation } from 'react-i18next';
 import { GlobalAssetMetaPill } from '@pages/assets/components/GlobalAssetLayout';
 import {
   LIFECYCLE_STATUS_META,
@@ -52,14 +53,15 @@ export const SkillImportModal = ({
   onImportRefChange,
   onImportUrlChange,
 }: SkillImportModalProps) => {
+  const { t } = useTranslation('pages');
   return (
     <Modal
-      title="导入 Skill"
+      title={t('skills.importFlow.title')}
       open={importModalOpen}
       onCancel={onCancel}
       onOk={onSubmit}
-      okText="导入 Skill"
-      cancelText="取消"
+      okText={t('skills.importFlow.submit')}
+      cancelText={t('skills.importFlow.cancel')}
       okButtonProps={{
         disabled: importPreview === null,
       }}
@@ -71,7 +73,7 @@ export const SkillImportModal = ({
         <Alert
           type="info"
           showIcon
-          message="导入即自有：导入后的 Skill 会成为你的可编辑全局资产，但当前阶段不会自动回源同步。"
+          message={t('skills.importFlow.intro')}
         />
 
         <Tabs
@@ -82,12 +84,12 @@ export const SkillImportModal = ({
           items={[
             {
               key: 'github',
-              label: 'GitHub',
+              label: t('skills.importFlow.github'),
               children: (
                 <div className="space-y-3">
                   <Input
                     value={importGitHubUrl}
-                    placeholder="优先支持 GitHub tree/blob/raw URL"
+                    placeholder={t('skills.importFlow.githubUrlPlaceholder')}
                     onChange={(event) => {
                       onImportGitHubUrlChange(event.target.value);
                     }}
@@ -116,14 +118,14 @@ export const SkillImportModal = ({
                     />
                   </div>
                   <Typography.Text className="text-xs text-slate-400">
-                    支持 `repository + path + ref`，也支持直接粘贴 GitHub URL。若路径指向 Skill 目录，会保留 bundle 结构。
+                    {t('skills.importFlow.githubHelp')}
                   </Typography.Text>
                 </div>
               ),
             },
             {
               key: 'url',
-              label: '原始 Markdown URL',
+              label: t('skills.importFlow.rawUrl'),
               children: (
                 <div className="space-y-3">
                   <Input
@@ -134,7 +136,7 @@ export const SkillImportModal = ({
                     }}
                   />
                   <Typography.Text className="text-xs text-slate-400">
-                    仅支持直接返回 Markdown 文本的原始 URL，不支持网页抓取与 zip。
+                    {t('skills.importFlow.rawUrlHelp')}
                   </Typography.Text>
                 </div>
               ),
@@ -148,7 +150,7 @@ export const SkillImportModal = ({
             loading={importPreviewLoading}
             onClick={onPreview}
           >
-            解析预览
+            {t('skills.importFlow.preview')}
           </Button>
         </div>
 
@@ -156,12 +158,12 @@ export const SkillImportModal = ({
           <div className="space-y-4 rounded-card-lg border border-slate-200 bg-slate-50/70 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <GlobalAssetMetaPill className={SOURCE_META.imported.accentClass}>
-                公网导入
+                {t('skills.importFlow.imported')}
               </GlobalAssetMetaPill>
               <GlobalAssetMetaPill
                 className={LIFECYCLE_STATUS_META.draft.accentClass}
               >
-                草稿
+                {t('skills.importFlow.draft')}
               </GlobalAssetMetaPill>
             </div>
 
@@ -176,7 +178,7 @@ export const SkillImportModal = ({
 
             <div className="rounded-panel border border-slate-200 bg-white px-4 py-4">
               <Typography.Text className="text-caption font-semibold uppercase tracking-[0.14em] text-slate-400">
-                来源信息
+                {t('skills.importFlow.provenance')}
               </Typography.Text>
               <Typography.Paragraph className="mb-0! mt-2 break-all text-sm! text-slate-500!">
                 {importPreview.importProvenance.githubUrl ??
@@ -186,7 +188,7 @@ export const SkillImportModal = ({
 
             <div className="rounded-panel border border-slate-200 bg-white px-4 py-4">
               <Typography.Text className="text-caption font-semibold uppercase tracking-[0.14em] text-slate-400">
-                Bundle 文件
+                {t('skills.importFlow.bundleFiles')}
               </Typography.Text>
               <div className="mt-3 flex flex-wrap gap-2">
                 {importPreview.bundleFiles.map((file) => (

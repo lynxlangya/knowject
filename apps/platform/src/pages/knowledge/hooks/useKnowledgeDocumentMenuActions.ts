@@ -4,6 +4,7 @@ import {
   buildKnowledgeDocumentDownloadPendingMessage,
   buildKnowledgeDocumentPreviewPendingMessage,
 } from '../utils/knowledgeMessages';
+import { tp } from '../knowledge.i18n';
 
 interface KnowledgeDocumentActionMessageApi {
   info: (content: string) => void;
@@ -43,13 +44,13 @@ export const useKnowledgeDocumentMenuActions = ({
   const confirmDeleteDocument = useCallback(
     (document: KnowledgeDocumentResponse) => {
       modal.confirm({
-        title: '删除文档',
+        title: tp('modal.deleteDocumentTitle'),
         content:
           document.status === 'pending' || document.status === 'processing'
-            ? '会删除文档记录与原始文件；若后台索引任务刚好完成，系统会继续尝试清理对应向量。'
-            : '会删除文档记录、原始文件，并清理对应向量记录。',
-        okText: '删除',
-        cancelText: '取消',
+            ? tp('modal.deleteDocumentDescriptionDone')
+            : tp('modal.deleteDocumentDescriptionDefault'),
+        okText: tp('modal.delete'),
+        cancelText: tp('modal.cancel'),
         okButtonProps: {
           danger: true,
         },

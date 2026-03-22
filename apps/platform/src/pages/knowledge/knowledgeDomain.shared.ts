@@ -15,6 +15,8 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { createElement } from 'react';
+import i18n from '@/i18n';
+import { tp } from './knowledge.i18n';
 
 export interface KnowledgeSourceMeta {
   label: string;
@@ -27,25 +29,19 @@ export interface KnowledgeDetailOverviewStat {
   emphasis: 'number' | 'time';
 }
 
-const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
-
-const compactDateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  month: 'numeric',
-  day: 'numeric',
-});
+const getIntlLocale = (): string => {
+  return i18n.resolvedLanguage === 'zh-CN' ? 'zh-CN' : 'en-US';
+};
 
 export const KNOWLEDGE_INDEX_STATUS_META: Record<
   KnowledgeIndexStatus,
   { label: string; color: string }
 > = {
-  idle: { label: '待索引', color: 'default' },
-  pending: { label: '排队中', color: 'gold' },
-  processing: { label: '处理中', color: 'processing' },
-  completed: { label: '已完成', color: 'success' },
-  failed: { label: '失败', color: 'error' },
+  idle: { label: tp('indexStatus.idle'), color: 'default' },
+  pending: { label: tp('indexStatus.pending'), color: 'gold' },
+  processing: { label: tp('indexStatus.processing'), color: 'processing' },
+  completed: { label: tp('indexStatus.completed'), color: 'success' },
+  failed: { label: tp('indexStatus.failed'), color: 'error' },
 };
 
 export const KNOWLEDGE_INDEX_STATUS_CLASS: Record<
@@ -63,10 +59,10 @@ export const KNOWLEDGE_DOCUMENT_STATUS_META: Record<
   KnowledgeDocumentStatus,
   { label: string; color: string }
 > = {
-  pending: { label: '排队中', color: 'gold' },
-  processing: { label: '处理中', color: 'processing' },
-  completed: { label: '已完成', color: 'success' },
-  failed: { label: '失败', color: 'error' },
+  pending: { label: tp('documentStatus.pending'), color: 'gold' },
+  processing: { label: tp('documentStatus.processing'), color: 'processing' },
+  completed: { label: tp('documentStatus.completed'), color: 'success' },
+  failed: { label: tp('documentStatus.failed'), color: 'error' },
 };
 
 export const KNOWLEDGE_SOURCE_TYPE_META: Record<
@@ -74,11 +70,11 @@ export const KNOWLEDGE_SOURCE_TYPE_META: Record<
   KnowledgeSourceMeta
 > = {
   global_docs: {
-    label: '全局文档',
+    label: tp('sourceMeta.global_docs'),
     color: 'blue',
   },
   global_code: {
-    label: '全局代码',
+    label: tp('sourceMeta.global_code'),
     color: 'purple',
   },
 };
@@ -89,52 +85,58 @@ export const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {
 };
 
 export const KNOWLEDGE_REBUILD_TOOLTIP =
-  '重新清理并构建当前知识库下的全部文档向量。';
+  tp('rebuildTooltip');
 
 export const formatKnowledgeDateTime = (
   value: string | null | undefined,
 ): string => {
   if (!value) {
-    return '未记录';
+    return tp('notRecorded');
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return '未记录';
+    return tp('notRecorded');
   }
 
-  return dateTimeFormatter.format(date);
+  return new Intl.DateTimeFormat(getIntlLocale(), {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
 };
 
 export const formatKnowledgeCompactDate = (
   value: string | null | undefined,
 ): string => {
   if (!value) {
-    return '未记录';
+    return tp('notRecorded');
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return '未记录';
+    return tp('notRecorded');
   }
 
-  return compactDateFormatter.format(date);
+  return new Intl.DateTimeFormat(getIntlLocale(), {
+    month: 'numeric',
+    day: 'numeric',
+  }).format(date);
 };
 
 export const getKnowledgeInitials = (name: string): string => {
   const trimmed = name.trim();
 
   if (!trimmed) {
-    return '知';
+    return tp('initialsFallback');
   }
 
   if (/^[a-z0-9]/i.test(trimmed)) {
     return trimmed.slice(0, 2).toUpperCase();
   }
 
-  return trimmed[0] ?? '知';
+  return trimmed[0] ?? tp('initialsFallback');
 };
 
 export const pickNextActiveKnowledgeId = (
@@ -268,11 +270,11 @@ export const buildKnowledgeRebuildBlockedReason = (
   knowledge: KnowledgeDetailResponse | null,
 ): string | null => {
   if (!knowledge) {
-    return '请先选择一个知识库';
+    return tp('rebuildBlocked.noSelection');
   }
 
   if (knowledge.documents.length === 0) {
-    return '当前知识库没有可重建文档';
+    return tp('rebuildBlocked.noDocuments');
   }
 
   if (
@@ -281,7 +283,7 @@ export const buildKnowledgeRebuildBlockedReason = (
         document.status === 'pending' || document.status === 'processing',
     )
   ) {
-    return '当前仍有文档在排队或处理中，暂不允许整库重建';
+    return tp('rebuildBlocked.processing');
   }
 
   return null;
@@ -295,7 +297,7 @@ export const buildKnowledgeDetailOverviewStats = (
 ): KnowledgeDetailOverviewStat[] => {
   const items: KnowledgeDetailOverviewStat[] = [
     {
-      label: '文档数量',
+      label: tp('stats.documentCount'),
       value: `${knowledge.documentCount}`,
       emphasis: 'number',
     },
@@ -303,14 +305,14 @@ export const buildKnowledgeDetailOverviewStats = (
 
   if (options?.includeChunkCount) {
     items.push({
-      label: '分块数量',
+      label: tp('stats.chunkCount'),
       value: `${knowledge.chunkCount}`,
       emphasis: 'number',
     });
   }
 
   items.push({
-    label: '最近更新',
+    label: tp('stats.updatedAt'),
     value: formatKnowledgeDateTime(knowledge.updatedAt),
     emphasis: 'time',
   });
@@ -326,12 +328,12 @@ export const buildKnowledgeDocumentActionMenuItems = (
     {
       key: 'preview',
       icon: createElement(EyeOutlined),
-      label: '预览',
+      label: tp('documentActions.preview'),
     },
     {
       key: 'download',
       icon: createElement(DownloadOutlined),
-      label: '下载',
+      label: tp('documentActions.download'),
     },
     {
       type: 'divider',
@@ -344,7 +346,7 @@ export const buildKnowledgeDocumentActionMenuItems = (
       {
         key: 'refresh',
         icon: createElement(ReloadOutlined),
-        label: '刷新状态',
+        label: tp('documentActions.refresh'),
         disabled: busy,
       },
       {
@@ -353,7 +355,7 @@ export const buildKnowledgeDocumentActionMenuItems = (
       {
         key: 'delete',
         icon: createElement(DeleteOutlined),
-        label: '删除文档',
+        label: tp('documentActions.delete'),
         danger: true,
         disabled: busy,
       },
@@ -367,7 +369,7 @@ export const buildKnowledgeDocumentActionMenuItems = (
           {
             key: 'retry',
             icon: createElement(ReloadOutlined),
-            label: '重试索引',
+            label: tp('documentActions.retry'),
             disabled: busy,
           },
         ]
@@ -375,7 +377,7 @@ export const buildKnowledgeDocumentActionMenuItems = (
     {
       key: 'rebuild',
       icon: createElement(ToolOutlined),
-      label: '重建索引',
+      label: tp('documentActions.rebuild'),
       disabled: busy,
     },
     {
@@ -384,7 +386,7 @@ export const buildKnowledgeDocumentActionMenuItems = (
     {
       key: 'delete',
       icon: createElement(DeleteOutlined),
-      label: '删除文档',
+      label: tp('documentActions.delete'),
       danger: true,
       disabled: busy,
     },

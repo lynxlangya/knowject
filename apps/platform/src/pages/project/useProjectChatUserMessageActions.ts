@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ProjectConversationDetailResponse } from '@api/projects';
 import { copyProjectChatText } from './projectChat.clipboard';
 import type { ProjectChatUserBubbleActions } from './projectChatBubble.components';
+import { tp } from './project.i18n';
 
 interface UseProjectChatUserMessageActionsOptions {
   currentConversationDetail: ProjectConversationDetailResponse | null;
@@ -49,7 +50,7 @@ export const useProjectChatUserMessageActions = ({
     }
 
     if (!userMessageMap.has(messageId)) {
-      message.warning('目标用户消息不存在，无法编辑');
+      message.warning(tp('conversation.userActions.missingEdit'));
       return;
     }
 
@@ -64,7 +65,7 @@ export const useProjectChatUserMessageActions = ({
     const targetUserMessage = userMessageMap.get(messageId);
 
     if (!targetUserMessage) {
-      message.warning('目标用户消息不存在，无法重试');
+      message.warning(tp('conversation.userActions.missingRetry'));
       return;
     }
 
@@ -81,16 +82,16 @@ export const useProjectChatUserMessageActions = ({
     const targetUserMessage = userMessageMap.get(messageId);
 
     if (!targetUserMessage) {
-      message.warning('目标用户消息不存在，无法复制');
+      message.warning(tp('conversation.userActions.missingCopy'));
       return;
     }
 
     try {
       await copyProjectChatText(targetUserMessage.content);
-      message.success('已复制消息');
+      message.success(tp('conversation.userActions.copied'));
     } catch (error) {
       console.error(error);
-      message.error('复制消息失败，请稍后重试');
+      message.error(tp('conversation.userActions.copyFailed'));
     }
   };
 
@@ -98,12 +99,12 @@ export const useProjectChatUserMessageActions = ({
     const trimmedContent = nextContent.trim();
 
     if (!trimmedContent) {
-      message.warning('请输入消息内容');
+      message.warning(tp('conversation.userActions.contentRequired'));
       return;
     }
 
     if (!userMessageMap.has(messageId)) {
-      message.warning('目标用户消息不存在，无法保存');
+      message.warning(tp('conversation.userActions.missingSave'));
       setEditingUserMessageId(null);
       return;
     }

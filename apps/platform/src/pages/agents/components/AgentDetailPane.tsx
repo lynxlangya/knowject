@@ -9,6 +9,7 @@ import {
   type MenuProps,
 } from 'antd';
 import type { AgentResponse } from '@api/agents';
+import { useTranslation } from 'react-i18next';
 import { GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME, GlobalAssetMetaPill } from '@pages/assets/components/GlobalAssetLayout';
 import { formatGlobalAssetUpdatedAt } from '@pages/assets/components/globalAsset.shared';
 import { AGENT_STATUS_META } from '../constants/agentsManagement.constants';
@@ -39,15 +40,16 @@ export const AgentDetailPane = ({
   registerAgentCardRef,
   selectedAgentId,
 }: AgentDetailPaneProps) => {
+  const { t } = useTranslation('pages');
   if (!error && itemsCount === 0) {
     return (
       <Card className={GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME}>
         <Empty
-          description="当前还没有全局智能体配置"
+          description={t('agents.detail.emptyAll')}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         >
           <Button type="primary" onClick={onCreateFirstAgent}>
-            创建第一个智能体
+            {t('agents.detail.createFirst')}
           </Button>
         </Empty>
       </Card>
@@ -58,7 +60,7 @@ export const AgentDetailPane = ({
     return (
       <Card className={GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME}>
         <Empty
-          description="当前分组下暂无智能体"
+          description={t('agents.detail.emptyFiltered')}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       </Card>
@@ -101,7 +103,7 @@ export const AgentDetailPane = ({
                   className="mb-0! mt-3 text-sm! text-slate-500!"
                   ellipsis={{ rows: 2 }}
                 >
-                  {agent.description || '当前未补充智能体描述。'}
+                  {agent.description || t('agents.detail.descriptionFallback')}
                 </Typography.Paragraph>
               </div>
 
@@ -118,7 +120,7 @@ export const AgentDetailPane = ({
                   size="small"
                   icon={<MoreOutlined />}
                   loading={isBusy}
-                  aria-label={`更多操作：${agent.name}`}
+                  aria-label={t('agents.detail.moreActions', { name: agent.name })}
                   className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                 />
               </Dropdown>
@@ -126,7 +128,7 @@ export const AgentDetailPane = ({
 
             <div className="mt-3 flex items-start gap-2 text-xs">
               <Typography.Text className="shrink-0 text-slate-400!">
-                提示词
+                {t('agents.detail.prompt')}
               </Typography.Text>
               <Typography.Text className="min-w-0 text-slate-500!">
                 {promptPreview}
@@ -135,14 +137,19 @@ export const AgentDetailPane = ({
 
             <div className="mt-4 flex flex-wrap gap-2 text-caption text-slate-600">
               <GlobalAssetMetaPill className="border-slate-200 bg-slate-50 text-slate-600">
-                知识库：{agent.boundKnowledgeIds.length}
+                {t('agents.detail.boundKnowledge', {
+                  count: agent.boundKnowledgeIds.length,
+                })}
               </GlobalAssetMetaPill>
               <GlobalAssetMetaPill className="border-slate-200 bg-slate-50 text-slate-600">
-                Skill：{agent.boundSkillIds.length}
+                {t('agents.detail.boundSkills', {
+                  count: agent.boundSkillIds.length,
+                })}
               </GlobalAssetMetaPill>
               <GlobalAssetMetaPill className="border-slate-200 bg-slate-50 text-slate-600">
-                最近更新：
-                {formatGlobalAssetUpdatedAt(agent.updatedAt)}
+                {t('agents.detail.updatedAt', {
+                  value: formatGlobalAssetUpdatedAt(agent.updatedAt),
+                })}
               </GlobalAssetMetaPill>
             </div>
           </article>

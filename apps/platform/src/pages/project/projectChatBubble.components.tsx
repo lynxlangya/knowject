@@ -9,9 +9,11 @@ import {
 import { Popover, Typography } from 'antd';
 import React from 'react';
 import type { MouseEvent } from 'react';
+import i18n from '../../i18n';
 import type { ProjectConversationSourceResponse } from '../../api/projects';
 import { ProjectChatMarkdown } from './projectChat.markdown';
 import { PROJECT_CHAT_STAR_CLASS_NAMES } from './projectChatStar.styles';
+import { tp } from './project.i18n';
 
 export interface ProjectChatUserBubbleActions {
   editing: boolean;
@@ -46,14 +48,14 @@ export interface ProjectChatBubbleExtraInfo {
 export type ProjectChatBubbleStatus = 'streaming' | 'reconciling';
 
 const PROJECT_CHAT_BUBBLE_STATUS_LABELS: Record<ProjectChatBubbleStatus, string> = {
-  streaming: '生成中',
-  reconciling: '同步中',
+  streaming: tp('conversation.status.streaming'),
+  reconciling: tp('conversation.status.reconciling'),
 };
 
 void React;
 
 const formatMessageTime = (value: string): string => {
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
@@ -221,7 +223,7 @@ export const ProjectChatAssistantFooter = ({
         <div className="flex items-center gap-1 text-slate-400">
           <button
             type="button"
-            aria-label="复制回复"
+            aria-label={tp('conversation.copyReply')}
             aria-disabled={copyDisabled}
             tabIndex={copyDisabled ? -1 : 0}
             className={[
@@ -238,7 +240,7 @@ export const ProjectChatAssistantFooter = ({
           </button>
           <button
             type="button"
-            aria-label={assistantActions?.starred ? '取消加星' : '加星'}
+            aria-label={assistantActions?.starred ? tp('conversation.unstar') : tp('conversation.star')}
             aria-disabled={starDisabled}
             tabIndex={starDisabled ? -1 : 0}
             className={[
@@ -275,7 +277,7 @@ export const ProjectChatAssistantFooter = ({
           </button>
           <button
             type="button"
-            aria-label="重新生成回复"
+            aria-label={tp('conversation.retryReply')}
             aria-disabled={retryDisabled}
             tabIndex={retryDisabled ? -1 : 0}
             className={[
@@ -335,7 +337,7 @@ export const ProjectChatUserFooter = ({
 
         <button
           type="button"
-          aria-label="重新发起请求"
+          aria-label={tp('conversation.retryRequest')}
           disabled={userActions.disabled}
           className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
           onClick={(event) => handleActionClick(event, userActions.onRetry)}
@@ -344,7 +346,7 @@ export const ProjectChatUserFooter = ({
         </button>
         <button
           type="button"
-          aria-label="编辑消息"
+          aria-label={tp('conversation.editMessage')}
           disabled={userActions.disabled}
           className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
           onClick={(event) =>
@@ -355,7 +357,7 @@ export const ProjectChatUserFooter = ({
         </button>
         <button
           type="button"
-          aria-label="复制消息"
+          aria-label={tp('conversation.copyMessage')}
           disabled={userActions.disabled}
           className="inline-flex h-6 w-6 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:text-slate-300"
           onClick={(event) => handleActionClick(event, userActions.onCopy)}

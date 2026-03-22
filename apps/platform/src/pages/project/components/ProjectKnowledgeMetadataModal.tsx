@@ -1,6 +1,7 @@
 import type { FormInstance } from "antd";
 import { Form, Input, Modal, Typography } from "antd";
 import type { EditKnowledgeFormValues } from "../types/projectResources.types";
+import { tp } from "../project.i18n";
 
 interface ProjectKnowledgeMetadataModalProps {
   open: boolean;
@@ -19,7 +20,7 @@ export const ProjectKnowledgeMetadataModal = ({
 }: ProjectKnowledgeMetadataModalProps) => {
   return (
     <Modal
-      title="编辑项目知识库"
+      title={tp('resources.metadata.title')}
       open={open}
       onCancel={onCancel}
       onOk={() => form.submit()}
@@ -28,7 +29,7 @@ export const ProjectKnowledgeMetadataModal = ({
     >
       <div className="space-y-4">
         <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
-          修改当前项目私有知识库的名称和描述，不会影响全局知识资产。
+          {tp('resources.metadata.description')}
         </Typography.Paragraph>
 
         <Form<EditKnowledgeFormValues>
@@ -38,22 +39,22 @@ export const ProjectKnowledgeMetadataModal = ({
         >
           <Form.Item
             name="name"
-            label="知识库名称"
+            label={tp('resources.metadata.name')}
             rules={[
               {
                 required: true,
-                message: "请输入知识库名称",
+                message: tp('resources.metadata.nameRequired'),
               },
             ]}
           >
-            <Input maxLength={80} placeholder="例如：项目执行手册" />
+            <Input maxLength={80} placeholder={tp('resources.metadata.namePlaceholder')} />
           </Form.Item>
 
-          <Form.Item name="description" label="描述">
+          <Form.Item name="description" label={tp('resources.metadata.descriptionLabel')}>
             <Input.TextArea
               autoSize={{ minRows: 4, maxRows: 6 }}
               maxLength={240}
-              placeholder="描述这份项目私有知识的内容边界、维护职责和使用场景。"
+              placeholder={tp('resources.metadata.descriptionPlaceholder')}
             />
           </Form.Item>
         </Form>

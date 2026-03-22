@@ -8,6 +8,7 @@ import type { KnowledgeSummaryResponse } from '@api/knowledge';
 import { Button, Empty, Form, Input, Modal, Pagination, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { KNOWLEDGE_INDEX_STATUS_META } from '@pages/knowledge/knowledgeDomain.shared';
+import { tp } from '../project.i18n';
 
 export interface ProjectKnowledgeFormValues {
   name: string;
@@ -51,7 +52,7 @@ export const ProjectKnowledgeAccessModal = ({
   createProjectTitle,
   createProjectDescription,
   createProjectHelperText,
-  createProjectSubmitText = '创建并继续上传',
+  createProjectSubmitText = tp('resources.access.createSubmitDefault'),
   onCancel,
   onBindGlobalKnowledge,
   onCreateProjectKnowledge,
@@ -64,9 +65,12 @@ export const ProjectKnowledgeAccessModal = ({
     {
       value: 'global' as const,
       icon: <LinkOutlined />,
-      title: '引入全局知识库',
-      description: '复用团队已经治理好的知识资产，在项目中只读查看文档内容。',
-      helper: `已绑定 ${boundKnowledgeIds.length} 个，还可继续引入 ${availableGlobalKnowledge.length} 个`,
+      title: tp('resources.access.globalTitle'),
+      description: tp('resources.access.globalDescription'),
+      helper: tp('resources.access.globalHelper', {
+        bound: boundKnowledgeIds.length,
+        available: availableGlobalKnowledge.length,
+      }),
       accentClassName: {
         wrapper:
           'border-sky-300 bg-[linear-gradient(180deg,rgba(240,249,255,0.98),rgba(224,242,254,0.84))] shadow-[0_20px_40px_rgba(14,116,144,0.12)]',
@@ -78,13 +82,13 @@ export const ProjectKnowledgeAccessModal = ({
     {
       value: 'project' as const,
       icon: <FolderAddOutlined />,
-      title: '新建项目私有知识库',
+      title: tp('resources.access.projectTitle'),
       description:
         createProjectDescription ??
-        '为当前项目沉淀专属上下文，创建后立即进入上传来源流程。',
+        tp('resources.access.projectDescription'),
       helper:
         createProjectHelperText ??
-        '仅当前项目内可见，可继续编辑、上传、重建与删除文档',
+        tp('resources.access.projectHelper'),
       accentClassName: {
         wrapper:
           'border-emerald-300 bg-[linear-gradient(180deg,rgba(236,253,245,0.98),rgba(209,250,229,0.84))] shadow-[0_20px_40px_rgba(5,150,105,0.12)]',
@@ -150,11 +154,11 @@ export const ProjectKnowledgeAccessModal = ({
     : false;
   const showModeSwitcher = visibleModeOptions.length > 1;
   const accessModeDescription = showModeSwitcher
-    ? '把团队已经治理好的全局知识库接入到当前项目，或直接新建只属于当前项目的私有知识库。前者复用全局资产，后者用于沉淀项目专属上下文。'
+    ? tp('resources.access.modeDescription')
     : isGlobalMode
-      ? '选择要接入当前项目的全局知识库，项目内将只读消费这些知识内容。'
+      ? tp('resources.access.globalPickerDescription')
       : createProjectDescription ??
-        '先创建一个空的项目私有知识库，再回到知识草稿抽屉继续保存当前 Markdown 文档。';
+        tp('resources.access.defaultCreateDescription');
 
   const handleToggleGlobalKnowledge = (knowledgeId: string) => {
     setSelectedGlobalKnowledgeIds((current) => {
@@ -177,7 +181,7 @@ export const ProjectKnowledgeAccessModal = ({
 
   return (
     <Modal
-      title="接入知识库"
+      title={tp('resources.access.title')}
       open={open}
       onCancel={onCancel}
       afterOpenChange={(nextOpen) => {
@@ -186,8 +190,8 @@ export const ProjectKnowledgeAccessModal = ({
         }
       }}
       onOk={handleConfirm}
-      okText={isGlobalMode ? '绑定到当前项目' : createProjectSubmitText}
-      cancelText="取消"
+      okText={isGlobalMode ? tp('resources.access.okGlobal') : createProjectSubmitText}
+      cancelText={tp('resources.access.cancel')}
       confirmLoading={confirmLoading}
       okButtonProps={{
         disabled: confirmDisabled,
@@ -200,7 +204,7 @@ export const ProjectKnowledgeAccessModal = ({
         <div className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.9))] p-4">
           <div className="flex flex-col gap-2">
             <Typography.Text className="text-caption font-semibold uppercase tracking-[0.24em] text-slate-400!">
-              接入方式
+              {tp('resources.access.modeLabel')}
             </Typography.Text>
             <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-600!">
               {accessModeDescription}
@@ -246,7 +250,7 @@ export const ProjectKnowledgeAccessModal = ({
                             : 'border-slate-200 bg-slate-50 text-slate-500',
                         ].join(' ')}
                       >
-                        {selected ? '当前选择' : '点击切换'}
+                        {selected ? tp('resources.access.switchCurrent') : tp('resources.access.switchClick')}
                       </span>
                     </div>
 
@@ -289,15 +293,15 @@ export const ProjectKnowledgeAccessModal = ({
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <Typography.Title level={5} className="mb-1! text-slate-800!">
-                    选择要接入的全局知识库
+                    {tp('resources.access.globalPickerTitle')}
                   </Typography.Title>
                   <Typography.Paragraph className="mb-0! text-sm! text-slate-500!">
-                    项目页只读查看这些文档；编辑、删除和运维仍然回到全局知识库治理页。
+                    {tp('resources.access.globalPickerDescription')}
                   </Typography.Paragraph>
                 </div>
 
                 <Button icon={<LinkOutlined />} onClick={onOpenGlobalManagement}>
-                  打开全局知识库
+                  {tp('resources.access.openGlobal')}
                 </Button>
               </div>
 
@@ -307,35 +311,35 @@ export const ProjectKnowledgeAccessModal = ({
                   setGlobalSearchValue(event.target.value);
                   setGlobalKnowledgePage(1);
                 }}
-                placeholder="搜索全局知识库名称或描述"
+                placeholder={tp('resources.access.searchPlaceholder')}
                 prefix={<SearchOutlined className="text-slate-400" />}
                 allowClear
               />
 
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <Tag color="blue">可批量绑定</Tag>
-                <span>本次已选择 {selectedGlobalKnowledgeIds.length} 个</span>
-                <span>当前仍有 {availableGlobalKnowledge.length} 个可接入</span>
+                <Tag color="blue">{tp('resources.access.batchTag')}</Tag>
+                <span>{tp('resources.access.selectedCount', { count: selectedGlobalKnowledgeIds.length })}</span>
+                <span>{tp('resources.access.availableCount', { count: availableGlobalKnowledge.length })}</span>
               </div>
             </div>
 
             {knowledgeCatalogLoading ? (
               <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
                 <Typography.Paragraph className="mb-0! text-center text-sm! text-slate-500!">
-                  正在加载可接入的全局知识库...
+                  {tp('resources.access.loading')}
                 </Typography.Paragraph>
               </div>
             ) : availableGlobalKnowledge.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
                 <Empty
-                  description="当前没有可新增绑定的全局知识库。"
+                  description={tp('resources.access.empty')}
                 >
-                  <Button onClick={onOpenGlobalManagement}>前往全局知识库页</Button>
+                  <Button onClick={onOpenGlobalManagement}>{tp('resources.access.openGlobalPage')}</Button>
                 </Empty>
               </div>
             ) : filteredGlobalKnowledge.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10">
-                <Empty description="没有匹配的全局知识库，试试换个关键词。" />
+                <Empty description={tp('resources.access.emptyFiltered')} />
               </div>
             ) : (
               <div className="space-y-4">
@@ -365,7 +369,7 @@ export const ProjectKnowledgeAccessModal = ({
                               <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
                             </div>
                             <Typography.Paragraph className="mb-0! mt-2 text-sm! leading-6! text-slate-500!">
-                              {knowledge.description || '暂无描述'}
+                              {knowledge.description || tp('resources.access.noDescription')}
                             </Typography.Paragraph>
                           </div>
 
@@ -377,14 +381,14 @@ export const ProjectKnowledgeAccessModal = ({
                                 : 'border-slate-200 bg-slate-50 text-slate-400',
                             ].join(' ')}
                           >
-                            {selected ? '已选' : '可选'}
+                            {selected ? tp('resources.access.selected') : tp('resources.access.selectable')}
                           </span>
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
-                          <span>文档数：{knowledge.documentCount}</span>
-                          <span>分块数：{knowledge.chunkCount}</span>
-                          <span>维护方：{knowledge.maintainerName ?? knowledge.createdByName ?? '未指定'}</span>
+                          <span>{tp('resources.access.documentCount', { count: knowledge.documentCount })}</span>
+                          <span>{tp('resources.access.chunkCount', { count: knowledge.chunkCount })}</span>
+                          <span>{tp('resources.access.maintainer', { value: knowledge.maintainerName ?? knowledge.createdByName ?? tp('resources.item.unassigned') })}</span>
                         </div>
                       </button>
                     );
@@ -415,11 +419,11 @@ export const ProjectKnowledgeAccessModal = ({
               </span>
               <div className="min-w-0">
                 <Typography.Title level={5} className="mb-1! text-slate-800!">
-                  {createProjectTitle ?? '新建当前项目的私有知识库'}
+                  {createProjectTitle ?? tp('resources.access.defaultCreateTitle')}
                 </Typography.Title>
                 <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
                   {createProjectDescription ??
-                    '创建完成后会立刻进入上传来源流程。项目私有知识只在当前项目内消费，不会出现在全局知识库列表中。'}
+                    tp('resources.access.defaultCreateDescription')}
                 </Typography.Paragraph>
               </div>
             </div>
@@ -435,28 +439,28 @@ export const ProjectKnowledgeAccessModal = ({
             >
               <Form.Item
                 name="name"
-                label="知识库名称"
+                label={tp('resources.access.formName')}
                 rules={[
                   {
                     required: true,
-                    message: '请输入知识库名称',
+                    message: tp('resources.access.formNameRequired'),
                   },
                 ]}
               >
-                <Input maxLength={80} placeholder="例如：项目执行手册" />
+                <Input maxLength={80} placeholder={tp('resources.access.formNamePlaceholder')} />
               </Form.Item>
 
-              <Form.Item name="description" label="描述">
+              <Form.Item name="description" label={tp('resources.access.formDescription')}>
                 <Input.TextArea
                   autoSize={{ minRows: 4, maxRows: 6 }}
                   maxLength={240}
-                  placeholder="描述这份项目私有知识的内容边界、维护职责和使用场景。"
+                  placeholder={tp('resources.access.formDescriptionPlaceholder')}
                 />
               </Form.Item>
 
               <div className="rounded-card border border-dashed border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-700">
                 {createProjectHelperText ??
-                  '创建成功后会直接弹出上传来源面板，继续完成文档导入。'}
+                  tp('resources.access.createContinueHint')}
               </div>
             </Form>
           </div>
@@ -464,7 +468,7 @@ export const ProjectKnowledgeAccessModal = ({
 
         <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-3 text-xs leading-6 text-slate-500">
           <DatabaseOutlined className="mr-2 text-slate-400" />
-          全局知识适合跨项目复用；项目私有知识适合当前项目的执行手册、会议纪要、里程碑资料和上下文沉淀。
+          {tp('resources.access.footerHint')}
         </div>
       </div>
     </Modal>

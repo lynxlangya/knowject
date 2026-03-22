@@ -6,6 +6,7 @@ import {
 } from '@api/knowledge';
 import { useState } from 'react';
 import { toKnowledgePayload } from '../adapters/knowledgePayload.adapter';
+import { tp } from '../knowledge.i18n';
 import type {
   KnowledgeFormValues,
   KnowledgeModalMode,
@@ -55,14 +56,14 @@ export const useKnowledgeCrudActions = ({
         const result = await createKnowledge(toKnowledgePayload(values, 'create'));
 
         resetPollingAttempts(result.knowledge.id);
-        message.success('知识库已创建');
+        message.success(tp('crud.created'));
         closeModal();
         reloadKnowledgeList(result.knowledge.id);
         return;
       }
 
       if (!activeKnowledgeId) {
-        message.warning('当前没有可编辑的知识库');
+        message.warning(tp('crud.noEditable'));
         return;
       }
 
@@ -71,7 +72,7 @@ export const useKnowledgeCrudActions = ({
         toKnowledgePayload(values, 'edit'),
       );
 
-      message.success('知识库信息已更新');
+      message.success(tp('crud.updated'));
       closeModal();
       reloadKnowledgeList(result.knowledge.id);
       reloadKnowledgeDetail();
@@ -81,8 +82,8 @@ export const useKnowledgeCrudActions = ({
         extractErrorMessage(
           currentError,
           modalMode === 'create'
-            ? '创建知识库失败，请稍后重试'
-            : '更新知识库失败，请稍后重试',
+            ? tp('crud.createFailed')
+            : tp('crud.updateFailed'),
         ),
       );
     } finally {
@@ -92,7 +93,7 @@ export const useKnowledgeCrudActions = ({
 
   const deleteActiveKnowledge = async () => {
     if (!activeKnowledgeId) {
-      message.warning('当前没有可删除的知识库');
+      message.warning(tp('crud.noDeletable'));
       return;
     }
 
@@ -106,11 +107,11 @@ export const useKnowledgeCrudActions = ({
 
       resetPollingAttempts(activeKnowledgeId);
       clearActiveKnowledge();
-      message.success('知识库已删除');
+      message.success(tp('crud.deleted'));
       reloadKnowledgeList(nextCandidateId);
     } catch (currentError) {
       console.error('[KnowledgeManagement] 删除知识库失败:', currentError);
-      message.error(extractErrorMessage(currentError, '删除知识库失败，请稍后重试'));
+      message.error(extractErrorMessage(currentError, tp('crud.deleteFailed')));
     } finally {
       setDeletingKnowledgeId(null);
     }

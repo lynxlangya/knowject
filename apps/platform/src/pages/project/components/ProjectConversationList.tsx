@@ -7,6 +7,7 @@ import {
 import {
   ProjectConversationLabel,
 } from '../projectChat.components';
+import { tp } from '../project.i18n';
 
 interface ProjectConversationListProps {
   conversations: ConversationSummary[];
@@ -42,7 +43,10 @@ export const ProjectConversationList = ({
     return (
       <div className="grid h-full place-items-center px-3">
         <div className="w-full rounded-hero border border-dashed border-slate-200 bg-white/75 px-6 py-10 text-center">
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该项目暂无对话" />
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={tp('conversation.empty')}
+          />
         </div>
       </div>
     );
@@ -66,7 +70,7 @@ export const ProjectConversationList = ({
                     maxLength={80}
                     value={editingTitleDraft}
                     disabled={renamingConversation}
-                    placeholder="输入线程标题"
+                    placeholder={tp('conversation.renamePlaceholder')}
                     className="rounded-[10px]! border-slate-200! bg-white!"
                     onChange={(event) =>
                       onEditingTitleDraftChange(event.target.value)
@@ -113,7 +117,7 @@ export const ProjectConversationList = ({
               >
                 <button
                   type="button"
-                  title="左键打开，右键更多操作"
+                  title={tp('conversation.openOrMenu')}
                   className="block w-full rounded-3xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-100 focus-visible:ring-offset-2"
                   aria-pressed={active}
                   onClick={() => onSelect(conversation.id)}

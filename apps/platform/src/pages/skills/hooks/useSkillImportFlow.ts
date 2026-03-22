@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { extractApiErrorMessage } from '@api/error';
 import { importSkill, type SkillImportPreview } from '@api/skills';
+import { tp } from '../skills.i18n';
 import type { ImportMode } from '../types/skillsManagement.types';
 
 interface SkillImportMessageApi {
@@ -116,7 +117,7 @@ export const useSkillImportFlow = ({
       console.error('[SkillsManagementPage] 解析导入预览失败:', currentError);
       setImportPreview(null);
       message.error(
-        extractApiErrorMessage(currentError, '解析导入预览失败，请检查来源信息'),
+        extractApiErrorMessage(currentError, tp('feedback.previewFailed')),
       );
     } finally {
       setImportPreviewLoading(false);
@@ -133,13 +134,13 @@ export const useSkillImportFlow = ({
         throw new Error('persisted skill response missing');
       }
 
-      message.success('Skill 导入成功，已纳入你的全局资产目录');
+      message.success(tp('feedback.imported'));
       closeImportModal();
       onImported();
     } catch (currentError) {
       console.error('[SkillsManagementPage] 导入 Skill 失败:', currentError);
       message.error(
-        extractApiErrorMessage(currentError, '导入 Skill 失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('feedback.importFailed')),
       );
     } finally {
       setImportSubmitting(false);

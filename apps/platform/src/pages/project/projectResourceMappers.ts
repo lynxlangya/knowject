@@ -11,6 +11,8 @@ import type {
   ProjectResourceItem,
   ProjectSummary,
 } from '@app/project/project.types';
+import i18n from '../../i18n';
+import { tp } from './project.i18n';
 
 export interface ProjectResourceCatalogs {
   knowledgeCatalog?: KnowledgeSummaryResponse[];
@@ -24,26 +26,25 @@ const RESOURCE_GROUP_COPY: Record<
   { title: string; description: string }
 > = {
   knowledge: {
-    title: '知识库',
-    description:
-      '当前项目既可以绑定全局知识库，也可以维护项目私有知识，二者都会作为项目协作上下文参与消费。',
+    title: tp('resources.group.knowledgeTitle'),
+    description: tp('resources.group.knowledgeDescription'),
   },
   skills: {
-    title: '技能',
-    description:
-      '当前项目可直接调用的技能能力，用于复用成熟工作流，来源仍来自全局技能资产。',
+    title: tp('resources.group.skillsTitle'),
+    description: tp('resources.group.skillsDescription'),
   },
   agents: {
-    title: '智能体',
-    description:
-      '当前项目已绑定的智能体能力，可参与分析、审查和执行协作，来源仍来自全局智能体资产。',
+    title: tp('resources.group.agentsTitle'),
+    description: tp('resources.group.agentsDescription'),
   },
 };
 
-const compactDateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  month: 'numeric',
-  day: 'numeric',
-});
+const formatCompactDate = (value: string): string => {
+  return new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', {
+    month: 'numeric',
+    day: 'numeric',
+  }).format(new Date(value));
+};
 
 const getResourceIdsByFocus = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
@@ -67,10 +68,12 @@ const buildMissingProjectResourceItem = (
   return {
     id: resourceId,
     type: focus,
-    name: `未知资源（${resourceId}）`,
-    description: `该${GLOBAL_ASSET_TITLES[focus]}已绑定到当前项目，但本地尚未拿到完整元数据。`,
-    updatedAt: '未记录',
-    owner: '未指定',
+    name: tp('resources.item.unknownName', { id: resourceId }),
+    description: tp('resources.item.unknownDescription', {
+      title: GLOBAL_ASSET_TITLES[focus],
+    }),
+    updatedAt: tp('resources.item.notRecorded'),
+    owner: tp('resources.item.unassigned'),
     usageCount: 0,
     source: 'global',
   };
@@ -93,8 +96,11 @@ const mapBoundKnowledgeResources = (
         type: 'knowledge' as const,
         name: knowledge.name,
         description: knowledge.description,
-        updatedAt: compactDateFormatter.format(new Date(knowledge.updatedAt)),
-        owner: knowledge.maintainerName ?? knowledge.createdByName ?? '未指定',
+        updatedAt: formatCompactDate(knowledge.updatedAt),
+        owner:
+          knowledge.maintainerName ??
+          knowledge.createdByName ??
+          tp('resources.item.unassigned'),
         usageCount: 0,
         source: 'global' as const,
         documentCount: knowledge.documentCount,
@@ -113,10 +119,10 @@ const mapBoundKnowledgeResources = (
     return {
       id: resourceId,
       type: 'knowledge' as const,
-      name: `知识库 ${resourceId}`,
-      description: '该知识库已绑定到当前项目，但本地尚未拿到完整元数据。',
-      updatedAt: '未记录',
-      owner: '未指定',
+      name: tp('resources.item.knowledgeFallbackName', { id: resourceId }),
+      description: tp('resources.item.knowledgeFallbackDescription'),
+      updatedAt: tp('resources.item.notRecorded'),
+      owner: tp('resources.item.unassigned'),
       usageCount: 0,
       source: 'global' as const,
     };
@@ -131,8 +137,11 @@ const mapProjectKnowledgeResources = (
     type: 'knowledge' as const,
     name: knowledge.name,
     description: knowledge.description,
-    updatedAt: compactDateFormatter.format(new Date(knowledge.updatedAt)),
-    owner: knowledge.maintainerName ?? knowledge.createdByName ?? '未指定',
+    updatedAt: formatCompactDate(knowledge.updatedAt),
+    owner:
+      knowledge.maintainerName ??
+      knowledge.createdByName ??
+      tp('resources.item.unassigned'),
     usageCount: 1,
     source: 'project' as const,
     documentCount: knowledge.documentCount,
@@ -171,13 +180,13 @@ const mapProjectResources = (
           type: 'skills' as const,
           name: skill.name,
           description: skill.description,
-          updatedAt: compactDateFormatter.format(new Date(skill.updatedAt)),
+          updatedAt: formatCompactDate(skill.updatedAt),
           owner:
             skill.source === 'system'
-              ? '系统内置'
+              ? tp('resources.item.systemBuiltin')
               : skill.source === 'imported'
-                ? '公网导入'
-                : '当前团队',
+                ? tp('resources.item.importedPublic')
+                : tp('resources.item.currentTeam'),
           usageCount: 0,
           source: 'global' as const,
         };
@@ -201,8 +210,8 @@ const mapProjectResources = (
           type: 'agents' as const,
           name: agent.name,
           description: agent.description,
-          updatedAt: compactDateFormatter.format(new Date(agent.updatedAt)),
-          owner: '当前团队',
+          updatedAt: formatCompactDate(agent.updatedAt),
+          owner: tp('resources.item.currentTeam'),
           usageCount: 0,
           source: 'global' as const,
         };

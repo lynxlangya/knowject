@@ -9,6 +9,7 @@ import {
   Typography,
 } from 'antd';
 import type { ProjectKnowledgeDraftValues } from '../useProjectConversationMessageActions';
+import { tp } from '../project.i18n';
 
 interface ProjectKnowledgeDraftDrawerProps {
   open: boolean;
@@ -56,16 +57,16 @@ export const ProjectKnowledgeDraftDrawer = ({
       open={open}
       size={520}
       destroyOnClose={false}
-      title="生成项目知识草稿"
+      title={tp('resources.draft.title')}
       onClose={onClose}
       footer={
         <div className="flex flex-wrap items-center justify-end gap-3">
           <Space wrap>
             <Button onClick={onClose} disabled={saving}>
-              关闭
+              {tp('resources.draft.close')}
             </Button>
             <Button type="primary" loading={saving} disabled={submitDisabled} onClick={onSubmit}>
-              保存到项目知识库
+              {tp('resources.draft.submit')}
             </Button>
           </Space>
         </div>
@@ -74,43 +75,43 @@ export const ProjectKnowledgeDraftDrawer = ({
       {!value ? null : (
         <div className="space-y-5">
           <div className="space-y-2">
-            <Typography.Text strong>项目私有知识库</Typography.Text>
+            <Typography.Text strong>{tp('resources.draft.knowledgeLabel')}</Typography.Text>
             {hasProjectKnowledgeOptions ? (
               <div className="space-y-2">
                 <Select
                   value={selectedKnowledgeId ?? undefined}
                   options={projectKnowledgeOptions}
-                  placeholder="请选择项目私有知识库"
+                  placeholder={tp('resources.draft.knowledgePlaceholder')}
                   status={!selectedKnowledgeId ? 'error' : undefined}
                   onChange={(nextValue) => onKnowledgeChange(nextValue)}
                 />
                 {!selectedKnowledgeId ? (
                   <Typography.Text type="danger" className="text-xs!">
-                    请选择项目私有知识库
+                    {tp('resources.draft.knowledgeRequired')}
                   </Typography.Text>
                 ) : null}
               </div>
             ) : projectKnowledgeLoading ? (
               <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-6">
                 <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
-                  正在加载项目私有知识库...
+                  {tp('resources.draft.loading')}
                 </Typography.Paragraph>
               </div>
             ) : projectKnowledgeError ? (
               <Alert
                 type="warning"
                 showIcon
-                message="项目私有知识库加载失败"
+                message={tp('resources.draft.loadFailed')}
                 description={projectKnowledgeError}
               />
             ) : (
               <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 px-5 py-6">
                 <Empty
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="当前项目还没有项目私有知识库，请先创建一个空知识库。"
+                  description={tp('resources.draft.empty')}
                 >
                   <Button type="primary" onClick={onCreateKnowledge}>
-                    新建项目私有知识库
+                    {tp('resources.draft.create')}
                   </Button>
                 </Empty>
               </div>
@@ -118,21 +119,21 @@ export const ProjectKnowledgeDraftDrawer = ({
           </div>
 
           <label className="block space-y-2">
-            <Typography.Text strong>文档标题</Typography.Text>
+            <Typography.Text strong>{tp('resources.draft.documentTitle')}</Typography.Text>
             <Input
               value={value.documentTitle}
               maxLength={120}
-              placeholder="用于上传 Markdown 文档的标题"
+              placeholder={tp('resources.draft.documentTitlePlaceholder')}
               onChange={(event) => onChange({ documentTitle: event.target.value })}
             />
           </label>
 
           <label className="block space-y-2">
-            <Typography.Text strong>Markdown 内容</Typography.Text>
+            <Typography.Text strong>{tp('resources.draft.markdownLabel')}</Typography.Text>
             <TextArea
               value={value.markdownContent}
               autoSize={{ minRows: 16, maxRows: 28 }}
-              placeholder="这里会保存将要上传的 Markdown 内容"
+              placeholder={tp('resources.draft.markdownPlaceholder')}
               onChange={(event) => onChange({ markdownContent: event.target.value })}
             />
           </label>

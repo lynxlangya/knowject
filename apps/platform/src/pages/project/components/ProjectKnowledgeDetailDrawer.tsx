@@ -36,6 +36,7 @@ import {
   KNOWLEDGE_INDEX_STATUS_META,
 } from "@pages/knowledge/knowledgeDomain.shared";
 import { KnowledgeSearchTab } from "@pages/knowledge/components/KnowledgeSearchTab";
+import { tp } from "../project.i18n";
 
 interface ProjectKnowledgeDetailDrawerProps {
   open: boolean;
@@ -109,12 +110,12 @@ export const ProjectKnowledgeDetailDrawer = ({
     key: string,
   ) => {
     if (key === "preview") {
-      message.info(`“${document.fileName}”预览原文即将开放`);
+      message.info(tp('resources.detail.previewSoon', { name: document.fileName }));
       return;
     }
 
     if (key === "download") {
-      message.info(`“${document.fileName}”下载原文即将开放`);
+      message.info(tp('resources.detail.downloadSoon', { name: document.fileName }));
       return;
     }
 
@@ -154,15 +155,15 @@ export const ProjectKnowledgeDetailDrawer = ({
           <Tooltip
             title={
               <div className="space-y-1 text-xs">
-                <div>格式：{document.mimeType}</div>
-                <div>上传时间：{formatKnowledgeDateTime(document.uploadedAt)}</div>
+                <div>{tp('resources.detail.tooltipFormat', { value: document.mimeType })}</div>
+                <div>{tp('resources.detail.tooltipUploadAt', { value: formatKnowledgeDateTime(document.uploadedAt) })}</div>
                 <div>
-                  最近索引：
+                  {tp('resources.detail.tooltipLatestIndex')}
                   {formatKnowledgeDateTime(
                     document.lastIndexedAt ?? document.processedAt,
                   )}
                 </div>
-                <div>分块数量：{document.chunkCount}</div>
+                <div>{tp('resources.detail.tooltipChunkCount', { value: document.chunkCount })}</div>
               </div>
             }
           >
@@ -173,10 +174,10 @@ export const ProjectKnowledgeDetailDrawer = ({
                 </Typography.Text>
                 <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
                 {diagnosticsDocument?.missingStorage ? (
-                  <Tag color="error">原文件缺失</Tag>
+                  <Tag color="error">{tp('resources.detail.missingStorage')}</Tag>
                 ) : null}
                 {diagnosticsDocument?.staleProcessing ? (
-                  <Tag color="warning">处理卡住</Tag>
+                  <Tag color="warning">{tp('resources.detail.staleProcessing')}</Tag>
                 ) : null}
               </div>
             </div>
@@ -196,15 +197,20 @@ export const ProjectKnowledgeDetailDrawer = ({
                 size="small"
                 icon={<MoreOutlined />}
                 loading={busy}
-                aria-label={`文档操作：${document.fileName}`}
+                aria-label={tp('resources.detail.documentActions', { name: document.fileName })}
               />
             </Dropdown>
           ) : null}
         </div>
 
         <Typography.Text className="mt-3 block text-xs text-slate-500">
-          上传于 {formatKnowledgeDateTime(document.uploadedAt)} · 最近索引{" "}
-          {formatKnowledgeDateTime(document.lastIndexedAt ?? document.processedAt)}
+          {tp('resources.detail.uploadAt', {
+            value: formatKnowledgeDateTime(document.uploadedAt),
+          })}{' '}
+          ·{' '}
+          {tp('resources.detail.latestIndex', {
+            value: formatKnowledgeDateTime(document.lastIndexedAt ?? document.processedAt),
+          })}
         </Typography.Text>
 
         {document.errorMessage ? (
@@ -212,7 +218,7 @@ export const ProjectKnowledgeDetailDrawer = ({
             className="mt-4"
             type="error"
             showIcon
-            title="处理失败"
+            title={tp('resources.detail.failed')}
             description={document.errorMessage}
           />
         ) : null}
@@ -223,10 +229,10 @@ export const ProjectKnowledgeDetailDrawer = ({
   const headerExtra = readOnlyGlobal ? (
     <div className="flex items-center gap-2">
       <Button onClick={onRefresh} icon={<ReloadOutlined />}>
-        刷新
+        {tp('resources.detail.refresh')}
       </Button>
       <Button icon={<LinkOutlined />} onClick={onOpenGlobalManagement}>
-        前往全局治理
+        {tp('resources.detail.openGlobal')}
       </Button>
       <Dropdown
         trigger={["click"]}
@@ -236,7 +242,7 @@ export const ProjectKnowledgeDetailDrawer = ({
             {
               key: "unbind",
               icon: <LinkOutlined />,
-              label: "解除项目绑定",
+              label: tp('resources.detail.unbind'),
               danger: true,
               disabled: unbindingGlobal,
             },
@@ -254,7 +260,7 @@ export const ProjectKnowledgeDetailDrawer = ({
   ) : (
     <div className="flex items-center gap-2">
       <Button onClick={onRefresh} icon={<ReloadOutlined />}>
-        刷新
+        {tp('resources.detail.refresh')}
       </Button>
       <Button
         type="primary"
@@ -262,9 +268,9 @@ export const ProjectKnowledgeDetailDrawer = ({
         loading={uploading}
         onClick={onUploadDocument}
       >
-        上传文档
+        {tp('resources.detail.upload')}
       </Button>
-      <Button onClick={onEditKnowledge}>编辑</Button>
+      <Button onClick={onEditKnowledge}>{tp('resources.editKnowledge')}</Button>
       <Dropdown
         trigger={["click"]}
         placement="bottomRight"
@@ -273,7 +279,7 @@ export const ProjectKnowledgeDetailDrawer = ({
             {
               key: "rebuild",
               icon: <ToolOutlined />,
-              label: "重建全部文档",
+              label: tp('resources.detail.rebuild'),
               disabled:
                 rebuildingKnowledge || loading || !knowledge?.documents.length,
             },
@@ -283,7 +289,7 @@ export const ProjectKnowledgeDetailDrawer = ({
             {
               key: "delete",
               icon: <DeleteOutlined />,
-              label: "删除知识库",
+              label: tp('resources.detail.delete'),
               danger: true,
               disabled: deletingKnowledge,
             },
@@ -310,7 +316,7 @@ export const ProjectKnowledgeDetailDrawer = ({
 
   return (
     <Drawer
-      title={knowledgeItem?.name ?? "知识库详情"}
+      title={knowledgeItem?.name ?? tp('resources.group.knowledgeTitle')}
       open={open}
       onClose={onClose}
       size={720}
@@ -326,7 +332,7 @@ export const ProjectKnowledgeDetailDrawer = ({
         <Alert
           type="error"
           showIcon
-          title="加载知识库详情失败"
+          title={tp('resources.alertProjectKnowledge')}
           description={error}
         />
       ) : knowledge ? (
@@ -334,7 +340,9 @@ export const ProjectKnowledgeDetailDrawer = ({
           <section className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] p-5">
             <div className="flex flex-wrap items-center gap-2">
               <Tag color={readOnlyGlobal ? "blue" : "green"}>
-                {readOnlyGlobal ? "全局绑定" : "项目私有"}
+                {readOnlyGlobal
+                  ? tp('resources.group.sourceGlobal')
+                  : tp('resources.group.sourceProject')}
               </Tag>
               <Tag color={KNOWLEDGE_INDEX_STATUS_META[knowledge.indexStatus].color}>
                 {KNOWLEDGE_INDEX_STATUS_META[knowledge.indexStatus].label}
@@ -342,7 +350,7 @@ export const ProjectKnowledgeDetailDrawer = ({
             </div>
 
             <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-              {knowledge.description || "暂无描述"}
+              {knowledge.description || tp('resources.access.noDescription')}
             </Typography.Paragraph>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -371,8 +379,8 @@ export const ProjectKnowledgeDetailDrawer = ({
             <Alert
               type="info"
               showIcon
-              title="当前项目内对全局知识库保持只读"
-              description="你可以在这里查看文档和状态，但全局知识库的编辑、删除和运维动作仍然回到全局知识库页面处理。"
+              title={tp('resources.access.globalTitle')}
+              description={tp('resources.access.globalPickerDescription')}
             />
           ) : null}
 
@@ -382,15 +390,15 @@ export const ProjectKnowledgeDetailDrawer = ({
             items={[
               {
                 key: "documents",
-                label: "文档",
+                label: tp('resources.detail.documentsTab'),
                 children:
                   knowledge.documents.length === 0 ? (
                     <Empty
                       className="my-12"
                       description={
                         readOnlyGlobal
-                          ? "当前全局知识库还没有文档，或文档尚未同步到这里。"
-                          : "当前知识库还没有文档，先上传一份 .md 或 .txt。"
+                          ? tp('resources.access.empty')
+                          : tp('resources.uploadDocument')
                       }
                     >
                       {!readOnlyGlobal ? (
@@ -400,7 +408,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                           loading={uploading}
                           onClick={onUploadDocument}
                         >
-                          上传第一份文档
+                          {tp('resources.uploadDocument')}
                         </Button>
                       ) : null}
                     </Empty>
@@ -412,7 +420,7 @@ export const ProjectKnowledgeDetailDrawer = ({
               },
               {
                 key: "ops",
-                label: "运维",
+                label: tp('resources.detail.opsTab'),
                 children: diagnosticsLoading ? (
                   <div className="flex min-h-60 items-center justify-center">
                     <Spin size="large" />
@@ -421,11 +429,11 @@ export const ProjectKnowledgeDetailDrawer = ({
                   <Alert
                     type="warning"
                     showIcon
-                    title="加载诊断信息失败"
+                    title={tp('resources.detail.diagnosticsTitle')}
                     description={diagnosticsError}
                     action={
                       <Button size="small" onClick={onRefreshDiagnostics}>
-                        重新获取
+                        {tp('resources.detail.diagnosticsRefresh')}
                       </Button>
                     }
                   />
@@ -440,7 +448,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                           level={5}
                           className="mb-0! mt-2 text-slate-800!"
                         >
-                          {diagnostics.collection.exists ? "已联通" : "未联通"}
+                          {diagnostics.collection.exists ? 'OK' : 'N/A'}
                         </Typography.Title>
                         <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
                           {diagnostics.expectedCollectionName}
@@ -455,16 +463,16 @@ export const ProjectKnowledgeDetailDrawer = ({
                           className="mb-0! mt-2 text-slate-800!"
                         >
                           {diagnostics.indexer.status === "ok"
-                            ? "运行正常"
-                            : "降级"}
+                            ? 'OK'
+                            : 'Degraded'}
                         </Typography.Title>
                         <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                          {diagnostics.indexer.service ?? "未返回服务名"}
+                          {diagnostics.indexer.service ?? 'N/A'}
                         </Typography.Paragraph>
                       </div>
                       <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4">
                         <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
-                          异常文档
+                          {tp('resources.detail.abnormalDocs')}
                         </Typography.Text>
                         <Typography.Title
                           level={5}
@@ -475,7 +483,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                             diagnostics.documentSummary.staleProcessing}
                         </Typography.Title>
                         <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
-                          失败 / 原文件缺失 / 处理卡住
+                          {tp('resources.detail.abnormalDocsHint')}
                         </Typography.Paragraph>
                       </div>
                     </div>
@@ -484,7 +492,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                       <Alert
                         type="warning"
                         showIcon
-                        title="Collection 状态异常"
+                        title={tp('resources.detail.collectionAbnormal')}
                         description={diagnostics.collection.errorMessage}
                       />
                     ) : null}
@@ -493,7 +501,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                       <Alert
                         type="warning"
                         showIcon
-                        title="Indexer 返回了降级信息"
+                        title={tp('resources.detail.indexerDegraded')}
                         description={diagnostics.indexer.errorMessage}
                       />
                     ) : null}
@@ -506,15 +514,15 @@ export const ProjectKnowledgeDetailDrawer = ({
                             level={5}
                             className="mb-0! text-slate-800!"
                           >
-                            文档诊断
+                            {tp('resources.detail.diagnosticsTitle')}
                           </Typography.Title>
                         </div>
-                        <Button onClick={onRefreshDiagnostics}>刷新诊断</Button>
+                        <Button onClick={onRefreshDiagnostics}>{tp('resources.detail.diagnosticsRefresh')}</Button>
                       </div>
 
                       <div className="mt-4 space-y-3">
                         {diagnostics.documents.length === 0 ? (
-                          <Empty description="当前没有文档诊断记录。" />
+                          <Empty description={tp('resources.detail.diagnosticsEmpty')} />
                         ) : (
                           diagnostics.documents.map((document) => (
                             <div
@@ -530,19 +538,21 @@ export const ProjectKnowledgeDetailDrawer = ({
                                     KNOWLEDGE_DOCUMENT_STATUS_META[document.status].color
                                   }
                                 >
-                                  {KNOWLEDGE_DOCUMENT_STATUS_META[document.status].label}
-                                </Tag>
-                                {document.missingStorage ? (
-                                  <Tag color="error">原文件缺失</Tag>
-                                ) : null}
-                                {document.staleProcessing ? (
-                                  <Tag color="warning">处理卡住</Tag>
-                                ) : null}
-                              </div>
-                              <Typography.Text className="mt-2 block text-xs text-slate-500">
-                                最近索引：
+                                {KNOWLEDGE_DOCUMENT_STATUS_META[document.status].label}
+                              </Tag>
+                              {document.missingStorage ? (
+                                  <Tag color="error">{tp('resources.detail.diagnosticsMissingStorage')}</Tag>
+                              ) : null}
+                              {document.staleProcessing ? (
+                                  <Tag color="warning">{tp('resources.detail.diagnosticsStale')}</Tag>
+                              ) : null}
+                            </div>
+                            <Typography.Text className="mt-2 block text-xs text-slate-500">
+                                {tp('resources.detail.diagnosticsLatestIndex')}
                                 {formatKnowledgeDateTime(document.lastIndexedAt)} ·
-                                更新时间：{formatKnowledgeDateTime(document.updatedAt)}
+                                {tp('resources.detail.diagnosticsUpdatedAt', {
+                                  value: formatKnowledgeDateTime(document.updatedAt),
+                                })}
                               </Typography.Text>
                               {document.errorMessage ? (
                                 <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-rose-500!">
@@ -556,19 +566,19 @@ export const ProjectKnowledgeDetailDrawer = ({
                     </div>
                   </div>
                 ) : (
-                  <Empty description="当前暂无可展示的运维信息。" />
+                  <Empty description={tp('resources.detail.noOps')} />
                 ),
               },
               {
                 key: "search",
-                label: "检索",
+                label: tp('resources.detail.searchTab'),
                 children: <KnowledgeSearchTab knowledgeId={knowledge.id} />,
               },
             ]}
           />
         </div>
       ) : (
-        <Empty className="my-16" description="请选择一个知识库查看详情。" />
+        <Empty className="my-16" description={tp('resources.detail.empty')} />
       )}
     </Drawer>
   );

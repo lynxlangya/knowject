@@ -10,6 +10,7 @@ import {
   validateKnowledgeSourceFile,
 } from './knowledgeUpload.shared';
 import type { KnowledgeTextInputValues } from './components/KnowledgeTextInputModal';
+import { tp } from './knowledge.i18n';
 
 export type UploadFlowStep = 'picker' | 'text';
 
@@ -66,7 +67,7 @@ export const useKnowledgeUploadFlow = ({
   refreshAfterUpload,
   successMessage,
   uploadErrorMessage,
-  emptyTargetMessage = '请先选择一个知识库',
+  emptyTargetMessage = tp('upload.emptyTarget'),
   closeTextInputOnSubmit = 'success',
   getUploadUnavailableReason,
   extractErrorMessage,
@@ -150,7 +151,7 @@ export const useKnowledgeUploadFlow = ({
         options?.showLargeFileWarning !== false &&
         shouldWarnLargeKnowledgeSourceFile(file)
       ) {
-        message.warning('文件超过 20 MB，建议按主题拆分上传，索引更快也更稳');
+        message.warning(tp('upload.largeFileWarning'));
       }
 
       const manageLoading = options?.manageLoading !== false;
@@ -224,7 +225,10 @@ export const useKnowledgeUploadFlow = ({
 
       if (fileIssues.length > 0) {
         message.warning(
-          `已跳过 ${fileIssues.length} 个文件：${formatKnowledgeSourceFileIssues(fileIssues)}`,
+          tp('upload.skippedFiles', {
+            count: fileIssues.length,
+            details: formatKnowledgeSourceFileIssues(fileIssues),
+          }),
         );
       }
 
@@ -300,14 +304,16 @@ export const useKnowledgeUploadFlow = ({
         message.open({
           key: batchUploadMessageKey,
           type: 'error',
-          content: '所选文件上传失败，请稍后重试',
+          content: tp('upload.uploadFailed'),
           duration: 4,
         });
       }
 
       if (failedFiles.length > 0) {
         message.error(
-          `上传失败的文件：${formatKnowledgeSourceFileIssues(failedFiles)}`,
+          tp('upload.failedFiles', {
+            details: formatKnowledgeSourceFileIssues(failedFiles),
+          }),
         );
       }
     },

@@ -4,6 +4,7 @@ import {
   updateSkill,
   type SkillSummaryResponse,
 } from '@api/skills';
+import { tp } from '../skills.i18n';
 
 interface SkillActionMessageApi {
   success: (content: string) => void;
@@ -39,28 +40,28 @@ export const useSkillCatalogActions = ({
       await updateSkill(skill.id, {
         lifecycleStatus: 'published',
       });
-      message.success(`“${skill.name}”已发布，可用于绑定`);
+      message.success(tp('feedback.published', { name: skill.name }));
       onReload();
     } catch (currentError) {
       console.error('[SkillsManagementPage] 发布 Skill 失败:', currentError);
       message.error(
-        extractApiErrorMessage(currentError, '发布 Skill 失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('feedback.publishFailed')),
       );
     }
   };
 
   const handleDeleteSkill = (skill: SkillSummaryResponse) => {
     modal.confirm({
-      title: `删除「${skill.name}」`,
-      content: '删除后该 Skill 会从全局资产目录移除，且不会自动回源同步。',
-      okText: '确认删除',
+      title: tp('feedback.deleteTitle', { name: skill.name }),
+      content: tp('feedback.deleteDescription'),
+      okText: tp('feedback.deleteConfirm'),
       okButtonProps: {
         danger: true,
       },
-      cancelText: '取消',
+      cancelText: tp('editor.cancel'),
       onOk: async () => {
         await deleteSkill(skill.id);
-        message.success(`“${skill.name}”已删除`);
+        message.success(tp('feedback.deleted', { name: skill.name }));
         onReload();
       },
     });

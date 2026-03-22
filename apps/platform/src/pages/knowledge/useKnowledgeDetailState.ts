@@ -7,6 +7,7 @@ import {
 } from '@api/knowledge';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { hasProcessingKnowledgeDocuments } from './knowledgeDomain.shared';
+import { tp } from './knowledge.i18n';
 
 interface UseKnowledgeDetailStateOptions {
   knowledgeId: string | null;
@@ -96,7 +97,7 @@ export const useKnowledgeDetailState = ({
         console.error('[KnowledgeDetailState] 加载知识库详情失败:', currentError);
         setDetail(null);
         setDetailError(
-          extractApiErrorMessage(currentError, '加载知识库详情失败，请稍后重试'),
+          extractApiErrorMessage(currentError, tp('management.detailLoadFailed')),
         );
       } finally {
         if (isMounted) {
@@ -142,7 +143,7 @@ export const useKnowledgeDetailState = ({
         console.error('[KnowledgeDetailState] 加载知识库诊断失败:', currentError);
         setDiagnostics(null);
         setDiagnosticsError(
-          extractApiErrorMessage(currentError, '加载知识库诊断失败，请稍后重试'),
+          extractApiErrorMessage(currentError, tp('ops.diagnosticsLoadFailed')),
         );
       } finally {
         if (isMounted) {

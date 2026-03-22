@@ -15,7 +15,12 @@
   - `/home`
   - `/analytics`
   - `/members`
+  - `/knowledge`
+  - `/skills`
+  - `/agents`
   - `/settings`
+  - `/project/:projectId/chat`
+  - `/project/:projectId/resources`
   - `/404`
 
 ## 文案迁移约束
@@ -27,7 +32,7 @@
   - `tests/appSider.locale.test.ts`
   - `tests/global-pages.locale.test.ts`
   - `tests/no-hardcoded-platform-copy.test.ts`
-- 修改 global pages、settings、登录页、侧栏文案时，必须同步更新 `src/i18n/locales/en|zh-CN/*`，并保持 guard 通过。
+- 修改 global pages、assets、project chat/resources、settings、登录页、侧栏文案时，必须同步更新 `src/i18n/locales/en|zh-CN/*`，并保持 guard 通过。
 
 ## 当前路由
 

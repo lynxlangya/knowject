@@ -5,6 +5,7 @@ import type {
   KnowledgeDocumentResponse,
 } from '@api/knowledge';
 import type { TabsProps } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { KnowledgeDocumentsTab } from '../components/KnowledgeDocumentsTab';
 import { KnowledgeOpsTab } from '../components/KnowledgeOpsTab';
 import { KnowledgeSearchTab } from '../components/KnowledgeSearchTab';
@@ -56,11 +57,12 @@ export const useKnowledgeTabOrchestration = ({
   onRebuildKnowledge,
   onReloadDiagnostics,
 }: UseKnowledgeTabOrchestrationOptions) => {
+  const { t } = useTranslation('pages');
   const tabItems: TabsProps['items'] = activeKnowledge
     ? [
         {
           key: 'documents',
-          label: '文档',
+          label: t('knowledge.documents.listTitle'),
           children: (
             <KnowledgeDocumentsTab
               activeKnowledge={activeKnowledge}
@@ -78,7 +80,7 @@ export const useKnowledgeTabOrchestration = ({
         },
         {
           key: 'ops',
-          label: '运维',
+          label: t('knowledge.ops.title'),
           children: (
             <KnowledgeOpsTab
               activeKnowledgeId={activeKnowledge.id}
@@ -94,7 +96,7 @@ export const useKnowledgeTabOrchestration = ({
         },
         {
           key: 'search',
-          label: '检索',
+          label: t('knowledge.search.action'),
           children: <KnowledgeSearchTab knowledgeId={activeKnowledge.id} />,
         },
       ]

@@ -10,6 +10,7 @@ import {
   formatProjectKnowledgeBatchUploadProgress,
   formatProjectKnowledgeBatchUploadSuccessMessage,
 } from "../constants/projectResources.constants";
+import { tp } from "../project.i18n";
 
 interface ProjectKnowledgeUploadMessageApi {
   error: (content: string) => void;
@@ -69,8 +70,8 @@ export const useProjectKnowledgeUploadFlow = ({
         reloadDiagnostics: true,
       });
     },
-    successMessage: "文档已上传，正在进入项目索引队列",
-    uploadErrorMessage: "上传项目知识文档失败，请稍后重试",
+    successMessage: tp("resources.upload.successSingle"),
+    uploadErrorMessage: tp("resources.upload.failed"),
     closeTextInputOnSubmit: "success",
     extractErrorMessage: extractApiErrorMessage,
   });

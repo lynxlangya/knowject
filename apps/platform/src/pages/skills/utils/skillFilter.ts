@@ -3,6 +3,7 @@ import type {
   SkillFilterGroup,
   SkillSidebarFilter,
 } from '../types/skillsManagement.types';
+import { tp } from '../skills.i18n';
 
 export const filterSkills = (
   items: SkillSummaryResponse[],
@@ -37,32 +38,32 @@ export const buildSkillFilterGroups = (
   return [
     {
       key: 'all',
-      label: '全部',
+      label: tp('filters.all'),
       count: items.length,
     },
     {
       key: 'published',
-      label: '已发布',
+      label: tp('filters.published'),
       count: filterSkills(items, 'published').length,
     },
     {
       key: 'draft',
-      label: '草稿',
+      label: tp('filters.draft'),
       count: filterSkills(items, 'draft').length,
     },
     {
       key: 'system',
-      label: '系统内置',
+      label: tp('filters.system'),
       count: filterSkills(items, 'system').length,
     },
     {
       key: 'custom',
-      label: '自建',
+      label: tp('filters.custom'),
       count: filterSkills(items, 'custom').length,
     },
     {
       key: 'imported',
-      label: '公网导入',
+      label: tp('filters.imported'),
       count: filterSkills(items, 'imported').length,
     },
   ];

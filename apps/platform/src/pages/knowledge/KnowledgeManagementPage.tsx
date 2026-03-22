@@ -17,6 +17,7 @@ import {
   Typography,
 } from 'antd';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { extractApiErrorMessage } from '@api/error';
 import {
   uploadKnowledgeDocument,
@@ -66,9 +67,11 @@ import {
   formatKnowledgeBatchUploadProgress,
   formatKnowledgeBatchUploadSuccessMessage,
 } from './utils/knowledgeMessages';
+import { tp } from './knowledge.i18n';
 
 export const KnowledgeManagementPage = () => {
   const { message, modal } = App.useApp();
+  const { t } = useTranslation('pages');
   const [form] = Form.useForm<KnowledgeFormValues>();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -251,8 +254,8 @@ export const KnowledgeManagementPage = () => {
         reloadDiagnostics: true,
       });
     },
-    successMessage: '文档已上传，正在进入索引队列',
-    uploadErrorMessage: '上传文档失败，请稍后重试',
+    successMessage: tp('upload.success'),
+    uploadErrorMessage: tp('upload.error'),
     closeTextInputOnSubmit: 'before',
     getUploadUnavailableReason: (knowledgeId) => {
       const targetKnowledge =
@@ -261,11 +264,11 @@ export const KnowledgeManagementPage = () => {
           : items.find((knowledge) => knowledge.id === knowledgeId) ?? null;
 
       if (!targetKnowledge) {
-        return '请先选择一个知识库';
+        return tp('upload.emptyTarget');
       }
 
       if (targetKnowledge.sourceType !== 'global_docs') {
-        return 'global_code 目前只冻结命名空间，暂不支持真实导入';
+        return tp('upload.sourceUnavailable');
       }
 
       return null;
@@ -327,7 +330,7 @@ export const KnowledgeManagementPage = () => {
 
   const handleRebuildKnowledge = async () => {
     if (!activeKnowledgeId || !activeKnowledge) {
-      message.info('请先选择一个知识库');
+      message.info(tp('upload.emptyTarget'));
       return;
     }
 
@@ -387,12 +390,12 @@ export const KnowledgeManagementPage = () => {
     return (
       <Card className={GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME}>
         <Typography.Title level={4} className="text-slate-800!">
-          知识库
+          {t('knowledge.management.title')}
         </Typography.Title>
         <Typography.Paragraph className="text-slate-500!">
           {error}
         </Typography.Paragraph>
-        <Button onClick={() => reloadKnowledgeList()}>重新加载</Button>
+        <Button onClick={() => reloadKnowledgeList()}>{t('knowledge.management.reload')}</Button>
       </Card>
     );
   }
@@ -401,7 +404,7 @@ export const KnowledgeManagementPage = () => {
     <GlobalAssetPageLayout
       header={
         <GlobalAssetPageHeader
-          title="全局知识库"
+          title={t('knowledge.management.headerTitle')}
           subtitle={KNOWLEDGE_PAGE_SUBTITLE}
           summaryItems={stats}
           actions={
@@ -411,10 +414,10 @@ export const KnowledgeManagementPage = () => {
                 icon={<PlusOutlined />}
                 onClick={openCreateModal}
               >
-                新建知识库
+                {t('knowledge.management.create')}
               </Button>
               <Button
-                aria-label="刷新状态"
+                aria-label={t('knowledge.management.refreshAria')}
                 shape="circle"
                 icon={<ReloadOutlined />}
                 loading={refreshing}
@@ -441,7 +444,7 @@ export const KnowledgeManagementPage = () => {
         {!activeKnowledgeId ? (
           <Empty
             className="my-16"
-            description="请选择左侧知识库，查看文档与状态详情。"
+            description={t('knowledge.management.emptyDetail')}
           />
         ) : detailLoading && !activeKnowledge ? (
           <div className="flex min-h-90 items-center justify-center">
@@ -450,7 +453,7 @@ export const KnowledgeManagementPage = () => {
         ) : detailError ? (
           <div className="space-y-4">
             <Alert type="error" showIcon title={detailError} />
-            <Button onClick={reloadKnowledgeDetail}>重试加载详情</Button>
+            <Button onClick={reloadKnowledgeDetail}>{t('knowledge.management.retryDetail')}</Button>
           </div>
         ) : activeKnowledge ? (
           <div className="space-y-4">
@@ -476,8 +479,10 @@ export const KnowledgeManagementPage = () => {
             className="my-16"
             description={
               activeSummary
-                ? `知识库“${activeSummary.name}”详情暂不可用，请稍后重试。`
-                : '请选择左侧知识库查看详情。'
+                ? t('knowledge.management.detailUnavailable', {
+                    name: activeSummary.name,
+                  })
+                : t('knowledge.management.detailPrompt')
             }
           />
         )}
@@ -528,28 +533,28 @@ export const KnowledgeManagementPage = () => {
         >
           <Form.Item
             name="name"
-            label="知识库名称"
+            label={t('knowledge.management.form.name')}
             rules={[
               {
                 required: true,
-                message: '请输入知识库名称',
+                message: t('knowledge.management.form.nameRequired'),
               },
             ]}
           >
-            <Input maxLength={80} placeholder="例如：产品规范库" />
+            <Input maxLength={80} placeholder={t('knowledge.management.form.namePlaceholder')} />
           </Form.Item>
 
           {isCreateMode ? (
-            <Form.Item name="sourceType" label="来源类型">
+            <Form.Item name="sourceType" label={t('knowledge.management.form.sourceType')}>
               <Select options={KNOWLEDGE_SOURCE_TYPE_OPTIONS} />
             </Form.Item>
           ) : null}
 
-          <Form.Item name="description" label="描述">
+          <Form.Item name="description" label={t('knowledge.management.form.description')}>
             <Input.TextArea
               autoSize={{ minRows: 3, maxRows: 5 }}
               maxLength={240}
-              placeholder="描述知识库的职责、内容范围和维护边界。"
+              placeholder={t('knowledge.management.form.descriptionPlaceholder')}
             />
           </Form.Item>
         </Form>

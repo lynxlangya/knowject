@@ -1,5 +1,6 @@
 import { Typography } from 'antd';
 import type { AgentResponse } from '@api/agents';
+import { useTranslation } from 'react-i18next';
 import {
   GlobalAssetSidebar,
   GlobalAssetSidebarFilterItem,
@@ -35,20 +36,21 @@ export const AgentsSidebar = ({
   selectedAgentId,
   selectedFilter,
 }: AgentsSidebarProps) => {
+  const { t } = useTranslation('pages');
   return (
     <GlobalAssetSidebar
       header={
         <div className="flex items-end justify-between gap-3">
           <Typography.Title level={5} className="mb-0! text-slate-800!">
-            分组与定位
+            {t('agents.sidebar.title')}
           </Typography.Title>
           <Typography.Text className="text-xs text-slate-400">
-            共 {itemsCount} 个
+            {t('agents.sidebar.count', { count: itemsCount })}
           </Typography.Text>
         </div>
       }
     >
-      <GlobalAssetSidebarSection title="分组浏览">
+      <GlobalAssetSidebarSection title={t('agents.sidebar.browse')}>
         {agentFilters.map((filter) => (
           <GlobalAssetSidebarFilterItem
             key={filter.key}
@@ -62,11 +64,11 @@ export const AgentsSidebar = ({
         ))}
       </GlobalAssetSidebarSection>
 
-      <GlobalAssetSidebarSection title="智能体列表">
+      <GlobalAssetSidebarSection title={t('agents.sidebar.list')}>
         {filteredAgents.length === 0 ? (
           <div className="px-2 py-4">
             <Typography.Text className="text-sm text-slate-400">
-              当前分组下暂无智能体。
+              {t('agents.sidebar.empty')}
             </Typography.Text>
           </div>
         ) : (
@@ -97,8 +99,9 @@ export const AgentsSidebar = ({
                     </Typography.Text>
                   </div>
                   <Typography.Text className="block text-caption text-slate-500">
-                    最近更新：
-                    {formatGlobalAssetUpdatedAt(agent.updatedAt)}
+                    {t('agents.sidebar.updatedAt', {
+                      value: formatGlobalAssetUpdatedAt(agent.updatedAt),
+                    })}
                   </Typography.Text>
                 </div>
               </GlobalAssetSidebarItem>

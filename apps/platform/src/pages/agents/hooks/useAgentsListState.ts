@@ -5,6 +5,7 @@ import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
 import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import type { GlobalAssetSummaryItem } from '@pages/assets/components/GlobalAssetLayout';
 import { createGlobalAssetSummaryItem } from '@pages/assets/components/globalAsset.shared';
+import { tp } from '../agents.i18n';
 import type { AgentSidebarFilter } from '../types/agentsManagement.types';
 import { filterAgents, sortAgentsByUpdatedAt } from '../utils/agentFilter';
 
@@ -59,7 +60,7 @@ export const useAgentsListState = () => {
         setError(
           extractApiErrorMessage(
             currentError,
-            '加载智能体目录失败，请稍后重试',
+            tp('feedback.loadFailed'),
           ),
         );
       } finally {
@@ -100,30 +101,30 @@ export const useAgentsListState = () => {
 
     return [
       createGlobalAssetSummaryItem(
-        '智能体总数',
-        `${items.length} 个`,
-        '当前目录中的全局智能体配置数量。',
+        tp('summary.total'),
+        tp('summary.totalValue', { count: items.length }),
+        tp('summary.totalHint'),
       ),
       createGlobalAssetSummaryItem(
-        '启用中',
-        `${activeCount} 个`,
+        tp('summary.active'),
+        tp('summary.activeValue', { count: activeCount }),
         disabledCount === 0
-          ? '当前没有停用中的智能体。'
-          : `${disabledCount} 个当前处于停用状态。`,
+          ? tp('summary.activeHintNone')
+          : tp('summary.activeHintDisabled', { count: disabledCount }),
       ),
       createGlobalAssetSummaryItem(
-        '已绑知识库',
-        `${knowledgeBoundCount} 个`,
+        tp('summary.knowledge'),
+        tp('summary.knowledgeValue', { count: knowledgeBoundCount }),
         knowledgeBindingTotal === 0
-          ? '当前还没有智能体接入知识库。'
-          : `累计 ${knowledgeBindingTotal} 条知识库绑定。`,
+          ? tp('summary.knowledgeHintNone')
+          : tp('summary.knowledgeHintSome', { count: knowledgeBindingTotal }),
       ),
       createGlobalAssetSummaryItem(
-        '已绑 Skill',
-        `${skillBoundCount} 个`,
+        tp('summary.skills'),
+        tp('summary.skillsValue', { count: skillBoundCount }),
         skillBindingTotal === 0
-          ? '当前还没有智能体接入 Skill。'
-          : `累计 ${skillBindingTotal} 条 Skill 绑定。`,
+          ? tp('summary.skillsHintNone')
+          : tp('summary.skillsHintSome', { count: skillBindingTotal }),
       ),
     ] satisfies GlobalAssetSummaryItem[];
   }, [items]);
@@ -132,22 +133,22 @@ export const useAgentsListState = () => {
     return [
       {
         key: 'all',
-        label: '全部',
+        label: tp('filters.all'),
         count: items.length,
       },
       {
         key: 'recent',
-        label: '最近使用',
+        label: tp('filters.recent'),
         count: filterAgents(items, 'recent').length,
       },
       {
         key: 'active',
-        label: '启用中',
+        label: tp('filters.active'),
         count: filterAgents(items, 'active').length,
       },
       {
         key: 'disabled',
-        label: '已停用',
+        label: tp('filters.disabled'),
         count: filterAgents(items, 'disabled').length,
       },
     ];

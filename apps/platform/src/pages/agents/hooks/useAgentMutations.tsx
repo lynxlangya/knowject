@@ -9,6 +9,7 @@ import { deleteAgent, updateAgent, type AgentResponse, type AgentStatus } from '
 import { extractApiErrorMessage } from '@api/error';
 import type { MenuProps } from 'antd';
 import { createAgentPayload } from '../adapters/agentPayload.adapter';
+import { tp } from '../agents.i18n';
 
 interface MessageLike {
   success: (content: string) => void;
@@ -70,12 +71,12 @@ export const useAgentMutations = ({
 
       onUpsertAgent(result.agent);
       message.success(
-        nextStatus === 'disabled' ? '智能体已停用' : '智能体已启用',
+        nextStatus === 'disabled' ? tp('feedback.disabled') : tp('feedback.enabled'),
       );
     } catch (currentError) {
       console.error('[AgentsManagementPage] 更新智能体状态失败:', currentError);
       message.error(
-        extractApiErrorMessage(currentError, '更新智能体状态失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('feedback.updateStatusFailed')),
       );
     } finally {
       setUpdatingStatusAgentId(null);
@@ -88,11 +89,11 @@ export const useAgentMutations = ({
     try {
       await deleteAgent(agent.id);
       onRemoveAgent(agent.id);
-      message.success('智能体已删除');
+      message.success(tp('feedback.deleted'));
     } catch (currentError) {
       console.error('[AgentsManagementPage] 删除智能体失败:', currentError);
       message.error(
-        extractApiErrorMessage(currentError, '删除智能体失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('feedback.deleteFailed')),
       );
     } finally {
       setDeletingAgentId(null);
@@ -101,10 +102,10 @@ export const useAgentMutations = ({
 
   const confirmDeleteAgent = (agent: AgentResponse) => {
     modal.confirm({
-      title: '删除智能体',
-      content: '会删除该智能体配置，但不会移除已绑定的知识库或 Skill 资产。',
-      okText: '删除',
-      cancelText: '取消',
+      title: tp('feedback.deleteTitle'),
+      content: tp('feedback.deleteDescription'),
+      okText: tp('feedback.deleteConfirm'),
+      cancelText: tp('form.cancel'),
       okButtonProps: {
         danger: true,
       },
@@ -125,7 +126,7 @@ export const useAgentMutations = ({
       {
         key: 'edit',
         icon: <EditOutlined />,
-        label: '编辑配置',
+        label: tp('actions.edit'),
         disabled: busy,
       },
       {
@@ -135,7 +136,7 @@ export const useAgentMutations = ({
         ) : (
           <PlayCircleOutlined />
         ),
-        label: toggleToDisabled ? '停用' : '启用',
+        label: toggleToDisabled ? tp('actions.disable') : tp('actions.enable'),
         disabled: busy,
       },
       {
@@ -144,7 +145,7 @@ export const useAgentMutations = ({
       {
         key: 'delete',
         icon: <DeleteOutlined />,
-        label: '删除',
+        label: tp('actions.delete'),
         danger: true,
         disabled: busy,
       },

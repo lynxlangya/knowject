@@ -2,6 +2,8 @@ import { Typography } from 'antd';
 import type { ReactNode } from 'react';
 import type { ConversationSummary } from '@app/project/project.types';
 import { KNOWJECT_BRAND } from '@styles/brand';
+import i18n from '../../i18n';
+import { tp } from './project.i18n';
 
 interface ProjectConversationLabelProps {
   conversation: ConversationSummary;
@@ -10,7 +12,7 @@ interface ProjectConversationLabelProps {
 }
 
 const formatConversationUpdatedAt = (value: string): string => {
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -68,7 +70,7 @@ export const ProjectConversationLabel = ({
                   active ? 'text-emerald-600' : 'text-slate-400',
                 ].join(' ')}
               >
-                {active ? '当前线程' : '最近活跃'}
+                {active ? tp('conversation.active') : tp('conversation.recent')}
               </Typography.Text>
             </div>
           </div>

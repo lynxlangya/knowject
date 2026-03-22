@@ -1,5 +1,6 @@
 import { PATHS } from "@app/navigation/paths";
 import type { ProjectResourceFocus } from "@app/project/project.types";
+import { tp } from "../project.i18n";
 
 export const PROJECT_KNOWLEDGE_BATCH_UPLOAD_MESSAGE_KEY =
   "project-knowledge-batch-upload";
@@ -16,7 +17,7 @@ export const formatProjectKnowledgeBatchUploadProgress = (
   current: number,
   total: number,
 ): string => {
-  return `正在上传项目文档 ${current}/${total}`;
+  return tp('resources.upload.progress', { current, total });
 };
 
 export const formatProjectKnowledgeBatchUploadSuccessMessage = (
@@ -24,8 +25,11 @@ export const formatProjectKnowledgeBatchUploadSuccessMessage = (
   totalCount: number,
 ): string => {
   if (successCount === totalCount) {
-    return `已上传 ${successCount} 个文件，正在进入项目索引队列`;
+    return tp('resources.upload.successAll', { count: successCount });
   }
 
-  return `已上传 ${successCount}/${totalCount} 个文件，正在进入项目索引队列`;
+  return tp('resources.upload.successPartial', {
+    success: successCount,
+    total: totalCount,
+  });
 };

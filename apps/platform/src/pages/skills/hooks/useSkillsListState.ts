@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { extractApiErrorMessage } from '@api/error';
 import { listSkills, type SkillSummaryResponse } from '@api/skills';
 import type { SkillSidebarFilter } from '../types/skillsManagement.types';
+import { tp } from '../skills.i18n';
 import { buildSkillFilterGroups, filterSkills } from '../utils/skillFilter';
 import { buildSkillSummaryItems } from '../utils/skillSummary';
 
@@ -35,7 +36,7 @@ export const useSkillsListState = () => {
 
         console.error('[SkillsManagementPage] 加载技能目录失败:', currentError);
         setError(
-          extractApiErrorMessage(currentError, '加载技能目录失败，请稍后重试'),
+          extractApiErrorMessage(currentError, tp('feedback.loadFailed')),
         );
       } finally {
         if (!cancelled) {

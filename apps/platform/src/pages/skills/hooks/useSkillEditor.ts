@@ -9,6 +9,7 @@ import {
   type SkillSummaryResponse,
 } from '@api/skills';
 import type { EditorMode } from '../types/skillsManagement.types';
+import { tp } from '../skills.i18n';
 import {
   buildSkillMarkdownTemplate,
   parseSkillMarkdownPreview,
@@ -74,7 +75,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     } catch (currentError) {
       console.error('[SkillsManagementPage] 加载 Skill 详情失败:', currentError);
       message.error(
-        extractApiErrorMessage(currentError, '加载 Skill 详情失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('feedback.detailLoadFailed')),
       );
       resetEditorState();
     } finally {
@@ -84,7 +85,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
   const handleSubmitEditor = async () => {
     if (!editorValidation.valid) {
-      message.warning('请先修正 SKILL.md frontmatter 校验问题');
+      message.warning(tp('feedback.frontmatterInvalid'));
       setEditorTabKey('editor');
       return;
     }
@@ -96,7 +97,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
         await createSkill({
           skillMarkdown: editorMarkdown,
         });
-        message.success('Skill 已创建为草稿');
+        message.success(tp('feedback.createdDraft'));
       }
 
       if (editorMode === 'edit' && editingSkill) {
@@ -104,7 +105,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
           skillMarkdown: editorMarkdown,
           lifecycleStatus: editorLifecycleStatus,
         });
-        message.success('Skill 已保存');
+        message.success(tp('feedback.saved'));
       }
 
       resetEditorState();
@@ -112,7 +113,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     } catch (currentError) {
       console.error('[SkillsManagementPage] 保存 Skill 失败:', currentError);
       message.error(
-        extractApiErrorMessage(currentError, '保存 Skill 失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('feedback.saveFailed')),
       );
     } finally {
       setEditorSubmitting(false);

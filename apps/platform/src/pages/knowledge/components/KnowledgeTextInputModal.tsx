@@ -1,5 +1,6 @@
 import { Button, Form, Input, Modal, Typography } from 'antd';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface KnowledgeTextInputValues {
   title?: string;
@@ -21,6 +22,7 @@ export const KnowledgeTextInputModal = ({
   onCancel,
   onSubmit,
 }: KnowledgeTextInputModalProps) => {
+  const { t } = useTranslation('pages');
   const [form] = Form.useForm<KnowledgeTextInputValues>();
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export const KnowledgeTextInputModal = ({
 
   return (
     <Modal
-      title="添加文本来源"
+      title={t('knowledge.upload.textModalTitle')}
       open={open}
       onCancel={onCancel}
       footer={null}
@@ -46,7 +48,7 @@ export const KnowledgeTextInputModal = ({
     >
       <div className="space-y-5">
         <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
-          粘贴或输入文本，将它保存到当前知识库文件中。
+          {t('knowledge.upload.textModalDescription')}
         </Typography.Paragraph>
 
         <Form<KnowledgeTextInputValues>
@@ -58,13 +60,13 @@ export const KnowledgeTextInputModal = ({
           }}
           onFinish={(values) => void onSubmit(values)}
         >
-          <Form.Item name="title" label="标题（选填）">
-            <Input maxLength={80} placeholder="例如：团队入职说明" />
+          <Form.Item name="title" label={t('knowledge.upload.textTitleLabel')}>
+            <Input maxLength={80} placeholder={t('knowledge.upload.textTitlePlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="content"
-            label="文本内容"
+            label={t('knowledge.upload.textContentLabel')}
             rules={[
               {
                 validator: (_, value: string | undefined) => {
@@ -72,7 +74,7 @@ export const KnowledgeTextInputModal = ({
                     return Promise.resolve();
                   }
 
-                  return Promise.reject(new Error('请输入文本内容'));
+                  return Promise.reject(new Error(t('knowledge.upload.textContentRequired')));
                 },
               },
             ]}
@@ -80,20 +82,20 @@ export const KnowledgeTextInputModal = ({
             <Input.TextArea
               autoSize={{ minRows: 12, maxRows: 18 }}
               maxLength={20000}
-              placeholder="在这里粘贴或输入要写入知识库的内容"
+              placeholder={t('knowledge.upload.textContentPlaceholder')}
             />
           </Form.Item>
 
           <div className="flex justify-end gap-3">
             <Button onClick={onBack} disabled={submitting}>
-              返回
+              {t('knowledge.upload.back')}
             </Button>
             <Button
               type="primary"
               loading={submitting}
               onClick={() => form.submit()}
             >
-              保存
+              {t('knowledge.upload.save')}
             </Button>
           </div>
         </Form>

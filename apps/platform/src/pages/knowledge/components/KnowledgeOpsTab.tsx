@@ -1,5 +1,6 @@
 import { DatabaseOutlined, ReloadOutlined, ToolOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert, Button, Spin, Tag, Tooltip, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { KnowledgeDiagnosticsResponse } from '@api/knowledge';
 import { KNOWLEDGE_REBUILD_TOOLTIP } from '../knowledgeDomain.shared';
 
@@ -24,6 +25,8 @@ export const KnowledgeOpsTab = ({
   onRebuildKnowledge,
   onReloadDiagnostics,
 }: KnowledgeOpsTabProps) => {
+  const { t } = useTranslation('pages');
+
   return (
     <section className="overflow-hidden rounded-card-lg border border-slate-200 bg-white/90 shadow-[0_16px_40px_rgba(15,23,42,0.04)]">
       <div className="flex flex-col gap-4 border-b border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(241,245,249,0.88))] px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
@@ -31,11 +34,11 @@ export const KnowledgeOpsTab = ({
           <div className="flex items-center gap-2">
             <ToolOutlined className="text-slate-400" />
             <Typography.Title level={5} className="mb-0! text-slate-800!">
-              索引运维
+              {t('knowledge.ops.title')}
             </Typography.Title>
           </div>
           <Typography.Paragraph className="mb-0! mt-2 text-sm! text-slate-500!">
-            查看当前 collection、indexer 与文档健康快照，并在这里发起最小 rebuild。
+            {t('knowledge.ops.description')}
           </Typography.Paragraph>
         </div>
 
@@ -48,7 +51,7 @@ export const KnowledgeOpsTab = ({
                 disabled={Boolean(knowledgeRebuildBlockedReason)}
                 onClick={() => void onRebuildKnowledge()}
               >
-                重建全部文档
+                {t('knowledge.ops.rebuildAll')}
               </Button>
             </span>
           </Tooltip>
@@ -57,7 +60,7 @@ export const KnowledgeOpsTab = ({
             loading={diagnosticsLoading}
             onClick={onReloadDiagnostics}
           >
-            刷新诊断
+            {t('knowledge.ops.reloadDiagnostics')}
           </Button>
         </div>
       </div>
@@ -67,7 +70,7 @@ export const KnowledgeOpsTab = ({
           <Alert
             type="warning"
             showIcon
-            title="诊断信息暂时不可用"
+            title={t('knowledge.ops.unavailable')}
             description={diagnosticsError}
           />
         ) : activeDiagnostics ? (
@@ -75,12 +78,12 @@ export const KnowledgeOpsTab = ({
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 {
-                  label: '待处理文档',
+                  label: t('knowledge.ops.pendingDocuments'),
                   value: `${activeDiagnostics.documentSummary.pending + activeDiagnostics.documentSummary.processing}`,
                   accent: 'text-sky-700',
                 },
                 {
-                  label: '失败文档',
+                  label: t('knowledge.ops.failedDocuments'),
                   value: `${activeDiagnostics.documentSummary.failed}`,
                   accent:
                     activeDiagnostics.documentSummary.failed > 0
@@ -88,7 +91,7 @@ export const KnowledgeOpsTab = ({
                       : 'text-slate-700',
                 },
                 {
-                  label: '原文件缺失',
+                  label: t('knowledge.ops.missingStorage'),
                   value: `${activeDiagnostics.documentSummary.missingStorage}`,
                   accent:
                     activeDiagnostics.documentSummary.missingStorage > 0
@@ -96,7 +99,7 @@ export const KnowledgeOpsTab = ({
                       : 'text-slate-700',
                 },
                 {
-                  label: '处理卡住',
+                  label: t('knowledge.ops.staleProcessing'),
                   value: `${activeDiagnostics.documentSummary.staleProcessing}`,
                   accent:
                     activeDiagnostics.documentSummary.staleProcessing > 0
@@ -131,7 +134,9 @@ export const KnowledgeOpsTab = ({
                   activeDiagnostics.indexer.status === 'ok' ? 'success' : 'warning'
                 }
               >
-                Indexer · {activeDiagnostics.indexer.status === 'ok' ? '运行正常' : '降级'}
+                Indexer · {activeDiagnostics.indexer.status === 'ok'
+                  ? t('knowledge.ops.indexerOk')
+                  : t('knowledge.ops.indexerDegraded')}
               </Tag>
               {activeDiagnostics.indexer.embeddingProvider ? (
                 <Tag color="blue">
@@ -152,7 +157,7 @@ export const KnowledgeOpsTab = ({
                 type="warning"
                 showIcon
                 icon={<DatabaseOutlined />}
-                title="Collection 检查已降级"
+                title={t('knowledge.ops.collectionDegraded')}
                 description={activeDiagnostics.collection.errorMessage}
               />
             ) : null}
@@ -161,7 +166,7 @@ export const KnowledgeOpsTab = ({
               <Alert
                 type="warning"
                 showIcon
-                title="Indexer 运行态已降级"
+                title={t('knowledge.ops.indexerDegradedTitle')}
                 description={activeDiagnostics.indexer.errorMessage}
               />
             ) : null}
@@ -173,17 +178,22 @@ export const KnowledgeOpsTab = ({
                 type="warning"
                 showIcon
                 icon={<WarningOutlined />}
-                title="检测到需要人工处理的文档"
-                description={`失败 ${activeDiagnostics.documentSummary.failed} 份，原文件缺失 ${activeDiagnostics.documentSummary.missingStorage} 份，处理卡住 ${activeDiagnostics.documentSummary.staleProcessing} 份。`}
+                title={t('knowledge.ops.manualAttention')}
+                description={t('knowledge.ops.manualAttentionDescription', {
+                  failed: activeDiagnostics.documentSummary.failed,
+                  missingStorage: activeDiagnostics.documentSummary.missingStorage,
+                  staleProcessing: activeDiagnostics.documentSummary.staleProcessing,
+                })}
               />
             ) : (
               <Alert
                 type="success"
                 showIcon
-                title="当前未发现阻塞性风险"
-                description={`Indexer ${
-                  activeDiagnostics.indexer.service ?? 'unknown'
-                } 已返回最新诊断，当前 collection 目标为 ${activeDiagnostics.expectedCollectionName}。`}
+                title={t('knowledge.ops.healthyTitle')}
+                description={t('knowledge.ops.healthyDescription', {
+                  service: activeDiagnostics.indexer.service ?? 'unknown',
+                  collection: activeDiagnostics.expectedCollectionName,
+                })}
               />
             )}
           </>

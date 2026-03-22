@@ -4,6 +4,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { Alert, App, Button, Spin, Tooltip } from 'antd';
+import { useTranslation } from 'react-i18next';
 import {
   GlobalAssetPageHeader,
   GlobalAssetPageLayout,
@@ -20,6 +21,7 @@ import { useSkillsListState } from './hooks/useSkillsListState';
 
 export const SkillsManagementPage = () => {
   const { message, modal } = App.useApp();
+  const { t } = useTranslation('pages');
   const skillsListState = useSkillsListState();
   const skillEditor = useSkillEditor({
     message,
@@ -49,7 +51,7 @@ export const SkillsManagementPage = () => {
       <GlobalAssetPageLayout
         header={
           <GlobalAssetPageHeader
-            title="技能"
+            title={t('skills.title')}
             subtitle={SKILLS_PAGE_SUBTITLE}
             summaryItems={skillsListState.summaryItems}
             actions={
@@ -59,17 +61,17 @@ export const SkillsManagementPage = () => {
                   icon={<PlusOutlined />}
                   onClick={skillEditor.handleOpenCreateModal}
                 >
-                  新建 Skill
+                  {t('skills.create')}
                 </Button>
                 <Button
                   icon={<CloudDownloadOutlined />}
                   onClick={skillImportFlow.openImportModal}
                 >
-                  导入 Skill
+                  {t('skills.import')}
                 </Button>
-                <Tooltip title="刷新目录">
+                <Tooltip title={t('skills.reload')}>
                   <Button
-                    aria-label="刷新目录"
+                    aria-label={t('skills.reload')}
                     shape="circle"
                     icon={<ReloadOutlined />}
                     onClick={skillsListState.handleReload}
@@ -87,7 +89,7 @@ export const SkillsManagementPage = () => {
               message={skillsListState.error}
               action={
                 <Button size="small" onClick={skillsListState.handleReload}>
-                  重试
+                  {t('skills.retry')}
                 </Button>
               }
             />

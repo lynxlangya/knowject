@@ -6,6 +6,7 @@ import {
 import { Modal, Typography } from 'antd';
 import type { DragEvent, KeyboardEvent } from 'react';
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KNOWLEDGE_UPLOAD_MAX_FILES } from '../knowledgeUpload.shared';
 
 interface KnowledgeSourcePickerModalProps {
@@ -58,6 +59,7 @@ export const KnowledgeSourcePickerModal = ({
   onTextInputClick,
   onDropFiles,
 }: KnowledgeSourcePickerModalProps) => {
+  const { t } = useTranslation('pages');
   const dragDepthRef = useRef(0);
   const [dragActive, setDragActive] = useState(false);
 
@@ -116,7 +118,7 @@ export const KnowledgeSourcePickerModal = ({
 
   return (
     <Modal
-      title="添加来源"
+      title={t('knowledge.upload.sourcePickerTitle')}
       open={open}
       onCancel={handleCancel}
       footer={null}
@@ -151,26 +153,28 @@ export const KnowledgeSourcePickerModal = ({
           </div>
 
           <Typography.Title level={4} className="mb-0! mt-6 text-slate-800!">
-            将文档拖到这里
+            {t('knowledge.upload.sourcePickerDropTitle')}
           </Typography.Title>
           <Typography.Paragraph className="mb-0! mt-3 max-w-lg text-sm! leading-6! text-slate-500!">
-            支持 .md、.markdown、.txt、.pdf、.docx、.xlsx（不支持 .doc、.xls）；PDF
-            仅支持数字文本 PDF，OCR / 扫描件暂不支持；单个文件不超过 50 MB；单次最多{' '}
-            {KNOWLEDGE_UPLOAD_MAX_FILES} 个文件；20 MB 以上建议拆分上传
+            {t('knowledge.upload.sourcePickerDropDescription', {
+              max: KNOWLEDGE_UPLOAD_MAX_FILES,
+            })}
           </Typography.Paragraph>
         </button>
 
         <div className="grid gap-3 pt-2 sm:grid-cols-2">
           <SourceActionCard
             icon={<CloudUploadOutlined />}
-            label="上传文件"
-            description={`从本地选择文档，单次最多 ${KNOWLEDGE_UPLOAD_MAX_FILES} 个，系统会按队列逐个上传。`}
+            label={t('knowledge.upload.uploadFilesLabel')}
+            description={t('knowledge.upload.uploadFilesDescription', {
+              max: KNOWLEDGE_UPLOAD_MAX_FILES,
+            })}
             onClick={onUploadClick}
           />
           <SourceActionCard
             icon={<FileTextOutlined />}
-            label="文本录入"
-            description="直接粘贴或输入文字，保存后自动生成文本文件。"
+            label={t('knowledge.upload.textInputLabel')}
+            description={t('knowledge.upload.textInputDescription')}
             onClick={onTextInputClick}
           />
         </div>

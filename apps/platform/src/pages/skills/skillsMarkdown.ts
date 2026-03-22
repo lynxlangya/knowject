@@ -1,3 +1,5 @@
+import { tp } from './skills.i18n';
+
 export interface ParsedSkillMarkdownPreview {
   valid: boolean;
   errors: string[];
@@ -30,7 +32,7 @@ export const parseSkillMarkdownPreview = (
   const errors: string[] = [];
 
   if (lines[0]?.trim() !== FRONTMATTER_BOUNDARY) {
-    errors.push('SKILL.md 顶部必须以 --- frontmatter 开头。');
+    errors.push(tp('markdown.missingOpening'));
 
     return {
       valid: false,
@@ -46,7 +48,7 @@ export const parseSkillMarkdownPreview = (
   );
 
   if (closingIndex <= 0) {
-    errors.push('请补齐 frontmatter 结束分隔线 ---。');
+    errors.push(tp('markdown.missingClosing'));
 
     return {
       valid: false,
@@ -63,11 +65,11 @@ export const parseSkillMarkdownPreview = (
   const body = lines.slice(closingIndex + 1).join('\n').trim();
 
   if (!name) {
-    errors.push('frontmatter 必须包含非空 name。');
+    errors.push(tp('markdown.missingName'));
   }
 
   if (!description) {
-    errors.push('frontmatter 必须包含非空 description。');
+    errors.push(tp('markdown.missingDescription'));
   }
 
   return {
@@ -81,22 +83,22 @@ export const parseSkillMarkdownPreview = (
 
 export const buildSkillMarkdownTemplate = (): string => {
   return `---
-name: 新 Skill
-description: 用一句话说明这个 Skill 解决什么问题。
+name: ${tp('markdown.templateName')}
+description: ${tp('markdown.templateDescription')}
 ---
 
-# 背景
+# ${tp('markdown.templateBackground')}
 
-- 这个 Skill 的目标是什么
-- 适合在什么场景下使用
+- ${tp('markdown.templateBackgroundGoal')}
+- ${tp('markdown.templateBackgroundScene')}
 
-## 工作方式
+## ${tp('markdown.templateFlow')}
 
-- 第一步做什么
-- 第二步做什么
+- ${tp('markdown.templateStepOne')}
+- ${tp('markdown.templateStepTwo')}
 
-## 边界
+## ${tp('markdown.templateBoundary')}
 
-- 明确不处理什么
+- ${tp('markdown.templateBoundaryItem')}
 `;
 };

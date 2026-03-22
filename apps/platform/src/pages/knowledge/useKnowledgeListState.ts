@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { extractApiErrorMessage } from '@api/error';
 import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
 import { pickNextActiveKnowledgeId } from './knowledgeDomain.shared';
+import { tp } from './knowledge.i18n';
 
 export const useKnowledgeListState = () => {
   const isFirstLoadRef = useRef(true);
@@ -54,7 +55,7 @@ export const useKnowledgeListState = () => {
 
         console.error('[KnowledgeManagement] 加载知识库列表失败:', currentError);
         setError(
-          extractApiErrorMessage(currentError, '加载知识库列表失败，请稍后重试'),
+          extractApiErrorMessage(currentError, tp('management.listLoadFailed')),
         );
       } finally {
         if (isMounted) {

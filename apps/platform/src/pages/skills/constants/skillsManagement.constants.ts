@@ -3,18 +3,19 @@ import type {
   SkillRuntimeStatus,
   SkillSource,
 } from '@api/skills';
+import { tp } from '../skills.i18n';
 
 export const SKILLS_PAGE_SUBTITLE =
-  '让 Skill 成为可治理、可复用、可发布的全局方法资产';
+  tp('subtitle');
 
 export const editorTabs = [
-  { key: 'editor', label: '编辑器' },
-  { key: 'preview', label: '预览' },
+  { key: 'editor', label: tp('tabs.editor') },
+  { key: 'preview', label: tp('tabs.preview') },
 ] as const;
 
 export const lifecycleOptions = [
-  { value: 'draft', label: 'draft · 草稿' },
-  { value: 'published', label: 'published · 已发布' },
+  { value: 'draft', label: tp('lifecycle.draft') },
+  { value: 'published', label: tp('lifecycle.published') },
 ] satisfies Array<{ value: SkillLifecycleStatus; label: string }>;
 
 export const SOURCE_META: Record<
@@ -22,15 +23,15 @@ export const SOURCE_META: Record<
   { label: string; accentClass: string }
 > = {
   system: {
-    label: '系统内置',
+    label: tp('source.system'),
     accentClass: 'border-sky-200 bg-sky-50 text-sky-700',
   },
   custom: {
-    label: '自建 Skill',
+    label: tp('source.custom'),
     accentClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   },
   imported: {
-    label: '公网导入',
+    label: tp('source.imported'),
     accentClass: 'border-amber-200 bg-amber-50 text-amber-700',
   },
 };
@@ -40,11 +41,11 @@ export const RUNTIME_STATUS_META: Record<
   { label: string; accentClass: string }
 > = {
   available: {
-    label: '已接服务',
+    label: tp('runtime.available'),
     accentClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   },
   contract_only: {
-    label: '契约预留',
+    label: tp('runtime.contractOnly'),
     accentClass: 'border-slate-200 bg-slate-100 text-slate-600',
   },
 };
@@ -54,11 +55,11 @@ export const LIFECYCLE_STATUS_META: Record<
   { label: string; accentClass: string }
 > = {
   draft: {
-    label: '草稿',
+    label: tp('lifecycle.draftBadge'),
     accentClass: 'border-amber-200 bg-amber-50 text-amber-700',
   },
   published: {
-    label: '已发布',
+    label: tp('lifecycle.publishedBadge'),
     accentClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   },
 };

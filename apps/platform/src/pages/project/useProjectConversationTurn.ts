@@ -19,6 +19,7 @@ import {
 } from './useProjectConversationTurn.helpers';
 import type { ProjectChatIssue } from './useProjectChatSettings';
 import type { ProjectConversationTargetRefValue } from './useProjectConversationDetail';
+import { tp } from './project.i18n';
 
 export type ProjectConversationStreamStatus =
   | 'idle'
@@ -238,14 +239,14 @@ export const useProjectConversationTurn = ({
     },
   ) => {
     if (!chatId) {
-      message.warning('请先选择或新建一个对话线程');
+      message.warning(tp('conversation.turn.selectThread'));
       return;
     }
 
     const nextContent = rawContent.trim();
 
     if (!nextContent) {
-      message.warning('请输入消息内容');
+      message.warning(tp('conversation.turn.messageRequired'));
       return;
     }
 
@@ -262,7 +263,7 @@ export const useProjectConversationTurn = ({
       );
 
       if (!targetUserMessage) {
-        message.warning('目标用户消息不存在，无法继续该操作');
+        message.warning(tp('conversation.turn.targetMissing'));
         return;
       }
     }
@@ -414,7 +415,7 @@ export const useProjectConversationTurn = ({
 
       if (!receivedDone) {
         throw new ApiError(
-          '项目对话流在完成前已提前结束',
+          tp('conversation.turn.streamEndedEarly'),
           502,
           'PROJECT_CONVERSATION_STREAM_UNEXPECTED_EOF',
         );
@@ -440,21 +441,21 @@ export const useProjectConversationTurn = ({
         clearDraftMessages();
         setStreamStatus('error');
         setStreamError(
-          extractApiErrorMessage(currentError, '发送消息失败，请稍后重试'),
+          extractApiErrorMessage(currentError, tp('conversation.turn.sendFailed')),
         );
       }
 
       if (isCurrentConversationTarget(requestProjectId, requestConversationId)) {
         const nextIssue = buildChatIssueFromError(
           currentError,
-          '发送消息失败，请稍后重试',
+          tp('conversation.turn.sendFailed'),
         );
 
         if (nextIssue) {
           setChatRuntimeIssue(nextIssue);
         } else {
           message.error(
-            extractApiErrorMessage(currentError, '发送消息失败，请稍后重试'),
+            extractApiErrorMessage(currentError, tp('conversation.turn.sendFailed')),
           );
         }
       }

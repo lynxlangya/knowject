@@ -1,4 +1,6 @@
 import type { ProjectConversationMessageRole } from '@api/projects';
+import i18n from '../../i18n';
+import { tp } from './project.i18n';
 
 export interface ConversationMessageExportItem {
   id: string;
@@ -12,7 +14,7 @@ export interface BuildConversationMessageMarkdownOptions {
   messages: ConversationMessageExportItem[];
 }
 
-const DEFAULT_MARKDOWN_FILE_NAME = '项目对话.md';
+const DEFAULT_MARKDOWN_FILE_NAME = tp('conversation.exportFile');
 
 const normalizeWhitespace = (value: string): string => {
   return value.replace(/\s+/g, ' ').trim();
@@ -20,6 +22,7 @@ const normalizeWhitespace = (value: string): string => {
 
 const formatMessageTimestamp = (value: string): string => {
   return new Intl.DateTimeFormat('zh-CN', {
+    localeMatcher: 'best fit',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -31,7 +34,9 @@ const formatMessageTimestamp = (value: string): string => {
 const formatConversationMessageRole = (
   role: ProjectConversationMessageRole,
 ): string => {
-  return role === 'assistant' ? '助手' : '用户';
+  return role === 'assistant'
+    ? tp('conversation.roleAssistant')
+    : tp('conversation.roleUser');
 };
 
 export const normalizeMarkdownFileName = (value: string): string => {
@@ -50,7 +55,8 @@ export const buildConversationMessageMarkdown = ({
   const sortedMessages = [...messages].sort((left, right) => {
     return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
   });
-  const normalizedTitle = normalizeWhitespace(conversationTitle) || '项目对话';
+  const normalizedTitle =
+    normalizeWhitespace(conversationTitle) || tp('conversation.exportFallbackTitle');
   const sections = sortedMessages.map((message) => {
     return [
       `### ${formatConversationMessageRole(message.role)} · ${formatMessageTimestamp(message.createdAt)}`,

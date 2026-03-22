@@ -60,6 +60,7 @@ import {
 } from './useProjectConversationMessageRail';
 import { useProjectConversationTurn } from './useProjectConversationTurn';
 import { useProjectPageContext } from './projectPageContext';
+import { tp } from './project.i18n';
 
 export const ProjectChatPage = () => {
   const { message } = App.useApp();
@@ -287,7 +288,7 @@ export const ProjectChatPage = () => {
     );
 
     if (!nextDraft) {
-      message.warning('请先选择至少一条已持久化的消息');
+      message.warning(tp('conversation.assistantActions.selectPersisted'));
       return;
     }
 
@@ -361,7 +362,7 @@ export const ProjectChatPage = () => {
     setKnowledgeDraftOpen(false);
     setKnowledgeDraftValue(null);
     setKnowledgeDraftSelectedKnowledgeId(null);
-    message.success('项目知识草稿已保存到所选私有知识库');
+    message.success(tp('resources.draft.saved'));
   };
 
   const handleCreateProjectKnowledgeForDraft = async (
@@ -382,11 +383,11 @@ export const ProjectChatPage = () => {
       });
       setKnowledgeDraftSelectedKnowledgeId(result.knowledge.id);
       setKnowledgeAccessModalOpen(false);
-      message.success('项目私有知识库已创建');
+      message.success(tp('resources.draft.createSuccess'));
       void projectKnowledge.refresh();
     } catch (currentError) {
       message.error(
-        extractApiErrorMessage(currentError, '创建项目知识库失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('resources.draft.createFailed')),
       );
     } finally {
       setCreatingDraftKnowledge(false);
@@ -408,7 +409,7 @@ export const ProjectChatPage = () => {
       return;
     }
 
-    message.error(result.message ?? '保存知识草稿失败，请稍后重试');
+    message.error(result.message ?? tp('resources.draft.saveFailed'));
   };
 
   const railProps = {
@@ -456,7 +457,7 @@ export const ProjectChatPage = () => {
           : 'h-13! rounded-card-lg! border-dashed! border-slate-300! bg-white! px-6! text-base! font-semibold! text-slate-700! shadow-hero! transition-all! hover:-translate-y-0.5 hover:border-slate-400 hover:bg-slate-50!',
       ].join(' ')}
     >
-      新建对话
+      {tp('conversation.create')}
     </Button>
   );
 
@@ -470,14 +471,16 @@ export const ProjectChatPage = () => {
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex items-center gap-2">
                     <Typography.Text className="text-caption font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      项目对话
+                      {tp('conversation.title')}
                     </Typography.Text>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-caption font-medium text-slate-500">
-                      {conversations.items.length} 个线程
+                      {tp('conversation.threadCount', {
+                        count: conversations.items.length,
+                      })}
                     </span>
                   </div>
                   <Typography.Title level={4} className="mb-1! mt-0! text-slate-800!">
-                    最近上下文
+                    {tp('conversation.recentContext')}
                   </Typography.Title>
                 </div>
 
@@ -486,10 +489,10 @@ export const ProjectChatPage = () => {
 
               <div className="flex flex-wrap gap-2 text-caption text-slate-500">
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                  正式项目线程
+                  {tp('conversation.formalThread')}
                 </span>
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                  右键更多操作
+                  {tp('conversation.openOrMenu')}
                 </span>
               </div>
             </div>
@@ -506,7 +509,7 @@ export const ProjectChatPage = () => {
             <Alert
               type="warning"
               showIcon
-              title="项目对话加载失败"
+              title={tp('conversation.loadFailed')}
               description={conversations.error}
             />
           ) : (
@@ -547,7 +550,7 @@ export const ProjectChatPage = () => {
                       onClick={() => setMobileRailOpen(true)}
                       className="rounded-full! border-slate-200! bg-white! text-slate-700!"
                     >
-                      消息导航
+                      {tp('conversation.railTitle')}
                     </Button>
                   </div>
 
@@ -562,10 +565,10 @@ export const ProjectChatPage = () => {
                           <span>{blockingChatIssue.description}</span>
                           <div className="flex flex-wrap gap-2">
                             <Button type="primary" onClick={() => navigate(PATHS.settings)}>
-                              前往设置
+                              {tp('conversation.toSettings')}
                             </Button>
                             <Button onClick={() => void loadChatSettings()}>
-                              重新检查配置
+                              {tp('conversation.reloadConfig')}
                             </Button>
                           </div>
                         </div>
@@ -577,8 +580,10 @@ export const ProjectChatPage = () => {
                       type="warning"
                       showIcon
                       className="mb-4"
-                      title="当前无法确认对话配置"
-                      description={`${chatSettingsError}。如后续发送失败，请前往设置页检查配置。`}
+                      title={tp('conversation.configUnknown')}
+                      description={tp('conversation.configHelp', {
+                        error: chatSettingsError,
+                      })}
                     />
                   ) : null}
                   {inlineChatIssue ? (
@@ -604,7 +609,7 @@ export const ProjectChatPage = () => {
                     </div>
                   ) : (
                     <div className="grid min-h-0 flex-1 place-items-center">
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="该对话暂无消息" />
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={tp('conversation.emptyChat')} />
                     </div>
                   )}
                 </div>
@@ -628,8 +633,8 @@ export const ProjectChatPage = () => {
                             autoSize={{ minRows: 1, maxRows: 6 }}
                             disabled={sendActionLocked}
                             variant="borderless"
-                            aria-label="项目消息输入框"
-                            placeholder="输入项目问题"
+                            aria-label={tp('conversation.composerAria')}
+                            placeholder={tp('conversation.composerPlaceholder')}
                             style={{ width: '100%' }}
                             className="w-full! rounded-card-lg! bg-transparent! px-4! py-3! text-body! leading-7! text-slate-700! placeholder:text-slate-400!"
                             onChange={(event) => setComposerValue(event.target.value)}
@@ -647,19 +652,19 @@ export const ProjectChatPage = () => {
                         {isStreaming ? (
                           <Button
                             htmlType="button"
-                            aria-label="停止生成"
+                            aria-label={tp('conversation.stop')}
                             icon={<StopOutlined />}
                             onClick={handleCancelStreaming}
                             className="mb-1 h-11! rounded-full! border-slate-200! px-4! text-sm! font-semibold! text-slate-700!"
                           >
-                            停止生成
+                            {tp('conversation.stop')}
                           </Button>
                         ) : (
                           <Button
                             type="primary"
                             htmlType="submit"
                             shape="circle"
-                            aria-label="发送消息"
+                            aria-label={tp('conversation.sendAria')}
                             loading={streamStatus === 'reconciling'}
                             disabled={!canSubmitMessage}
                             icon={<ArrowUpOutlined />}
@@ -686,7 +691,7 @@ export const ProjectChatPage = () => {
             <Drawer
               open={mobileRailOpen}
               size={360}
-              title="消息导航"
+              title={tp('conversation.railTitle')}
               placement="right"
               className="xl:hidden"
               onClose={() => setMobileRailOpen(false)}
@@ -723,10 +728,10 @@ export const ProjectChatPage = () => {
               boundKnowledgeIds={[]}
               binding={false}
               creating={creatingDraftKnowledge}
-              createProjectTitle="新建当前项目的私有知识库"
-              createProjectDescription="先创建一个空的项目私有知识库，再回到知识草稿抽屉继续保存当前 Markdown 文档。"
-              createProjectHelperText="创建成功后会回到知识草稿抽屉，继续保存当前 Markdown 文档。"
-              createProjectSubmitText="创建空知识库"
+              createProjectTitle={tp('resources.access.defaultCreateTitle')}
+              createProjectDescription={tp('resources.access.defaultCreateDescription')}
+              createProjectHelperText={tp('resources.access.createContinueHint')}
+              createProjectSubmitText={tp('resources.access.createEmptySubmit')}
               onCancel={() => setKnowledgeAccessModalOpen(false)}
               onBindGlobalKnowledge={() => undefined}
               onCreateProjectKnowledge={(values) => {
@@ -741,10 +746,10 @@ export const ProjectChatPage = () => {
               <Alert
                 type={detailError ? 'error' : 'warning'}
                 showIcon
-                title={detailError ? '项目对话加载失败' : '对话不存在'}
+                title={detailError ? tp('conversation.loadFailed') : tp('conversation.missingConversation')}
                 description={
                   detailError ??
-                  '当前 chatId 无法匹配到会话，请从左侧重新选择。'
+                  tp('conversation.missingConversationDescription')
                 }
               />
             ) : (
@@ -759,10 +764,10 @@ export const ProjectChatPage = () => {
                         <span>{blockingChatIssue.description}</span>
                         <div className="flex flex-col justify-center gap-3 sm:flex-row">
                           <Button type="primary" onClick={() => navigate(PATHS.settings)}>
-                            前往设置
+                            {tp('conversation.toSettings')}
                           </Button>
                           <Button onClick={() => void loadChatSettings()}>
-                            重新检查配置
+                            {tp('conversation.reloadConfig')}
                           </Button>
                         </div>
                       </div>
@@ -773,14 +778,16 @@ export const ProjectChatPage = () => {
                   <Alert
                     type="warning"
                     showIcon
-                    title="当前无法确认对话配置"
-                    description={`${chatSettingsError}。你仍可先创建线程；若发送失败，请前往设置页检查。`}
+                    title={tp('conversation.configUnknown')}
+                    description={tp('conversation.configHelpEmpty', {
+                      error: chatSettingsError,
+                    })}
                   />
                 ) : null}
                 <Empty
                   description={
                     <Typography.Text type="secondary">
-                      请选择左侧线程，或先新建一个对话开始发送消息。
+                      {tp('conversation.emptyStateDescription')}
                     </Typography.Text>
                   }
                 />

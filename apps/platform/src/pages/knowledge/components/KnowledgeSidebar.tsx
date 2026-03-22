@@ -1,4 +1,5 @@
 import { Avatar, Button, Empty, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
 import {
   GlobalAssetSidebar,
@@ -27,23 +28,25 @@ export const KnowledgeSidebar = ({
   onSelectKnowledge,
   onCreateKnowledge,
 }: KnowledgeSidebarProps) => {
+  const { t } = useTranslation('pages');
+
   return (
     <GlobalAssetSidebar
       header={
         <div className="flex items-end justify-between gap-3">
           <Typography.Title level={5} className="mb-0! text-slate-800!">
-            知识库列表
+            {t('knowledge.list.title')}
           </Typography.Title>
           <Typography.Text className="text-xs text-slate-400">
-            共 {items.length} 个
+            {t('knowledge.list.count', { count: items.length })}
           </Typography.Text>
         </div>
       }
     >
       {items.length === 0 ? (
-        <Empty className="my-10" description="还没有正式知识库，先创建一个再上传文档。">
+        <Empty className="my-10" description={t('knowledge.list.empty')}>
           <Button type="primary" onClick={onCreateKnowledge}>
-            创建第一个知识库
+            {t('knowledge.list.createFirst')}
           </Button>
         </Empty>
       ) : (
@@ -54,9 +57,10 @@ export const KnowledgeSidebar = ({
             const sourceTypeMeta =
               KNOWLEDGE_SOURCE_TYPE_META[knowledge.sourceType];
             const isActive = knowledge.id === activeKnowledgeId;
-            const compactMeta = `${knowledge.documentCount} 份文档 · ${formatKnowledgeCompactDate(
-              knowledge.updatedAt,
-            )} 更新`;
+            const compactMeta = t('knowledge.list.compactMeta', {
+              count: knowledge.documentCount,
+              updatedAt: formatKnowledgeCompactDate(knowledge.updatedAt),
+            });
 
             return (
               <GlobalAssetSidebarItem

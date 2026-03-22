@@ -1,5 +1,6 @@
 import { ReloadOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Spin, Tooltip, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { GlobalAssetPageHeader, GlobalAssetPageLayout } from '@pages/assets/components/GlobalAssetLayout';
 import { AgentDetailPane } from './components/AgentDetailPane';
 import { AgentFormModal } from './components/AgentFormModal';
@@ -12,6 +13,7 @@ import { useAgentsListState } from './hooks/useAgentsListState';
 
 export const AgentsManagementPage = () => {
   const { message, modal } = App.useApp();
+  const { t } = useTranslation('pages');
   const {
     agentFilters,
     error,
@@ -75,21 +77,21 @@ export const AgentsManagementPage = () => {
     <GlobalAssetPageLayout
       header={
         <GlobalAssetPageHeader
-          title="智能体"
+          title={t('agents.title')}
           subtitle={AGENTS_PAGE_SUBTITLE}
           summaryItems={summaryItems}
           actions={
             <div className="flex flex-col items-start gap-3 lg:items-end">
               <Typography.Text className="text-xs text-slate-400">
-                模型由服务端固定，绑定资源时会做存在性校验
+                {t('agents.modelHint')}
               </Typography.Text>
               <div className="flex flex-wrap gap-2">
                 <Button type="primary" onClick={openCreateModal}>
-                  新建智能体
+                  {t('agents.create')}
                 </Button>
-                <Tooltip title="刷新目录">
+                <Tooltip title={t('agents.reload')}>
                   <Button
-                    aria-label="刷新目录"
+                    aria-label={t('agents.reload')}
                     shape="circle"
                     icon={<ReloadOutlined />}
                     onClick={reload}
@@ -107,9 +109,9 @@ export const AgentsManagementPage = () => {
             showIcon
             message={error}
             action={
-              <Button size="small" onClick={reload}>
-                重试
-              </Button>
+                <Button size="small" onClick={reload}>
+                  {t('agents.retry')}
+                </Button>
             }
           />
         ) : null

@@ -21,6 +21,7 @@ import type {
   ProjectChatIssue,
 } from './useProjectChatSettings';
 import type { ProjectConversationTargetRefValue } from './useProjectConversationDetail';
+import { tp } from './project.i18n';
 
 interface UseProjectChatActionsOptions {
   activeProjectId: string;
@@ -107,14 +108,14 @@ export const useProjectChatActions = ({
       if (isCurrentProject(requestProjectId)) {
         const nextIssue = buildChatIssueFromError(
           currentError,
-          '新建对话失败，请稍后重试',
+          tp('conversation.actions.createFailed'),
         );
 
         if (nextIssue) {
           setChatRuntimeIssue(nextIssue);
         } else {
           message.error(
-            extractApiErrorMessage(currentError, '新建对话失败，请稍后重试'),
+            extractApiErrorMessage(currentError, tp('conversation.actions.createFailed')),
           );
         }
       }
@@ -151,7 +152,7 @@ export const useProjectChatActions = ({
     const nextTitle = renameConversationTitleDraft.trim();
 
     if (!nextTitle) {
-      message.warning('请输入对话标题');
+      message.warning(tp('conversation.actions.renameRequired'));
       return;
     }
 
@@ -184,11 +185,11 @@ export const useProjectChatActions = ({
 
       setRenameTargetConversation(null);
       setRenameConversationTitleDraft('');
-      message.success('对话标题已更新');
+      message.success(tp('conversation.actions.renameSuccess'));
     } catch (currentError) {
       console.error(currentError);
       message.error(
-        extractApiErrorMessage(currentError, '更新对话标题失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('conversation.actions.renameFailed')),
       );
     } finally {
       setRenamingConversation(false);
@@ -201,7 +202,7 @@ export const useProjectChatActions = ({
     }
 
     if (conversations.items.length <= 1) {
-      message.warning('至少保留一个对话线程');
+      message.warning(tp('conversation.actions.keepOne'));
       return;
     }
 
@@ -221,11 +222,11 @@ export const useProjectChatActions = ({
       null;
 
     modal.confirm({
-      title: '删除当前线程',
-      content: `确定删除「${currentTitle}」吗？此操作不可撤销。`,
-      okText: '删除',
+      title: tp('conversation.actions.deleteTitle'),
+      content: tp('conversation.actions.deleteContent', { title: currentTitle }),
+      okText: tp('conversation.actions.deleteConfirm'),
       okButtonProps: { danger: true },
-      cancelText: '取消',
+      cancelText: tp('conversation.actions.cancel'),
       onOk: () => {
         return (async () => {
           setDeletingConversation(true);
@@ -252,7 +253,7 @@ export const useProjectChatActions = ({
               setRenameConversationTitleDraft('');
             }
 
-            message.success(`已删除「${currentTitle}」`);
+            message.success(tp('conversation.actions.deleteSuccess', { title: currentTitle }));
           } catch (currentError) {
             console.error(currentError);
 
@@ -263,14 +264,14 @@ export const useProjectChatActions = ({
               message.warning(
                 extractApiErrorMessage(
                   currentError,
-                  '至少保留一个对话线程',
+                  tp('conversation.actions.keepOne'),
                 ),
               );
             } else {
               message.error(
                 extractApiErrorMessage(
                   currentError,
-                  '删除对话失败，请稍后重试',
+                  tp('conversation.actions.deleteFailed'),
                 ),
               );
             }
@@ -290,13 +291,13 @@ export const useProjectChatActions = ({
   ) => {
     switch (action) {
       case 'share':
-        message.info('后续将支持分享线程。');
+        message.info(tp('conversation.actions.shareSoon'));
         return;
       case 'knowledge':
-        message.info('后续将支持把当前讨论沉淀为知识条目。');
+        message.info(tp('conversation.actions.knowledgeSoon'));
         return;
       case 'resources':
-        message.info('后续将支持从线程上下文直接查看相关资源。');
+        message.info(tp('conversation.actions.resourcesSoon'));
         return;
       case 'rename':
         handleStartRenamingConversation(conversation);

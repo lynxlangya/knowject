@@ -30,6 +30,7 @@ import { useProjectResourceFocus } from "./hooks/useProjectResourceFocus";
 import { useProjectPageContext } from "./projectPageContext";
 import { getProjectResourceGroups } from "./projectResourceMappers";
 import type { ProjectKnowledgeCardActionKey } from "./types/projectResources.types";
+import { tp } from "./project.i18n";
 
 export const ProjectResourcesPage = () => {
   const { message, modal } = App.useApp();
@@ -160,12 +161,12 @@ export const ProjectResourcesPage = () => {
       removeActiveKnowledgeDocument(knowledgeId, document.id);
     },
     messages: {
-      retryError: () => "重试项目知识文档失败，请稍后重试",
-      rebuildDocumentSuccess: () => "文档已提交重建",
-      rebuildDocumentError: () => "重建项目知识文档失败，请稍后重试",
-      rebuildKnowledgeSuccess: () => "已提交全部文档重建任务",
-      rebuildKnowledgeError: () => "重建项目知识库失败，请稍后重试",
-      deleteDocumentError: () => "删除项目知识文档失败，请稍后重试",
+      retryError: () => tp("resources.documentActions.retryError"),
+      rebuildDocumentSuccess: () => tp("resources.documentActions.rebuildSuccess"),
+      rebuildDocumentError: () => tp("resources.documentActions.rebuildError"),
+      rebuildKnowledgeSuccess: () => tp("resources.documentActions.rebuildAllSuccess"),
+      rebuildKnowledgeError: () => tp("resources.documentActions.rebuildAllError"),
+      deleteDocumentError: () => tp("resources.documentActions.deleteError"),
     },
   });
 
@@ -175,13 +176,13 @@ export const ProjectResourcesPage = () => {
 
   const confirmDeleteDocument = (document: KnowledgeDocumentResponse) => {
     modal.confirm({
-      title: "删除文档",
+      title: tp("resources.documentActions.deleteTitle"),
       content:
         document.status === "pending" || document.status === "processing"
-          ? "会删除文档记录与原始文件；若后台索引任务刚好完成，系统会继续尝试清理对应向量。"
-          : "会删除文档记录、原始文件，并清理对应向量记录。",
-      okText: "删除",
-      cancelText: "取消",
+          ? tp("resources.documentActions.deletePendingDescription")
+          : tp("resources.documentActions.deleteDoneDescription"),
+      okText: tp("conversation.actions.deleteConfirm"),
+      cancelText: tp("conversation.actions.cancel"),
       okButtonProps: {
         danger: true,
       },
@@ -246,14 +247,14 @@ export const ProjectResourcesPage = () => {
       return [
         {
           key: "open-global",
-          label: "前往全局治理",
+          label: tp("resources.toGlobal"),
         },
         {
           type: "divider",
         },
         {
           key: "unbind",
-          label: "解除项目绑定",
+          label: tp("resources.unbind"),
           danger: true,
           disabled: updatingGlobalBindingId === item.id,
         },
@@ -263,15 +264,15 @@ export const ProjectResourcesPage = () => {
     return [
       {
         key: "upload",
-        label: "上传文档",
+        label: tp("resources.uploadDocument"),
       },
       {
         key: "edit",
-        label: "编辑知识库",
+        label: tp("resources.editKnowledge"),
       },
       {
         key: "rebuild",
-        label: "重建全部文档",
+        label: tp("resources.rebuildAll"),
         disabled: rebuildingKnowledgeId === item.id || item.documentCount === 0,
       },
       {
@@ -279,7 +280,7 @@ export const ProjectResourcesPage = () => {
       },
       {
         key: "delete",
-        label: "删除知识库",
+        label: tp("resources.deleteKnowledge"),
         danger: true,
         disabled: deletingKnowledgeId === item.id,
       },
@@ -310,7 +311,7 @@ export const ProjectResourcesPage = () => {
           size="small"
           icon={<MoreOutlined />}
           loading={itemBusy}
-          aria-label={`更多操作：${item.name}`}
+          aria-label={tp("resources.moreActions", { name: item.name })}
         />
       </Dropdown>
     );
@@ -325,7 +326,7 @@ export const ProjectResourcesPage = () => {
       return;
     }
 
-    message.info(`下一步会在这里接入“为当前项目新增${groupTitle}”的流程。`);
+    message.info(tp("resources.nextStep", { title: groupTitle }));
   };
 
   return (
@@ -334,13 +335,13 @@ export const ProjectResourcesPage = () => {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
             <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              项目资源
+              {tp("resources.pageTitle")}
             </Typography.Text>
             <Typography.Title level={3} className="mb-1! mt-2 text-slate-800!">
-              当前项目知识、技能与智能体
+              {tp("resources.pageSubtitle")}
             </Typography.Title>
             <Typography.Paragraph className="mb-0! max-w-2xl text-sm! text-slate-600!">
-              这里展示的是当前项目内已经启用的知识库、技能和智能体。知识库分成“绑定的全局知识”和“项目私有知识”两层，前者继续走全局治理，后者可直接在当前页创建并上传文档。
+              {tp("resources.pageDescription")}
             </Typography.Paragraph>
           </div>
 
@@ -353,7 +354,7 @@ export const ProjectResourcesPage = () => {
           <Alert
             type="warning"
             showIcon
-            message="全局知识库元数据加载失败"
+            message={tp("resources.alertGlobalKnowledge")}
             description={knowledgeCatalogError}
           />
         ) : null}
@@ -362,7 +363,7 @@ export const ProjectResourcesPage = () => {
           <Alert
             type="warning"
             showIcon
-            message="项目私有知识加载失败"
+            message={tp("resources.alertProjectKnowledge")}
             description={projectKnowledgeError}
           />
         ) : null}
@@ -371,7 +372,7 @@ export const ProjectResourcesPage = () => {
           <Alert
             type="warning"
             showIcon
-            message="Skill 元数据加载失败"
+            message={tp("resources.alertSkills")}
             description={skillsCatalogError}
           />
         ) : null}
@@ -380,7 +381,7 @@ export const ProjectResourcesPage = () => {
           <Alert
             type="warning"
             showIcon
-            message="Agent 元数据加载失败"
+            message={tp("resources.alertAgents")}
             description={agentsCatalogError}
           />
         ) : null}
@@ -399,7 +400,11 @@ export const ProjectResourcesPage = () => {
             <ProjectResourceGroup
               group={group}
               highlighted={focus === group.key}
-              addButtonLabel={group.key === "knowledge" ? "接入知识库" : "新增"}
+              addButtonLabel={
+                group.key === "knowledge"
+                  ? tp("resources.addKnowledge")
+                  : tp("resources.addDefault")
+              }
               onAddProjectResource={() =>
                 handleAddProjectResource(group.key, group.title)
               }
@@ -420,12 +425,12 @@ export const ProjectResourcesPage = () => {
                           type="primary"
                           onClick={() => openKnowledgeAccessModal("global")}
                         >
-                          引入全局知识库
+                          {tp("resources.connectGlobalKnowledge")}
                         </Button>
                         <Button
                           onClick={() => openKnowledgeAccessModal("project")}
                         >
-                          新建项目知识库
+                          {tp("resources.createProjectKnowledge")}
                         </Button>
                       </div>
                     )
@@ -561,7 +566,7 @@ export const ProjectResourcesPage = () => {
 
       {uploadTargetKnowledge ? (
         <div className="sr-only" aria-live="polite">
-          当前准备上传到 {uploadTargetKnowledge.name}
+          {tp("resources.uploadTarget", { name: uploadTargetKnowledge.name })}
         </div>
       ) : null}
     </section>

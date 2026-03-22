@@ -5,6 +5,7 @@ import {
 } from "@api/knowledge";
 import { Alert, Button, Divider, Empty, Input, Tag, Typography } from "antd";
 import { Fragment, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface KnowledgeSearchTabProps {
   knowledgeId: string | null;
@@ -12,7 +13,6 @@ interface KnowledgeSearchTabProps {
 
 type SearchStatus = "idle" | "success" | "empty" | "error";
 
-const QUERY_PLACEHOLDER = "输入一段描述，验证这个知识库能否找到相关内容";
 const MAX_CONTENT_PREVIEW_LENGTH = 120;
 
 const truncateContent = (content: string): string => {
@@ -39,6 +39,7 @@ const formatSimilarityScore = (distance: number | null): string => {
 export const KnowledgeSearchTab = ({
   knowledgeId,
 }: KnowledgeSearchTabProps) => {
+  const { t } = useTranslation("pages");
   const requestIdRef = useRef(0);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -90,7 +91,7 @@ export const KnowledgeSearchTab = ({
         return;
       }
 
-      console.error("[KnowledgeSearchTab] 知识库检索失败:", error);
+      console.error("[KnowledgeSearchTab] knowledge search failed:", error);
       setStatus("error");
     } finally {
       if (requestIdRef.current === requestId) {
@@ -109,7 +110,7 @@ export const KnowledgeSearchTab = ({
               variant="borderless"
               value={query}
               prefix={<SearchOutlined className="text-slate-400" />}
-              placeholder={QUERY_PLACEHOLDER}
+              placeholder={t("knowledge.search.placeholder")}
               disabled={loading}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -126,7 +127,7 @@ export const KnowledgeSearchTab = ({
               className="mx-1 my-1 shrink-0 px-3"
               loading={loading}
               disabled={!canSearch}
-              aria-label="检索"
+              aria-label={t("knowledge.search.action")}
               onClick={() => {
                 void handleSearch();
               }}
@@ -136,20 +137,20 @@ export const KnowledgeSearchTab = ({
 
         {status === "idle" ? (
           <Typography.Text className="block text-sm text-slate-400">
-            输入查询内容后，将返回最相关的 5 条知识片段及相关度分数
+            {t("knowledge.search.hint")}
           </Typography.Text>
         ) : null}
       </div>
 
       {status === "idle" ? null : status === "error" ? (
         <div className="w-fit max-w-full">
-          <Alert type="error" showIcon message="检索失败，请稍后重试" />
+          <Alert type="error" showIcon message={t("knowledge.search.failed")} />
         </div>
       ) : status === "empty" ? (
         <div className="rounded-card border border-dashed border-slate-200 bg-slate-50/50 py-8">
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="未找到相关内容，可检查文档是否已完成索引"
+            description={t("knowledge.search.empty")}
           />
         </div>
       ) : (
@@ -160,10 +161,12 @@ export const KnowledgeSearchTab = ({
                 <div className="py-4">
                   <div className="flex items-start justify-between gap-3">
                     <Tag color="default" className="mr-0 max-w-[70%] truncate">
-                      {item.source || "未命名文档"}
+                      {item.source || t("knowledge.search.unnamedSource")}
                     </Tag>
                     <Typography.Text className="shrink-0 text-xs text-slate-400">
-                      相关度 {formatSimilarityScore(item.distance)}
+                      {t("knowledge.search.similarity", {
+                        score: formatSimilarityScore(item.distance),
+                      })}
                     </Typography.Text>
                   </div>
                   <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-500!">

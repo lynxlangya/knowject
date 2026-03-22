@@ -1,5 +1,6 @@
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
 import type { GlobalAssetSummaryItem } from '@pages/assets/components/GlobalAssetLayout';
+import { tp } from '../knowledge.i18n';
 
 export const buildKnowledgeStats = (
   items: KnowledgeSummaryResponse[],
@@ -23,29 +24,29 @@ export const buildKnowledgeStats = (
 
   return [
     {
-      label: '知识库总数',
-      value: `${items.length} 个`,
-      hint: '当前纳入治理的全局知识集合。',
+      label: tp('stats.knowledgeCount'),
+      value: tp('stats.knowledgeCountValue', { count: items.length }),
+      hint: tp('stats.knowledgeCountHint'),
     },
     {
-      label: '文档总数',
-      value: `${totalDocuments} 份`,
-      hint: '已上传到各知识库的原始文档规模。',
+      label: tp('stats.totalDocuments'),
+      value: tp('stats.totalDocumentsValue', { count: totalDocuments }),
+      hint: tp('stats.totalDocumentsHint'),
     },
     {
-      label: '分块总量',
-      value: `${totalChunks} 段`,
-      hint: '直接反映当前检索与向量索引体量。',
+      label: tp('stats.totalChunks'),
+      value: tp('stats.totalChunksValue', { count: totalChunks }),
+      hint: tp('stats.totalChunksHint'),
     },
     {
-      label: '需关注索引',
-      value: `${attentionCount} 个`,
+      label: tp('stats.attention'),
+      value: tp('stats.attentionValue', { count: attentionCount }),
       hint:
         attentionCount === 0
-          ? '当前没有排队、处理中或失败的知识库。'
+          ? tp('stats.attentionHintNone')
           : failedCount === 0
-            ? `${processingCount} 个仍在排队或处理中。`
-            : `${failedCount} 个失败，${processingCount} 个排队或处理中。`,
+            ? tp('stats.attentionHintProcessing', { processingCount })
+            : tp('stats.attentionHintMixed', { failedCount, processingCount }),
     },
   ];
 };

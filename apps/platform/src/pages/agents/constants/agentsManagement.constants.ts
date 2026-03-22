@@ -1,4 +1,5 @@
 import type { AgentStatus } from '@api/agents';
+import { tp } from '../agents.i18n';
 import type { AgentFormValues } from '../types/agentsManagement.types';
 
 export const AGENT_STATUS_META: Record<
@@ -6,16 +7,16 @@ export const AGENT_STATUS_META: Record<
   { label: string; tagColor: string }
 > = {
   active: {
-    label: '启用中',
+    label: tp('status.active'),
     tagColor: 'green',
   },
   disabled: {
-    label: '已停用',
+    label: tp('status.disabled'),
     tagColor: 'default',
   },
 };
 
-export const AGENTS_PAGE_SUBTITLE = '复用角色与流程，项目内绑定执行';
+export const AGENTS_PAGE_SUBTITLE = tp('subtitle');
 
 export const AGENT_FORM_INITIAL_VALUES: AgentFormValues = {
   name: '',

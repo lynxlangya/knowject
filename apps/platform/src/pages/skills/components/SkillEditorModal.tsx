@@ -1,5 +1,6 @@
 import { Alert, Input, Modal, Select, Spin, Tabs, Typography } from 'antd';
 import type { SkillDetailResponse, SkillLifecycleStatus } from '@api/skills';
+import { useTranslation } from 'react-i18next';
 import { editorTabs, lifecycleOptions } from '../constants/skillsManagement.constants';
 import type { EditorMode } from '../types/skillsManagement.types';
 import type { ParsedSkillMarkdownPreview } from '../skillsMarkdown';
@@ -36,17 +37,27 @@ export const SkillEditorModal = ({
   onCancel,
   onSubmit,
 }: SkillEditorModalProps) => {
+  const { t } = useTranslation('pages');
+
   return (
     <Modal
-      title={editorMode === 'create' ? '新建 Skill' : '编辑 Skill'}
+      title={
+        editorMode === 'create'
+          ? t('skills.editor.createTitle')
+          : t('skills.editor.editTitle')
+      }
       open={editorMode !== null}
       onCancel={onCancel}
       onOk={onSubmit}
       confirmLoading={editorSubmitting}
       destroyOnHidden
       width={880}
-      okText={editorMode === 'create' ? '创建草稿' : '保存修改'}
-      cancelText="取消"
+      okText={
+        editorMode === 'create'
+          ? t('skills.editor.createDraft')
+          : t('skills.editor.save')
+      }
+      cancelText={t('skills.editor.cancel')}
     >
       {editorLoading ? (
         <div className="flex min-h-80 items-center justify-center">
@@ -57,13 +68,13 @@ export const SkillEditorModal = ({
           <Alert
             type="info"
             showIcon
-            message="Skill 以原生 SKILL.md 作为事实源。创建后默认进入草稿，发布后才可被 Agent 或项目绑定。"
+            message={t('skills.editor.intro')}
           />
 
           {editorMode === 'edit' && editingSkill?.source !== 'system' ? (
             <div className="flex items-center gap-3">
               <Typography.Text className="text-sm text-slate-500">
-                发布状态
+                {t('skills.lifecycle.title')}
               </Typography.Text>
               <Select
                 value={editorLifecycleStatus}
@@ -89,7 +100,7 @@ export const SkillEditorModal = ({
                       <Alert
                         type="warning"
                         showIcon
-                        message="当前还不能保存"
+                        message={t('skills.editor.invalid')}
                         description={
                           <div className="space-y-1">
                             {editorValidation.errors.map((currentError) => (
@@ -102,14 +113,14 @@ export const SkillEditorModal = ({
                       <Alert
                         type="success"
                         showIcon
-                        message="frontmatter 校验通过"
+                        message={t('skills.editor.valid')}
                       />
                     )}
                     <Input.TextArea
                       value={editorMarkdown}
                       autoSize={{ minRows: 18, maxRows: 22 }}
                       className="font-mono"
-                      placeholder="请填写原生 SKILL.md"
+                      placeholder={t('skills.editor.placeholder')}
                       onChange={(event) => {
                         onEditorMarkdownChange(event.target.value);
                       }}

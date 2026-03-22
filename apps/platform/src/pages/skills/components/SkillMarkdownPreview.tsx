@@ -1,4 +1,5 @@
 import { Alert, Card, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { parseSkillMarkdownPreview } from '../skillsMarkdown';
 
 interface SkillMarkdownPreviewProps {
@@ -6,6 +7,7 @@ interface SkillMarkdownPreviewProps {
 }
 
 export const SkillMarkdownPreview = ({ markdown }: SkillMarkdownPreviewProps) => {
+  const { t } = useTranslation('pages');
   const preview = parseSkillMarkdownPreview(markdown);
 
   return (
@@ -14,7 +16,7 @@ export const SkillMarkdownPreview = ({ markdown }: SkillMarkdownPreviewProps) =>
         <Alert
           type="warning"
           showIcon
-          message="预览前发现 frontmatter 校验问题"
+          message={t('skills.editor.validationPreview')}
           description={
             <div className="space-y-1">
               {preview.errors.map((error) => (
@@ -30,10 +32,10 @@ export const SkillMarkdownPreview = ({ markdown }: SkillMarkdownPreviewProps) =>
           SKILL Preview
         </Typography.Text>
         <Typography.Title level={4} className="mb-0! mt-3 text-slate-900!">
-          {preview.name || '等待填写 name'}
+          {preview.name || t('skills.editor.waitingName')}
         </Typography.Title>
         <Typography.Paragraph className="mb-0! mt-2 text-sm! leading-6! text-slate-600!">
-          {preview.description || '等待填写 description'}
+          {preview.description || t('skills.editor.waitingDescription')}
         </Typography.Paragraph>
       </div>
 
@@ -42,7 +44,7 @@ export const SkillMarkdownPreview = ({ markdown }: SkillMarkdownPreviewProps) =>
         styles={{ body: { padding: 0 } }}
       >
         <pre className="max-h-85 overflow-auto whitespace-pre-wrap px-5 py-5 text-label leading-6 text-slate-600">
-          {preview.body || '这里会显示 frontmatter 之后的正文内容。'}
+          {preview.body || t('skills.editor.waitingBody')}
         </pre>
       </Card>
     </div>

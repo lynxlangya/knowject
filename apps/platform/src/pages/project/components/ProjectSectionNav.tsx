@@ -1,5 +1,6 @@
 import type { ProjectSectionKey } from '@app/project/project.types';
 import { KNOWJECT_BRAND } from '@styles/brand';
+import { tp } from '../project.i18n';
 
 interface ProjectSectionNavProps {
   activeKey: ProjectSectionKey;
@@ -9,23 +10,23 @@ interface ProjectSectionNavProps {
 const NAV_ITEMS: Array<{ key: ProjectSectionKey; label: string; description: string }> = [
   {
     key: 'overview',
-    label: '概览',
-    description: '项目摘要与最近动态',
+    label: tp('nav.overview.label'),
+    description: tp('nav.overview.description'),
   },
   {
     key: 'chat',
-    label: '对话',
-    description: '项目讨论与上下文',
+    label: tp('nav.chat.label'),
+    description: tp('nav.chat.description'),
   },
   {
     key: 'resources',
-    label: '资源',
-    description: '当前项目知识、技能与智能体',
+    label: tp('nav.resources.label'),
+    description: tp('nav.resources.description'),
   },
   {
     key: 'members',
-    label: '成员',
-    description: '项目参与者与协作状态',
+    label: tp('nav.members.label'),
+    description: tp('nav.members.description'),
   },
 ];
 
@@ -34,7 +35,7 @@ export const ProjectSectionNav = ({
   onSelect,
 }: ProjectSectionNavProps) => {
   return (
-    <nav aria-label="项目页面分区" className="border-b border-slate-200/90">
+    <nav aria-label={tp('nav.aria')} className="border-b border-slate-200/90">
       <div className="flex gap-1 overflow-x-auto">
         {NAV_ITEMS.map((item) => {
           const active = item.key === activeKey;

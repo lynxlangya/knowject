@@ -1,5 +1,6 @@
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
 import type { SkillSummaryResponse } from '@api/skills';
+import { tp } from '../agents.i18n';
 import type { AgentSelectOption } from '../types/agentsManagement.types';
 
 export const resolveSelectableOptions = (
@@ -17,7 +18,7 @@ export const resolveSelectableOptions = (
 
     optionMap.set(resourceId, {
       value: resourceId,
-      label: `未知 Skill（${resourceId}）`,
+      label: tp('feedback.optionalUnknownSkill', { id: resourceId }),
     });
   });
 
@@ -31,7 +32,7 @@ export const createKnowledgeOptions = (
     value: item.id,
     label:
       item.sourceType === 'global_code'
-        ? `${item.name} · global_code（预留）`
+        ? tp('feedback.optionalGlobalCode', { name: item.name })
         : item.name,
   }));
 };
@@ -44,8 +45,8 @@ export const createSkillOptions = (
     value: item.id,
     label:
       item.runtimeStatus === 'available'
-        ? `${item.name} · 已接服务`
-        : `${item.name} · 契约预留`,
+        ? tp('feedback.optionalRuntimeReady', { name: item.name })
+        : tp('feedback.optionalContractOnly', { name: item.name }),
   }));
 
   return resolveSelectableOptions(selectedSkillIds, baseOptions);

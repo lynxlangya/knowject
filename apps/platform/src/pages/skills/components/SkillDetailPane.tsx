@@ -1,6 +1,7 @@
 import { DeleteOutlined, EditOutlined, MoreOutlined, UploadOutlined } from '@ant-design/icons';
 import { Button, Card, Dropdown, Empty, Tag, Typography, type MenuProps } from 'antd';
 import type { SkillSummaryResponse } from '@api/skills';
+import { useTranslation } from 'react-i18next';
 import {
   GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME,
   GlobalAssetMetaPill,
@@ -8,6 +9,7 @@ import {
 import { formatGlobalAssetUpdatedAt } from '@pages/assets/components/globalAsset.shared';
 import { getStatusBadgeMeta } from '../adapters/skillStatus.adapter';
 import { SOURCE_META } from '../constants/skillsManagement.constants';
+import { tp } from '../skills.i18n';
 
 interface SkillDetailPaneProps {
   error: string | null;
@@ -19,46 +21,43 @@ interface SkillDetailPaneProps {
 const buildSkillActionMenuItems = (
   skill: SkillSummaryResponse,
 ): MenuProps['items'] => {
+  const items: NonNullable<MenuProps['items']> = [];
+
   if (skill.source === 'system') {
     return [
       {
         key: 'readonly',
-        label: '系统内置 Skill，仅支持查看',
+        label: tp('action.readonly'),
         icon: <EditOutlined />,
         disabled: true,
       },
     ];
   }
-
-  const items: NonNullable<MenuProps['items']> = [
+  return [
     {
       key: 'edit',
-      label: '编辑',
+      label: tp('action.edit'),
       icon: <EditOutlined />,
     },
-  ];
-
-  if (skill.lifecycleStatus === 'draft') {
-    items.push({
-      key: 'publish',
-      label: '发布',
-      icon: <UploadOutlined />,
-    });
-  }
-
-  items.push(
+    ...(skill.lifecycleStatus === 'draft'
+      ? [
+          {
+            key: 'publish',
+            label: tp('action.publish'),
+            icon: <UploadOutlined />,
+          },
+        ]
+      : []),
     {
       type: 'divider',
     },
     {
       key: 'delete',
-      label: '删除',
+      label: tp('action.delete'),
       icon: <DeleteOutlined />,
       danger: true,
     },
-  );
-
-  return items;
+  ];
 };
 
 export const SkillDetailPane = ({
@@ -67,11 +66,12 @@ export const SkillDetailPane = ({
   filteredItems,
   onSkillMenuAction,
 }: SkillDetailPaneProps) => {
+  const { t } = useTranslation('pages');
   if (!error && items.length === 0) {
     return (
       <Card className={GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME}>
         <Empty
-          description="当前还没有 Skill，先新建一个方法资产吧。"
+          description={t('skills.emptyAll')}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       </Card>
@@ -81,7 +81,7 @@ export const SkillDetailPane = ({
   if (!error && items.length > 0 && filteredItems.length === 0) {
     return (
       <Card className={GLOBAL_ASSET_CONTENT_CARD_CLASS_NAME}>
-        <Empty description="当前分组下暂无 Skill" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        <Empty description={t('skills.emptyFiltered')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
       </Card>
     );
   }
@@ -128,7 +128,7 @@ export const SkillDetailPane = ({
               <div className="flex items-center justify-end gap-2">
                 {skill.source === 'system' ? (
                   <Tag color="default" className="mr-0 rounded-full px-3 py-1">
-                    只读
+                    {t('skills.readOnlyTag')}
                   </Tag>
                 ) : null}
 
@@ -145,7 +145,7 @@ export const SkillDetailPane = ({
                     type="text"
                     size="small"
                     icon={<MoreOutlined />}
-                    aria-label={`更多操作：${skill.name}`}
+                    aria-label={t('skills.moreActions', { name: skill.name })}
                   />
                 </Dropdown>
               </div>
@@ -153,7 +153,9 @@ export const SkillDetailPane = ({
 
             <div className="mt-auto pt-5">
               <div className="border-t border-slate-200/80 pt-4 text-xs text-slate-400">
-                更新于 {formatGlobalAssetUpdatedAt(skill.updatedAt)}
+                {t('skills.updatedAt', {
+                  value: formatGlobalAssetUpdatedAt(skill.updatedAt),
+                })}
               </div>
             </div>
           </article>

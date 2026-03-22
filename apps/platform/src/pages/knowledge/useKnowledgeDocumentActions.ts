@@ -6,6 +6,7 @@ import {
   type KnowledgeDocumentResponse,
 } from '@api/knowledge';
 import { useCallback, useState } from 'react';
+import { tp } from './knowledge.i18n';
 
 interface KnowledgeActionMessageApi {
   error: (content: string) => void;
@@ -91,8 +92,8 @@ export const useKnowledgeDocumentActions = ({
         message.success(
           messages?.retrySuccess?.(document) ??
             (document.status === 'completed'
-              ? '文档已进入重新索引队列'
-              : '文档已重新进入索引队列'),
+              ? tp('actionFeedback.retryQueued')
+              : tp('actionFeedback.retryRequeued')),
         );
         onRefreshKnowledgeState(document.knowledgeId, {
           reloadDiagnostics: true,
@@ -102,8 +103,8 @@ export const useKnowledgeDocumentActions = ({
         const fallback =
           messages?.retryError?.(document) ??
           (document.status === 'completed'
-            ? '重新索引失败，请稍后重试'
-            : '重试索引失败，请稍后重试');
+            ? tp('actionFeedback.retryFailed')
+            : tp('actionFeedback.retryQueueFailed'));
         message.error(
           extractErrorMessage
             ? extractErrorMessage(currentError, fallback)
@@ -131,7 +132,8 @@ export const useKnowledgeDocumentActions = ({
 
         onRebuildDocumentQueued?.(document.knowledgeId, document);
         message.success(
-          messages?.rebuildDocumentSuccess?.(document) ?? '文档已进入重建队列',
+          messages?.rebuildDocumentSuccess?.(document) ??
+            tp('actionFeedback.rebuildDocumentQueued'),
         );
         onRefreshKnowledgeState(document.knowledgeId, {
           reloadDiagnostics: true,
@@ -140,7 +142,7 @@ export const useKnowledgeDocumentActions = ({
         console.error('[KnowledgeActions] 重建文档索引失败:', currentError);
         const fallback =
           messages?.rebuildDocumentError?.(document) ??
-          '重建文档索引失败，请稍后重试';
+          tp('actionFeedback.rebuildDocumentFailed');
         message.error(
           extractErrorMessage
             ? extractErrorMessage(currentError, fallback)
@@ -169,7 +171,7 @@ export const useKnowledgeDocumentActions = ({
         onRebuildKnowledgeQueued?.(knowledgeId);
         message.success(
           messages?.rebuildKnowledgeSuccess?.(knowledgeId) ??
-            '知识库已进入重建队列',
+            tp('actionFeedback.rebuildKnowledgeQueued'),
         );
         onRefreshKnowledgeState(knowledgeId, {
           reloadDiagnostics: true,
@@ -178,7 +180,7 @@ export const useKnowledgeDocumentActions = ({
         console.error('[KnowledgeActions] 重建知识库失败:', currentError);
         const fallback =
           messages?.rebuildKnowledgeError?.(knowledgeId) ??
-          '重建知识库失败，请稍后重试';
+          tp('actionFeedback.rebuildKnowledgeFailed');
         message.error(
           extractErrorMessage
             ? extractErrorMessage(currentError, fallback)
@@ -206,7 +208,8 @@ export const useKnowledgeDocumentActions = ({
 
         onDocumentDeleted?.(document.knowledgeId, document);
         message.success(
-          messages?.deleteDocumentSuccess?.(document) ?? '文档已删除',
+          messages?.deleteDocumentSuccess?.(document) ??
+            tp('actionFeedback.deleteDocumentSuccess'),
         );
         onRefreshKnowledgeState(document.knowledgeId, {
           reloadDiagnostics: true,
@@ -215,7 +218,7 @@ export const useKnowledgeDocumentActions = ({
         console.error('[KnowledgeActions] 删除文档失败:', currentError);
         const fallback =
           messages?.deleteDocumentError?.(document) ??
-          '删除文档失败，请稍后重试';
+          tp('actionFeedback.deleteDocumentFailed');
         message.error(
           extractErrorMessage
             ? extractErrorMessage(currentError, fallback)

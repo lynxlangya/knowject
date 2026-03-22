@@ -15,9 +15,11 @@ import {
   Typography,
 } from 'antd';
 import React, { type CSSProperties, type ReactNode } from 'react';
+import i18n from '../../../i18n';
 import type { ProjectConversationMessageResponse } from '@api/projects';
 import { PROJECT_CHAT_STAR_CLASS_NAMES } from '../projectChatStar.styles';
 import type { ProjectConversationMessageRailMode } from '../useProjectConversationMessageRail';
+import { tp } from '../project.i18n';
 
 void React;
 
@@ -55,7 +57,7 @@ interface ProjectConversationMessageRailProps {
 }
 
 const formatMessageTime = (value: string): string => {
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
@@ -65,7 +67,7 @@ const buildMessagePreview = (content: string): string => {
   const normalized = content.replace(/\s+/g, ' ').trim();
 
   if (!normalized) {
-    return '空消息';
+    return tp('conversation.messageEmpty');
   }
 
   return normalized.length > 72 ? `${normalized.slice(0, 72)}...` : normalized;
@@ -83,25 +85,24 @@ const MODE_META: Record<
 > = {
   browse: {
     icon: <PushpinOutlined />,
-    label: '全部消息',
-    description: '点击条目可快速定位正文，并直接给关键消息加星。',
-    emptyTitle: '当前会话暂无消息',
-    emptyDescription: '消息发送成功后，这里会出现当前会话的消息索引。',
+    label: tp('conversation.browse.label'),
+    description: tp('conversation.browse.description'),
+    emptyTitle: tp('conversation.browse.emptyTitle'),
+    emptyDescription: tp('conversation.browse.emptyDescription'),
   },
   starred: {
     icon: <StarOutlined />,
-    label: '星标消息',
-    description: '只保留已加星消息，适合快速回看关键节点。',
-    emptyTitle: '当前会话还没有加星消息',
-    emptyDescription: '你可以先在全部消息视图里给关键消息加星。',
+    label: tp('conversation.starred.label'),
+    description: tp('conversation.starred.description'),
+    emptyTitle: tp('conversation.starred.emptyTitle'),
+    emptyDescription: tp('conversation.starred.emptyDescription'),
   },
   selection: {
     icon: <CheckSquareOutlined />,
-    label: '选择消息',
-    description:
-      '点击条目勾选或取消，用于导出 Markdown 或沉淀为知识。',
-    emptyTitle: '当前没有可选择的消息',
-    emptyDescription: 'pending user 和 draft assistant 不会进入共享选择。',
+    label: tp('conversation.selection.label'),
+    description: tp('conversation.selection.description'),
+    emptyTitle: tp('conversation.selection.emptyTitle'),
+    emptyDescription: tp('conversation.selection.emptyDescription'),
   },
 };
 
@@ -235,11 +236,12 @@ const RailContent = ({
   const activeModeMeta = MODE_META[mode];
   const countLabel =
     mode === 'selection'
-      ? `${selectedMessageIds.length} 已选`
-      : `${visibleMessages.length} 条`;
+      ? tp('conversation.selectedCount', { count: selectedMessageIds.length })
+      : tp('conversation.messageCount', { count: visibleMessages.length });
   const bulkActionsReadOnly = mode === 'selection' && selectedMessageIds.length <= 0;
   const canCollapse = Boolean(onExpandedChange) && mode !== 'selection';
-  const headerEyebrow = mode === 'selection' ? '批量操作' : '消息导航';
+  const headerEyebrow =
+    mode === 'selection' ? tp('conversation.railBatchTitle') : tp('conversation.railTitle');
   const handleMessageAction = ({
     messageId,
     selectable,
@@ -283,7 +285,7 @@ const RailContent = ({
                 type="text"
                 size="small"
                 icon={<CloseOutlined />}
-                aria-label="收起消息导航"
+                aria-label={tp('conversation.railCollapse')}
                 className="h-8! w-8! rounded-full! border border-slate-200! bg-white! text-slate-500! shadow-none!"
                 onClick={() => onExpandedChange?.(false)}
               />
@@ -295,7 +297,7 @@ const RailContent = ({
           <div className="mt-4 flex items-center justify-between gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5">
             <div className="min-w-0">
               <Typography.Text className="block text-xs font-medium text-emerald-700">
-                批量选择上下文
+                {tp('conversation.railSelectionTitle')}
               </Typography.Text>
               {/* <Typography.Text className="block text-[11px] text-emerald-700/80">
                 点击条目勾选消息，底部操作保持原有导出与知识草稿流程。
@@ -306,7 +308,7 @@ const RailContent = ({
               onClick={() => onModeChange('browse')}
               className="rounded-full! border-emerald-200! bg-white! px-3! text-xs! font-medium! text-emerald-700! shadow-none!"
             >
-              返回浏览
+              {tp('conversation.railBack')}
             </Button>
           </div>
         ) : null}
@@ -317,7 +319,7 @@ const RailContent = ({
               <RailModeButton
                 active={mode === 'browse'}
                 icon={MODE_META.browse.icon}
-                label="全部"
+                label={tp('conversation.railAll')}
                 onClick={() => onModeChange('browse')}
               />
               <RailModeButton
@@ -328,7 +330,7 @@ const RailContent = ({
                     className={PROJECT_CHAT_STAR_CLASS_NAMES.iconActive}
                   />
                 }
-                label="已加星"
+                label={tp('conversation.railStarred')}
                 onClick={() => onModeChange('starred')}
                 activeClassName={
                   PROJECT_CHAT_STAR_CLASS_NAMES.buttonActiveAntd
@@ -346,7 +348,7 @@ const RailContent = ({
               onClick={() => onModeChange('selection')}
               className="h-9! rounded-full! border-slate-200! bg-white! px-3.5! text-xs! font-medium! text-slate-700! shadow-none! hover:border-slate-300! hover:bg-slate-50/80! hover:text-slate-800!"
             >
-              选择
+              {tp('conversation.railSelect')}
             </Button>
           </div>
         ) : null}
@@ -451,7 +453,9 @@ const RailContent = ({
                                   : 'bg-slate-100 text-slate-600',
                               ].join(' ')}
                             >
-                              {message.role === 'assistant' ? '助手' : '用户'}
+                              {message.role === 'assistant'
+                                ? tp('conversation.roleAssistant')
+                                : tp('conversation.roleUser')}
                             </span>
                             <Typography.Text className="text-[11px] font-medium text-slate-400">
                               {formatMessageTime(message.createdAt)}
@@ -466,7 +470,7 @@ const RailContent = ({
                             ) : null}
                             {disableSelectionAffordance ? (
                               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                                暂不可选
+                                {tp('conversation.railSelectDisabled')}
                               </span>
                             ) : null}
                           </div>
@@ -484,7 +488,7 @@ const RailContent = ({
                             type="text"
                             size="small"
                             loading={starringMessageId === message.id}
-                            aria-label={message.starred ? '取消加星' : '加星'}
+                            aria-label={message.starred ? tp('conversation.unstar') : tp('conversation.star')}
                             className={[
                               '-mt-0.5 h-8! w-8! rounded-full! border-0! shadow-none!',
                               message.starred
@@ -521,14 +525,14 @@ const RailContent = ({
           <div className="mb-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <Typography.Text className="block text-xs font-medium text-slate-700">
-                批量操作
+                {tp('conversation.selection.footerTitle')}
               </Typography.Text>
               {/* <Typography.Text className="block text-[11px] leading-5 text-slate-500">
                 已选消息会按当前顺序进入导出与知识草稿流程。
               </Typography.Text> */}
             </div>
             <RailCountBadge
-              value={`${selectedMessageIds.length} 条`}
+              value={tp('conversation.selectedCount', { count: selectedMessageIds.length })}
               tone="selection"
             />
           </div>
@@ -540,7 +544,7 @@ const RailContent = ({
               disabled={exportDisabled}
               onClick={onExportMarkdown}
             >
-              导出 Markdown
+              {tp('conversation.selection.export')}
             </RailBulkActionButton>
             <RailBulkActionButton
               variant="primary"
@@ -549,7 +553,7 @@ const RailContent = ({
               disabled={knowledgeDraftDisabled}
               onClick={onGenerateKnowledgeDraft}
             >
-              沉淀为知识
+              {tp('conversation.selection.knowledge')}
             </RailBulkActionButton>
           </div>
         </div>
@@ -602,7 +606,7 @@ export const ProjectConversationMessageRail = ({
           type="text"
           shape="circle"
           size="large"
-          aria-label={expanded ? '收起消息导航' : '展开消息导航'}
+          aria-label={expanded ? tp('conversation.railCollapse') : tp('conversation.railExpand')}
           icon={expanded ? <CloseOutlined /> : <MenuFoldOutlined />}
           className="h-10! w-10! border border-slate-200! bg-white! text-slate-500! shadow-[0_8px_20px_rgba(15,23,42,0.04)]!"
           onClick={() => onExpandedChange?.(!expanded)}

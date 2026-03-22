@@ -1,8 +1,10 @@
+import { tp } from '../knowledge.i18n';
+
 export const formatKnowledgeBatchUploadProgress = (
   current: number,
   total: number,
 ): string => {
-  return `正在上传文档 ${current}/${total}`;
+  return tp('batch.progress', { current, total });
 };
 
 export const formatKnowledgeBatchUploadSuccessMessage = (
@@ -10,20 +12,20 @@ export const formatKnowledgeBatchUploadSuccessMessage = (
   totalCount: number,
 ): string => {
   if (successCount === totalCount) {
-    return `已上传 ${successCount} 个文件，正在进入索引队列`;
+    return tp('batch.successAll', { count: successCount });
   }
 
-  return `已上传 ${successCount}/${totalCount} 个文件，正在进入索引队列`;
+  return tp('batch.successPartial', { successCount, totalCount });
 };
 
 export const buildKnowledgeDocumentPreviewPendingMessage = (
   fileName: string,
 ): string => {
-  return `“${fileName}”预览原文即将开放`;
+  return tp('batch.previewPending', { fileName });
 };
 
 export const buildKnowledgeDocumentDownloadPendingMessage = (
   fileName: string,
 ): string => {
-  return `“${fileName}”下载原文即将开放`;
+  return tp('batch.downloadPending', { fileName });
 };

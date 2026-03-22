@@ -5,6 +5,7 @@ import type {
   ProjectResourceGroup as ProjectResourceGroupType,
   ProjectResourceItem,
 } from '@app/project/project.types';
+import { tp } from '../project.i18n';
 
 interface ProjectResourceGroupProps {
   group: ProjectResourceGroupType;
@@ -20,34 +21,34 @@ interface ProjectResourceGroupProps {
 const SOURCE_TAG_META = {
   global: {
     color: 'blue',
-    label: '全局绑定',
+    label: tp('resources.group.sourceGlobal'),
   },
   project: {
     color: 'green',
-    label: '项目私有',
+    label: tp('resources.group.sourceProject'),
   },
 } as const;
 
 const KNOWLEDGE_INDEX_META = {
   idle: {
     color: 'default',
-    label: '待索引',
+    label: tp('resources.group.indexIdle'),
   },
   pending: {
     color: 'gold',
-    label: '排队中',
+    label: tp('resources.group.indexPending'),
   },
   processing: {
     color: 'processing',
-    label: '处理中',
+    label: tp('resources.group.indexProcessing'),
   },
   completed: {
     color: 'success',
-    label: '已完成',
+    label: tp('resources.group.indexCompleted'),
   },
   failed: {
     color: 'error',
-    label: '失败',
+    label: tp('resources.group.indexFailed'),
   },
 } as const;
 
@@ -56,7 +57,7 @@ export const ProjectResourceGroup = ({
   highlighted = false,
   onAddProjectResource,
   onOpenGlobal,
-  addButtonLabel = '新增',
+  addButtonLabel = tp('resources.addDefault'),
   onItemClick,
   renderItemActions,
   renderEmptyActions,
@@ -130,12 +131,12 @@ export const ProjectResourceGroup = ({
         {item.description}
       </Typography.Paragraph>
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
-        <span>维护方：{item.owner}</span>
-        <span>最近更新：{item.updatedAt}</span>
+        <span>{tp('resources.group.owner', { value: item.owner })}</span>
+        <span>{tp('resources.group.updatedAt', { value: item.updatedAt })}</span>
         {item.type === 'knowledge' ? (
-          <span>文档数：{item.documentCount ?? 0}</span>
+          <span>{tp('resources.group.documentCount', { count: item.documentCount ?? 0 })}</span>
         ) : (
-          <span>使用项目：{item.usageCount}</span>
+          <span>{tp('resources.group.usageCount', { count: item.usageCount })}</span>
         )}
       </div>
     </article>
@@ -146,12 +147,12 @@ export const ProjectResourceGroup = ({
       ? [
           {
             key: 'project',
-            label: '项目私有',
+            label: tp('resources.group.sourceProject'),
             items: group.items.filter((item) => item.source === 'project'),
           },
           {
             key: 'global',
-            label: '全局绑定',
+            label: tp('resources.group.sourceGlobal'),
             items: group.items.filter((item) => item.source === 'global'),
           },
         ].filter((section) => section.items.length > 0)
@@ -177,9 +178,9 @@ export const ProjectResourceGroup = ({
           <Button icon={<PlusOutlined />} onClick={onAddProjectResource}>
             {addButtonLabel}
           </Button>
-          <Tooltip title={`查看全局${group.title}`}>
+          <Tooltip title={tp('resources.group.viewGlobal', { title: group.title })}>
             <Button
-              aria-label={`查看全局${group.title}`}
+              aria-label={tp('resources.group.viewGlobal', { title: group.title })}
               icon={<ExportOutlined />}
               onClick={onOpenGlobal}
             />
@@ -198,7 +199,10 @@ export const ProjectResourceGroup = ({
                 >
                   <div className="mb-3">
                     <Typography.Text className="text-sm font-medium text-slate-500">
-                      {section.label} · {section.items.length} 个
+                      {tp('resources.group.sectionCount', {
+                        label: section.label,
+                        count: section.items.length,
+                      })}
                     </Typography.Text>
                   </div>
 
@@ -217,7 +221,7 @@ export const ProjectResourceGroup = ({
           <div className="rounded-card border border-dashed border-slate-200 bg-slate-50/50 px-4 py-8">
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description={`当前项目尚未接入${group.title}`}
+              description={tp('resources.group.empty', { title: group.title })}
             >
               {renderEmptyActions ? renderEmptyActions() : null}
             </Empty>

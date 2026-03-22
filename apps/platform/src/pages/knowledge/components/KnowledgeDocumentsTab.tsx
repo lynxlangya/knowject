@@ -12,6 +12,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type {
   KnowledgeDetailResponse,
   KnowledgeDiagnosticsDocumentResponse,
@@ -54,6 +55,8 @@ export const KnowledgeDocumentsTab = ({
   onRetryDocument,
   onDocumentMenuAction,
 }: KnowledgeDocumentsTabProps) => {
+  const { t } = useTranslation('pages');
+
   const renderDocumentCard = (document: KnowledgeDocumentResponse) => {
     const statusMeta = KNOWLEDGE_DOCUMENT_STATUS_META[document.status];
     const indexedAt = document.lastIndexedAt ?? document.processedAt;
@@ -70,9 +73,9 @@ export const KnowledgeDocumentsTab = ({
           <Tooltip
             title={
               <div className="space-y-1 text-xs">
-                <div>格式：{document.mimeType}</div>
-                <div>索引完成：{formatKnowledgeDateTime(indexedAt)}</div>
-                <div>分块数量：{document.chunkCount}</div>
+                <div>{t('knowledge.documents.tooltipFormat', { value: document.mimeType })}</div>
+                <div>{t('knowledge.documents.tooltipIndexedAt', { value: formatKnowledgeDateTime(indexedAt) })}</div>
+                <div>{t('knowledge.documents.tooltipChunkCount', { count: document.chunkCount })}</div>
               </div>
             }
           >
@@ -83,10 +86,10 @@ export const KnowledgeDocumentsTab = ({
                 </Typography.Text>
                 <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
                 {documentDiagnostics?.missingStorage ? (
-                  <Tag color="error">原文件缺失</Tag>
+                  <Tag color="error">{t('knowledge.documents.missingStorage')}</Tag>
                 ) : null}
                 {documentDiagnostics?.staleProcessing ? (
-                  <Tag color="warning">处理卡住</Tag>
+                  <Tag color="warning">{t('knowledge.documents.staleProcessing')}</Tag>
                 ) : null}
               </div>
             </div>
@@ -105,14 +108,16 @@ export const KnowledgeDocumentsTab = ({
               size="small"
               icon={<MoreOutlined />}
               loading={busy}
-              aria-label={`更多操作：${document.fileName}`}
+              aria-label={t('knowledge.documents.moreActions', { fileName: document.fileName })}
             />
           </Dropdown>
         </div>
 
         <Typography.Text className="mt-3 block text-xs text-slate-500">
-          上传于 {formatKnowledgeDateTime(document.uploadedAt)} · 最近索引{' '}
-          {formatKnowledgeDateTime(indexedAt)}
+          {t('knowledge.documents.uploadedAt', {
+            uploadedAt: formatKnowledgeDateTime(document.uploadedAt),
+            indexedAt: formatKnowledgeDateTime(indexedAt),
+          })}
         </Typography.Text>
 
         {document.errorMessage ? (
@@ -120,7 +125,7 @@ export const KnowledgeDocumentsTab = ({
             className="mt-4"
             type="error"
             showIcon
-            title="处理失败"
+            title={t('knowledge.documents.failedTitle')}
             description={document.errorMessage}
             action={
               <Button
@@ -130,7 +135,7 @@ export const KnowledgeDocumentsTab = ({
                 loading={retryingDocumentId === document.id}
                 onClick={() => onRetryDocument(document)}
               >
-                重试
+                {t('knowledge.documents.retry')}
               </Button>
             }
           />
@@ -148,8 +153,8 @@ export const KnowledgeDocumentsTab = ({
             showIcon
             title={
               pollingStopped
-                ? '自动刷新已达到本轮上限，请手动刷新继续观察。'
-                : '检测到待处理文档，页面会做最小轮询以更新索引状态。'
+                ? t('knowledge.documents.pollingStopped')
+                : t('knowledge.documents.pollingActive')
             }
           />
         ) : null}
@@ -160,11 +165,13 @@ export const KnowledgeDocumentsTab = ({
           <div className="flex items-center gap-2">
             <FileTextOutlined className="text-slate-400" />
             <Typography.Title level={5} className="mb-0! text-slate-800!">
-              文档列表
+              {t('knowledge.documents.listTitle')}
             </Typography.Title>
           </div>
           <Typography.Text className="text-xs text-slate-400">
-            共 {activeKnowledge.documents.length} 份
+            {t('knowledge.documents.listCount', {
+              count: activeKnowledge.documents.length,
+            })}
           </Typography.Text>
         </div>
 
@@ -173,8 +180,8 @@ export const KnowledgeDocumentsTab = ({
             className="my-12"
             description={
               activeKnowledge.sourceType === 'global_docs'
-                ? '当前知识库还没有文档，上传一份 .md 或 .txt 开始索引。'
-                : 'global_code 当前还没有真实代码导入入口。'
+                ? t('knowledge.documents.emptyDocs')
+                : t('knowledge.documents.emptyCode')
             }
           >
             {activeKnowledge.sourceType === 'global_docs' ? (
@@ -184,7 +191,7 @@ export const KnowledgeDocumentsTab = ({
                 loading={uploading}
                 onClick={onUploadDocument}
               >
-                上传第一份文档
+                {t('knowledge.documents.uploadFirst')}
               </Button>
             ) : null}
           </Empty>

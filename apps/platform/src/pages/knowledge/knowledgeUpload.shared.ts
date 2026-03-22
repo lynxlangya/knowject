@@ -1,4 +1,5 @@
 import { normalizeMarkdownFileName } from '../project/projectConversationMessageExport';
+import { tp } from './knowledge.i18n';
 
 const DOCUMENT_UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 const DOCUMENT_UPLOAD_SOFT_WARNING_BYTES = 20 * 1024 * 1024;
@@ -16,7 +17,7 @@ export const DOCUMENT_UPLOAD_ACCEPT =
   '.md,.markdown,.txt,.pdf,.docx,.xlsx,text/markdown,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 export const KNOWLEDGE_UPLOAD_MAX_FILES = 10;
 export const KNOWLEDGE_UPLOAD_TOOLTIP =
-  '支持 .md /.markdown /.txt /.pdf /.docx /.xlsx 上传（不支持 .doc /.xls）。PDF 仅支持数字文本 PDF，暂不支持 OCR / 扫描件；单文件上限 50 MB，单次最多 10 个文件，20 MB 以上建议拆分上传。';
+  tp('upload.tooltip');
 
 export interface KnowledgeSourceFileIssue {
   fileName: string;
@@ -48,11 +49,11 @@ export const validateKnowledgeSourceFile = (file: File): string | null => {
       extension as (typeof SUPPORTED_DOCUMENT_EXTENSIONS)[number],
     )
   ) {
-    return '仅支持 md、markdown、txt、pdf、docx、xlsx 文件（不支持 doc、xls）';
+    return tp('upload.invalidType');
   }
 
   if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {
-    return '文件大小不能超过 50 MB';
+    return tp('upload.maxSize');
   }
 
   return null;
@@ -103,7 +104,10 @@ export const formatKnowledgeSourceOverflowMessage = (
     return '';
   }
 
-  return `单次最多上传 ${KNOWLEDGE_UPLOAD_MAX_FILES} 个文件，已忽略后续 ${overflowCount} 个文件`;
+  return tp('upload.overflow', {
+    max: KNOWLEDGE_UPLOAD_MAX_FILES,
+    overflowCount,
+  });
 };
 
 export const formatKnowledgeSourceLargeFileWarning = (
@@ -114,8 +118,8 @@ export const formatKnowledgeSourceLargeFileWarning = (
   }
 
   return largeFileCount === 1
-    ? '有 1 个文件超过 20 MB，建议按主题拆分上传，索引更快也更稳'
-    : `有 ${largeFileCount} 个文件超过 20 MB，建议按主题拆分上传，索引更快也更稳`;
+    ? tp('upload.largeFileOne')
+    : tp('upload.largeFileMany', { largeFileCount });
 };
 
 export const formatKnowledgeSourceFileIssues = (
@@ -134,7 +138,10 @@ export const formatKnowledgeSourceFileIssues = (
     return preview;
   }
 
-  return `${preview}；另外 ${fileIssues.length - FILE_ISSUE_PREVIEW_LIMIT} 个文件请逐个检查`;
+  return tp('upload.issueOverflow', {
+    preview,
+    count: fileIssues.length - FILE_ISSUE_PREVIEW_LIMIT,
+  });
 };
 
 const sanitizeTextSourceTitle = (value: string): string => {
@@ -153,7 +160,7 @@ const buildFallbackTextSourceFileName = (): string => {
     `${now.getSeconds()}`.padStart(2, '0'),
   ];
 
-  return `文本来源-${parts.join('')}.txt`;
+  return `${tp('upload.textFileNamePrefix')}-${parts.join('')}.txt`;
 };
 
 export const createTextSourceFile = ({

@@ -2,6 +2,7 @@ import type { KnowledgeDetailResponse } from '@api/knowledge';
 import type { FormInstance } from 'antd';
 import { useCallback, useState } from 'react';
 import { KNOWLEDGE_FORM_INITIAL_VALUES } from '../constants/knowledgeManagement.constants';
+import { tp } from '../knowledge.i18n';
 import type {
   KnowledgeFormValues,
   KnowledgeModalMode,
@@ -31,7 +32,7 @@ export const useKnowledgeModalState = ({
 
   const openEditModal = useCallback(() => {
     if (!activeKnowledge) {
-      message.info('请先选择一个知识库');
+      message.info(tp('rebuildBlocked.noSelection'));
       return;
     }
 
@@ -51,7 +52,10 @@ export const useKnowledgeModalState = ({
   return {
     modalMode,
     modalOpen: modalMode !== null,
-    modalTitle: modalMode === 'create' ? '新建知识库' : '编辑知识库',
+    modalTitle:
+      modalMode === 'create'
+        ? tp('management.form.createTitle')
+        : tp('management.form.editTitle'),
     openCreateModal,
     openEditModal,
     closeModal,
