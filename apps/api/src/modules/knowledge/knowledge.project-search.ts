@@ -176,6 +176,7 @@ export const searchKnowledgeNamespaceDocuments = async ({
   query,
   topK,
   mergePriority,
+  locale,
 }: {
   env: AppEnv;
   repository: KnowledgeRepository;
@@ -186,6 +187,7 @@ export const searchKnowledgeNamespaceDocuments = async ({
   query: string;
   topK: number;
   mergePriority: number;
+  locale?: import("@lib/locale.js").SupportedLocale;
 }): Promise<GroupedKnowledgeSearchHits | null> => {
   if (allowedKnowledgeIds.size === 0) {
     return null;
@@ -204,6 +206,7 @@ export const searchKnowledgeNamespaceDocuments = async ({
     collectionName: resolveSearchCollectionName(namespaceContext),
     embeddingConfig: resolveActiveEmbeddingConfig(namespaceContext),
     topK: buildProjectNamespaceSearchTopK(allowedKnowledgeIds.size, topK),
+    ...(locale ? { locale } : {}),
   });
   const filteredItems = deduplicateKnowledgeSearchHits(
     response.items.filter((item) => allowedKnowledgeIds.has(item.knowledgeId)),

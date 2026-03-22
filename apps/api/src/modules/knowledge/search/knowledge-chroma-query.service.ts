@@ -37,6 +37,7 @@ export const createKnowledgeChromaQueryService = ({
       collectionName,
       embeddingConfig,
       topK,
+      locale,
     }: SearchDocumentsInput) => {
       const collection = await collectionService.getExistingCollection(
         collectionName ?? collectionService.getCollectionName(sourceType),
@@ -53,6 +54,7 @@ export const createKnowledgeChromaQueryService = ({
       const [queryEmbedding] = await embeddingService.createEmbeddings(
         [query],
         embeddingConfig,
+        locale,
       );
 
       const response = await collectionService.requestChromaJson({

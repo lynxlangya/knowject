@@ -6667,6 +6667,105 @@ test('getKnowledgeDiagnostics accepts legacy /health fallback when versioned dia
   }
 });
 
+test('getKnowledgeDiagnostics localizes representable document failure messages for english requests', async () => {
+  const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-diagnostics-doc-en-'));
+  const knowledgeId = '507f1f77bcf86cd7994390aa';
+  const knowledge: KnowledgeBaseDocument & {
+    _id: NonNullable<KnowledgeBaseDocument['_id']>;
+  } = {
+    _id: new ObjectId(knowledgeId),
+    name: '知识库文档失败',
+    description: '验证 diagnostics 文档错误本地化',
+    sourceType: 'global_docs',
+    indexStatus: 'failed',
+    documentCount: 1,
+    chunkCount: 0,
+    maintainerId: '507f1f77bcf86cd799439012',
+    createdBy: '507f1f77bcf86cd799439013',
+    createdAt: new Date('2026-03-14T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-14T00:00:00.000Z'),
+  };
+  const documents = [
+    {
+      _id: new ObjectId('507f1f77bcf86cd7994390ab'),
+      knowledgeId,
+      fileName: 'failed.md',
+      mimeType: 'text/markdown',
+      storagePath: `${knowledgeId}/failed.md`,
+      status: 'failed' as const,
+      chunkCount: 0,
+      documentVersionHash: 'hash-failed',
+      embeddingProvider: 'openai' as const,
+      embeddingModel: 'text-embedding-3-small' as const,
+      lastIndexedAt: null,
+      retryCount: 1,
+      errorMessage: '所属知识库不存在，无法恢复索引任务',
+      errorMessageKey: 'knowledge.recovery.missingKnowledge' as const,
+      errorMessageParams: null,
+      uploadedBy: '507f1f77bcf86cd799439012',
+      uploadedAt: new Date('2026-03-14T00:00:00.000Z'),
+      processedAt: new Date('2026-03-14T00:10:00.000Z'),
+      createdAt: new Date('2026-03-14T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-14T00:10:00.000Z'),
+    },
+  ];
+
+  const service = createKnowledgeService({
+    env: createTestEnv(storageRoot),
+    repository: {
+      ensureMetadataModel: async () => undefined,
+      findKnowledgeById: async (id: string) => (id === knowledgeId ? knowledge : null),
+      listDocumentsByKnowledgeId: async () => documents,
+    } as unknown as KnowledgeRepository,
+    searchService: createSearchServiceStub(),
+    authRepository: {
+      findProfilesByIds: async () => [],
+    } as unknown as AuthRepository,
+  });
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        status: 'ok',
+        service: 'knowject-indexer-py',
+        chunkSize: 1000,
+        chunkOverlap: 200,
+        supportedFormats: ['md'],
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+
+  try {
+    const response = await service.getKnowledgeDiagnostics(
+      {
+        actor: {
+          id: '507f1f77bcf86cd799439012',
+          username: 'langya',
+        },
+        locale: 'en',
+      },
+      knowledgeId,
+    );
+
+    assert.equal(
+      response.documents[0]?.errorMessage,
+      'Knowledge base no longer exists; the indexing task cannot be recovered',
+    );
+    assert.equal(
+      response.documents[0]?.errorMessageKey,
+      'knowledge.recovery.missingKnowledge',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('deleteDocument stops deleting records when Chroma cleanup fails', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-knowledge-document-delete-'));
   const knowledgeId = '507f1f77bcf86cd799439011';

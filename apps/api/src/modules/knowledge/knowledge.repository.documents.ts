@@ -285,6 +285,8 @@ export const updateKnowledgeDocument = async (
       | "embeddingModel"
       | "lastIndexedAt"
       | "errorMessage"
+      | "errorMessageKey"
+      | "errorMessageParams"
       | "processedAt"
       | "updatedAt"
     >
@@ -329,6 +331,8 @@ export const markKnowledgeDocumentPendingIfRetryable = (
     {
       status: "pending",
       errorMessage: null,
+      errorMessageKey: null,
+      errorMessageParams: null,
       processedAt: null,
       updatedAt,
     },
@@ -361,6 +365,8 @@ export const markKnowledgeDocumentProcessingIfPending = (
   return updateKnowledgeDocumentByStatus(access, documentId, "pending", {
     status: "processing",
     errorMessage: null,
+    errorMessageKey: null,
+    errorMessageParams: null,
     processedAt: null,
     updatedAt,
   });
@@ -386,6 +392,8 @@ export const markKnowledgeDocumentCompletedIfProcessing = (
     embeddingModel: patch.embeddingModel,
     lastIndexedAt: patch.lastIndexedAt,
     errorMessage: null,
+    errorMessageKey: null,
+    errorMessageParams: null,
     processedAt: patch.processedAt,
     updatedAt: patch.updatedAt,
   });
@@ -397,6 +405,8 @@ export const markKnowledgeDocumentFailedIfProcessing = (
   patch: Pick<
     KnowledgeDocumentRecord,
     "errorMessage" | "processedAt" | "updatedAt"
+    | "errorMessageKey"
+    | "errorMessageParams"
   >,
 ) => {
   return updateKnowledgeDocumentByStatus(
@@ -407,6 +417,8 @@ export const markKnowledgeDocumentFailedIfProcessing = (
       status: "failed",
       chunkCount: 0,
       errorMessage: patch.errorMessage,
+      errorMessageKey: patch.errorMessageKey,
+      errorMessageParams: patch.errorMessageParams,
       processedAt: patch.processedAt,
       updatedAt: patch.updatedAt,
     },
@@ -422,6 +434,8 @@ export const markKnowledgeDocumentFailedIfRecoverable = (
   patch: Pick<
     KnowledgeDocumentRecord,
     "errorMessage" | "processedAt" | "updatedAt"
+    | "errorMessageKey"
+    | "errorMessageParams"
   >,
 ) => {
   return updateKnowledgeDocumentByStatus(
@@ -432,6 +446,8 @@ export const markKnowledgeDocumentFailedIfRecoverable = (
       status: "failed",
       chunkCount: 0,
       errorMessage: patch.errorMessage,
+      errorMessageKey: patch.errorMessageKey,
+      errorMessageParams: patch.errorMessageParams,
       processedAt: patch.processedAt,
       updatedAt: patch.updatedAt,
     },

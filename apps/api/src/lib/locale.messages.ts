@@ -139,6 +139,8 @@ export const messages = {
       'Python indexer request failed',
     'knowledge.search.indexer.diagnosticsInvalid':
       'Python indexer diagnostics response is invalid',
+    'knowledge.recovery.missingKnowledge':
+      'Knowledge base no longer exists; the indexing task cannot be recovered',
     'knowledge.search.embedding.unavailable':
       'Embedding API key is not configured; knowledge indexing and search are unavailable',
     'knowledge.search.embedding.aliyun.failed':
@@ -356,6 +358,7 @@ export const messages = {
     'knowledge.search.indexer.requestFailed': 'Python indexer 请求失败',
     'knowledge.search.indexer.diagnosticsInvalid':
       'Python indexer 诊断响应格式不合法',
+    'knowledge.recovery.missingKnowledge': '所属知识库不存在，无法恢复索引任务',
     'knowledge.search.embedding.unavailable':
       'Embedding API Key 未配置，当前无法执行知识索引和检索',
     'knowledge.search.embedding.aliyun.failed': '阿里云 embedding 请求失败',

@@ -1,5 +1,6 @@
 import type { ObjectId } from 'mongodb';
 import type { SupportedLocale } from '@lib/locale.js';
+import type { MessageKey, MessageParams } from '@lib/locale.messages.js';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
 import type { RuntimeEmbeddingProvider } from '@modules/settings/settings.types.js';
 
@@ -117,6 +118,8 @@ export interface KnowledgeDocumentRecord {
   lastIndexedAt: Date | null;
   retryCount: number;
   errorMessage: string | null;
+  errorMessageKey?: MessageKey | null;
+  errorMessageParams?: MessageParams | null;
   uploadedBy: string;
   uploadedAt: Date;
   processedAt: Date | null;
@@ -189,6 +192,8 @@ export interface KnowledgeDiagnosticsDocumentResponse {
   retryCount: number;
   lastIndexedAt: string | null;
   errorMessage: string | null;
+  errorMessageKey?: MessageKey | null;
+  errorMessageParams?: MessageParams | null;
   updatedAt: string;
   missingStorage: boolean;
   staleProcessing: boolean;

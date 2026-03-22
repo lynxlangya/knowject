@@ -117,7 +117,7 @@ export const createKnowledgeReadHandlers = ({
     },
 
     searchDocuments: async (
-      { actor }: KnowledgeCommandContext,
+      { actor, locale }: KnowledgeCommandContext,
       input: SearchKnowledgeDocumentsInput,
     ): Promise<KnowledgeSearchResponse> => {
       const validatedInput = validateSearchDocumentsInput(input);
@@ -138,6 +138,7 @@ export const createKnowledgeReadHandlers = ({
           ...validatedInput,
           collectionName: resolveSearchCollectionName(namespaceContext),
           embeddingConfig: resolveActiveEmbeddingConfig(namespaceContext),
+          ...(locale ? { locale } : {}),
         });
       }
 
@@ -160,11 +161,12 @@ export const createKnowledgeReadHandlers = ({
         sourceType: knowledge.sourceType,
         collectionName: resolveSearchCollectionName(namespaceContext),
         embeddingConfig: resolveActiveEmbeddingConfig(namespaceContext),
+        ...(locale ? { locale } : {}),
       });
     },
 
     searchProjectDocuments: async (
-      { actor }: KnowledgeCommandContext,
+      { actor, locale }: KnowledgeCommandContext,
       projectId: string,
       input: SearchProjectKnowledgeDocumentsInput,
     ): Promise<KnowledgeSearchResponse> => {
@@ -244,6 +246,7 @@ export const createKnowledgeReadHandlers = ({
           query: validatedInput.query,
           topK: validatedInput.topK,
           mergePriority: 0,
+          locale,
         }),
         searchKnowledgeNamespaceDocuments({
           env,
@@ -259,6 +262,7 @@ export const createKnowledgeReadHandlers = ({
           query: validatedInput.query,
           topK: validatedInput.topK,
           mergePriority: 1,
+          locale,
         }),
       ]);
       const items = mergeKnowledgeSearchHitGroups(

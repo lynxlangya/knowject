@@ -1,4 +1,6 @@
 import { getEffectiveIndexingConfig } from "@config/ai-config.js";
+import { DEFAULT_LOCALE } from "@lib/locale.js";
+import { getMessage } from "@lib/locale.messages.js";
 import {
   isStaleProcessingDocument,
   readKnowledgeIndexerDiagnostics,
@@ -196,12 +198,23 @@ export const createKnowledgeDiagnosticsHandlers = ({
         indexer: indexerDiagnostics,
         documents: documentsWithStorageState.map(
           ({ document, storageExists, staleProcessing }) => ({
+            errorMessage:
+              document.errorMessageKey
+                ? (
+                    getMessage(
+                      document.errorMessageKey,
+                      locale ?? DEFAULT_LOCALE,
+                      document.errorMessageParams ?? undefined,
+                    ) ?? document.errorMessage
+                  )
+                : document.errorMessage,
             id: document._id.toHexString(),
             status: document.status,
             fileName: document.fileName,
             retryCount: document.retryCount,
             lastIndexedAt: document.lastIndexedAt?.toISOString() ?? null,
-            errorMessage: document.errorMessage,
+            errorMessageKey: document.errorMessageKey ?? null,
+            errorMessageParams: document.errorMessageParams ?? null,
             updatedAt: document.updatedAt.toISOString(),
             missingStorage: !storageExists,
             staleProcessing,

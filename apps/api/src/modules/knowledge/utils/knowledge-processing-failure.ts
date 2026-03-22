@@ -10,6 +10,8 @@ export const persistProcessingFailure = async ({
   knowledgeId,
   documentId,
   errorMessage,
+  errorMessageKey,
+  errorMessageParams,
   previousChunkCount = 0,
 }: PersistProcessingFailureInput): Promise<void> => {
   const failedAt = new Date();
@@ -20,6 +22,8 @@ export const persistProcessingFailure = async ({
       documentId,
       {
         errorMessage,
+        errorMessageKey,
+        errorMessageParams,
         updatedAt: failedAt,
         processedAt: failedAt,
       },

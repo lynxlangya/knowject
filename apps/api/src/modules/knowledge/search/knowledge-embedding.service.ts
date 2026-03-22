@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { getEffectiveEmbeddingConfig } from "@config/ai-config.js";
+import { DEFAULT_LOCALE, type SupportedLocale } from "@lib/locale.js";
 import { normalizeOpenAiCompatibleErrorMessage, parseResponseBody, buildApiUrl } from "@lib/http.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type { EffectiveEmbeddingConfig } from "@modules/settings/settings.types.js";
@@ -75,6 +76,7 @@ export const createKnowledgeEmbeddingService = ({
     createEmbeddings: async (
       texts: string[],
       configOverride?: EffectiveEmbeddingConfig,
+      locale: SupportedLocale = DEFAULT_LOCALE,
     ): Promise<number[][]> => {
       const embeddingConfig =
         configOverride ??
@@ -97,7 +99,10 @@ export const createKnowledgeEmbeddingService = ({
       const errorMessageKey = getEmbeddingErrorMessageKey(
         embeddingConfig.provider,
       );
-      const errorPrefix = getEmbeddingErrorPrefix(embeddingConfig.provider);
+      const errorPrefix = getEmbeddingErrorPrefix(
+        embeddingConfig.provider,
+        locale,
+      );
       let responseBody: unknown = null;
 
       try {

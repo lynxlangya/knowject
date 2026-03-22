@@ -20,6 +20,7 @@ export interface SearchDocumentsInput {
   collectionName?: string;
   embeddingConfig?: EffectiveEmbeddingConfig;
   topK: number;
+  locale?: SupportedLocale;
 }
 
 export interface SearchDiagnosticsInput {
@@ -78,6 +79,7 @@ export interface KnowledgeEmbeddingService {
   createEmbeddings(
     texts: string[],
     configOverride?: EffectiveEmbeddingConfig,
+    locale?: SupportedLocale,
   ): Promise<number[][]>;
 }
 

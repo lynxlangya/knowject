@@ -3,6 +3,7 @@ import test from "node:test";
 import type { AppEnv } from "@config/env.js";
 import { AppError } from "@lib/app-error.js";
 import { encryptApiKey } from "@lib/crypto.js";
+import { createKnowledgeSearchDiagnosticsService } from "./search/knowledge-search-diagnostics.service.js";
 import {
   createGatewayError,
   createServiceUnavailableError,
@@ -506,11 +507,12 @@ test("searchDocuments reports provider-aware embedding errors for aliyun", async
         query: "database embedding",
         sourceType: "global_docs",
         topK: 3,
+        locale: "en",
       }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.messageKey, "knowledge.search.embedding.aliyun.failed");
-        assert.equal(error.message, "阿里云 embedding 请求失败（HTTP 400）");
+        assert.equal(error.message, "Aliyun embedding request failed（HTTP 400）");
         return true;
       },
     );
@@ -533,7 +535,7 @@ test("knowledge search error helpers attach localized message keys", () => {
   assert.equal(serviceUnavailableError.message, "Embedding API Key 未配置，当前无法执行知识索引和检索");
   assert.equal(gatewayError.messageKey, "knowledge.search.chroma.requestFailed");
   assert.equal(gatewayError.message, "Chroma 请求失败");
-  assert.equal(getEmbeddingErrorPrefix("aliyun"), "阿里云 embedding 请求失败");
+  assert.equal(getEmbeddingErrorPrefix("aliyun"), "Aliyun embedding request failed");
 });
 
 test("diagnostics helpers localize AppError message keys but preserve specific upstream context", () => {
@@ -561,6 +563,38 @@ test("diagnostics helpers localize AppError message keys but preserve specific u
       "en",
     ),
     "Chroma request failed (HTTP 503)",
+  );
+});
+
+test("knowledge search diagnostics service localizes AppError helper messages", async () => {
+  const service = createKnowledgeSearchDiagnosticsService({
+    env: createTestEnv(),
+    collectionService: {
+      getCollectionName: () => "global_docs",
+      deleteCachedCollection: () => undefined,
+      requestChromaJson: async () => {
+        throw new Error("not used");
+      },
+      getExistingCollection: async () => {
+        throw new AppError({
+          statusCode: 503,
+          code: "KNOWLEDGE_SEARCH_CHROMA_UNAVAILABLE",
+          message: "Chroma 未配置，当前无法执行知识索引和检索",
+          messageKey: "knowledge.search.chroma.unavailable",
+        });
+      },
+    },
+  });
+
+  const diagnostics = await service.getDiagnostics({
+    collectionName: "global_docs",
+    locale: "en",
+  });
+
+  assert.equal(diagnostics.collection.exists, false);
+  assert.equal(
+    diagnostics.collection.errorMessage,
+    "Chroma is not configured; knowledge indexing and search are unavailable",
   );
 });
 

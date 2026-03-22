@@ -1,6 +1,8 @@
 import { AppError } from "@lib/app-error.js";
+import { resolveLocalizedAppErrorMessage } from "@lib/app-error-message.js";
+import { DEFAULT_LOCALE, type SupportedLocale } from "@lib/locale.js";
 import type { MessageKey } from "@lib/locale.messages.js";
-import { getFallbackMessage } from "@lib/locale.messages.js";
+import { getFallbackMessage, getMessage } from "@lib/locale.messages.js";
 import type { EffectiveEmbeddingConfig } from "@modules/settings/settings.types.js";
 
 export const createServiceUnavailableError = (
@@ -52,20 +54,30 @@ export const getEmbeddingErrorMessageKey = (
 
 export const getEmbeddingErrorPrefix = (
   provider: EffectiveEmbeddingConfig["provider"],
+  locale: SupportedLocale = DEFAULT_LOCALE,
 ): string => {
-  return getFallbackMessage(getEmbeddingErrorMessageKey(provider));
+  return (
+    getMessage(getEmbeddingErrorMessageKey(provider), locale) ??
+    getFallbackMessage(getEmbeddingErrorMessageKey(provider))
+  );
 };
 
-export const resolveDiagnosticsErrorMessage = (error: unknown): string => {
+export const resolveDiagnosticsErrorMessage = (
+  error: unknown,
+  locale: SupportedLocale = DEFAULT_LOCALE,
+): string => {
   if (error instanceof AppError) {
-    return error.message;
+    return resolveLocalizedAppErrorMessage(error, locale);
   }
 
   if (error instanceof Error && error.message.trim()) {
     return error.message.trim();
   }
 
-  return getFallbackMessage("knowledge.search.diagnosticsFailed");
+  return (
+    getMessage("knowledge.search.diagnosticsFailed", locale) ??
+    getFallbackMessage("knowledge.search.diagnosticsFailed")
+  );
 };
 
 export const isIndexerRouteNotFoundError = (

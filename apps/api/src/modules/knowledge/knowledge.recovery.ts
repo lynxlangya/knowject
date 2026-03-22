@@ -1,5 +1,6 @@
 import { getEffectiveIndexingConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
+import { getFallbackMessage } from "@lib/locale.messages.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type { WithId } from "mongodb";
 import {
@@ -189,7 +190,8 @@ export const recoverInterruptedKnowledgeTasks = async ({
         repository,
         knowledgeId: document.knowledgeId,
         documentId: document._id.toHexString(),
-        errorMessage: "所属知识库不存在，无法恢复索引任务",
+        errorMessage: getFallbackMessage("knowledge.recovery.missingKnowledge"),
+        errorMessageKey: "knowledge.recovery.missingKnowledge",
         previousChunkCount: document.chunkCount,
       });
       continue;
@@ -254,6 +256,8 @@ export const recoverInterruptedKnowledgeTasks = async ({
             knowledgeId: document.knowledgeId,
             documentId: document._id.toHexString(),
             errorMessage: createLegacyNamespaceRebuildRequiredError().message,
+            errorMessageKey:
+              createLegacyNamespaceRebuildRequiredError().messageKey,
             previousChunkCount: document.chunkCount,
           }),
         ),
@@ -272,6 +276,8 @@ export const recoverInterruptedKnowledgeTasks = async ({
             knowledgeId: document.knowledgeId,
             documentId: document._id.toHexString(),
             errorMessage: createNamespaceRebuildRequiredError().message,
+            errorMessageKey:
+              createNamespaceRebuildRequiredError().messageKey,
             previousChunkCount: document.chunkCount,
           }),
         ),

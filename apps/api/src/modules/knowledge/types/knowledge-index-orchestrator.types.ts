@@ -1,4 +1,5 @@
 import type { AppEnv } from "@config/env.js";
+import type { MessageKey, MessageParams } from "@lib/locale.messages.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type {
   EffectiveEmbeddingConfig,
@@ -74,6 +75,8 @@ export interface PersistProcessingFailureInput {
   knowledgeId: string;
   documentId: string;
   errorMessage: string;
+  errorMessageKey?: MessageKey;
+  errorMessageParams?: MessageParams;
   previousChunkCount?: number;
 }
 
