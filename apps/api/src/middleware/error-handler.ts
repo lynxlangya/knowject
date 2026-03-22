@@ -77,55 +77,14 @@ const resolveErrorDetails = (
     return undefined;
   }
 
-  if (error.messageKey !== 'api.validation.invalidJson') {
-    if (!error.messageKey?.startsWith('validation.')) {
-      return error.details;
-    }
-
-    if (locale === 'zh-CN') {
-      return error.details;
-    }
-
+  if (error.messageKey === 'api.validation.invalidJson') {
     if (!error.details || typeof error.details !== 'object') {
       return error.details;
     }
 
-    const details = error.details as { fields?: Record<string, string> };
-
-    if (!details.fields || typeof details.fields !== 'object') {
-      return error.details;
-    }
-
-    const localizedMessage = getMessage(
-      error.messageKey,
-      locale,
-      error.messageParams,
-    );
-
-    if (!localizedMessage) {
-      return error.details;
-    }
-
-    const localizedFields: Record<string, string> = {};
-    const fallbackMessage = getMessage(error.messageKey, DEFAULT_LOCALE);
-    const fallbackZhMessage = getMessage(error.messageKey, 'zh-CN');
-
-    for (const [field, fieldValue] of Object.entries(details.fields)) {
-      if (
-        fieldValue === error.message ||
-        fieldValue === fallbackMessage ||
-        fieldValue === fallbackZhMessage
-      ) {
-        localizedFields[field] = localizedMessage;
-        continue;
-      }
-
-      localizedFields[field] = fieldValue;
-    }
-
     return {
-      ...details,
-      fields: localizedFields,
+      ...(error.details as Record<string, unknown>),
+      body: message,
     };
   }
 
@@ -133,9 +92,52 @@ const resolveErrorDetails = (
     return error.details;
   }
 
+  const details = error.details as {
+    fields?: Record<string, string>;
+  } & Record<string, unknown>;
+
+  if (!error.messageKey || !details.fields || typeof details.fields !== 'object') {
+    return error.details;
+  }
+
+  const localizedMessage = getMessage(
+    error.messageKey,
+    locale,
+    error.messageParams,
+  );
+
+  if (!localizedMessage) {
+    return error.details;
+  }
+
+  const fallbackMessage = getMessage(
+    error.messageKey,
+    DEFAULT_LOCALE,
+    error.messageParams,
+  );
+  const fallbackZhMessage = getMessage(
+    error.messageKey,
+    'zh-CN',
+    error.messageParams,
+  );
+  const localizedFields: Record<string, string> = {};
+
+  for (const [field, fieldValue] of Object.entries(details.fields)) {
+    if (
+      fieldValue === error.message ||
+      fieldValue === fallbackMessage ||
+      fieldValue === fallbackZhMessage
+    ) {
+      localizedFields[field] = localizedMessage;
+      continue;
+    }
+
+    localizedFields[field] = fieldValue;
+  }
+
   return {
-    ...(error.details as Record<string, unknown>),
-    body: message,
+    ...details,
+    fields: localizedFields,
   };
 };
 

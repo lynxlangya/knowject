@@ -17,8 +17,14 @@ function stableStringify(obj: unknown): string {
 export class RequestDeduper {
   private inflight = new Map<string, Promise<unknown>>();
 
-  getKey(method: string, url: string, params?: unknown, data?: unknown): string {
-    return `${method.toUpperCase()}:${url}:${stableStringify(params)}:${stableStringify(data)}`;
+  getKey(
+    method: string,
+    url: string,
+    params?: unknown,
+    data?: unknown,
+    context?: unknown,
+  ): string {
+    return `${method.toUpperCase()}:${url}:${stableStringify(params)}:${stableStringify(data)}:${stableStringify(context)}`;
   }
 
   add(key: string, promise: Promise<unknown>): void {

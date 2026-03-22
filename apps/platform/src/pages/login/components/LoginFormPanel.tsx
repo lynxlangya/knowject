@@ -1,59 +1,100 @@
 import { IdcardOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Checkbox, Form, Input, Typography, type FormInstance } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { KNOWJECT_BRAND } from '@styles/brand';
+import type { SupportedLocale } from '@app/providers/locale.storage';
 import {
   LOGIN_FORM_CLASS_NAME,
+  LOGIN_LOCALE_OPTIONS,
   type AuthMode,
   type LoginFormValues,
 } from '@pages/login/constants';
 
 interface LoginFormPanelProps {
   form: FormInstance<LoginFormValues>;
+  locale: SupportedLocale;
   mode: AuthMode;
   loading: boolean;
   onModeChange: (mode: AuthMode) => void;
+  onLocaleChange: (locale: SupportedLocale) => void | Promise<void>;
   onSubmit: (values: LoginFormValues) => void | Promise<void>;
   onForgotPassword: () => void;
 }
 
 export const LoginFormPanel = ({
   form,
+  locale,
   mode,
   loading,
   onModeChange,
+  onLocaleChange,
   onSubmit,
   onForgotPassword,
 }: LoginFormPanelProps) => {
+  const { t } = useTranslation('auth');
   const isRegisterMode = mode === 'register';
   const passwordRules = isRegisterMode
     ? [
-        { required: true, message: '请输入至少 8 位密码' },
-        { min: 8, message: '密码至少需要 8 位' },
+        { required: true, message: t('validation.passwordRequired') },
+        { min: 8, message: t('validation.passwordMinLength') },
       ]
-    : [{ required: true, message: '请输入登录密码' }];
+    : [{ required: true, message: t('validation.passwordRequired') }];
 
   return (
     <section className="relative z-1 flex flex-col p-[clamp(30px,3.6vw,52px)] max-[960px]:px-5.5 max-[960px]:py-7 max-[560px]:px-3.5 max-[560px]:py-5.5">
       <div>
         <div className="mb-6">
+          <div className="mb-5 flex items-start justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
+            <div className="inline-flex w-fit items-center rounded-full border border-slate-200/80 bg-white/85 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+              {LOGIN_LOCALE_OPTIONS.map((option) => {
+                const active = option.locale === locale;
+
+                return (
+                  <button
+                    key={option.locale}
+                    type="button"
+                    className={[
+                      'rounded-full px-3 py-1.5 text-xs font-semibold tracking-[0.01em] transition-colors',
+                      active
+                        ? 'text-white shadow-[0_8px_18px_rgba(27,80,183,0.24)]'
+                        : 'text-slate-500 hover:text-slate-900',
+                    ].join(' ')}
+                    style={
+                      active
+                        ? {
+                            backgroundImage: KNOWJECT_BRAND.navGradient,
+                          }
+                        : undefined
+                    }
+                    onClick={() => {
+                      void onLocaleChange(option.locale);
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <Typography.Title
             level={2}
             className="m-0! text-display-lg! font-[780]! leading-[1.04]! tracking-[-0.02em]! text-slate-900! max-[1199px]:text-[46px]! max-[960px]:text-[38px]! max-[560px]:text-3xl!"
           >
-            {isRegisterMode ? '创建账号' : '欢迎回来'}
+            {isRegisterMode ? t('register.title') : t('login.title')}
           </Typography.Title>
           <Typography.Paragraph className="mb-0! mt-2.5! text-body! text-slate-500!">
-            {isRegisterMode ? '创建你的第一个知项账号并直接进入系统' : '请输入用户名和密码以继续'}
+            {isRegisterMode ? t('register.subtitle') : t('login.subtitle')}
           </Typography.Paragraph>
           <div className="mt-3 inline-flex items-center gap-2 text-sm text-slate-500">
-            <span>{isRegisterMode ? '已经有账号？' : '还没有账号？'}</span>
+            <span>{isRegisterMode ? t('register.hasAccount') : t('login.noAccount')}</span>
             <button
               type="button"
               onClick={() => onModeChange(isRegisterMode ? 'login' : 'register')}
               className="cursor-pointer border-none bg-transparent p-0 font-semibold transition-opacity hover:opacity-90"
               style={{ color: KNOWJECT_BRAND.primaryHover }}
             >
-              {isRegisterMode ? '去登录' : '立即注册'}
+              {isRegisterMode ? t('register.action') : t('login.action')}
             </button>
           </div>
         </div>
@@ -68,12 +109,12 @@ export const LoginFormPanel = ({
         >
           {isRegisterMode ? (
             <Form.Item
-              label="显示名称"
+              label={t('fields.displayNameLabel')}
               name="name"
-              rules={[{ required: true, message: '请输入显示名称' }]}
+              rules={[{ required: true, message: t('validation.displayNameRequired') }]}
             >
               <Input
-                placeholder="请输入显示名称"
+                placeholder={t('fields.displayNamePlaceholder')}
                 prefix={<IdcardOutlined />}
                 size="large"
               />
@@ -81,24 +122,28 @@ export const LoginFormPanel = ({
           ) : null}
 
           <Form.Item
-            label="用户名"
+            label={t('fields.usernameLabel')}
             name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
+            rules={[{ required: true, message: t('validation.usernameRequired') }]}
           >
             <Input
-              placeholder="请输入用户名"
+              placeholder={t('fields.usernamePlaceholder')}
               prefix={<UserOutlined />}
               size="large"
             />
           </Form.Item>
 
           <Form.Item
-            label={isRegisterMode ? '设置密码' : '登录密码'}
+            label={isRegisterMode ? t('register.passwordLabel') : t('login.passwordLabel')}
             name="password"
             rules={passwordRules}
           >
             <Input.Password
-              placeholder={isRegisterMode ? '请输入至少 8 位密码' : '请输入登录密码'}
+              placeholder={
+                isRegisterMode
+                  ? t('register.passwordPlaceholder')
+                  : t('login.passwordPlaceholder')
+              }
               prefix={<LockOutlined />}
               size="large"
             />
@@ -106,24 +151,26 @@ export const LoginFormPanel = ({
 
           {isRegisterMode ? (
             <Form.Item
-              label="确认密码"
+              label={t('fields.confirmPasswordLabel')}
               name="confirmPassword"
               dependencies={['password']}
               rules={[
-                { required: true, message: '请再次输入密码' },
+                { required: true, message: t('validation.confirmPasswordRequired') },
                 ({ getFieldValue }) => ({
                   validator: (_, value) => {
                     if (!value || getFieldValue('password') === value) {
                       return Promise.resolve();
                     }
 
-                    return Promise.reject(new Error('两次输入的密码不一致'));
+                    return Promise.reject(
+                      new Error(t('validation.confirmPasswordMismatch')),
+                    );
                   },
                 }),
               ]}
             >
               <Input.Password
-                placeholder="请再次输入密码"
+                placeholder={t('fields.confirmPasswordPlaceholder')}
                 prefix={<LockOutlined />}
                 size="large"
               />
@@ -132,11 +179,11 @@ export const LoginFormPanel = ({
 
           <div className="my-0.5 mb-5.5 flex items-center justify-between">
             <Form.Item name="remember" valuePropName="checked" noStyle>
-              <Checkbox>记住用户名</Checkbox>
+              <Checkbox>{t('actions.rememberUsername')}</Checkbox>
             </Form.Item>
 
             {isRegisterMode ? (
-              <div className="text-sm text-slate-400">注册后将直接进入系统</div>
+              <div className="text-sm text-slate-400">{t('register.directEntryHint')}</div>
             ) : (
               <Button
                 className="p-0! font-medium! hover:opacity-90!"
@@ -144,7 +191,7 @@ export const LoginFormPanel = ({
                 style={{ color: KNOWJECT_BRAND.primary }}
                 onClick={onForgotPassword}
               >
-                忘记密码？
+                {t('actions.forgotPassword')}
               </Button>
             )}
           </div>
@@ -161,7 +208,7 @@ export const LoginFormPanel = ({
               loading={loading}
               block
             >
-              {isRegisterMode ? '创建并进入' : '登录系统'}
+              {isRegisterMode ? t('register.submit') : t('login.submit')}
             </Button>
           </Form.Item>
         </Form>
@@ -169,26 +216,26 @@ export const LoginFormPanel = ({
 
       {isRegisterMode ? (
         <Typography.Paragraph className="mb-0! mt-auto! pt-8 text-center text-sm! text-slate-500!">
-          已经有账号？
+          {t('register.hasAccount')}
           <button
             type="button"
             onClick={() => onModeChange('login')}
             className="cursor-pointer border-none bg-transparent p-0 font-semibold transition-opacity hover:opacity-90"
             style={{ color: KNOWJECT_BRAND.primaryHover }}
           >
-            直接登录
+            {t('register.footerAction')}
           </button>
         </Typography.Paragraph>
       ) : (
         <Typography.Paragraph className="mb-0! mt-auto! pt-8 text-center text-sm! text-slate-500!">
-          需要帮助？
+          {t('actions.help')}
           <button
             type="button"
             onClick={onForgotPassword}
             className="cursor-pointer border-none bg-transparent p-0 font-semibold transition-opacity hover:opacity-90"
             style={{ color: KNOWJECT_BRAND.primaryHover }}
           >
-            联系技术支持
+            {t('actions.contactSupport')}
           </button>
         </Typography.Paragraph>
       )}

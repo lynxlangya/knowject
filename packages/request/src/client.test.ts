@@ -11,6 +11,7 @@ import { ApiError, unwrapApiData } from "./types";
 const withServer = async (
   callback: (baseUrl: string) => Promise<void>,
 ): Promise<void> => {
+  let delayedProfileRequestCount = 0;
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     if (req.url === "/profile") {
       res.writeHead(200, {
@@ -32,6 +33,34 @@ const withServer = async (
           },
         }),
       );
+      return;
+    }
+
+    if (req.url === "/profile-delayed") {
+      delayedProfileRequestCount += 1;
+      const requestCount = delayedProfileRequestCount;
+
+      setTimeout(() => {
+        res.writeHead(200, {
+          "content-type": "application/json",
+        });
+        res.end(
+          JSON.stringify({
+            code: "SUCCESS",
+            message: "请求成功",
+            data: {
+              ok: true,
+              locale: req.headers["accept-language"] ?? null,
+              requestCount,
+            },
+            meta: {
+              requestId: "server-request-id",
+              timestamp: "2026-03-18T00:00:00.000Z",
+            },
+          }),
+        );
+      }, 20);
+
       return;
     }
 
@@ -157,4 +186,61 @@ test("normalizeLocale maps raw locale values", () => {
   assert.equal(normalizeLocale("zh"), "zh-CN");
   assert.equal(normalizeLocale("en-US"), "en");
   assert.equal(normalizeLocale("fr"), "en");
+});
+
+test("createHttpClient dedupe keeps inflight requests separate across locales", async () => {
+  await withServer(async (baseUrl) => {
+    const client = createHttpClient({
+      baseURL: baseUrl,
+      dedupe: true,
+    });
+
+    const firstRequest = client.get<{
+      code: string;
+      message: string;
+      data: {
+        ok: boolean;
+        locale: string | string[] | null;
+        requestCount: number;
+      };
+      meta: {
+        requestId: string;
+        timestamp: string;
+      };
+    }>("/profile-delayed", {
+      headers: {
+        "Accept-Language": "zh-CN",
+      },
+    });
+
+    const secondRequest = client.get<{
+      code: string;
+      message: string;
+      data: {
+        ok: boolean;
+        locale: string | string[] | null;
+        requestCount: number;
+      };
+      meta: {
+        requestId: string;
+        timestamp: string;
+      };
+    }>("/profile-delayed", {
+      headers: {
+        "Accept-Language": "en",
+      },
+    });
+
+    const [firstResponse, secondResponse] = await Promise.all([
+      firstRequest,
+      secondRequest,
+    ]);
+    const firstData = unwrapApiData(firstResponse.data);
+    const secondData = unwrapApiData(secondResponse.data);
+
+    assert.equal(firstData.locale, "zh-CN");
+    assert.equal(firstData.requestCount, 1);
+    assert.equal(secondData.locale, "en");
+    assert.equal(secondData.requestCount, 2);
+  });
 });

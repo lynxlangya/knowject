@@ -1,8 +1,14 @@
 import { CheckCircleOutlined } from '@ant-design/icons';
 import { Typography } from 'antd';
-import { LOGIN_FEATURE_ITEMS } from '@pages/login/constants';
+import { useTranslation } from 'react-i18next';
 
 export const LoginHeroPanel = () => {
+  const { t } = useTranslation('auth');
+  const featureItems = [
+    t('hero.features.deliveryBoost'),
+    t('hero.features.contextUnderstanding'),
+  ];
+
   return (
     <section className="relative flex flex-col justify-center border-r border-slate-400/25 bg-linear-to-br from-[#f2f6ff] to-[#edf3ff] p-[clamp(36px,4vw,56px)] max-[960px]:border-r-0 max-[960px]:border-b max-[960px]:px-5.5 max-[960px]:py-7">
       <div className="relative z-2">
@@ -26,7 +32,7 @@ export const LoginHeroPanel = () => {
         </Typography.Paragraph>
 
         <div className="mt-10.5 flex flex-col gap-3.5 max-[960px]:mt-4.5 max-[960px]:gap-2.5 max-[560px]:hidden">
-          {LOGIN_FEATURE_ITEMS.map((item) => (
+          {featureItems.map((item) => (
             <div
               key={item}
               className="inline-flex w-fit items-center gap-2.5 rounded-full border border-blue-500/15 bg-white/85 px-3.5 py-2.5 text-sm leading-[1.45] text-blue-900"

@@ -1,9 +1,14 @@
+import {
+  normalizeLocale,
+  type SupportedLocale,
+} from '@app/providers/locale.storage';
 import { clearToken, getToken, setToken } from './token';
 
 export interface AuthUser {
   id: string;
   username: string;
   name: string;
+  locale: SupportedLocale;
 }
 
 export interface AuthSession {
@@ -31,6 +36,11 @@ const normalizeAuthUser = (value: unknown): AuthUser | null => {
     id: candidate.id,
     username: candidate.username,
     name: candidate.name,
+    locale: normalizeLocale(
+      typeof candidate.locale === 'string'
+        ? candidate.locale
+        : null,
+    ),
   };
 };
 

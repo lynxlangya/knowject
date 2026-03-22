@@ -12,43 +12,55 @@ import { PATHS } from './paths';
 
 type MenuItem = Required<MenuProps>['items'][number];
 
-export const menuItems: MenuItem[] = [
-  {
-    key: PATHS.home,
-    icon: <HomeOutlined />,
-    label: '主页',
-  },
-  {
-    key: PATHS.knowledge,
-    icon: <BookOutlined />,
-    label: '知识库',
-  },
-  {
-    key: PATHS.skills,
-    icon: <AppstoreOutlined />,
-    label: '技能',
-  },
-  {
-    key: PATHS.agents,
-    icon: <RobotOutlined />,
-    label: '智能体',
-  },
-  {
-    key: PATHS.members,
-    icon: <TeamOutlined />,
-    label: '成员',
-  },
-  {
-    key: PATHS.analytics,
-    icon: <LineChartOutlined />,
-    label: '分析',
-  },
-  {
-    key: PATHS.settings,
-    icon: <SettingOutlined />,
-    label: '设置',
-  },
-];
+const MENU_KEYS = [
+  PATHS.home,
+  PATHS.knowledge,
+  PATHS.skills,
+  PATHS.agents,
+  PATHS.members,
+  PATHS.analytics,
+  PATHS.settings,
+] as const;
+
+export const getMenuItems = (t: (key: string) => string): MenuItem[] => {
+  return [
+    {
+      key: PATHS.home,
+      icon: <HomeOutlined />,
+      label: t('menu.home'),
+    },
+    {
+      key: PATHS.knowledge,
+      icon: <BookOutlined />,
+      label: t('menu.knowledge'),
+    },
+    {
+      key: PATHS.skills,
+      icon: <AppstoreOutlined />,
+      label: t('menu.skills'),
+    },
+    {
+      key: PATHS.agents,
+      icon: <RobotOutlined />,
+      label: t('menu.agents'),
+    },
+    {
+      key: PATHS.members,
+      icon: <TeamOutlined />,
+      label: t('menu.members'),
+    },
+    {
+      key: PATHS.analytics,
+      icon: <LineChartOutlined />,
+      label: t('menu.analytics'),
+    },
+    {
+      key: PATHS.settings,
+      icon: <SettingOutlined />,
+      label: t('menu.settings'),
+    },
+  ];
+};
 
 export const getMenuPath = (key: string): string => key;
 
@@ -57,13 +69,9 @@ export const getMenuSelectedKey = (pathname: string): string | null => {
     return null;
   }
 
-  const matchedItem = menuItems.find((item) => {
-    if (!item || typeof item.key !== 'string') {
-      return false;
-    }
-
-    return pathname === item.key || pathname.startsWith(`${item.key}/`);
+  const matchedKey = MENU_KEYS.find((item) => {
+    return pathname === item || pathname.startsWith(`${item}/`);
   });
 
-  return typeof matchedItem?.key === 'string' ? matchedItem.key : null;
+  return matchedKey ?? null;
 };

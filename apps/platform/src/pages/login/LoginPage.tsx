@@ -1,5 +1,6 @@
 import { App, Form, Layout } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { isApiError } from '@knowject/request';
 import {
@@ -10,6 +11,13 @@ import {
 } from '@api/auth';
 import { setAuthSession } from '@app/auth/user';
 import { PATHS } from '@app/navigation/paths';
+import {
+  useLocale,
+} from '@app/providers/LocaleProvider';
+import {
+  type SupportedLocale,
+  writeGuestLocale,
+} from '@app/providers/locale.storage';
 import { LoginFlowBackground } from './components/LoginFlowBackground';
 import { LoginFormPanel } from './components/LoginFormPanel';
 import { LoginHeroPanel } from './components/LoginHeroPanel';
@@ -27,6 +35,8 @@ export const LoginPage = () => {
   const [form] = Form.useForm<LoginFormValues>();
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const { t } = useTranslation('auth');
+  const { locale, setLocale } = useLocale();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<AuthMode>('login');
 
@@ -50,6 +60,15 @@ export const LoginPage = () => {
     setMode(nextMode);
   };
 
+  const handleGuestLocaleChange = async (nextLocale: SupportedLocale) => {
+    if (nextLocale === locale) {
+      return;
+    }
+
+    writeGuestLocale(nextLocale);
+    await setLocale(nextLocale, 'guest');
+  };
+
   const handleSubmit = async (values: LoginFormValues) => {
     setLoading(true);
 
@@ -69,13 +88,16 @@ export const LoginPage = () => {
             } satisfies LoginRequest);
 
       persistRememberedUsername(username, values.remember);
+      await setLocale(result.user.locale, 'account');
 
       setAuthSession({
         token: result.token,
         user: result.user,
       });
       message.success(
-        mode === 'register' ? `欢迎加入，${result.user.name}` : `欢迎回来，${result.user.name}`
+        mode === 'register'
+          ? t('messages.registerSuccess', { name: result.user.name })
+          : t('messages.loginSuccess', { name: result.user.name })
       );
       void navigate(PATHS.home, { replace: true });
     } catch (error) {
@@ -84,8 +106,8 @@ export const LoginPage = () => {
         isApiError(error)
           ? error.message
           : mode === 'register'
-            ? '注册失败，请稍后重试'
-            : '登录失败，请检查用户名和密码'
+            ? t('messages.registerFailed')
+            : t('messages.loginFailed')
       );
     } finally {
       setLoading(false);
@@ -93,7 +115,7 @@ export const LoginPage = () => {
   };
 
   const handleForgotPassword = () => {
-    message.info('请联系技术支持处理密码重置。');
+    message.info(t('messages.forgotPassword'));
   };
 
   return (
@@ -117,9 +139,11 @@ export const LoginPage = () => {
           <LoginHeroPanel />
           <LoginFormPanel
             form={form}
+            locale={locale}
             mode={mode}
             loading={loading}
             onModeChange={handleModeChange}
+            onLocaleChange={handleGuestLocaleChange}
             onSubmit={handleSubmit}
             onForgotPassword={handleForgotPassword}
           />

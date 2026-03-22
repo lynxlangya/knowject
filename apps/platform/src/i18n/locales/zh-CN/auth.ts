@@ -1,0 +1,61 @@
+export const authMessages = {
+  login: {
+    title: '欢迎回来',
+    subtitle: '请输入用户名和密码以继续',
+    noAccount: '还没有账号？',
+    action: '立即注册',
+    passwordLabel: '登录密码',
+    passwordPlaceholder: '请输入登录密码',
+    submit: '登录系统',
+  },
+  register: {
+    title: '创建账号',
+    subtitle: '创建你的第一个知项账号并直接进入系统',
+    hasAccount: '已经有账号？',
+    action: '去登录',
+    passwordLabel: '设置密码',
+    passwordPlaceholder: '请输入至少 8 位密码',
+    submit: '创建并进入',
+    directEntryHint: '注册后将直接进入系统',
+    footerAction: '直接登录',
+  },
+  fields: {
+    displayNameLabel: '显示名称',
+    displayNamePlaceholder: '请输入显示名称',
+    usernameLabel: '用户名',
+    usernamePlaceholder: '请输入用户名',
+    confirmPasswordLabel: '确认密码',
+    confirmPasswordPlaceholder: '请再次输入密码',
+  },
+  actions: {
+    rememberUsername: '记住用户名',
+    forgotPassword: '忘记密码？',
+    help: '需要帮助？',
+    contactSupport: '联系技术支持',
+  },
+  validation: {
+    displayNameRequired: '请输入显示名称',
+    usernameRequired: '请输入用户名',
+    passwordRequired: '请输入登录密码',
+    passwordMinLength: '密码至少需要 8 位',
+    confirmPasswordRequired: '请再次输入密码',
+    confirmPasswordMismatch: '两次输入的密码不一致',
+  },
+  messages: {
+    loginSuccess: '欢迎回来，{{name}}',
+    registerSuccess: '欢迎加入，{{name}}',
+    loginFailed: '登录失败，请检查用户名和密码',
+    registerFailed: '注册失败，请稍后重试',
+    forgotPassword: '请联系技术支持处理密码重置。',
+  },
+  language: {
+    english: 'English',
+    chineseSimplified: '简体中文',
+  },
+  hero: {
+    features: {
+      deliveryBoost: '提升项目交付效率达 40%',
+      contextUnderstanding: '在真实语境中快速理解项目上下文',
+    },
+  },
+};

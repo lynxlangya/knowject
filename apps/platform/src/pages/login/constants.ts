@@ -1,3 +1,5 @@
+import type { SupportedLocale } from '@app/providers/locale.storage';
+
 export interface LoginFormValues {
   name?: string;
   username: string;
@@ -7,6 +9,10 @@ export interface LoginFormValues {
 }
 
 export type AuthMode = 'login' | 'register';
+export interface LoginLocaleOption {
+  locale: SupportedLocale;
+  label: string;
+}
 
 export interface FlowPoint {
   x: number;
@@ -85,10 +91,16 @@ export const LOGIN_FORM_CLASS_NAME = [
   '[&_.ant-input::placeholder]:text-slate-400',
 ].join(' ');
 
-export const LOGIN_FEATURE_ITEMS = [
-  '提升项目交付效率达 40%',
-  '在真实语境中快速理解项目上下文',
-] as const;
+export const LOGIN_LOCALE_OPTIONS: LoginLocaleOption[] = [
+  {
+    locale: 'en',
+    label: 'English',
+  },
+  {
+    locale: 'zh-CN',
+    label: '简体中文',
+  },
+];
 
 export const toPercent = (value: number, total: number): string =>
   `${(value / total) * 100}%`;

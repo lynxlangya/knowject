@@ -270,11 +270,23 @@ test('PATCH /api/auth/me/preferences localizes invalid locale in english', async
       },
       body: JSON.stringify({ locale: 'fr' }),
     });
-    const body = (await response.json()) as { message: string; code: string };
+    const body = (await response.json()) as {
+      message: string;
+      code: string;
+      meta?: {
+        details?: {
+          fields?: Record<string, string>;
+        };
+      };
+    };
 
     assert.equal(response.status, 400);
     assert.equal(body.code, 'VALIDATION_ERROR');
     assert.equal(body.message, 'Locale is not supported');
+    assert.equal(
+      body.meta?.details?.fields?.locale,
+      'Locale is not supported',
+    );
   });
 });
 

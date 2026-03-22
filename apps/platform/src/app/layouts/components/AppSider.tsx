@@ -10,6 +10,7 @@ import {
   PushpinOutlined,
   ShareAltOutlined,
   SettingOutlined,
+  TranslationOutlined,
 } from "@ant-design/icons";
 import {
   App,
@@ -21,15 +22,19 @@ import {
   Typography,
 } from "antd";
 import type { MenuProps } from "antd";
+import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
+import { updateAuthPreferences } from "@api/auth";
 import { KNOWJECT_BRAND } from "@styles/brand";
-import { getMenuPath, menuItems } from "@app/navigation/menu";
+import { getMenuItems, getMenuPath } from "@app/navigation/menu";
 import {
   PATHS,
   buildProjectOverviewPath,
   getProjectIdFromPathname,
 } from "@app/navigation/paths";
 import { getAuthUser } from "@app/auth/user";
+import { useLocale } from "@app/providers/LocaleProvider";
+import type { SupportedLocale } from "@app/providers/locale.storage";
 import type { ProjectSummary } from "@app/project/project.types";
 import { useProjectContext } from "@app/project/useProjectContext";
 import { SIDER_WIDTH } from "@app/layouts/layout.constants";
@@ -52,6 +57,8 @@ export const AppSider = ({
   onLogout,
 }: AppSiderProps) => {
   const { message, modal } = App.useApp();
+  const { t } = useTranslation("navigation");
+  const { locale, setLocale } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -81,11 +88,12 @@ export const AppSider = ({
   const accountSecondary =
     authUser?.name && authUser.name !== accountPrimary
       ? authUser.name
-      : "当前登录账号";
+      : t("account.current");
   const accountAvatar = (authUser?.name || authUser?.username || "K")
     .trim()
     .charAt(0)
     .toUpperCase();
+  const menuItems = getMenuItems(t);
 
   const handleOpenProject = (projectId: string) => {
     void navigate(buildProjectOverviewPath(projectId));
@@ -127,45 +135,45 @@ export const AppSider = ({
         });
 
         if (result === "empty") {
-          message.warning("请输入项目名称");
+          message.warning(t("messages.projectNameRequired"));
           return;
         }
 
         if (result === "duplicate") {
-          message.warning("项目名称已存在，请更换后重试");
+          message.warning(t("messages.projectNameDuplicate"));
           return;
         }
 
         if (result === "not_found") {
-          message.warning("项目不存在或已被删除");
+          message.warning(t("messages.projectMissing"));
           handleCloseProjectModal();
           return;
         }
 
-        message.success("项目已更新");
+        message.success(t("messages.projectUpdated"));
         handleCloseProjectModal();
         return;
       }
 
       const result = await addProject(nextValues);
       if (result === "empty") {
-        message.warning("请输入项目名称");
+        message.warning(t("messages.projectNameRequired"));
         return;
       }
 
       if (result === "duplicate") {
-        message.warning("项目名称已存在，请更换后重试");
+        message.warning(t("messages.projectNameDuplicate"));
         return;
       }
 
-      message.success("项目已添加到“我的项目”");
+      message.success(t("messages.projectAdded"));
       handleCloseProjectModal();
     } catch (submitError) {
       console.error(submitError);
       message.error(
         isApiError(submitError)
           ? submitError.message
-          : "保存项目失败，请稍后重试",
+          : t("messages.projectSaveFailed"),
       );
     } finally {
       setProjectSubmitting(false);
@@ -177,16 +185,16 @@ export const AppSider = ({
     setActionMenuOpenProjectId(null);
 
     if (result === "not_found") {
-      message.warning("项目不存在或已被删除");
+      message.warning(t("messages.projectMissing"));
       return;
     }
 
     if (result === "pinned") {
-      message.success(`已置顶「${project.name}」`);
+      message.success(t("messages.projectPinned", { name: project.name }));
       return;
     }
 
-    message.success(`已取消置顶「${project.name}」`);
+    message.success(t("messages.projectUnpinned", { name: project.name }));
   };
 
   const handleDeleteProject = (project: ProjectSummary) => {
@@ -195,22 +203,22 @@ export const AppSider = ({
     const remainingProjects = projects.filter((item) => item.id !== project.id);
 
     modal.confirm({
-      title: "删除项目",
-      content: `确定删除「${project.name}」吗？此操作不可撤销。`,
-      okText: "删除",
+      title: t("dialogs.deleteProjectTitle"),
+      content: t("dialogs.deleteProjectContent", { name: project.name }),
+      okText: t("dialogs.deleteConfirm"),
       okButtonProps: { danger: true },
-      cancelText: "取消",
+      cancelText: t("dialogs.cancel"),
       onOk: () => {
         return (async () => {
           try {
             const result = await deleteProject(project.id);
 
             if (result === "not_found") {
-              message.warning("项目不存在或已被删除");
+              message.warning(t("messages.projectMissing"));
               return;
             }
 
-            message.success(`已删除「${project.name}」`);
+            message.success(t("messages.projectDeleted", { name: project.name }));
 
             if (project.id !== activeProjectId) {
               return;
@@ -227,7 +235,7 @@ export const AppSider = ({
             message.error(
               isApiError(deleteError)
                 ? deleteError.message
-                : "删除项目失败，请稍后重试",
+                : t("messages.projectDeleteFailed"),
             );
             throw deleteError;
           }
@@ -242,29 +250,29 @@ export const AppSider = ({
     {
       key: "share",
       icon: <ShareAltOutlined />,
-      label: "分享",
+      label: t("projects.share"),
       disabled: true,
     },
     {
       key: "edit",
       icon: <EditOutlined />,
-      label: "编辑",
+      label: t("projects.edit"),
     },
     {
       key: "pin",
       icon: <PushpinOutlined />,
-      label: project.isPinned ? "取消置顶" : "置顶",
+      label: project.isPinned ? t("projects.unpin") : t("projects.pin"),
     },
     {
       key: "archive",
       icon: <InboxOutlined />,
-      label: "归档",
+      label: t("projects.archive"),
       disabled: true,
     },
     {
       key: "delete",
       icon: <DeleteOutlined />,
-      label: "删除",
+      label: t("projects.delete"),
       danger: true,
     },
   ];
@@ -284,6 +292,69 @@ export const AppSider = ({
       handleDeleteProject(project);
     }
   };
+
+  const handleLocaleChange = async (nextLocale: SupportedLocale) => {
+    if (nextLocale === locale) {
+      setAccountPanelOpen(false);
+      return;
+    }
+
+    setAccountPanelOpen(false);
+    await setLocale(nextLocale, "account");
+
+    try {
+      await updateAuthPreferences({ locale: nextLocale });
+    } catch (error) {
+      console.error(error);
+      message.error(
+        isApiError(error)
+          ? error.message
+          : t("account.languageSaveFailed"),
+      );
+    }
+  };
+
+  const languagePanelContent = (
+    <div className="flex w-40 flex-col gap-1 rounded-card p-1.5">
+      {[
+        {
+          locale: "en" as const,
+          label: t("account.english"),
+        },
+        {
+          locale: "zh-CN" as const,
+          label: t("account.chineseSimplified"),
+        },
+      ].map((option) => {
+        const active = option.locale === locale;
+
+        return (
+          <button
+            key={option.locale}
+            type="button"
+            className={[
+              "flex h-9 items-center rounded-[12px] px-3 text-left text-sm font-medium transition-colors",
+              active
+                ? "text-white"
+                : "text-slate-600 hover:bg-white hover:text-slate-900",
+            ].join(" ")}
+            style={
+              active
+                ? {
+                    backgroundImage: KNOWJECT_BRAND.navGradient,
+                  }
+                : undefined
+            }
+            onClick={() => {
+              void handleLocaleChange(option.locale);
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   const accountPanelContent = (
     <div className="w-68 rounded-card p-2">
@@ -318,8 +389,33 @@ export const AppSider = ({
         }}
       >
         <SettingOutlined className="text-body" />
-        <span className="text-sm font-medium">设置</span>
+        <span className="text-sm font-medium">{t("account.settings")}</span>
       </button>
+
+      <Popover
+        trigger={["hover"]}
+        placement="rightTop"
+        arrow={false}
+        content={languagePanelContent}
+        styles={{
+          container: {
+            padding: 0,
+            borderRadius: 18,
+            background: KNOWJECT_BRAND.shellSurfaceStrong,
+            border: "1px solid rgba(255,255,255,0.72)",
+            boxShadow: "0 18px 36px rgba(15,42,38,0.08)",
+            backdropFilter: "blur(18px)",
+          },
+        }}
+      >
+        <button
+          type="button"
+          className="flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-slate-600 transition-colors hover:bg-white hover:text-slate-900"
+        >
+          <TranslationOutlined className="text-body" />
+          <span className="text-sm font-medium">{t("account.language")}</span>
+        </button>
+      </Popover>
 
       <div className="mx-2 my-1.5 h-px bg-slate-200/80" />
 
@@ -332,7 +428,7 @@ export const AppSider = ({
         }}
       >
         <LogoutOutlined className="text-body" />
-        <span className="text-sm font-medium">退出登录</span>
+        <span className="text-sm font-medium">{t("account.logout")}</span>
       </button>
     </div>
   );
@@ -404,11 +500,11 @@ export const AppSider = ({
         >
           <div className="mb-3 flex items-center justify-between">
             <Typography.Text className="text-sm font-semibold tracking-[0.08em] text-slate-600">
-              我的项目
+              {t("projects.mine")}
             </Typography.Text>
             <button
               type="button"
-              aria-label="添加项目"
+              aria-label={t("projects.addProject")}
               className="flex h-9 w-9 items-center justify-center rounded-[14px] border text-slate-600 transition-all duration-200 hover:-translate-y-px hover:text-slate-900"
               style={{
                 borderColor: "rgba(255,255,255,0.72)",
@@ -435,7 +531,7 @@ export const AppSider = ({
                   className="self-start text-xs font-medium text-slate-600 transition-colors hover:text-slate-900"
                   onClick={() => void refreshProjects()}
                 >
-                  重新加载
+                  {t("projects.reload")}
                 </button>
               </div>
             ) : projects.length === 0 ? (
@@ -449,10 +545,10 @@ export const AppSider = ({
                 <div className="flex flex-col gap-3">
                   <div>
                     <Typography.Text className="block text-label font-semibold text-slate-800">
-                      还没有项目
+                      {t("projects.emptyTitle")}
                     </Typography.Text>
                     <Typography.Text className="mt-1 block text-xs leading-5 text-slate-500">
-                      新建一个项目后，概览、资源、成员和对话会出现在这里。
+                      {t("projects.emptyDescription")}
                     </Typography.Text>
                   </div>
 
@@ -466,7 +562,7 @@ export const AppSider = ({
                     onClick={handleOpenProjectModal}
                   >
                     <PlusOutlined />
-                    <span>新建项目</span>
+                    <span>{t("projects.createProject")}</span>
                   </button>
                 </div>
               </div>
@@ -475,7 +571,7 @@ export const AppSider = ({
                 {error ? (
                   <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2">
                     <Typography.Text className="text-caption leading-5 text-amber-700">
-                      项目列表最近一次同步失败，当前显示本地已加载结果。
+                      {t("projects.syncWarning")}
                     </Typography.Text>
                   </div>
                 ) : null}
@@ -546,7 +642,9 @@ export const AppSider = ({
                       >
                         <button
                           type="button"
-                          aria-label={`${project.name} 的项目操作`}
+                          aria-label={t("projects.actionAria", {
+                            name: project.name,
+                          })}
                           className={[
                             "absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border text-slate-500 transition-all duration-200",
                             "opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto",
@@ -605,7 +703,7 @@ export const AppSider = ({
             }}
           >
             <SettingOutlined className="shrink-0 text-base text-slate-500" />
-            <span className="text-label font-semibold">设置</span>
+            <span className="text-label font-semibold">{t("account.settings")}</span>
           </button>
         </Popover>
       </div>

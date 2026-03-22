@@ -1,0 +1,61 @@
+export const authMessages = {
+  login: {
+    title: 'Welcome back',
+    subtitle: 'Enter your username and password to continue',
+    noAccount: 'New here?',
+    action: 'Create an account',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'Enter your password',
+    submit: 'Sign in',
+  },
+  register: {
+    title: 'Create your account',
+    subtitle: 'Create your first Knowject account and enter the workspace right away',
+    hasAccount: 'Already have an account?',
+    action: 'Go to sign in',
+    passwordLabel: 'Create password',
+    passwordPlaceholder: 'Enter at least 8 characters',
+    submit: 'Create and enter',
+    directEntryHint: 'You will enter the workspace right after sign-up',
+    footerAction: 'Sign in directly',
+  },
+  fields: {
+    displayNameLabel: 'Display name',
+    displayNamePlaceholder: 'Enter a display name',
+    usernameLabel: 'Username',
+    usernamePlaceholder: 'Enter your username',
+    confirmPasswordLabel: 'Confirm password',
+    confirmPasswordPlaceholder: 'Enter your password again',
+  },
+  actions: {
+    rememberUsername: 'Remember username',
+    forgotPassword: 'Forgot password?',
+    help: 'Need help?',
+    contactSupport: 'Contact support',
+  },
+  validation: {
+    displayNameRequired: 'Enter a display name',
+    usernameRequired: 'Enter your username',
+    passwordRequired: 'Enter your password',
+    passwordMinLength: 'Password must be at least 8 characters',
+    confirmPasswordRequired: 'Enter your password again',
+    confirmPasswordMismatch: 'Passwords do not match',
+  },
+  messages: {
+    loginSuccess: 'Welcome back, {{name}}',
+    registerSuccess: 'Welcome aboard, {{name}}',
+    loginFailed: 'Sign-in failed. Check your username and password.',
+    registerFailed: 'Registration failed. Try again later.',
+    forgotPassword: 'Please contact support to reset your password.',
+  },
+  language: {
+    english: 'English',
+    chineseSimplified: '简体中文',
+  },
+  hero: {
+    features: {
+      deliveryBoost: 'Boost project delivery efficiency by 40%',
+      contextUnderstanding: 'Understand project context quickly in the right working context',
+    },
+  },
+};

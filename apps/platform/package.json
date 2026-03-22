@@ -19,8 +19,10 @@
     "@knowject/ui": "workspace:*",
     "antd": "^6.1.4",
     "dayjs": "^1.11.19",
+    "i18next": "^25.6.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-i18next": "^16.3.5",
     "react-router-dom": "^7.11.0"
   },
   "devDependencies": {

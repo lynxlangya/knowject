@@ -12,6 +12,45 @@ import {
   type HttpClientOptions,
 } from "./types";
 
+const readHeaderValue = (
+  headers: InternalAxiosRequestConfig["headers"] | AxiosRequestConfig["headers"],
+  name: string,
+): string | null => {
+  if (!headers) {
+    return null;
+  }
+
+  if (typeof headers.get === "function") {
+    const value = headers.get(name);
+    return typeof value === "string" && value.trim() ? value : null;
+  }
+
+  const rawHeaders = headers as Record<string, unknown>;
+  const value = rawHeaders[name] ?? rawHeaders[name.toLowerCase()];
+
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.join(",");
+  }
+
+  return null;
+};
+
+const resolveRequestLocale = (
+  config: AxiosRequestConfig | InternalAxiosRequestConfig | undefined,
+  getLocale: HttpClientOptions["getLocale"],
+): string | null => {
+  const headerLocale = readHeaderValue(config?.headers, LOCALE_HEADER);
+  if (headerLocale) {
+    return normalizeLocale(headerLocale);
+  }
+
+  return getLocale ? normalizeLocale(getLocale()) : null;
+};
+
 export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
   const {
     baseURL,
@@ -35,19 +74,20 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
   // Request Interceptor
   instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     // Inject Token
-    if (getToken) {
-      const token = getToken();
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+      if (getToken) {
+        const token = getToken();
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
-    }
 
-    if (getLocale && config.headers) {
-      config.headers[LOCALE_HEADER] = normalizeLocale(getLocale());
-    }
+      const requestLocale = resolveRequestLocale(config, getLocale);
+      if (requestLocale && config.headers && !readHeaderValue(config.headers, LOCALE_HEADER)) {
+        config.headers[LOCALE_HEADER] = requestLocale;
+      }
 
-    // Add x-request-id
-    const requestId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      // Add x-request-id
+      const requestId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     if (config.headers) {
       config.headers["x-request-id"] = requestId;
     }
@@ -109,7 +149,10 @@ export const createHttpClient = (options: HttpClientOptions): AxiosInstance => {
       // Re-implementation of dedupe logic using wrapper to capture the promise
       const method = "GET";
       const params = config?.params;
-      const key = deduper.getKey(method, url, params);
+      const locale = resolveRequestLocale(config, getLocale);
+      const key = deduper.getKey(method, url, params, undefined, {
+        locale,
+      });
 
       const existing = deduper.get(key);
       if (existing) {
