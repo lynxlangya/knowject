@@ -1,5 +1,9 @@
-# contracts
+# Contracts
 
-This surface stores implementation contracts and cross-module interface agreements.
+`docs/contracts/` 存放当前仍有效的实现契约与跨模块边界约定。
 
-No legacy content has been migrated into this surface in this branch yet.
+当前目录内容：
+
+- `auth-contract.md`
+- `chat-contract.md`
+- `chroma-decision.md`

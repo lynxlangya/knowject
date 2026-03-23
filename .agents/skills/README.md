@@ -6,5 +6,5 @@
 
 后续新增仓库级 Skills 统一落在 `.agents/skills/<skill>/`（至少包含 `SKILL.md`，并可按需同目录放置 `agents/`、脚本或资产文件）。
 
-说明：本次仅完成 skill 层迁移；仓库其他根入口/治理文档仍可能在后续任务继续收敛。
-兼容入口见 `.codex/` 下的 skills 兼容 stub 说明。
+说明：当前仓库内与 Skill live root 相关的治理，以 `AGENTS.md`、`docs/README.md` 与本文件为准。
+`.codex/` 当前不承担 Skill live root 职责；若未来补充兼容说明，也只能作为兼容层，不能覆盖 `.agents/skills/` 的 live root 定义。

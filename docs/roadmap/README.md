@@ -1,5 +1,8 @@
-# roadmap
+# Roadmap
 
-This surface stores target architecture direction and gap analysis.
+`docs/roadmap/` 存放目标架构、阶段目标与差距分析，不承担当前事实源职责。
 
-No legacy content has been migrated into this surface in this branch yet.
+当前目录内容：
+
+- `target-architecture.md`
+- `gap-analysis.md`

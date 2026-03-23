@@ -1,4 +1,5 @@
-# Knowject Codex project configuration.
-# `.codex/` is configuration + compatibility space only.
-# Primary docs live in `docs/`; derived exports live in `docs/exports/`.
-# Project skills live root is `.agents/skills/`; `.codex/skills/` is compatibility-only.
+# Project-local Codex configuration.
+# Official minimal shape:
+# - AGENTS.md for repository instructions
+# - .codex/config.toml for project configuration
+# - .agents/skills/ for repo skills

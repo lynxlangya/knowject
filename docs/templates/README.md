@@ -1,5 +1,7 @@
-# templates
+# Templates
 
-This surface stores reusable templates for plans and process documents.
+`docs/templates/` 存放可复用模板，不放当前事实或阶段记录。
 
-No legacy content has been migrated into this surface in this branch yet.
+当前目录内容：
+
+- `PLANS.md`

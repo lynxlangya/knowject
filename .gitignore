@@ -20,9 +20,12 @@ __pycache__/
 *.pyo
 .venv/
 .pytest_cache/
+.agents/
 .codex/
 .superpowers/
 .worktrees/
+docs/
+AGENTS.md
 
 # Testing
 coverage

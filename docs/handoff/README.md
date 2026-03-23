@@ -1,5 +1,10 @@
-# handoff
+# Handoff
 
-This surface stores handoff guides and collaborator onboarding context.
+`docs/handoff/` 存放接手顺序、交接说明与对外模型的最小上下文入口。
 
-No legacy content has been migrated into this surface in this branch yet.
+当前目录内容：
+
+- `handoff-guide.md`
+- `chatgpt-project-brief.md`
+- `handoff-prompt.md`
+- `history/`

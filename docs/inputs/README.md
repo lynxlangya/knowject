@@ -1,5 +1,8 @@
-# inputs
+# Inputs
 
-This surface stores upstream inputs and source materials for documentation work.
+`docs/inputs/` 存放上游输入材料与认知原稿，不直接充当事实源。
 
-No legacy content has been migrated into this surface in this branch yet.
+当前目录内容：
+
+- `知项Knowject-项目认知总结-v2.md`
+- `知项Knowject-项目认知总结-v3.md`
