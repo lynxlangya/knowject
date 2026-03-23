@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { WithId } from 'mongodb';
+import { ObjectId, type WithId } from 'mongodb';
 import type { SettingsRepository } from '@modules/settings/settings.repository.js';
 import type { WorkspaceSettingsDocument } from '@modules/settings/settings.types.js';
 import type { AppEnv } from './env.js';
@@ -69,6 +69,7 @@ const createTestEnv = (): AppEnv => {
 
 const createLegacyDefaultSettings = (): WithId<WorkspaceSettingsDocument> => {
   return {
+    _id: new ObjectId('507f1f77bcf86cd799439001'),
     singleton: 'default',
     indexing: {
       chunkSize: 1000,

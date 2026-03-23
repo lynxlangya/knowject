@@ -1,4 +1,5 @@
 import { Tooltip, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import type {
   ProjectMember,
   ProjectOverviewStats,
@@ -20,6 +21,7 @@ export const ProjectHeader = ({
   meta,
   stats,
 }: ProjectHeaderProps) => {
+  const { t } = useTranslation('project');
   const projectInitial = (project.name.trim().slice(0, 1) || 'P').toUpperCase();
   const projectDescription = project.description.trim() || meta.summary;
   const activeMembers = members.filter((member) => member.isActive);
@@ -27,10 +29,10 @@ export const ProjectHeader = ({
   const hiddenMemberCount = Math.max(activeMembers.length - visibleMembers.length, 0);
   const statLabelClassName = 'text-xs font-semibold leading-none text-slate-600';
   const statItems = [
-    { label: '知识库', value: stats.knowledgeCount },
-    { label: '技能', value: stats.skillCount },
-    { label: '智能体', value: stats.agentCount },
-    { label: '对话', value: stats.conversationCount },
+    { label: t('header.knowledge'), value: stats.knowledgeCount },
+    { label: t('header.skills'), value: stats.skillCount },
+    { label: t('header.agents'), value: stats.agentCount },
+    { label: t('header.conversations'), value: stats.conversationCount },
   ];
 
   return (
@@ -60,7 +62,7 @@ export const ProjectHeader = ({
         <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-78 lg:shrink-0">
           <div className="rounded-[14px] border border-white/80 bg-white/78 px-3.5 py-2.5 shadow-[0_8px_18px_rgba(148,163,184,0.08)] backdrop-blur sm:col-span-2">
             <Typography.Text className={statLabelClassName}>
-              活跃成员
+              {t('header.activeMembers')}
             </Typography.Text>
             <div className="mt-1.5 flex items-center">
 	              {visibleMembers.map((member, index) => (

@@ -2,6 +2,7 @@ import {
   XMarkdown,
   type ComponentProps as XMarkdownComponentProps,
 } from '@ant-design/x-markdown';
+import { tp } from './project.i18n';
 
 const joinClassName = (...classNames: Array<string | undefined>) => {
   return classNames.filter(Boolean).join(' ');
@@ -305,7 +306,8 @@ const renderMarkdownImage = ({
   src?: string;
   title?: string;
 }>) => {
-  const fallbackLabel = alt?.trim() || title?.trim() || '外部图片';
+  const fallbackLabel =
+    alt?.trim() || title?.trim() || tp('conversation.externalImageLabel');
 
   return (
     <span
@@ -314,7 +316,7 @@ const renderMarkdownImage = ({
         className,
       )}
     >
-      <span className="font-semibold">已拦截外部图片加载</span>
+      <span className="font-semibold">{tp('conversation.externalImageBlocked')}</span>
       <span>{fallbackLabel}</span>
       {src ? (
         <span className="break-all text-caption leading-5 text-amber-700">

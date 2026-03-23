@@ -4,6 +4,7 @@ import {
   listProjectConversations,
   type ProjectConversationSummaryResponse,
 } from '@api/projects';
+import { tp } from './project.i18n';
 
 export interface UseProjectConversationsResult {
   items: ProjectConversationSummaryResponse[];
@@ -53,7 +54,7 @@ export const useProjectConversations = (
       setError(
         extractApiErrorMessage(
           currentError,
-          '加载项目对话失败，请稍后重试。',
+          tp('conversation.loadFailed'),
         ),
       );
     } finally {

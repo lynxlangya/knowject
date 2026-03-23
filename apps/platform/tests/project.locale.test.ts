@@ -1,0 +1,82 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import { projectMessages as projectMessagesEn } from '../src/i18n/locales/en/project';
+import { projectMessages as projectMessagesZhCN } from '../src/i18n/locales/zh-CN/project';
+
+const componentFiles = [
+  '../src/pages/project/ProjectLayout.tsx',
+  '../src/pages/project/ProjectOverviewPage.tsx',
+  '../src/pages/project/ProjectMembersPage.tsx',
+  '../src/pages/project/components/ProjectHeader.tsx',
+] as const;
+
+const helperFiles = [
+  '../src/pages/project/projectConversationMessageExport.ts',
+  '../src/pages/project/projectKnowledgeDraft.helpers.ts',
+  '../src/pages/project/projectWorkspaceSnapshot.mock.ts',
+  '../src/pages/project/useGlobalAssetCatalogs.ts',
+  '../src/pages/project/useProjectChatSettings.ts',
+  '../src/pages/project/useProjectConversationDetail.ts',
+  '../src/pages/project/useProjectConversations.ts',
+  '../src/pages/project/useProjectKnowledgeCatalog.ts',
+  '../src/pages/project/projectChat.markdown.tsx',
+  '../src/pages/project/hooks/useProjectKnowledgeMutations.ts',
+] as const;
+
+const localeSensitiveFiles = [
+  '../src/pages/project/ProjectOverviewPage.tsx',
+  '../src/pages/project/ProjectMembersPage.tsx',
+  '../src/pages/project/projectConversationMessageExport.ts',
+] as const;
+
+test('project locale resources expose mirrored layout, overview, members, header, chat settings, and draft defaults', () => {
+  const enProject = projectMessagesEn as Record<string, unknown>;
+  const zhProject = projectMessagesZhCN as Record<string, unknown>;
+
+  for (const key of ['layout', 'overview', 'members', 'header', 'chatSettings'] as const) {
+    const enSection = enProject[key] as Record<string, unknown> | undefined;
+    const zhSection = zhProject[key] as Record<string, unknown> | undefined;
+
+    assert.ok(enSection, `missing en project.${key}`);
+    assert.ok(zhSection, `missing zh-CN project.${key}`);
+    assert.deepEqual(Object.keys(enSection), Object.keys(zhSection));
+  }
+
+  const enResources = enProject.resources as Record<string, unknown> | undefined;
+  const zhResources = zhProject.resources as Record<string, unknown> | undefined;
+  const enDraft = enResources?.draft as Record<string, unknown> | undefined;
+  const zhDraft = zhResources?.draft as Record<string, unknown> | undefined;
+
+  assert.ok(enDraft);
+  assert.ok(zhDraft);
+
+  for (const key of ['defaultDocumentTitle', 'defaultKnowledgeDescription', 'missingKnowledge', 'invalidDocument'] as const) {
+    assert.ok(enDraft?.[key], `missing en project.resources.draft.${key}`);
+    assert.ok(zhDraft?.[key], `missing zh-CN project.resources.draft.${key}`);
+  }
+});
+
+for (const file of componentFiles) {
+  test(`${file} wires project i18n usage`, () => {
+    const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+
+    assert.match(source, /useTranslation\(|\btp\(/);
+  });
+}
+
+for (const file of helperFiles) {
+  test(`${file} resolves user-facing copy from project i18n`, () => {
+    const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+
+    assert.match(source, /i18n\.t\(|\btp\(/);
+  });
+}
+
+for (const file of localeSensitiveFiles) {
+  test(`${file} does not hardcode zh-CN date formatting`, () => {
+    const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+
+    assert.doesNotMatch(source, /DateTimeFormat\(\s*['"]zh-CN['"]/);
+  });
+}

@@ -19,13 +19,13 @@
   - `/skills`
   - `/agents`
   - `/settings`
+  - `/project/:projectId/overview`
   - `/project/:projectId/chat`
   - `/project/:projectId/resources`
-  - `/404`
-- 当前仍在继续迁移的 project 页面面：
-  - `/project/:projectId/overview`
   - `/project/:projectId/members`
-  - `ProjectLayout` 及少量 project 辅助 hook / helper
+  - `ProjectLayout` project shell
+  - `/404`
+- project `overview / members / layout` 与直接产出 UI 文案的 project 辅助 hook / helper 当前已完成 i18n 收口；剩余 project mock 演示补充数据不作为运行时文案事实源。
 
 ## 文案迁移约束
 
@@ -36,9 +36,11 @@
   - `tests/appSider.locale.test.ts`
   - `tests/global-pages.locale.test.ts`
   - `tests/knowledge.locale.test.ts`
+  - `tests/skills.locale.test.ts`
+  - `tests/agents.locale.test.ts`
+  - `tests/project.locale.test.ts`
   - `tests/no-hardcoded-platform-copy.test.ts`
-- 当前尚未补齐 `tests/skills.locale.test.ts`、`tests/agents.locale.test.ts` 与 `tests/project.locale.test.ts`；Task 8 仍在继续收尾。
-- 修改 global pages、assets、project chat/resources、settings、登录页、侧栏文案时，必须同步更新 `src/i18n/locales/en|zh-CN/*`，并保持 guard 通过；若继续推进 project `overview/members/layout`，也要同步补上对应 guard。
+- 修改 global pages、assets、project 页、settings、登录页、侧栏文案时，必须同步更新 `src/i18n/locales/en|zh-CN/*`，并保持对应 guard 通过。
 
 ## 当前路由
 

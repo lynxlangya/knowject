@@ -5,7 +5,7 @@ import { resolveLocalizedAppErrorMessage } from '@lib/app-error-message.js';
 import { createErrorEnvelope } from '@lib/api-response.js';
 import type { SupportedLocale } from '@lib/locale.js';
 import { DEFAULT_LOCALE } from '@lib/locale.js';
-import { getMessage } from '@lib/locale.messages.js';
+import { getFallbackMessage, getMessage } from '@lib/locale.messages.js';
 
 interface JsonParseError extends SyntaxError {
   status?: number;
@@ -26,6 +26,9 @@ const isJsonParseError = (error: unknown): error is JsonParseError => {
   );
 };
 
+const INVALID_JSON_MESSAGE_KEY = 'api.validation.invalidJson';
+const INTERNAL_ERROR_MESSAGE_KEY = 'api.internalError';
+
 const normalizeError = (error: unknown): AppError => {
   if (error instanceof AppError) {
     return error;
@@ -33,13 +36,15 @@ const normalizeError = (error: unknown): AppError => {
 
   // `express.json()` 在进入路由前就会失败，但责任仍然属于客户端请求体。
   if (isJsonParseError(error)) {
+    const message = getFallbackMessage(INVALID_JSON_MESSAGE_KEY);
+
     return new AppError({
       statusCode: 400,
       code: 'VALIDATION_ERROR',
-      message: '请求体不是合法 JSON',
-      messageKey: 'api.validation.invalidJson',
+      message,
+      messageKey: INVALID_JSON_MESSAGE_KEY,
       details: {
-        body: '请求体不是合法 JSON',
+        body: message,
       },
       cause: error,
     });
@@ -49,8 +54,8 @@ const normalizeError = (error: unknown): AppError => {
     return new AppError({
       statusCode: 500,
       code: 'INTERNAL_SERVER_ERROR',
-      message: '服务暂时不可用',
-      messageKey: 'api.internalError',
+      message: getFallbackMessage(INTERNAL_ERROR_MESSAGE_KEY),
+      messageKey: INTERNAL_ERROR_MESSAGE_KEY,
       cause: error,
     });
   }
@@ -58,8 +63,8 @@ const normalizeError = (error: unknown): AppError => {
   return new AppError({
     statusCode: 500,
     code: 'INTERNAL_SERVER_ERROR',
-    message: '服务暂时不可用',
-    messageKey: 'api.internalError',
+    message: getFallbackMessage(INTERNAL_ERROR_MESSAGE_KEY),
+    messageKey: INTERNAL_ERROR_MESSAGE_KEY,
   });
 };
 

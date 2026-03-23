@@ -21,8 +21,6 @@ interface SkillDetailPaneProps {
 const buildSkillActionMenuItems = (
   skill: SkillSummaryResponse,
 ): MenuProps['items'] => {
-  const items: NonNullable<MenuProps['items']> = [];
-
   if (skill.source === 'system') {
     return [
       {

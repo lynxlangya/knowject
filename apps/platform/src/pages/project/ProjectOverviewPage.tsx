@@ -1,4 +1,5 @@
 import { Alert, Button, Card, Empty, Typography } from 'antd';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   buildProjectChatPath,
@@ -8,16 +9,8 @@ import {
 import { useProjectPageContext } from './projectPageContext';
 import { getRecentProjectResources } from './projectResourceMappers';
 
-const formatConversationUpdatedAt = (value: string): string => {
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
-};
-
 export const ProjectOverviewPage = () => {
+  const { t, i18n } = useTranslation('project');
   const navigate = useNavigate();
   const {
     activeProject,
@@ -32,6 +25,19 @@ export const ProjectOverviewPage = () => {
     agentsCatalog: globalAssetCatalogs.agents.items,
     skillsCatalog: globalAssetCatalogs.skills.items,
   });
+  const resourceTypeLabels = {
+    knowledge: t('header.knowledge'),
+    skills: t('header.skills'),
+    agents: t('header.agents'),
+  } as const;
+  const formatConversationUpdatedAt = (value: string): string => {
+    return new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  };
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -40,7 +46,7 @@ export const ProjectOverviewPage = () => {
           <Alert
             type="warning"
             showIcon
-            message="项目上下文加载部分失败"
+            message={t('overview.partialLoad')}
             description={conversations.error}
           />
         ) : null}
@@ -54,24 +60,24 @@ export const ProjectOverviewPage = () => {
               <div className="min-w-0 flex-1">
                 <div className="mb-2 flex items-center gap-2">
                   <Typography.Text className="text-caption font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    项目对话
+                    {t('overview.conversationsEyebrow')}
                   </Typography.Text>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-caption font-medium text-slate-500">
-                    最近 {recentConversations.length} 条
+                    {t('overview.recentCount', { count: recentConversations.length })}
                   </span>
                 </div>
                 <Typography.Title level={4} className="mb-1! mt-0! text-slate-800!">
-                  最近对话
+                  {t('overview.recentTitle')}
                 </Typography.Title>
                 <Typography.Text className="text-sm text-slate-500">
-                  快速回到最近推进的讨论。
+                  {t('overview.recentDescription')}
                 </Typography.Text>
               </div>
               <Button
                 className="h-10! rounded-full! border-slate-200! px-4! text-sm! font-medium! text-slate-600!"
                 onClick={() => navigate(buildProjectChatPath(activeProject.id))}
               >
-                查看全部
+                {t('overview.viewAll')}
               </Button>
             </div>
           </div>
@@ -96,7 +102,7 @@ export const ProjectOverviewPage = () => {
                             aria-hidden="true"
                           />
                           <Typography.Text className="text-caption font-semibold uppercase tracking-[0.16em] text-slate-400">
-                            最近活跃
+                            {t('overview.recentActive')}
                           </Typography.Text>
                         </div>
                         <Typography.Text className="block truncate text-body font-semibold text-slate-800">
@@ -117,7 +123,10 @@ export const ProjectOverviewPage = () => {
           ) : (
             <div className="px-4 py-4">
               <div className="rounded-card-lg border border-dashed border-slate-200 bg-slate-50/40 px-6 py-10">
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前暂无对话" />
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={t('overview.emptyConversations')}
+                />
               </div>
             </div>
           )}
@@ -130,13 +139,15 @@ export const ProjectOverviewPage = () => {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <Typography.Title level={4} className="mb-1! text-slate-800!">
-                最近接入资源
+                {t('overview.resourcesTitle')}
               </Typography.Title>
               <Typography.Text className="text-sm text-slate-500">
-                这里同时展示项目绑定的全局资产和项目私有知识，便于快速回到当前上下文。
+                {t('overview.resourcesDescription')}
               </Typography.Text>
             </div>
-            <Button onClick={() => navigate(buildProjectResourcesPath(activeProject.id))}>进入资源页</Button>
+            <Button onClick={() => navigate(buildProjectResourcesPath(activeProject.id))}>
+              {t('overview.openResources')}
+            </Button>
           </div>
 
           {recentResources.length > 0 ? (
@@ -147,7 +158,7 @@ export const ProjectOverviewPage = () => {
                   className="rounded-card border border-slate-200 bg-slate-50/55 px-4 py-4"
                 >
                   <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
-                    {resource.type}
+                    {resourceTypeLabels[resource.type]}
                   </Typography.Text>
                   <Typography.Title level={5} className="mb-1! mt-2 text-slate-800!">
                     {resource.name}
@@ -159,7 +170,10 @@ export const ProjectOverviewPage = () => {
               ))}
             </div>
           ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前暂无接入资源" />
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={t('overview.emptyResources')}
+            />
           )}
         </Card>
       </div>
@@ -169,13 +183,13 @@ export const ProjectOverviewPage = () => {
         styles={{ body: { padding: '20px 20px 20px' } }}
       >
         <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-          快捷操作
+          {t('overview.quickActionsEyebrow')}
         </Typography.Text>
         <Typography.Title level={3} className="mb-2! mt-3 text-slate-800!">
-          从项目概览进入下一步
+          {t('overview.quickActionsTitle')}
         </Typography.Title>
         <Typography.Paragraph className="mb-6! text-sm! text-slate-600!">
-          先看项目状态，再进入对话、资源和成员页，能显著降低工作台的认知切换成本。
+          {t('overview.quickActionsDescription')}
         </Typography.Paragraph>
 
         <div className="flex flex-col gap-3">
@@ -188,7 +202,7 @@ export const ProjectOverviewPage = () => {
               navigate(buildProjectChatPath(activeProject.id, recentConversations[0]?.id))
             }
           >
-            继续对话
+            {t('overview.continueChat')}
           </Button>
           <Button
             block
@@ -196,7 +210,7 @@ export const ProjectOverviewPage = () => {
             className="h-12! rounded-panel! text-base! font-medium!"
             onClick={() => navigate(buildProjectResourcesPath(activeProject.id))}
           >
-            引入资源
+            {t('overview.addResources')}
           </Button>
           <Button
             block
@@ -204,7 +218,7 @@ export const ProjectOverviewPage = () => {
             className="h-12! rounded-panel! text-base! font-medium!"
             onClick={() => navigate(buildProjectMembersPath(activeProject.id))}
           >
-            查看成员
+            {t('overview.viewMembers')}
           </Button>
         </div>
       </Card>

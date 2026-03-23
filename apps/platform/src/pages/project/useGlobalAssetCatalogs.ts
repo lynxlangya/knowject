@@ -3,6 +3,7 @@ import { listAgents, type AgentResponse } from '@api/agents';
 import { extractApiErrorMessage } from '@api/error';
 import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
 import { listSkills, type SkillSummaryResponse } from '@api/skills';
+import { tp } from './project.i18n';
 
 export interface UseGlobalAssetCatalogsResult {
   knowledge: {
@@ -68,7 +69,7 @@ export const useGlobalAssetCatalogs = (
       setKnowledgeError(
         extractApiErrorMessage(
           knowledgeResult.reason,
-          '加载知识库元数据失败，请稍后重试。',
+          tp('resources.alertGlobalKnowledge'),
         ),
       );
     }
@@ -82,7 +83,7 @@ export const useGlobalAssetCatalogs = (
       setAgentsError(
         extractApiErrorMessage(
           agentsResult.reason,
-          '加载 Agent 元数据失败，请稍后重试。',
+          tp('resources.alertAgents'),
         ),
       );
     }
@@ -96,7 +97,7 @@ export const useGlobalAssetCatalogs = (
       setSkillsError(
         extractApiErrorMessage(
           skillsResult.reason,
-          '加载 Skill 元数据失败，请稍后重试。',
+          tp('resources.alertSkills'),
         ),
       );
     }

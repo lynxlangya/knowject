@@ -21,22 +21,27 @@ export interface ProjectResourceCatalogs {
   skillsCatalog?: SkillSummaryResponse[];
 }
 
-const RESOURCE_GROUP_COPY: Record<
-  ProjectResourceFocus,
-  { title: string; description: string }
-> = {
-  knowledge: {
-    title: tp('resources.group.knowledgeTitle'),
-    description: tp('resources.group.knowledgeDescription'),
-  },
-  skills: {
-    title: tp('resources.group.skillsTitle'),
-    description: tp('resources.group.skillsDescription'),
-  },
-  agents: {
+const getResourceGroupCopy = (
+  focus: ProjectResourceFocus,
+): { title: string; description: string } => {
+  if (focus === 'knowledge') {
+    return {
+      title: tp('resources.group.knowledgeTitle'),
+      description: tp('resources.group.knowledgeDescription'),
+    };
+  }
+
+  if (focus === 'skills') {
+    return {
+      title: tp('resources.group.skillsTitle'),
+      description: tp('resources.group.skillsDescription'),
+    };
+  }
+
+  return {
     title: tp('resources.group.agentsTitle'),
     description: tp('resources.group.agentsDescription'),
-  },
+  };
 };
 
 const formatCompactDate = (value: string): string => {
@@ -247,12 +252,16 @@ export const getProjectResourceGroups = (
   project: Pick<ProjectSummary, 'knowledgeBaseIds' | 'skillIds' | 'agentIds'>,
   catalogs: ProjectResourceCatalogs = {},
 ): ProjectResourceGroup[] => {
-  return (['knowledge', 'skills', 'agents'] as const).map((focus) => ({
-    key: focus,
-    title: RESOURCE_GROUP_COPY[focus].title,
-    description: RESOURCE_GROUP_COPY[focus].description,
-    items: mapProjectResources(project, focus, catalogs),
-  }));
+  return (['knowledge', 'skills', 'agents'] as const).map((focus) => {
+    const groupCopy = getResourceGroupCopy(focus);
+
+    return {
+      key: focus,
+      title: groupCopy.title,
+      description: groupCopy.description,
+      items: mapProjectResources(project, focus, catalogs),
+    };
+  });
 };
 
 export const getRecentProjectResources = (

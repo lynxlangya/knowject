@@ -5,6 +5,7 @@ import {
   KNOWLEDGE_UPLOAD_TOOLTIP,
   validateKnowledgeSourceFile,
 } from '../src/pages/knowledge/knowledgeUpload.shared';
+import { tp as knowledgeTp } from '../src/pages/knowledge/knowledge.i18n';
 
 const createFile = (name: string, size = 1024): File => {
   return new File([new Uint8Array(size)], name, {
@@ -20,17 +21,18 @@ test('DOCUMENT_UPLOAD_ACCEPT 扩展到 md/markdown/txt/pdf/docx/xlsx', () => {
 });
 
 test('KNOWLEDGE_UPLOAD_TOOLTIP 展示新增格式、doc/xls 不支持与数字 PDF 限制', () => {
+  assert.equal(KNOWLEDGE_UPLOAD_TOOLTIP, knowledgeTp('upload.tooltip'));
   assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /\.md/);
   assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /\.markdown/);
   assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /\.txt/);
   assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /\.pdf/);
   assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /\.docx/);
   assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /\.xlsx/);
-  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /doc/);
-  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /xls/);
-  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /不支持/);
-  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /数字 PDF|数字文本 PDF/);
-  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /OCR|扫描/);
+  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /\.doc/);
+  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /\.xls/);
+  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /PDF/i);
+  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /digital|数字/i);
+  assert.match(KNOWLEDGE_UPLOAD_TOOLTIP, /OCR|scan|扫描/i);
 });
 
 test('validateKnowledgeSourceFile 接受新扩展并拒绝 doc/xls', () => {
@@ -44,12 +46,6 @@ test('validateKnowledgeSourceFile 接受新扩展并拒绝 doc/xls', () => {
   const docError = validateKnowledgeSourceFile(createFile('a.doc'));
   const xlsError = validateKnowledgeSourceFile(createFile('a.xls'));
 
-  assert.equal(
-    docError,
-    '仅支持 md、markdown、txt、pdf、docx、xlsx 文件（不支持 doc、xls）',
-  );
-  assert.equal(
-    xlsError,
-    '仅支持 md、markdown、txt、pdf、docx、xlsx 文件（不支持 doc、xls）',
-  );
+  assert.equal(docError, knowledgeTp('upload.invalidType'));
+  assert.equal(xlsError, knowledgeTp('upload.invalidType'));
 });

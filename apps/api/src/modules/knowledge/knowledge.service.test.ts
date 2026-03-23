@@ -1062,6 +1062,7 @@ test('uploadDocument rejects files disabled by indexing supportedTypes before pe
     } as unknown as AuthRepository,
     settingsRepository: createSettingsRepositoryStub({
       getSettings: async () => ({
+        _id: new ObjectId(),
         singleton: 'default',
         indexing: {
           chunkSize: 960,

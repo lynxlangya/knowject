@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getAuthSession, getAuthUser, setAuthSession } from '@app/auth/user';
-import i18n from '@/i18n';
+import i18n from '../../i18n';
 import {
   normalizeLocale,
   readGuestLocale,

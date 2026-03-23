@@ -520,6 +520,8 @@ const updateKnowledgeDocumentByStatus = async (
       | "embeddingModel"
       | "lastIndexedAt"
       | "errorMessage"
+      | "errorMessageKey"
+      | "errorMessageParams"
       | "processedAt"
       | "updatedAt"
     >

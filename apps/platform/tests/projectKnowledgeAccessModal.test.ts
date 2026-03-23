@@ -30,5 +30,8 @@ test('ProjectKnowledgeAccessModal 支持聊天页自定义 project-only 创建�
   assert.match(modalSource, /createProjectSubmitText\?: string/);
   assert.match(modalSource, /createProjectHelperText\?: string/);
   assert.match(modalSource, /createProjectTitle\?: string/);
-  assert.match(modalSource, /okText=\{isGlobalMode \? '绑定到当前项目' : createProjectSubmitText\}/);
+  assert.match(
+    modalSource,
+    /okText=\{isGlobalMode \? tp\('resources\.access\.okGlobal'\) : createProjectSubmitText\}/,
+  );
 });

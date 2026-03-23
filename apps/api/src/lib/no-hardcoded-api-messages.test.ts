@@ -32,6 +32,8 @@ const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/skills/skills.shared.ts',
   'apps/api/src/modules/skills/validators/skills.validator.ts',
   'apps/api/src/routes/memory.ts',
+  'apps/api/src/middleware/error-handler.ts',
+  'apps/api/src/middleware/not-found.ts',
   'apps/api/src/middleware/secure-transport.ts',
   'apps/api/src/lib/validation.ts',
   'apps/api/src/lib/mutation-input.ts',

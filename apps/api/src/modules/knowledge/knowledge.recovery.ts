@@ -1,5 +1,6 @@
 import { getEffectiveIndexingConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
+import type { AppError } from "@lib/app-error.js";
 import { getFallbackMessage } from "@lib/locale.messages.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type { WithId } from "mongodb";
@@ -99,8 +100,8 @@ export const recoverInterruptedKnowledgeTasks = async ({
   repository: KnowledgeRepository;
   searchService: KnowledgeSearchService;
   settingsRepository: SettingsRepository;
-  createLegacyNamespaceRebuildRequiredError: () => Error;
-  createNamespaceRebuildRequiredError: () => Error;
+  createLegacyNamespaceRebuildRequiredError: () => AppError;
+  createNamespaceRebuildRequiredError: () => AppError;
 }): Promise<void> => {
   const now = new Date();
   const staleProcessingBefore = new Date(

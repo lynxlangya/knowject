@@ -446,7 +446,7 @@ export const validateUploadFile = (
   const supported = SUPPORTED_KNOWLEDGE_UPLOAD_TYPES.find(
     (item) =>
       item.sourceType === sourceType &&
-      item.extensions.includes(extension as (typeof item.extensions)[number]),
+      item.extensions.some((supportedExtension) => supportedExtension === extension),
   );
 
   if (!supported) {
@@ -479,8 +479,8 @@ export const validateUploadFile = (
   }
 
   if (
-    !supported.mimeTypes.includes(
-      file.mimeType as (typeof supported.mimeTypes)[number],
+    !supported.mimeTypes.some(
+      (supportedMimeType) => supportedMimeType === file.mimeType,
     )
   ) {
     throw createUploadNotSupportedError();

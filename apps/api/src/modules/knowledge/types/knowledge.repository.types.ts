@@ -15,7 +15,11 @@ export type KnowledgeDocumentCompletionPatch = Pick<
 
 export type KnowledgeDocumentFailurePatch = Pick<
   KnowledgeDocumentRecord,
-  "errorMessage" | "processedAt" | "updatedAt"
+  | "errorMessage"
+  | "errorMessageKey"
+  | "errorMessageParams"
+  | "processedAt"
+  | "updatedAt"
 >;
 
 export type KnowledgeSummaryCompletionPatch = {

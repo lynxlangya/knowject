@@ -325,6 +325,8 @@ export class KnowledgeRepository {
         | "embeddingModel"
         | "lastIndexedAt"
         | "errorMessage"
+        | "errorMessageKey"
+        | "errorMessageParams"
         | "processedAt"
         | "updatedAt"
       >
@@ -392,7 +394,11 @@ export class KnowledgeRepository {
     documentId: string,
     patch: Pick<
       KnowledgeDocumentRecord,
-      "errorMessage" | "processedAt" | "updatedAt"
+      | "errorMessage"
+      | "errorMessageKey"
+      | "errorMessageParams"
+      | "processedAt"
+      | "updatedAt"
     >,
   ): Promise<WithId<KnowledgeDocumentRecord> | null> {
     return markKnowledgeDocumentFailedIfProcessingImpl(
@@ -406,7 +412,11 @@ export class KnowledgeRepository {
     documentId: string,
     patch: Pick<
       KnowledgeDocumentRecord,
-      "errorMessage" | "processedAt" | "updatedAt"
+      | "errorMessage"
+      | "errorMessageKey"
+      | "errorMessageParams"
+      | "processedAt"
+      | "updatedAt"
     >,
   ): Promise<WithId<KnowledgeDocumentRecord> | null> {
     return markKnowledgeDocumentFailedIfRecoverableImpl(

@@ -47,11 +47,6 @@ export interface ProjectChatBubbleExtraInfo {
 
 export type ProjectChatBubbleStatus = 'streaming' | 'reconciling';
 
-const PROJECT_CHAT_BUBBLE_STATUS_LABELS: Record<ProjectChatBubbleStatus, string> = {
-  streaming: tp('conversation.status.streaming'),
-  reconciling: tp('conversation.status.reconciling'),
-};
-
 void React;
 
 const formatMessageTime = (value: string): string => {
@@ -66,7 +61,11 @@ const formatSourceDistance = (value: number | null): string | null => {
     return null;
   }
 
-  return `distance ${value.toFixed(2)}`;
+  return tp('conversation.sourceDistance', { value: value.toFixed(2) });
+};
+
+const getProjectChatBubbleStatusLabel = (status: ProjectChatBubbleStatus): string => {
+  return tp(`conversation.status.${status}`);
 };
 
 const ProjectConversationSources = ({
@@ -217,7 +216,7 @@ export const ProjectChatAssistantFooter = ({
       <div className="flex flex-wrap items-center gap-2">
         {extraInfo.status ? (
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700">
-            {PROJECT_CHAT_BUBBLE_STATUS_LABELS[extraInfo.status]}
+            {getProjectChatBubbleStatusLabel(extraInfo.status)}
           </span>
         ) : null}
         <div className="flex items-center gap-1 text-slate-400">

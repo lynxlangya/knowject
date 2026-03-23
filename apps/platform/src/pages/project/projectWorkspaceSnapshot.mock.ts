@@ -5,6 +5,7 @@ import type {
   ProjectWorkspaceMeta,
   ProjectWorkspaceSnapshot,
 } from '@app/project/project.types';
+import { tp } from './project.i18n';
 
 type ProjectMemberSnapshot = Omit<ProjectMember, 'id' | 'name' | 'avatarUrl'>;
 
@@ -118,9 +119,6 @@ const PROJECT_MEMBER_SNAPSHOTS_BY_PROJECT: Record<
   },
 };
 
-const DEFAULT_PROJECT_SUMMARY =
-  '聚焦当前项目的知识沉淀、协作过程和 AI 能力接入。';
-
 const PROJECT_META_BY_ID: Record<string, Pick<ProjectWorkspaceMeta, 'iconUrl'>> =
   {
     'project-mobile-rebuild': {
@@ -204,7 +202,7 @@ const getProjectMeta = (
 ): ProjectWorkspaceMeta => {
   return {
     iconUrl: PROJECT_META_BY_ID[project.id]?.iconUrl ?? '/icon-128.png',
-    summary: project.description.trim() || DEFAULT_PROJECT_SUMMARY,
+    summary: project.description.trim() || tp('snapshot.defaultSummary'),
   };
 };
 

@@ -5,6 +5,7 @@ import {
   type SettingsLlmProvider,
 } from '@api/settings';
 import { useCallback, useEffect, useState } from 'react';
+import { tp } from './project.i18n';
 
 export type ProjectChatIssueCode =
   | 'PROJECT_CONVERSATION_LLM_UNAVAILABLE'
@@ -36,7 +37,7 @@ export const useProjectChatSettings = (projectId: string) => {
       if (code === 'PROJECT_CONVERSATION_LLM_UNAVAILABLE') {
         return {
           code,
-          title: '当前未配置可用的对话模型',
+          title: tp('chatSettings.unavailableTitle'),
           description,
         };
       }
@@ -44,7 +45,7 @@ export const useProjectChatSettings = (projectId: string) => {
       if (code === 'PROJECT_CONVERSATION_LLM_PROVIDER_UNSUPPORTED') {
         return {
           code,
-          title: '当前 LLM Provider 暂不支持项目对话',
+          title: tp('chatSettings.providerUnsupportedTitle'),
           description,
         };
       }
@@ -52,7 +53,7 @@ export const useProjectChatSettings = (projectId: string) => {
       if (code === 'PROJECT_CONVERSATION_LLM_STREAM_UNSUPPORTED') {
         return {
           code,
-          title: '当前 LLM Provider 暂不支持流式项目对话',
+          title: tp('chatSettings.streamUnsupportedTitle'),
           description,
         };
       }
@@ -60,7 +61,7 @@ export const useProjectChatSettings = (projectId: string) => {
       if (code === 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR') {
         return {
           code,
-          title: '项目对话模型调用失败',
+          title: tp('chatSettings.upstreamErrorTitle'),
           description,
         };
       }
@@ -82,7 +83,7 @@ export const useProjectChatSettings = (projectId: string) => {
       console.error('[ProjectChatPage] 加载对话配置失败:', currentError);
       setChatLlmSettings(null);
       setChatSettingsError(
-        extractApiErrorMessage(currentError, '读取对话配置失败，请稍后重试'),
+        extractApiErrorMessage(currentError, tp('chatSettings.loadFailed')),
       );
     } finally {
       setChatSettingsLoading(false);
@@ -98,9 +99,8 @@ export const useProjectChatSettings = (projectId: string) => {
       if (!chatLlmSettings.hasKey) {
         return {
           code: 'PROJECT_CONVERSATION_LLM_UNAVAILABLE' as const,
-          title: '当前未配置可用的对话模型',
-          description:
-            '请先前往设置页保存并测试 LLM API Key，项目对话才会生成 assistant 回复。',
+          title: tp('chatSettings.unavailableTitle'),
+          description: tp('chatSettings.unavailableDescription'),
         };
       }
     }

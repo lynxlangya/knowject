@@ -8,6 +8,7 @@ import {
   useState,
   type MutableRefObject,
 } from 'react';
+import { tp } from './project.i18n';
 
 export interface ProjectConversationTargetRefValue {
   projectId: string;
@@ -68,7 +69,7 @@ export const useProjectConversationDetail = ({
         console.error(currentError);
         setConversationDetail(null);
         setDetailError(
-          extractApiErrorMessage(currentError, '加载项目对话失败，请稍后重试'),
+          extractApiErrorMessage(currentError, tp('conversation.loadFailed')),
         );
       } finally {
         if (!cancelled) {
@@ -132,7 +133,7 @@ export const useProjectConversationDetail = ({
         latestTarget.chatId === conversationId
       ) {
         setDetailError(
-          extractApiErrorMessage(currentError, '刷新项目对话失败，请稍后重试'),
+          extractApiErrorMessage(currentError, tp('conversation.refreshFailed')),
         );
       }
     }

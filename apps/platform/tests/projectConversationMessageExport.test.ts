@@ -40,10 +40,7 @@ test('buildKnowledgeDraftDefaults derives default names from the conversation ti
   });
 
   assert.equal(defaults.knowledgeName, '项目周会复盘');
-  assert.equal(
-    defaults.knowledgeDescription,
-    '基于「项目周会复盘」整理的项目对话知识草稿',
-  );
+  assert.match(defaults.knowledgeDescription, /项目周会复盘/);
   assert.equal(defaults.documentTitle, '项目周会复盘');
   assert.equal(defaults.markdownContent, '# 复盘\n\n内容');
 

@@ -14,14 +14,12 @@ export interface BuildConversationMessageMarkdownOptions {
   messages: ConversationMessageExportItem[];
 }
 
-const DEFAULT_MARKDOWN_FILE_NAME = tp('conversation.exportFile');
-
 const normalizeWhitespace = (value: string): string => {
   return value.replace(/\s+/g, ' ').trim();
 };
 
 const formatMessageTimestamp = (value: string): string => {
-  return new Intl.DateTimeFormat('zh-CN', {
+  return new Intl.DateTimeFormat(i18n.resolvedLanguage || 'en', {
     localeMatcher: 'best fit',
     year: 'numeric',
     month: '2-digit',
@@ -45,7 +43,7 @@ export const normalizeMarkdownFileName = (value: string): string => {
     .replace(/[\\/:*?"<>|]+/g, '-')
     .trim();
 
-  return normalizedBaseName ? `${normalizedBaseName}.md` : DEFAULT_MARKDOWN_FILE_NAME;
+  return normalizedBaseName ? `${normalizedBaseName}.md` : tp('conversation.exportFile');
 };
 
 export const buildConversationMessageMarkdown = ({

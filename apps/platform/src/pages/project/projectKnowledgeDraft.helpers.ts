@@ -1,4 +1,5 @@
 import { createMarkdownSourceFile } from '../knowledge/knowledgeUpload.shared';
+import { tp } from './project.i18n';
 
 export interface BuildKnowledgeDraftDefaultsOptions {
   conversationTitle: string;
@@ -49,12 +50,14 @@ export const buildKnowledgeDraftDefaults = ({
   markdownContent,
 }: BuildKnowledgeDraftDefaultsOptions): KnowledgeDraftDefaults => {
   const documentTitle =
-    normalizeWhitespace(conversationTitle) || '项目对话知识草稿';
+    normalizeWhitespace(conversationTitle) || tp('resources.draft.defaultDocumentTitle');
 
   // 保留知识字段仅用于兼容当前草稿表单消费者；文档级字段仍是默认值主契约。
   return {
     knowledgeName: documentTitle,
-    knowledgeDescription: `基于「${documentTitle}」整理的项目对话知识草稿`,
+    knowledgeDescription: tp('resources.draft.defaultKnowledgeDescription', {
+      title: documentTitle,
+    }),
     documentTitle,
     markdownContent,
   };
@@ -101,14 +104,14 @@ export const saveProjectKnowledgeDraftDocument = async ({
   if (!knowledgeId) {
     return {
       status: 'error',
-      message: '请先选择项目私有知识库',
+      message: tp('resources.draft.missingKnowledge'),
     };
   }
 
   if (!documentTitle || !markdownContent) {
     return {
       status: 'error',
-      message: '请补全文档标题和 Markdown 内容',
+      message: tp('resources.draft.invalidDocument'),
     };
   }
 
@@ -134,7 +137,7 @@ export const saveProjectKnowledgeDraftDocument = async ({
       status: 'error',
       message: getProjectKnowledgeDraftErrorMessage(
         error,
-        '保存知识草稿失败，请稍后重试',
+        tp('resources.draft.saveFailed'),
       ),
     };
   }

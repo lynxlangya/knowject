@@ -16,6 +16,7 @@ import type {
   ProjectKnowledgeFormValues,
 } from "../components/ProjectKnowledgeAccessModal";
 import type { EditKnowledgeFormValues } from "../types/projectResources.types";
+import { tp } from "../project.i18n";
 
 interface ProjectKnowledgeMessageApi {
   error: (content: string) => void;
@@ -126,11 +127,11 @@ export const useProjectKnowledgeMutations = ({
     }
 
     if (result === "not_found") {
-      message.error("项目不存在或已被删除");
+      message.error(tp("resources.mutations.projectMissing"));
       return false;
     }
 
-    message.error("当前无法更新项目资源绑定，请稍后重试");
+    message.error(tp("resources.mutations.bindingUpdateFailed"));
     return false;
   };
 
@@ -152,12 +153,14 @@ export const useProjectKnowledgeMutations = ({
         return;
       }
 
-      message.success(`已为项目引入 ${knowledgeIds.length} 个全局知识库`);
+      message.success(
+        tp("resources.mutations.bindGlobalSuccess", { count: knowledgeIds.length }),
+      );
       closeKnowledgeAccessModal();
     } catch (currentError) {
       console.error("[ProjectResources] 绑定全局知识失败:", currentError);
       message.error(
-        extractApiErrorMessage(currentError, "绑定全局知识失败，请稍后重试"),
+        extractApiErrorMessage(currentError, tp("resources.mutations.bindGlobalFailed")),
       );
     } finally {
       setKnowledgeAccessSubmittingMode(null);
@@ -176,7 +179,7 @@ export const useProjectKnowledgeMutations = ({
         sourceType: "global_docs",
       });
 
-      message.success("项目知识库已创建");
+      message.success(tp("resources.draft.createSuccess"));
       closeKnowledgeAccessModal();
       void refreshProjectKnowledge();
       setActiveKnowledgeId(result.knowledge.id);
@@ -184,7 +187,7 @@ export const useProjectKnowledgeMutations = ({
     } catch (currentError) {
       console.error("[ProjectResources] 创建项目知识库失败:", currentError);
       message.error(
-        extractApiErrorMessage(currentError, "创建项目知识库失败，请稍后重试"),
+        extractApiErrorMessage(currentError, tp("resources.draft.createFailed")),
       );
     } finally {
       setKnowledgeAccessSubmittingMode(null);
@@ -206,7 +209,7 @@ export const useProjectKnowledgeMutations = ({
         description: values.description,
       });
 
-      message.success("项目知识库已更新");
+      message.success(tp("resources.mutations.updateSuccess"));
       closeMetadataModal();
       void refreshProjectKnowledge();
 
@@ -218,7 +221,7 @@ export const useProjectKnowledgeMutations = ({
     } catch (currentError) {
       console.error("[ProjectResources] 更新项目知识库失败:", currentError);
       message.error(
-        extractApiErrorMessage(currentError, "更新项目知识库失败，请稍后重试"),
+        extractApiErrorMessage(currentError, tp("resources.mutations.updateFailed")),
       );
     } finally {
       setMetadataSubmitting(false);
@@ -227,10 +230,10 @@ export const useProjectKnowledgeMutations = ({
 
   const confirmUnbindGlobalKnowledge = (item: ProjectResourceItem) => {
     modal.confirm({
-      title: "解除全局知识库绑定",
-      content: `解除后，知识库“${item.name}”不会再参与当前项目上下文消费，但不会影响它在全局中的原始内容。`,
-      okText: "解除绑定",
-      cancelText: "取消",
+      title: tp("resources.mutations.unbindTitle"),
+      content: tp("resources.mutations.unbindDescription", { name: item.name }),
+      okText: tp("resources.mutations.unbindConfirm"),
+      cancelText: tp("members.cancel"),
       okButtonProps: {
         danger: true,
       },
@@ -249,7 +252,7 @@ export const useProjectKnowledgeMutations = ({
             return;
           }
 
-          message.success(`已解除“${item.name}”的项目绑定`);
+          message.success(tp("resources.mutations.unbindSuccess", { name: item.name }));
 
           if (activeKnowledgeId === item.id) {
             setActiveKnowledgeId(null);
@@ -262,7 +265,7 @@ export const useProjectKnowledgeMutations = ({
           message.error(
             extractApiErrorMessage(
               currentError,
-              "解除全局知识绑定失败，请稍后重试",
+              tp("resources.mutations.unbindFailed"),
             ),
           );
         } finally {
@@ -274,10 +277,10 @@ export const useProjectKnowledgeMutations = ({
 
   const confirmDeleteKnowledge = (item: ProjectResourceItem) => {
     modal.confirm({
-      title: "删除项目知识库",
-      content: `删除后会清理知识库元数据、原始文件和对应向量，且不可撤销。确定删除“${item.name}”吗？`,
-      okText: "删除",
-      cancelText: "取消",
+      title: tp("resources.mutations.deleteTitle"),
+      content: tp("resources.mutations.deleteDescription", { name: item.name }),
+      okText: tp("resources.mutations.deleteConfirm"),
+      cancelText: tp("members.cancel"),
       okButtonProps: {
         danger: true,
       },
@@ -287,7 +290,7 @@ export const useProjectKnowledgeMutations = ({
 
         try {
           await deleteKnowledge(item.id);
-          message.success("项目知识库已删除");
+          message.success(tp("resources.mutations.deleteSuccess"));
           void refreshProjectKnowledge();
 
           if (activeKnowledgeId === item.id) {
@@ -302,7 +305,7 @@ export const useProjectKnowledgeMutations = ({
           message.error(
             extractApiErrorMessage(
               currentError,
-              "删除项目知识库失败，请稍后重试",
+              tp("resources.mutations.deleteFailed"),
             ),
           );
         } finally {

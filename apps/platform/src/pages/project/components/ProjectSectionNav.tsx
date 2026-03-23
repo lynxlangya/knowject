@@ -1,43 +1,48 @@
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ProjectSectionKey } from '@app/project/project.types';
 import { KNOWJECT_BRAND } from '@styles/brand';
-import { tp } from '../project.i18n';
 
 interface ProjectSectionNavProps {
   activeKey: ProjectSectionKey;
   onSelect: (key: ProjectSectionKey) => void;
 }
 
-const NAV_ITEMS: Array<{ key: ProjectSectionKey; label: string; description: string }> = [
-  {
-    key: 'overview',
-    label: tp('nav.overview.label'),
-    description: tp('nav.overview.description'),
-  },
-  {
-    key: 'chat',
-    label: tp('nav.chat.label'),
-    description: tp('nav.chat.description'),
-  },
-  {
-    key: 'resources',
-    label: tp('nav.resources.label'),
-    description: tp('nav.resources.description'),
-  },
-  {
-    key: 'members',
-    label: tp('nav.members.label'),
-    description: tp('nav.members.description'),
-  },
-];
-
 export const ProjectSectionNav = ({
   activeKey,
   onSelect,
 }: ProjectSectionNavProps) => {
+  const { t } = useTranslation('project');
+  const navItems = useMemo<Array<{ key: ProjectSectionKey; label: string; description: string }>>(
+    () => [
+      {
+        key: 'overview',
+        label: t('nav.overview.label'),
+        description: t('nav.overview.description'),
+      },
+      {
+        key: 'chat',
+        label: t('nav.chat.label'),
+        description: t('nav.chat.description'),
+      },
+      {
+        key: 'resources',
+        label: t('nav.resources.label'),
+        description: t('nav.resources.description'),
+      },
+      {
+        key: 'members',
+        label: t('nav.members.label'),
+        description: t('nav.members.description'),
+      },
+    ],
+    [t],
+  );
+
   return (
-    <nav aria-label={tp('nav.aria')} className="border-b border-slate-200/90">
+    <nav aria-label={t('nav.aria')} className="border-b border-slate-200/90">
       <div className="flex gap-1 overflow-x-auto">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const active = item.key === activeKey;
           return (
             <button

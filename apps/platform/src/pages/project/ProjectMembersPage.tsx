@@ -11,6 +11,7 @@ import {
   Typography,
 } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { extractApiErrorMessage } from "@api/error";
 import {
   addProjectMember,
@@ -38,19 +39,8 @@ interface MemberCandidateOption {
   username: string;
 }
 
-const PROJECT_ROLE_LABELS: Record<ProjectRole, string> = {
-  admin: "管理员",
-  member: "成员",
-};
-
-const formatDateTime = (value: string): string => {
-  return new Intl.DateTimeFormat("zh-CN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-};
-
 export const ProjectMembersPage = () => {
+  const { t, i18n } = useTranslation("project");
   const { message } = App.useApp();
   const [form] = Form.useForm<AddMemberFormValues>();
   const navigate = useNavigate();
@@ -66,6 +56,19 @@ export const ProjectMembersPage = () => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const candidateRequestIdRef = useRef(0);
   const currentMemberUsernameSetRef = useRef(new Set<string>());
+  const projectRoleLabels = useMemo<Record<ProjectRole, string>>(
+    () => ({
+      admin: t("members.roleAdmin"),
+      member: t("members.roleMember"),
+    }),
+    [t],
+  );
+  const formatDateTime = (value: string): string => {
+    return new Intl.DateTimeFormat(i18n.resolvedLanguage || "en", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  };
 
   const currentMemberUsernameSet = useMemo(() => {
     return new Set(activeProject.members.map((member) => member.username));
@@ -141,7 +144,7 @@ export const ProjectMembersPage = () => {
 
       console.error("[ProjectMembersPage] 加载可添加成员失败:", error);
       message.error(
-        extractApiErrorMessage(error, "加载可添加成员失败，请稍后重试"),
+        extractApiErrorMessage(error, t("members.feedback.loadCandidatesFailed")),
       );
     } finally {
       if (candidateRequestIdRef.current === requestId) {
@@ -159,7 +162,7 @@ export const ProjectMembersPage = () => {
       ).filter((username) => !currentMemberUsernameSet.has(username));
 
       if (usernames.length === 0) {
-        message.warning("请至少选择一位可加入项目的用户");
+        message.warning(t("members.feedback.selectAtLeastOne"));
         return;
       }
 
@@ -178,7 +181,13 @@ export const ProjectMembersPage = () => {
         } catch (error) {
           console.error("[ProjectMembersPage] 添加成员失败:", error);
           failedMessages.push(
-            `${username}：${extractApiErrorMessage(error, "添加失败")}`,
+            t("members.feedback.addFailureItem", {
+              username,
+              message: extractApiErrorMessage(
+                error,
+                t("members.feedback.addFailureFallback"),
+              ),
+            }),
           );
         }
       }
@@ -198,7 +207,11 @@ export const ProjectMembersPage = () => {
 
       if (failedMessages.length === 0) {
         message.success(
-          usernames.length === 1 ? "成员已加入项目" : `已添加 ${usernames.length} 位成员`,
+          usernames.length === 1
+            ? t("members.feedback.addSuccessSingle")
+            : t("members.feedback.addSuccessMultiple", {
+                count: usernames.length,
+              }),
         );
         return;
       }
@@ -206,16 +219,20 @@ export const ProjectMembersPage = () => {
       const successCount = usernames.length - failedMessages.length;
       if (successCount > 0) {
         message.warning(
-          `已添加 ${successCount} 位成员，${failedMessages.length} 位失败：${failedMessages[0]}`,
+          t("members.feedback.addPartial", {
+            success: successCount,
+            failed: failedMessages.length,
+            message: failedMessages[0],
+          }),
         );
         return;
       }
 
-      message.error(failedMessages[0] ?? "添加成员失败，请稍后重试");
+      message.error(failedMessages[0] ?? t("members.feedback.addFailed"));
     } catch (error) {
       console.error("[ProjectMembersPage] 添加成员失败:", error);
       message.error(
-        extractApiErrorMessage(error, "添加成员失败，请稍后重试"),
+        extractApiErrorMessage(error, t("members.feedback.addFailed")),
       );
     } finally {
       setSubmitting(false);
@@ -238,11 +255,11 @@ export const ProjectMembersPage = () => {
       });
 
       syncProject(result.project);
-      message.success("成员角色已更新");
+      message.success(t("members.feedback.updateRoleSuccess"));
     } catch (error) {
       console.error("[ProjectMembersPage] 更新成员角色失败:", error);
       message.error(
-        extractApiErrorMessage(error, "更新成员角色失败，请稍后重试"),
+        extractApiErrorMessage(error, t("members.feedback.updateRoleFailed")),
       );
     } finally {
       setUpdatingUserId(null);
@@ -259,7 +276,7 @@ export const ProjectMembersPage = () => {
 
       if (result.removedCurrentUser || !result.project) {
         removeProjectSnapshot(activeProject.id);
-        message.success("你已退出当前项目");
+        message.success(t("members.feedback.selfRemoved"));
         void navigate(
           nextProject ? buildProjectOverviewPath(nextProject.id) : PATHS.home,
         );
@@ -267,11 +284,11 @@ export const ProjectMembersPage = () => {
       }
 
       syncProject(result.project);
-      message.success("成员已移出项目");
+      message.success(t("members.feedback.removeSuccess"));
     } catch (error) {
       console.error("[ProjectMembersPage] 移除成员失败:", error);
       message.error(
-        extractApiErrorMessage(error, "移除成员失败，请稍后重试"),
+        extractApiErrorMessage(error, t("members.feedback.removeFailed")),
       );
     } finally {
       setRemovingUserId(null);
@@ -286,27 +303,29 @@ export const ProjectMembersPage = () => {
 
     return [
       {
-        label: "项目成员",
-        value: `${activeProject.members.length} 位`,
-        hint: "当前已加入正式后端项目的成员数量",
+        label: t("members.summaryProjectMembersLabel"),
+        value: t("members.countValue", {
+          count: activeProject.members.length,
+        }),
+        hint: t("members.summaryProjectMembersHint"),
       },
       {
-        label: "管理员",
-        value: `${adminCount} 位`,
-        hint: "具备项目级更新与成员管理权限",
+        label: t("members.summaryAdminsLabel"),
+        value: t("members.countValue", { count: adminCount }),
+        hint: t("members.summaryAdminsHint"),
       },
       {
-        label: "普通成员",
-        value: `${regularMemberCount} 位`,
-        hint: "拥有项目访问权限，不具备管理权限",
+        label: t("members.summaryRegularMembersLabel"),
+        value: t("members.countValue", { count: regularMemberCount }),
+        hint: t("members.summaryRegularMembersHint"),
       },
       {
-        label: "我的权限",
-        value: PROJECT_ROLE_LABELS[activeProject.currentUserRole],
-        hint: "以当前登录账号在该项目中的正式角色为准",
+        label: t("members.summaryMyRoleLabel"),
+        value: projectRoleLabels[activeProject.currentUserRole],
+        hint: t("members.summaryMyRoleHint"),
       },
     ];
-  }, [activeProject]);
+  }, [activeProject, projectRoleLabels, t]);
 
   const canManageMembers = activeProject.currentUserRole === "admin";
 
@@ -319,14 +338,13 @@ export const ProjectMembersPage = () => {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
             <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-              成员管理
+              {t("members.pageEyebrow")}
             </Typography.Text>
             <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
-              当前项目的正式成员 roster
+              {t("members.pageTitle")}
             </Typography.Title>
             <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-              这里展示的是后端正式项目中的成员关系，只支持最小闭环：按用户名 / 姓名搜索已有用户、多选加入项目、修改
-              `admin / member` 角色、移除成员。
+              {t("members.pageDescription")}
             </Typography.Paragraph>
           </div>
 
@@ -362,11 +380,11 @@ export const ProjectMembersPage = () => {
           <div className="flex items-center gap-2">
             <UserAddOutlined className="text-slate-400" />
             <Typography.Title level={5} className="mb-0! text-slate-800!">
-              添加已有用户
+              {t("members.formTitle")}
             </Typography.Title>
           </div>
           <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-            只允许把已注册用户加入当前项目，不引入邀请 token、邮件或外部通知链路。
+            {t("members.formDescription")}
           </Typography.Paragraph>
 
           {canManageMembers ? (
@@ -379,13 +397,13 @@ export const ProjectMembersPage = () => {
             >
               <Form.Item
                 name="usernames"
-                label="用户"
+                label={t("members.usersLabel")}
                 rules={[
                   {
                     required: true,
                     type: "array",
                     min: 1,
-                    message: "请至少选择一位要加入项目的用户",
+                    message: t("members.usersRequired"),
                   },
                 ]}
               >
@@ -393,16 +411,16 @@ export const ProjectMembersPage = () => {
                   mode="multiple"
                   showSearch
                   allowClear
-                  placeholder="搜索用户名或姓名，例如：langya / 琅邪"
+                  placeholder={t("members.usersPlaceholder")}
                   options={candidateOptions}
                   filterOption={false}
                   loading={candidateSearching}
                   notFoundContent={
                     candidateSearching
-                      ? "搜索中..."
+                      ? t("members.usersLoading")
                       : searchKeyword.trim()
-                        ? "没有找到可添加的用户"
-                        : "输入用户名或姓名开始搜索"
+                        ? t("members.usersEmpty")
+                        : t("members.usersIdle")
                   }
                   onSearch={(value) => {
                     setSearchKeyword(value);
@@ -432,13 +450,13 @@ export const ProjectMembersPage = () => {
 
               <Form.Item
                 name="role"
-                label="项目角色"
-                rules={[{ required: true, message: "请选择项目角色" }]}
+                label={t("members.roleLabel")}
+                rules={[{ required: true, message: t("members.roleRequired") }]}
               >
                 <Select
                   options={[
-                    { value: "member", label: PROJECT_ROLE_LABELS.member },
-                    { value: "admin", label: PROJECT_ROLE_LABELS.admin },
+                    { value: "member", label: projectRoleLabels.member },
+                    { value: "admin", label: projectRoleLabels.admin },
                   ]}
                 />
               </Form.Item>
@@ -449,7 +467,7 @@ export const ProjectMembersPage = () => {
                 loading={submitting}
                 block
               >
-                添加成员
+                {t("members.addSubmit")}
               </Button>
             </Form>
           ) : (
@@ -457,8 +475,8 @@ export const ProjectMembersPage = () => {
               className="mt-5"
               type="warning"
               showIcon
-              message="当前账号不是项目 admin"
-              description="你可以查看正式成员 roster，但不能添加、改角色或移除成员。"
+              message={t("members.noManageTitle")}
+              description={t("members.noManageDescription")}
             />
           )}
         </Card>
@@ -470,23 +488,23 @@ export const ProjectMembersPage = () => {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                正式成员列表
+                {t("members.listEyebrow")}
               </Typography.Text>
               <Typography.Title
                 level={5}
                 className="mb-0! mt-2 text-slate-800!"
               >
-                当前项目已加入成员
+                {t("members.listTitle")}
               </Typography.Title>
             </div>
             <Typography.Text className="text-sm text-slate-400">
-              项目：{activeProject.name}
+              {t("members.listProjectLabel", { name: activeProject.name })}
             </Typography.Text>
           </div>
 
           {activeProject.members.length === 0 ? (
             <div className="mt-6">
-              <Empty description="当前项目暂无正式成员" />
+              <Empty description={t("members.empty")} />
             </div>
           ) : (
             <div className="mt-6 flex flex-col gap-3">
@@ -508,18 +526,18 @@ export const ProjectMembersPage = () => {
                         </Typography.Text>
                         {isCurrentUser ? (
                           <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-500">
-                            当前账号
+                            {t("members.currentAccount")}
                           </span>
                         ) : null}
                         <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
-                          {PROJECT_ROLE_LABELS[member.role]}
+                          {projectRoleLabels[member.role]}
                         </span>
                       </div>
                       <Typography.Text className="mt-2 block text-xs text-slate-400">
                         @{member.username}
                       </Typography.Text>
                       <Typography.Text className="mt-1 block text-xs text-slate-400">
-                        加入时间：{formatDateTime(member.joinedAt)}
+                        {t("members.joinedAt", { value: formatDateTime(member.joinedAt) })}
                       </Typography.Text>
                     </div>
 
@@ -534,18 +552,20 @@ export const ProjectMembersPage = () => {
                         options={[
                           {
                             value: "member",
-                            label: PROJECT_ROLE_LABELS.member,
+                            label: projectRoleLabels.member,
                           },
-                          { value: "admin", label: PROJECT_ROLE_LABELS.admin },
+                          { value: "admin", label: projectRoleLabels.admin },
                         ]}
                         className="min-w-30"
                       />
 
                       <Popconfirm
-                        title="移除成员"
-                        description={`确定将 ${member.name} 移出当前项目吗？`}
-                        okText="移除"
-                        cancelText="取消"
+                        title={t("members.removeTitle")}
+                        description={t("members.removeDescription", {
+                          name: member.name,
+                        })}
+                        okText={t("members.removeConfirm")}
+                        cancelText={t("members.cancel")}
                         disabled={!canManageMembers}
                         onConfirm={() => void handleRemoveMember(member.userId)}
                       >
@@ -555,7 +575,7 @@ export const ProjectMembersPage = () => {
                           loading={removingUserId === member.userId}
                           disabled={!canManageMembers || actionLoading}
                         >
-                          移除
+                          {t("members.removeConfirm")}
                         </Button>
                       </Popconfirm>
                     </div>

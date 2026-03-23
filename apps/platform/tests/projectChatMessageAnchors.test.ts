@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { tp as projectTp } from '../src/pages/project/project.i18n';
 
 const require = createRequire(import.meta.url);
 require.extensions['.css'] = () => undefined;
+
+const escapeRegExp = (value: string): string => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 test('buildProjectChatBubbleItems and bubble wrappers keep stable message anchors for persisted messages', async () => {
   const [
@@ -147,20 +152,41 @@ test('buildProjectChatBubbleItems and bubble wrappers keep stable message anchor
   );
 
   assert.ok(assistantBubble?.extraInfo?.assistantActions);
-  assert.match(assistantFooterHtml, /aria-label="复制回复"/);
-  assert.match(assistantFooterHtml, /aria-label="取消加星"/);
+  assert.match(
+    assistantFooterHtml,
+    new RegExp(
+      `aria-label="${escapeRegExp(projectTp('conversation.copyReply'))}"`,
+    ),
+  );
+  assert.match(
+    assistantFooterHtml,
+    new RegExp(
+      `aria-label="${escapeRegExp(projectTp('conversation.unstar'))}"`,
+    ),
+  );
   assert.match(
     assistantFooterHtml,
     /class="[^"]*\sbg-amber-50(?:\s|")/,
   );
   assert.match(assistantFooterHtml, /aria-disabled="true"/);
-  assert.match(inactiveAssistantFooterHtml, /aria-label="加星"/);
+  assert.match(
+    inactiveAssistantFooterHtml,
+    new RegExp(`aria-label="${escapeRegExp(projectTp('conversation.star'))}"`),
+  );
   assert.match(
     inactiveAssistantFooterHtml,
     /class="[^"]*hover:bg-amber-50[^"]*hover:text-amber-600[^"]*"/,
   );
-  assert.match(assistantFooterHtml, /aria-label="重新生成回复"/);
+  assert.match(
+    assistantFooterHtml,
+    new RegExp(
+      `aria-label="${escapeRegExp(projectTp('conversation.retryReply'))}"`,
+    ),
+  );
   assert.doesNotMatch(assistantFooterHtml, />08:00</);
-  assert.match(draftAssistantFooterHtml, /aria-label="加星"/);
+  assert.match(
+    draftAssistantFooterHtml,
+    new RegExp(`aria-label="${escapeRegExp(projectTp('conversation.star'))}"`),
+  );
   assert.match(draftAssistantFooterHtml, /aria-disabled="true"/);
 });

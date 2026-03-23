@@ -4,6 +4,7 @@ import {
   listProjectKnowledge,
   type KnowledgeSummaryResponse,
 } from '@api/knowledge';
+import { tp } from './project.i18n';
 
 const DEFAULT_POLLING_MAX_ATTEMPTS = 20;
 const DEFAULT_POLLING_INTERVAL_MS = 1500;
@@ -101,7 +102,7 @@ export const useProjectKnowledgeCatalog = (
         setError(
           extractApiErrorMessage(
             currentError,
-            '加载项目私有知识失败，请稍后重试。',
+            tp('resources.alertProjectKnowledge'),
           ),
         );
       } finally {

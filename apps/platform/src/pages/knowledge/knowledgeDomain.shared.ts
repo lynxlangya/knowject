@@ -15,7 +15,7 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { createElement } from 'react';
-import i18n from '@/i18n';
+import i18n from '../../i18n';
 import { tp } from './knowledge.i18n';
 
 export interface KnowledgeSourceMeta {

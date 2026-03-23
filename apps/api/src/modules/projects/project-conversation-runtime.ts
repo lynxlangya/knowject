@@ -30,6 +30,7 @@ export interface ProjectConversationKnowledgeSearch {
 export interface ProjectConversationRuntime {
   generateAssistantReply(input: {
     actor: KnowledgeCommandContext["actor"];
+    locale?: KnowledgeCommandContext["locale"];
     project: WithId<ProjectDocument>;
     conversation: ProjectConversationDocument;
     userMessage: ProjectConversationMessageDocument;
@@ -39,6 +40,7 @@ export interface ProjectConversationRuntime {
   }>;
   streamAssistantReply(input: {
     actor: KnowledgeCommandContext["actor"];
+    locale?: KnowledgeCommandContext["locale"];
     project: WithId<ProjectDocument>;
     conversation: ProjectConversationDocument;
     userMessage: ProjectConversationMessageDocument;

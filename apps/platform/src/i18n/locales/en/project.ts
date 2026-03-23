@@ -18,6 +18,129 @@ export const projectMessages = {
       description: 'Participants and collaboration status',
     },
   },
+  layout: {
+    missingRouteTitle: 'Missing project route',
+    missingRouteDescription:
+      'No projectId was detected. Return to home and choose a project again.',
+    backHome: 'Back to home',
+    loadFailedTitle: 'Failed to load project list',
+    missingProjectTitle: 'Project not found or already deleted',
+    loadFailedDescription:
+      'The latest project list could not be synced from the backend. Please try again later.',
+    missingProjectDescription:
+      'Re-select a project from My Projects in the left sidebar.',
+    reload: 'Reload',
+  },
+  overview: {
+    partialLoad: 'Some project context failed to load',
+    conversationsEyebrow: 'Project chat',
+    recentCount: 'Recent {{count}}',
+    recentTitle: 'Recent conversations',
+    recentDescription: 'Jump back into the latest discussions quickly.',
+    viewAll: 'View all',
+    recentActive: 'Recently active',
+    emptyConversations: 'No conversations yet',
+    resourcesTitle: 'Recently connected resources',
+    resourcesDescription:
+      'Shows both globally bound assets and project-private knowledge so you can jump back into the current context quickly.',
+    openResources: 'Open resources',
+    emptyResources: 'No connected resources yet',
+    quickActionsEyebrow: 'Quick actions',
+    quickActionsTitle: 'Choose the next step from project overview',
+    quickActionsDescription:
+      'Review project status first, then jump to chat, resources, or members to reduce context switching.',
+    continueChat: 'Continue chat',
+    addResources: 'Add resources',
+    viewMembers: 'View members',
+  },
+  header: {
+    activeMembers: 'Active members',
+    knowledge: 'Knowledge',
+    skills: 'Skills',
+    agents: 'Agents',
+    conversations: 'Conversations',
+  },
+  members: {
+    roleAdmin: 'Admin',
+    roleMember: 'Member',
+    pageEyebrow: 'Member management',
+    pageTitle: 'Formal member roster for this project',
+    pageDescription:
+      'This page shows the formal backend project membership and supports the current minimum loop: search existing users by username or name, add them in batches, update `admin / member` roles, and remove members.',
+    summaryProjectMembersLabel: 'Project members',
+    summaryProjectMembersHint:
+      'Members that have already joined the formal backend project.',
+    summaryAdminsLabel: 'Admins',
+    summaryAdminsHint:
+      'Members with project-level update and member-management permissions.',
+    summaryRegularMembersLabel: 'Regular members',
+    summaryRegularMembersHint:
+      'Members with project access but without management permissions.',
+    summaryMyRoleLabel: 'My role',
+    summaryMyRoleHint:
+      'Based on the formal role of the current signed-in account in this project.',
+    countValue: '{{count}}',
+    formTitle: 'Add existing users',
+    formDescription:
+      'Only already-registered users can be added to the current project. Invitation tokens, email, and external notification flows are intentionally out of scope.',
+    usersLabel: 'Users',
+    usersRequired: 'Select at least one user to add',
+    usersPlaceholder: 'Search by username or name, for example: langya / 琅邪',
+    usersLoading: 'Searching...',
+    usersEmpty: 'No addable users found',
+    usersIdle: 'Enter a username or name to start searching',
+    roleLabel: 'Project role',
+    roleRequired: 'Select a project role',
+    addSubmit: 'Add members',
+    noManageTitle: 'Current account is not a project admin',
+    noManageDescription:
+      'You can view the formal member roster, but cannot add members, change roles, or remove members.',
+    listEyebrow: 'Formal member list',
+    listTitle: 'Members already joined to this project',
+    listProjectLabel: 'Project: {{name}}',
+    empty: 'This project has no formal members yet',
+    currentAccount: 'Current account',
+    joinedAt: 'Joined: {{value}}',
+    removeTitle: 'Remove member',
+    removeDescription:
+      'Remove {{name}} from the current project?',
+    removeConfirm: 'Remove',
+    cancel: 'Cancel',
+    feedback: {
+      loadCandidatesFailed:
+        'Failed to load addable members. Please try again later.',
+      selectAtLeastOne: 'Select at least one user who can join this project',
+      addFailureItem: '{{username}}: {{message}}',
+      addFailureFallback: 'Failed to add member',
+      addSuccessSingle: 'Member added to project',
+      addSuccessMultiple: '{{count}} members added',
+      addPartial:
+        '{{success}} members added and {{failed}} failed: {{message}}',
+      addFailed: 'Failed to add members. Please try again later.',
+      updateRoleSuccess: 'Member role updated',
+      updateRoleFailed:
+        'Failed to update member role. Please try again later.',
+      selfRemoved: 'You have left the current project',
+      removeSuccess: 'Member removed from project',
+      removeFailed:
+        'Failed to remove member. Please try again later.',
+    },
+  },
+  snapshot: {
+    defaultSummary:
+      'Focus on knowledge capture, collaboration progress, and AI capability access for the current project.',
+  },
+  chatSettings: {
+    unavailableTitle: 'No available chat model is configured',
+    unavailableDescription:
+      'Save and test an LLM API key from Settings first so project chat can generate assistant replies.',
+    providerUnsupportedTitle:
+      'The current LLM provider does not support project chat',
+    streamUnsupportedTitle:
+      'The current LLM provider does not support streaming project chat',
+    upstreamErrorTitle: 'Project chat model request failed',
+    loadFailed: 'Failed to read chat configuration. Please try again later.',
+  },
   conversation: {
     active: 'Current thread',
     recent: 'Recently active',
@@ -57,6 +180,10 @@ export const projectMessages = {
     composerPlaceholder: 'Ask a project question',
     stop: 'Stop generating',
     sendAria: 'Send message',
+    refreshFailed: 'Failed to refresh project chat. Please try again later.',
+    sourceDistance: 'distance {{value}}',
+    externalImageLabel: 'External image',
+    externalImageBlocked: 'External image loading blocked',
     missingConversation: 'Conversation not found',
     missingConversationDescription:
       'The current chatId does not match any conversation. Re-select one from the left.',
@@ -330,12 +457,42 @@ export const projectMessages = {
       markdownLabel: 'Markdown content',
       markdownPlaceholder:
         'The Markdown content to be uploaded will be saved here.',
+      defaultDocumentTitle: 'Project chat knowledge draft',
+      defaultKnowledgeDescription:
+        'Project chat knowledge draft organized from "{{title}}"',
+      missingKnowledge: 'Select a project-private knowledge base first',
+      invalidDocument: 'Complete the document title and Markdown content first',
       saved: 'Project knowledge draft saved to the selected private knowledge base',
       createSuccess: 'Project-private knowledge base created',
       createFailed:
         'Failed to create project knowledge base. Please try again later.',
       saveFailed:
         'Failed to save knowledge draft. Please try again later.',
+    },
+    mutations: {
+      projectMissing: 'Project not found or already deleted',
+      bindingUpdateFailed:
+        'Unable to update project resource bindings right now. Please try again later.',
+      bindGlobalSuccess: '{{count}} global knowledge base(s) connected to the project',
+      bindGlobalFailed:
+        'Failed to connect global knowledge. Please try again later.',
+      updateSuccess: 'Project knowledge base updated',
+      updateFailed:
+        'Failed to update project knowledge base. Please try again later.',
+      unbindTitle: 'Remove global knowledge binding',
+      unbindDescription:
+        'After removal, "{{name}}" will no longer participate in this project context, but its original global content will remain unchanged.',
+      unbindConfirm: 'Remove binding',
+      unbindSuccess: '"{{name}}" removed from the project',
+      unbindFailed:
+        'Failed to remove global knowledge binding. Please try again later.',
+      deleteTitle: 'Delete project knowledge base',
+      deleteDescription:
+        'Deleting "{{name}}" removes knowledge metadata, original files, and related vectors. This cannot be undone.',
+      deleteConfirm: 'Delete',
+      deleteSuccess: 'Project knowledge base deleted',
+      deleteFailed:
+        'Failed to delete project knowledge base. Please try again later.',
     },
     metadata: {
       title: 'Edit project knowledge base',

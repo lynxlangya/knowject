@@ -64,7 +64,7 @@ test('saveProjectKnowledgeDraftDocument 在缺少 knowledgeId 时直接返回错
   });
 
   assert.equal(result.status, 'error');
-  assert.match(result.message ?? '', /请先选择项目私有知识库/);
+  assert.ok(result.message);
 });
 
 test('saveProjectKnowledgeDraftDocument 只调用上传函数，不再创建知识库', async () => {

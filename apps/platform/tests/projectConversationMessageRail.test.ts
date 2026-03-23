@@ -3,9 +3,14 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { tp as projectTp } from '../src/pages/project/project.i18n';
 
 const require = createRequire(import.meta.url);
 require.extensions['.css'] = () => undefined;
+
+const escapeRegExp = (value: string): string => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 test('desktop rail keeps a fixed collapsed gutter width even when expanded content is shown', async () => {
   const React = await import('react');
@@ -57,7 +62,12 @@ test('desktop rail keeps a fixed collapsed gutter width even when expanded conte
   );
 
   assert.match(collapsedHtml, /w-\[72px\]/);
-  assert.match(collapsedHtml, /aria-label="展开消息导航"/);
+  assert.match(
+    collapsedHtml,
+    new RegExp(
+      `aria-label="${escapeRegExp(projectTp('conversation.railExpand'))}"`,
+    ),
+  );
   assert.match(
     expandedHtml,
     /<aside class="[^"]*w-\[320px\][^"]*"/,
@@ -66,14 +76,19 @@ test('desktop rail keeps a fixed collapsed gutter width even when expanded conte
     expandedHtml,
     /w-\[320px\] h-full shrink-0 bg-white[^"]*pointer-events-auto opacity-100/,
   );
-  assert.match(expandedHtml, /aria-label="收起消息导航"/);
+  assert.match(
+    expandedHtml,
+    new RegExp(
+      `aria-label="${escapeRegExp(projectTp('conversation.railCollapse'))}"`,
+    ),
+  );
   assert.doesNotMatch(
     expandedHtml,
     /pointer-events-none[^"]*pointer-events-auto/,
   );
 });
 
-test('selection mode does not render a desktop collapse toggle because the rail is forced open', async () => {
+test('selection mode keeps the desktop collapse toggle inside the inert hidden gutter only', async () => {
   const React = await import('react');
   globalThis.React = React;
   const { ProjectConversationMessageRail } = await import(
@@ -100,7 +115,18 @@ test('selection mode does not render a desktop collapse toggle because the rail 
     } as any),
   );
 
-  assert.doesNotMatch(selectionHtml, /aria-label="收起消息 Rail"/);
+  assert.match(
+    selectionHtml,
+    new RegExp(
+      `pointer-events-none" inert="">[\\s\\S]*aria-label="${escapeRegExp(projectTp('conversation.railCollapse'))}"`,
+    ),
+  );
+  assert.doesNotMatch(
+    selectionHtml,
+    new RegExp(
+      `pointer-events-auto[\\s\\S]*aria-label="${escapeRegExp(projectTp('conversation.railCollapse'))}"`,
+    ),
+  );
 });
 
 test('selection mode bulk action buttons render as readonly when nothing is selected', async () => {
@@ -144,11 +170,15 @@ test('selection mode bulk action buttons render as readonly when nothing is sele
 
   assert.match(
     selectionHtml,
-    /aria-disabled="true"[^>]*class="[^"]*cursor-not-allowed![^"]*"[^>]*>[\s\S]*?导出 Markdown/,
+    new RegExp(
+      `aria-disabled="true"[^>]*class="[^"]*cursor-not-allowed![^"]*"[^>]*>[\\s\\S]*?${escapeRegExp(projectTp('conversation.selection.export'))}`,
+    ),
   );
   assert.match(
     selectionHtml,
-    /aria-disabled="true"[^>]*class="[^"]*cursor-not-allowed![^"]*"[^>]*>[\s\S]*?沉淀为知识/,
+    new RegExp(
+      `aria-disabled="true"[^>]*class="[^"]*cursor-not-allowed![^"]*"[^>]*>[\\s\\S]*?${escapeRegExp(projectTp('conversation.selection.knowledge'))}`,
+    ),
   );
   assert.doesNotMatch(selectionHtml, /disabled=""/);
 });
@@ -248,7 +278,9 @@ test('starred rail controls reuse the shared warm star affordance', async () => 
 
   assert.match(
     starredHtml,
-    /bg-amber-50![^"]*text-amber-600![\s\S]*?<span>已加星<\/span>/,
+    new RegExp(
+      `bg-amber-50![^"]*text-amber-600![\\s\\S]*?<span>${escapeRegExp(projectTp('conversation.railStarred'))}</span>`,
+    ),
   );
   assert.match(
     starredHtml,
@@ -256,6 +288,8 @@ test('starred rail controls reuse the shared warm star affordance', async () => 
   );
   assert.match(
     browseHtml,
-    /aria-label="加星"[^>]*class="[^"]*hover:bg-amber-50![^"]*hover:text-amber-600![^"]*"/,
+    new RegExp(
+      `aria-label="${escapeRegExp(projectTp('conversation.star'))}"[^>]*class="[^"]*hover:bg-amber-50![^"]*hover:text-amber-600![^"]*"`,
+    ),
   );
 });

@@ -13,6 +13,7 @@ import type { ProjectsService } from './projects.service.js';
 import { createProjectsService } from './projects.service.js';
 import type { ProjectsRepository } from './projects.repository.js';
 import type {
+  ProjectCommandContext,
   ProjectConversationDocument,
   ProjectConversationStreamEvent,
   ProjectConversationSourceDocument,
@@ -4061,7 +4062,7 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
     projectId: string;
     query: string;
     topK?: number;
-    locale?: string;
+    locale?: ProjectCommandContext['locale'];
   }> = [];
   let capturedLlmRequest: CapturedLlmRequest | null = null;
   const originalFetch = global.fetch;
