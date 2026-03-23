@@ -1,5 +1,6 @@
 import { IdcardOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Checkbox, Form, Input, Typography, type FormInstance } from 'antd';
+import type { KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KNOWJECT_BRAND } from '@styles/brand';
 import type { SupportedLocale } from '@app/providers/locale.storage';
@@ -39,6 +40,10 @@ export const LoginFormPanel = ({
         { min: 8, message: t('validation.passwordMinLength') },
       ]
     : [{ required: true, message: t('validation.passwordRequired') }];
+  const handlePressEnter = (event: KeyboardEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    void form.submit();
+  };
 
   return (
     <section className="relative z-1 flex flex-col p-[clamp(30px,3.6vw,52px)] max-[960px]:px-5.5 max-[960px]:py-7 max-[560px]:px-3.5 max-[560px]:py-5.5">
@@ -117,6 +122,7 @@ export const LoginFormPanel = ({
                 placeholder={t('fields.displayNamePlaceholder')}
                 prefix={<IdcardOutlined />}
                 size="large"
+                onPressEnter={handlePressEnter}
               />
             </Form.Item>
           ) : null}
@@ -130,6 +136,7 @@ export const LoginFormPanel = ({
               placeholder={t('fields.usernamePlaceholder')}
               prefix={<UserOutlined />}
               size="large"
+              onPressEnter={handlePressEnter}
             />
           </Form.Item>
 
@@ -146,6 +153,7 @@ export const LoginFormPanel = ({
               }
               prefix={<LockOutlined />}
               size="large"
+              onPressEnter={handlePressEnter}
             />
           </Form.Item>
 
@@ -173,6 +181,7 @@ export const LoginFormPanel = ({
                 placeholder={t('fields.confirmPasswordPlaceholder')}
                 prefix={<LockOutlined />}
                 size="large"
+                onPressEnter={handlePressEnter}
               />
             </Form.Item>
           ) : null}
