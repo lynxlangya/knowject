@@ -211,6 +211,7 @@ export const buildProjectChatBubbleItems = (
       messageId: message.id,
       createdAt: message.createdAt,
       sources: message.sources ?? [],
+      citationContent: message.citationContent,
       ...(message.role === 'assistant'
         ? {
             assistantActions:
@@ -238,6 +239,7 @@ export const buildProjectChatBubbleItems = (
       extraInfo: {
         createdAt: options.pendingUserMessage.createdAt,
         sources: [],
+        citationContent: undefined,
       } satisfies ProjectChatBubbleExtraInfo,
     });
   }
@@ -253,6 +255,7 @@ export const buildProjectChatBubbleItems = (
       extraInfo: {
         createdAt: options.draftAssistantMessage.createdAt,
         sources: [],
+        citationContent: undefined,
         status: options.draftAssistantMessage.status,
         assistantActions:
           options.getDraftAssistantMessageActions?.(
@@ -319,8 +322,9 @@ export const PROJECT_CHAT_BUBBLE_ROLES: BubbleListProps['role'] = {
         extraInfo: info.extraInfo as ProjectChatBubbleExtraInfo | undefined,
       }),
     footerPlacement: 'outer-start',
-    footer: (_content, info) =>
+    footer: (content, info) =>
       createElement(ProjectChatAssistantFooter, {
+        content: String(content),
         extraInfo: info.extraInfo as ProjectChatBubbleExtraInfo | undefined,
       }),
   },

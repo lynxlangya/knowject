@@ -10,8 +10,16 @@ import { Popover, Typography } from 'antd';
 import React from 'react';
 import type { MouseEvent } from 'react';
 import i18n from '../../i18n';
-import type { ProjectConversationSourceResponse } from '../../api/projects';
+import type {
+  ProjectConversationCitationContent,
+  ProjectConversationSourceResponse,
+} from '../../api/projects';
 import { ProjectChatMarkdown } from './projectChat.markdown';
+import {
+  buildProjectChatCitationViewModel,
+  canUseProjectChatCitationMode,
+  type ProjectChatCitationDocumentGroupViewModel,
+} from './projectChatCitations';
 import { PROJECT_CHAT_STAR_CLASS_NAMES } from './projectChatStar.styles';
 import { tp } from './project.i18n';
 
@@ -39,6 +47,7 @@ export interface ProjectChatAssistantBubbleActions {
 export interface ProjectChatBubbleExtraInfo {
   createdAt: string;
   sources: ProjectConversationSourceResponse[];
+  citationContent?: ProjectConversationCitationContent;
   messageId?: string;
   status?: ProjectChatBubbleStatus;
   assistantActions?: ProjectChatAssistantBubbleActions;
@@ -68,6 +77,13 @@ const getProjectChatBubbleStatusLabel = (status: ProjectChatBubbleStatus): strin
   return tp(`conversation.status.${status}`);
 };
 
+const getProjectChatSourceFileName = (
+  source: Pick<ProjectConversationSourceResponse, 'source'> | Pick<ProjectChatCitationDocumentGroupViewModel, 'sourceLabel'>,
+): string => {
+  const sourceLabel = 'source' in source ? source.source : source.sourceLabel;
+  return sourceLabel.split(/[\\/]/).filter(Boolean).pop() || sourceLabel;
+};
+
 const ProjectConversationSources = ({
   sources,
 }: {
@@ -80,8 +96,7 @@ const ProjectConversationSources = ({
   return (
     <div className="flex flex-wrap gap-2">
       {sources.map((source, index) => {
-        const fileName =
-          source.source.split(/[\\/]/).filter(Boolean).pop() || source.source;
+        const fileName = getProjectChatSourceFileName(source);
 
         return (
           <Popover
@@ -132,6 +147,112 @@ const ProjectConversationSources = ({
   );
 };
 
+const ProjectConversationCitationDocumentCard = ({
+  documentGroup,
+}: {
+  documentGroup: ProjectChatCitationDocumentGroupViewModel;
+}) => {
+  const [activeEntryId, setActiveEntryId] = React.useState(
+    documentGroup.entries[0]?.id,
+  );
+  const activeEntry =
+    documentGroup.entries.find((entry) => entry.id === activeEntryId) ??
+    documentGroup.entries[0];
+
+  if (!activeEntry) {
+    return null;
+  }
+
+  const fileName = getProjectChatSourceFileName(documentGroup);
+
+  return (
+    <div
+      data-citation-document-group={documentGroup.id}
+      className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+    >
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-100 px-1.5 text-caption font-semibold text-slate-600">
+          {documentGroup.markerNumber}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
+                {fileName}
+              </Typography.Text>
+              {documentGroup.sourceLabel !== fileName ? (
+                <Typography.Text className="block text-caption leading-5 text-slate-400">
+                  {documentGroup.sourceLabel}
+                </Typography.Text>
+              ) : null}
+            </div>
+            {formatSourceDistance(activeEntry.distance) ? (
+              <Typography.Text className="shrink-0 text-caption text-slate-400">
+                {formatSourceDistance(activeEntry.distance)}
+              </Typography.Text>
+            ) : null}
+          </div>
+          <Typography.Paragraph className="mb-0! text-xs! leading-6! text-slate-600!">
+            {activeEntry.snippet}
+          </Typography.Paragraph>
+          {documentGroup.entries.length > 1 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {documentGroup.entries.map((entry, index) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  data-citation-entry={entry.id}
+                  className={[
+                    'inline-flex h-6 min-w-6 items-center justify-center rounded-full border px-2 text-[11px] leading-none transition-colors duration-200',
+                    entry.id === activeEntry.id
+                      ? 'border-slate-300 bg-slate-100 text-slate-700'
+                      : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600',
+                  ].join(' ')}
+                  onClick={() => setActiveEntryId(entry.id)}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProjectConversationCitationPopover = ({
+  documentGroups,
+}: {
+  documentGroups: ProjectChatCitationDocumentGroupViewModel[];
+}) => {
+  if (documentGroups.length === 0) {
+    return null;
+  }
+
+  return (
+    <div data-citation-popover="true" className="max-w-[440px] space-y-3">
+      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+        <span className="text-slate-700">依据</span>
+        <span className="text-slate-400">
+          [{documentGroups[0]?.markerNumber}
+          {documentGroups.length > 1 ? '+' : ''}]
+        </span>
+      </div>
+      <div className="space-y-2">
+        {documentGroups.map((documentGroup) => (
+          <div
+            key={documentGroup.id}
+            data-citation-popover-group={documentGroup.id}
+          >
+            <ProjectConversationCitationDocumentCard documentGroup={documentGroup} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const BubbleTimestamp = ({ createdAt }: { createdAt: string }) => {
   return (
     <Typography.Text className="text-caption font-medium tracking-[0.02em] text-slate-400">
@@ -147,12 +268,75 @@ export const ProjectChatAssistantMessage = ({
   content: string;
   extraInfo?: ProjectChatBubbleExtraInfo;
 }) => {
+  const citationViewModel = buildProjectChatCitationViewModel(
+    extraInfo?.citationContent,
+    extraInfo?.sources ?? [],
+  );
+  const useSentenceCitationMode = canUseProjectChatCitationMode({
+    content,
+    citationViewModel,
+  });
+  const documentGroupById =
+    citationViewModel.mode === 'citation'
+      ? new Map(
+          citationViewModel.documentGroups.map((documentGroup) => [
+            documentGroup.id,
+            documentGroup,
+          ]),
+        )
+      : null;
+
   return (
     <div
       id={getProjectChatMessageDomId(extraInfo?.messageId)}
       className="text-body text-slate-700"
     >
-      <ProjectChatMarkdown content={content} />
+      {useSentenceCitationMode ? (
+        <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+          {citationViewModel.sentences.map((sentence) => (
+            <span
+              key={sentence.id}
+              data-citation-sentence={sentence.id}
+              data-grounded={sentence.grounded ? 'true' : 'false'}
+            >
+              {sentence.text}
+              {sentence.primaryMarkerNumber ? (
+                <Popover
+                  trigger={['click']}
+                  placement="topLeft"
+                  overlayClassName="max-w-[460px]"
+                  content={
+                    <ProjectConversationCitationPopover
+                      documentGroups={sentence.documentGroupIds
+                        .map((documentGroupId) =>
+                          documentGroupById?.get(documentGroupId),
+                        )
+                        .filter(
+                          (
+                            documentGroup,
+                          ): documentGroup is ProjectChatCitationDocumentGroupViewModel =>
+                            Boolean(documentGroup),
+                        )}
+                    />
+                  }
+                >
+                  <button
+                    type="button"
+                    data-citation-marker={String(sentence.primaryMarkerNumber)}
+                    className="ml-1 inline-flex align-super text-[11px] font-medium leading-none text-slate-400 transition-colors duration-200 hover:text-emerald-700 focus-visible:outline-none focus-visible:text-emerald-700"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    [{sentence.primaryMarkerNumber}
+                    {sentence.hasMoreSources ? '+' : ''}]
+                  </button>
+                </Popover>
+              ) : null}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <ProjectChatMarkdown content={content} />
+      )}
     </div>
   );
 };
@@ -179,8 +363,10 @@ export const ProjectChatUserMessage = ({
 };
 
 export const ProjectChatAssistantFooter = ({
+  content = '',
   extraInfo,
 }: {
+  content?: string;
   extraInfo?: ProjectChatBubbleExtraInfo;
 }) => {
   if (!extraInfo) {
@@ -188,6 +374,14 @@ export const ProjectChatAssistantFooter = ({
   }
 
   const assistantActions = extraInfo.assistantActions;
+  const citationViewModel = buildProjectChatCitationViewModel(
+    extraInfo.citationContent,
+    extraInfo.sources,
+  );
+  const useSentenceCitationMode = canUseProjectChatCitationMode({
+    content,
+    citationViewModel,
+  });
   const copyDisabled = assistantActions?.copyDisabled ?? true;
   const retryDisabled = assistantActions?.retryDisabled ?? true;
   const starDisabled =
@@ -210,7 +404,7 @@ export const ProjectChatAssistantFooter = ({
 
   return (
     <div className="mt-2.5 flex flex-col gap-2.5">
-      {extraInfo.sources.length > 0 ? (
+      {!useSentenceCitationMode && extraInfo.sources.length > 0 ? (
         <ProjectConversationSources sources={extraInfo.sources} />
       ) : null}
       <div className="flex flex-wrap items-center gap-2">

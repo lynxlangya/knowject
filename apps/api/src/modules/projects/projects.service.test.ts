@@ -15,6 +15,7 @@ import type { ProjectsRepository } from './projects.repository.js';
 import type {
   ProjectCommandContext,
   ProjectConversationDocument,
+  ProjectConversationCitationContent,
   ProjectConversationStreamEvent,
   ProjectConversationSourceDocument,
   ProjectDocument,
@@ -85,6 +86,7 @@ const createSkillBindingValidatorStub = (
 const createDefaultAssistantReply = (): {
   content: string;
   sources: ProjectConversationSourceDocument[];
+  citationContent?: ProjectConversationCitationContent;
 } => {
   return {
     content: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
@@ -106,6 +108,7 @@ const createConversationRuntimeStub = (options?: {
   generateAssistantReply?: () => Promise<{
     content: string;
     sources: ProjectConversationSourceDocument[];
+    citationContent?: ProjectConversationCitationContent;
   }>;
   streamAssistantReply?: (input: {
     signal?: AbortSignal;
@@ -114,6 +117,7 @@ const createConversationRuntimeStub = (options?: {
     content: string;
     sources: ProjectConversationSourceDocument[];
     finishReason: 'stop' | 'length' | 'cancelled' | 'unknown';
+    citationContent?: ProjectConversationCitationContent;
   }>;
 }) => {
   return {
@@ -666,6 +670,7 @@ test('createProjectConversationMessage appends persisted user and assistant mess
   );
   assert.deepEqual(persistedConversation.messages[1]?.sources, [
     {
+      id: 's1',
       knowledgeId: 'kb-1',
       documentId: 'doc-1',
       chunkId: 'chunk-1',
@@ -683,6 +688,710 @@ test('createProjectConversationMessage appends persisted user and assistant mess
   );
   assert.equal(result.conversation.messages[1]?.sources?.length, 1);
   assert.equal(result.conversation.title, '已有会话');
+});
+
+test('assistant message serializes source ids and citationContent sentences', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439021'),
+    name: '引用序列化',
+    description: '验证 assistant 引用字段序列化',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-citation',
+        title: '引用会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      assert.equal(conversationId, 'chat-citation');
+      persistedConversation = {
+        ...persistedConversation,
+        messages: [...persistedConversation.messages, message],
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      generateAssistantReply: async () => ({
+        content: '当前项目已经接入正式 merged retrieval。',
+        sources: [
+          {
+            id: 's1',
+            knowledgeId: 'kb-1',
+            documentId: 'doc-1',
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            source: 'chat-core.md',
+            snippet: '引用序列化基线',
+            distance: 0.18,
+          },
+        ],
+        citationContent: {
+          version: 1,
+          sentences: [
+            {
+              id: 'sent-1',
+              text: '当前项目已经接入正式 merged retrieval。',
+              sourceIds: ['s1'],
+              grounded: true,
+            },
+          ],
+        },
+      }),
+    }),
+  });
+
+  const result = await service.createProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+      locale: 'en',
+    },
+    project._id.toHexString(),
+    'chat-citation',
+    {
+      content: '请验证引用序列化',
+    },
+  );
+
+  assert.equal(result.conversation.messages[1]?.sources?.[0]?.id, 's1');
+  assert.deepEqual(result.conversation.messages[1]?.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'sent-1',
+        text: '当前项目已经接入正式 merged retrieval。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+    ],
+  });
+});
+
+test('createProjectConversationMessage persists citationContent from the real runtime grounding pass', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439023'),
+    name: '真实 runtime 引用成功',
+    description: '验证 grounding 成功后 assistant message 持久化 citationContent',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-runtime-citation-success',
+        title: '真实 runtime 引用成功',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+  let llmCalls = 0;
+  const originalFetch = global.fetch;
+
+  global.fetch = async () => {
+    llmCalls += 1;
+
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content:
+                llmCalls === 1
+                  ? '当前项目已经接入正式 merged retrieval。'
+                  : '{"version":1,"sentences":[{"id":"sent-1","text":"当前项目已经接入正式 merged retrieval。","sourceIds":["s1"],"grounded":true}]}',
+            },
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    const repository = {
+      findById: async (projectId: string) =>
+        projectId === project._id.toHexString() ? project : null,
+      appendProjectConversationMessage: async (
+        _projectId: string,
+        conversationId: string,
+        message: ProjectDocument['conversations'][number]['messages'][number],
+        updatedAt: Date,
+      ) => {
+        assert.equal(conversationId, 'chat-runtime-citation-success');
+        persistedConversation = {
+          ...persistedConversation,
+          messages: [...persistedConversation.messages, message],
+          updatedAt,
+        };
+
+        return {
+          ...project,
+          conversations: [persistedConversation],
+          updatedAt,
+          _id: project._id,
+        };
+      },
+    } as unknown as ProjectsRepository;
+
+    const service = createProjectsService({
+      repository,
+      authRepository: createAuthRepositoryStub(),
+      skillBindingValidator: createSkillBindingValidatorStub(),
+      conversationRuntime: createProjectConversationRuntime({
+        env: createTestEnv(),
+        settingsRepository: createSettingsRepositoryStub(),
+        knowledgeSearch: {
+          searchProjectDocuments: async () => ({
+            query: '请给出正式引用',
+            sourceType: 'global_docs',
+            total: 1,
+            items: [
+              {
+                knowledgeId: 'kb-1',
+                documentId: 'doc-1',
+                chunkId: 'chunk-1',
+                chunkIndex: 0,
+                type: 'global_docs',
+                source: 'chat-core.md',
+                content: '当前项目已经接入正式 merged retrieval。',
+                distance: 0.11,
+              },
+            ],
+          }),
+        },
+      }),
+    });
+
+    const result = await service.createProjectConversationMessage(
+      {
+        actor: {
+          id: 'user-1',
+          username: 'langya',
+        },
+      },
+      project._id.toHexString(),
+      'chat-runtime-citation-success',
+      {
+        content: '请给出正式引用',
+      },
+    );
+
+    assert.equal(llmCalls, 2);
+    assert.equal(persistedConversation.messages[1]?.sources?.[0]?.id, 's1');
+    assert.deepEqual(persistedConversation.messages[1]?.citationContent, {
+      version: 1,
+      sentences: [
+        {
+          id: 'sent-1',
+          text: '当前项目已经接入正式 merged retrieval。',
+          sourceIds: ['s1'],
+          grounded: true,
+        },
+      ],
+    });
+    assert.deepEqual(result.conversation.messages[1]?.citationContent, {
+      version: 1,
+      sentences: [
+        {
+          id: 'sent-1',
+          text: '当前项目已经接入正式 merged retrieval。',
+          sourceIds: ['s1'],
+          grounded: true,
+        },
+      ],
+    });
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('createProjectConversationMessage falls back to legacy sources when real runtime grounding is malformed', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439024'),
+    name: '真实 runtime 引用降级',
+    description: '验证 grounding 非法时回退 legacy sources',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-runtime-citation-fallback',
+        title: '真实 runtime 引用降级',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+  let llmCalls = 0;
+  const originalFetch = global.fetch;
+
+  global.fetch = async () => {
+    llmCalls += 1;
+
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content:
+                llmCalls === 1
+                  ? '当前项目已经接入正式 merged retrieval。'
+                  : '```json\n{"version":1,"sentences":[{"id":"sent-1","text":"","sourceIds":["s1"],"grounded":true}]}\n```',
+            },
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  };
+
+  try {
+    const repository = {
+      findById: async (projectId: string) =>
+        projectId === project._id.toHexString() ? project : null,
+      appendProjectConversationMessage: async (
+        _projectId: string,
+        conversationId: string,
+        message: ProjectDocument['conversations'][number]['messages'][number],
+        updatedAt: Date,
+      ) => {
+        assert.equal(conversationId, 'chat-runtime-citation-fallback');
+        persistedConversation = {
+          ...persistedConversation,
+          messages: [...persistedConversation.messages, message],
+          updatedAt,
+        };
+
+        return {
+          ...project,
+          conversations: [persistedConversation],
+          updatedAt,
+          _id: project._id,
+        };
+      },
+    } as unknown as ProjectsRepository;
+
+    const service = createProjectsService({
+      repository,
+      authRepository: createAuthRepositoryStub(),
+      skillBindingValidator: createSkillBindingValidatorStub(),
+      conversationRuntime: createProjectConversationRuntime({
+        env: createTestEnv(),
+        settingsRepository: createSettingsRepositoryStub(),
+        knowledgeSearch: {
+          searchProjectDocuments: async () => ({
+            query: '请给出降级引用',
+            sourceType: 'global_docs',
+            total: 1,
+            items: [
+              {
+                knowledgeId: 'kb-1',
+                documentId: 'doc-1',
+                chunkId: 'chunk-1',
+                chunkIndex: 0,
+                type: 'global_docs',
+                source: 'chat-core.md',
+                content: '当前项目已经接入正式 merged retrieval。',
+                distance: 0.11,
+              },
+            ],
+          }),
+        },
+      }),
+    });
+
+    const result = await service.createProjectConversationMessage(
+      {
+        actor: {
+          id: 'user-1',
+          username: 'langya',
+        },
+      },
+      project._id.toHexString(),
+      'chat-runtime-citation-fallback',
+      {
+        content: '请给出降级引用',
+      },
+    );
+
+    assert.equal(llmCalls, 2);
+    assert.equal(persistedConversation.messages[1]?.sources?.[0]?.id, 's1');
+    assert.equal(persistedConversation.messages[1]?.citationContent, undefined);
+    assert.equal(result.conversation.messages[1]?.citationContent, undefined);
+    assert.equal(result.conversation.messages[1]?.sources?.[0]?.id, 's1');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('assistant persistence drops invalid citationContent that does not match final content', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439025'),
+    name: '持久化边界降级',
+    description: '验证非法 citation 在 persist 边界 fail closed',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-persist-invalid-citation',
+        title: '持久化边界降级',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+
+  let persistedConversation = project.conversations[0]!;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      assert.equal(conversationId, 'chat-persist-invalid-citation');
+      persistedConversation = {
+        ...persistedConversation,
+        messages: [...persistedConversation.messages, message],
+        updatedAt,
+      };
+
+      return {
+        ...project,
+        conversations: [persistedConversation],
+        updatedAt,
+        _id: project._id,
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      generateAssistantReply: async () => ({
+        content: '当前项目已经接入正式 merged retrieval。',
+        sources: [
+          {
+            id: 's1',
+            knowledgeId: 'kb-1',
+            documentId: 'doc-1',
+            chunkId: 'chunk-1',
+            chunkIndex: 0,
+            source: 'chat-core.md',
+            snippet: '引用序列化基线',
+            distance: 0.18,
+          },
+        ],
+        citationContent: {
+          version: 1,
+          sentences: [
+            {
+              id: 'sent-1',
+              text: '不匹配的句子',
+              sourceIds: ['s1'],
+              grounded: true,
+            },
+          ],
+        },
+      }),
+    }),
+  });
+
+  const result = await service.createProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+      locale: 'en',
+    },
+    project._id.toHexString(),
+    'chat-persist-invalid-citation',
+    {
+      content: '请验证持久化边界',
+    },
+  );
+
+  assert.equal(persistedConversation.messages[1]?.citationContent, undefined);
+  assert.equal(result.conversation.messages[1]?.citationContent, undefined);
+  assert.equal(result.conversation.messages[1]?.sources?.[0]?.id, 's1');
+});
+
+test('getProjectConversationDetail backfills legacy source ids for persisted messages', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439022'),
+    name: '旧消息兼容',
+    description: '验证旧消息 source id 补齐',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-legacy',
+        title: '旧消息会话',
+        messages: [
+          {
+            id: 'msg-legacy-assistant',
+            role: 'assistant',
+            content: '旧消息仍然可读',
+            createdAt: new Date('2026-03-17T09:10:00.000Z'),
+            sources: [
+              {
+                knowledgeId: 'kb-legacy-1',
+                documentId: 'doc-legacy-1',
+                chunkId: 'chunk-legacy-1',
+                chunkIndex: 0,
+                source: 'legacy-1.md',
+                snippet: 'legacy snippet 1',
+                distance: 0.12,
+              },
+              {
+                knowledgeId: 'kb-legacy-2',
+                documentId: 'doc-legacy-2',
+                chunkId: 'chunk-legacy-2',
+                chunkIndex: 1,
+                source: 'legacy-2.md',
+                snippet: 'legacy snippet 2',
+                distance: 0.24,
+              },
+            ],
+          },
+        ],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:10:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:10:00.000Z'),
+  };
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await service.getProjectConversationDetail(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+      locale: 'en',
+    },
+    project._id.toHexString(),
+    'chat-legacy',
+  );
+
+  assert.deepEqual(
+    result.conversation.messages[0]?.sources?.map((source) => source.id),
+    ['s1', 's2'],
+  );
+});
+
+test('getProjectConversationDetail omits invalid persisted citationContent from response', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439026'),
+    name: '脏引用详情降级',
+    description: '验证 detail 边界会隐藏非法 citation',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-dirty-citation',
+        title: '脏引用会话',
+        messages: [
+          {
+            id: 'msg-dirty-assistant',
+            role: 'assistant',
+            content: '当前项目已经接入正式 merged retrieval。',
+            createdAt: new Date('2026-03-17T09:10:00.000Z'),
+            sources: [
+              {
+                knowledgeId: 'kb-1',
+                documentId: 'doc-1',
+                chunkId: 'chunk-1',
+                chunkIndex: 0,
+                source: 'chat-core.md',
+                snippet: '引用序列化基线',
+                distance: 0.18,
+              },
+            ],
+            citationContent: {
+              version: 1,
+              sentences: [
+                {
+                  id: 'sent-1',
+                  text: '不匹配的脏句子',
+                  sourceIds: ['s1'],
+                  grounded: true,
+                },
+              ],
+            },
+          },
+        ],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:10:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:10:00.000Z'),
+  };
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await service.getProjectConversationDetail(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+      locale: 'en',
+    },
+    project._id.toHexString(),
+    'chat-dirty-citation',
+  );
+
+  assert.equal(result.conversation.messages[0]?.citationContent, undefined);
+  assert.equal(result.conversation.messages[0]?.sources?.[0]?.id, 's1');
 });
 
 test('message star contract returns starred metadata for the persisted message', async () => {
@@ -3389,7 +4098,7 @@ test('createProjectConversationMessage localizes canonical default-thread conten
   );
 });
 
-test('streamProjectConversationMessage emits ack delta done and persists the final assistant reply', async () => {
+test('streamProjectConversationMessage persists citationContent on final assistant reply', async () => {
   const project: ProjectDocument & {
     _id: NonNullable<ProjectDocument['_id']>;
   } = {
@@ -3453,7 +4162,44 @@ test('streamProjectConversationMessage emits ack delta done and persists the fin
     repository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
-    conversationRuntime: createConversationRuntimeStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      streamAssistantReply: async ({ onDelta }) => {
+        const deltas = ['当前项目已经具备最小对话写链路，', '并开始接入项目级检索。'];
+
+        for (const delta of deltas) {
+          await onDelta(delta);
+        }
+
+        return {
+          content: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+          sources: [
+            {
+              id: 's1',
+              knowledgeId: 'kb-1',
+              documentId: 'doc-1',
+              chunkId: 'chunk-1',
+              chunkIndex: 0,
+              source: 'chat-core.md',
+              snippet:
+                '项目对话已经具备最小消息写链路，并开始接入项目级 merged retrieval。',
+              distance: 0.18,
+            },
+          ],
+          citationContent: {
+            version: 1,
+            sentences: [
+              {
+                id: 'sent-1',
+                text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+                sourceIds: ['s1'],
+                grounded: true,
+              },
+            ],
+          },
+          finishReason: 'stop',
+        };
+      },
+    }),
   });
 
   await service.streamProjectConversationMessage(
@@ -3497,6 +4243,17 @@ test('streamProjectConversationMessage emits ack delta done and persists the fin
     persistedConversation?.messages[1]?.content,
     '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
   );
+  assert.deepEqual(persistedConversation?.messages[1]?.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'sent-1',
+        text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+    ],
+  });
 });
 
 test('streamProjectConversationMessage emits an error event and skips assistant persistence when upstream fails', async () => {
@@ -4064,21 +4821,26 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
     topK?: number;
     locale?: ProjectCommandContext['locale'];
   }> = [];
-  let capturedLlmRequest: CapturedLlmRequest | null = null;
+  const capturedLlmRequests: CapturedLlmRequest[] = [];
   const originalFetch = global.fetch;
 
   global.fetch = async (input, init) => {
-    capturedLlmRequest = {
+    capturedLlmRequests.push({
       url: typeof input === 'string' ? input : input.toString(),
       body: JSON.parse(String(init?.body ?? '{}')) as CapturedLlmRequest['body'],
-    };
+    });
+
+    const callIndex = capturedLlmRequests.length;
 
     return new Response(
       JSON.stringify({
         choices: [
           {
             message: {
-              content: '当前项目已经接入正式项目知识检索，并区分全局绑定知识与项目私有知识。',
+              content:
+                callIndex === 1
+                  ? '当前项目已经接入正式项目知识检索，并区分全局绑定知识与项目私有知识。'
+                  : '```json\n{"version":1,"sentences":[{"id":"sent-1","text":"当前项目已经接入正式项目知识检索，并区分全局绑定知识与项目私有知识。","sourceIds":["s1"],"grounded":true}]}\n```',
             },
           },
         ],
@@ -4146,19 +4908,25 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
         locale: 'en',
       },
     ]);
-    assert.notEqual(capturedLlmRequest, null);
-    if (!capturedLlmRequest) {
-      throw new Error('capturedLlmRequest should not be null');
+    assert.equal(capturedLlmRequests.length, 2);
+    const answerRequest = capturedLlmRequests[0];
+    const groundingRequest = capturedLlmRequests[1];
+
+    if (!answerRequest || !groundingRequest) {
+      throw new Error('capturedLlmRequests should contain answer and grounding');
     }
 
-    const persistedLlmRequest: CapturedLlmRequest = capturedLlmRequest;
-    const persistedMessages = persistedLlmRequest.body.messages ?? [];
+    const persistedMessages = answerRequest.body.messages ?? [];
     const latestPromptMessage = persistedMessages[persistedMessages.length - 1];
-    assert.match(persistedLlmRequest.url, /https:\/\/api\.openai\.com\/v1\/chat\/completions/);
-    assert.equal(persistedLlmRequest.body.model, 'gpt-5.4');
+    assert.match(answerRequest.url, /https:\/\/api\.openai\.com\/v1\/chat\/completions/);
+    assert.equal(answerRequest.body.model, 'gpt-5.4');
     assert.match(
       latestPromptMessage?.content ?? '',
       /architecture\.md/,
+    );
+    assert.match(
+      groundingRequest.body.messages?.[1]?.content ?? '',
+      /结构化 citation JSON/,
     );
     assert.equal(
       result.content,
@@ -4166,6 +4934,7 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
     );
     assert.deepEqual(result.sources, [
       {
+        id: 's1',
         knowledgeId: 'kb-1',
         documentId: 'doc-1',
         chunkId: 'chunk-1',
@@ -4176,6 +4945,17 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
         distance: 0.09,
       },
     ]);
+    assert.deepEqual(result.citationContent, {
+      version: 1,
+      sentences: [
+        {
+          id: 'sent-1',
+          text: '当前项目已经接入正式项目知识检索，并区分全局绑定知识与项目私有知识。',
+          sourceIds: ['s1'],
+          grounded: true,
+        },
+      ],
+    });
   } finally {
     global.fetch = originalFetch;
   }
@@ -4223,24 +5003,49 @@ test('createProjectConversationRuntime streams deltas from an OpenAI-compatible 
   const receivedDeltas: string[] = [];
 
   global.fetch = async (_input, init) => {
-    return createAbortAwareSseResponse({
-      signal: init?.signal ?? undefined,
-      encoder,
-      steps: [
-        {
-          afterMs: 0,
-          chunk: 'data: {"choices":[{"delta":{"content":"当前项目对话已切到"}}]}\n\n',
+    const body = JSON.parse(String(init?.body ?? '{}')) as {
+      stream?: boolean;
+    };
+
+    if (body.stream) {
+      return createAbortAwareSseResponse({
+        signal: init?.signal ?? undefined,
+        encoder,
+        steps: [
+          {
+            afterMs: 0,
+            chunk: 'data: {"choices":[{"delta":{"content":"当前项目对话已切到"}}]}\n\n',
+          },
+          {
+            afterMs: 0,
+            chunk: 'data: {"choices":[{"delta":{"content":"统一流式编排。"},"finish_reason":"stop"}]}\n\n',
+          },
+          {
+            afterMs: 0,
+            chunk: 'data: [DONE]\n\n',
+          },
+        ],
+      });
+    }
+
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content:
+                '{"version":1,"sentences":[{"id":"sent-1","text":"","sourceIds":["s1"],"grounded":true}]}',
+            },
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
         },
-        {
-          afterMs: 0,
-          chunk: 'data: {"choices":[{"delta":{"content":"统一流式编排。"},"finish_reason":"stop"}]}\n\n',
-        },
-        {
-          afterMs: 0,
-          chunk: 'data: [DONE]\n\n',
-        },
-      ],
-    });
+      },
+    );
   };
 
   try {
@@ -4284,6 +5089,8 @@ test('createProjectConversationRuntime streams deltas from an OpenAI-compatible 
     assert.deepEqual(receivedDeltas, ['当前项目对话已切到', '统一流式编排。']);
     assert.equal(result.content, '当前项目对话已切到统一流式编排。');
     assert.equal(result.finishReason, 'stop');
+    assert.equal(result.citationContent, undefined);
+    assert.equal(result.sources[0]?.id, 's1');
     assert.equal(result.sources[0]?.source, 'streaming-architecture.md');
   } finally {
     global.fetch = originalFetch;
@@ -4730,6 +5537,7 @@ test('createProjectConversationRuntime accepts all configured supported provider
         model?: string;
         messages?: Array<{ content?: string }>;
       };
+      const latestPrompt = body.messages?.[body.messages.length - 1]?.content ?? '';
 
       assert.equal(
         url,
@@ -4741,7 +5549,29 @@ test('createProjectConversationRuntime accepts all configured supported provider
         ).toString(),
       );
       assert.equal(body.model, activeProviderCase.model);
-      assert.match(body.messages?.[body.messages.length - 1]?.content ?? '', /项目知识片段/);
+
+      if (/结构化 citation JSON/.test(latestPrompt)) {
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content:
+                    '{"version":1,"sentences":[{"id":"sent-1","text":"provider citation","sourceIds":["s1"],"grounded":true}]}',
+                },
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: {
+              'content-type': 'application/json',
+            },
+          },
+        );
+      }
+
+      assert.match(latestPrompt, /项目知识片段/);
 
       return new Response(
         JSON.stringify({

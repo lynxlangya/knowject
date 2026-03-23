@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-22，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话同步/流式写链路、消息级 star metadata PATCH、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；当前知识上传链路已支持 `md / markdown / txt / pdf / docx / xlsx`，其中 `pdf` 仅支持可提取数字文本的文档（OCR/扫描件不支持），`docx / xlsx` 由 Python indexer 做结构感知抽取并产出 chunk anchor 元数据。Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。项目对话后端现已抽出统一 `ConversationTurnService`、provider capability gate，并新增 `PATCH /api/projects/:projectId/conversations/:conversationId/messages/:messageId` 与 `POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 两条消息级路由；其中流式事件类型冻结为 `ack / delta / done / error`。语言设置第一阶段当前还补齐了 request locale 协商、`messageKey + locale dictionary` 本地化，以及账号级 locale 持久化。
+截至 2026-03-23，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话同步/流式写链路、消息级 star metadata PATCH、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；当前知识上传链路已支持 `md / markdown / txt / pdf / docx / xlsx`，其中 `pdf` 仅支持可提取数字文本的文档（OCR/扫描件不支持），`docx / xlsx` 由 Python indexer 做结构感知抽取并产出 chunk anchor 元数据。Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。项目对话后端现已抽出统一 `ConversationTurnService`、provider capability gate，并新增 `PATCH /api/projects/:projectId/conversations/:conversationId/messages/:messageId` 与 `POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 两条消息级路由；assistant `sources[]` 现已包含稳定的 message-local `id`，并只在结构化 grounding 成功且通过严格校验时返回可选 `citationContent`，否则安全降级为 legacy `content + sources[]`。流式事件类型仍冻结为 `ack / delta / done / error`。语言设置第一阶段当前还补齐了 request locale 协商、`messageKey + locale dictionary` 本地化，以及账号级 locale 持久化。
 
 ## Locale / message localization
 
@@ -70,6 +70,7 @@
 - `GET /api/projects/:projectId/conversations/:conversationId`
   - 需要 `Authorization: Bearer <token>`。
   - 返回当前项目单条对话详情与消息列表。
+  - assistant message 当前会返回带稳定 message-local `id` 的 `sources[]`；只有在结构化 grounding 成功且严格校验通过时，才额外返回 `citationContent`。
 - `DELETE /api/projects/:projectId/conversations/:conversationId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除当前项目中的一条对话线程。
@@ -77,15 +78,15 @@
 - `POST /api/projects/:projectId/conversations/:conversationId/messages`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `content`、可选 `clientRequestId` 与可选 `targetUserMessageId`；默认行为是向当前对话追加一条 user message，若传入 `targetUserMessageId`，则会在当前线程内重放 / 编辑这条历史 user message，并裁掉它之后的所有 turn 再重新生成 assistant。
-  - merged retrieval 当前只覆盖“项目绑定的全局 docs + 当前项目私有 docs”；assistant 消息会返回最小 `sources` 引用数组。
+  - merged retrieval 当前只覆盖“项目绑定的全局 docs + 当前项目私有 docs”；assistant 消息会返回带稳定 `source.id` 的 `sources[]`，并仅在结构化 citation 成功且通过严格校验时附带 `citationContent`。
   - 当当前线程标题仍是默认值或自动标题时，服务端会基于裁剪后线程中的首条 user message 自动生成更接近 ChatGPT 风格的短标题；手动改过的标题不会被覆盖。
-  - 当前实现会先持久化或重写目标 user message，再尝试生成 assistant；若 assistant 生成失败，接口会返回 `5xx`，但前端应在重试时复用同一个 `clientRequestId`，服务端会复用已落库的目标 user message，避免线程重复写脏。
+  - 当前实现会先持久化或重写目标 user message，再尝试生成 assistant；若 assistant 生成、citation 解析或 citation 校验失败，接口会安全降级为 legacy `content + sources[]` 或返回 `5xx`，前端在重试时应复用同一个 `clientRequestId`，服务端会复用已落库的目标 user message，避免线程重复写脏。
 - `POST /api/projects/:projectId/conversations/:conversationId/messages/stream`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `content`、必填 `clientRequestId` 与可选 `targetUserMessageId`，返回 `text/event-stream`。
   - 服务端沿用与同步消息写接口相同的 turn owner：先校验输入与会话可见性，再持久化 / 复用 / 重写目标 user message；若存在 `targetUserMessageId`，会先裁掉该消息后的所有 turn，再执行项目级 merged retrieval，并通过当前 effective LLM config 发起上游流式生成。
-  - 业务事件固定为 `ack / delta / done / error` 四类；其中 `ack` 只会在 user message 已持久化或成功复用后发出，`done` 只会在 assistant 消息完成落库后发出。
-  - 浏览器断开或客户端主动取消时，服务端会中止上游 LLM 请求、停止输出事件，并且不把半截 assistant 内容写成正式消息；线程最终真相应以后续 detail/list 回读为准。
+  - 业务事件固定为 `ack / delta / done / error` 四类；其中 `ack` 只会在 user message 已持久化或成功复用后发出，`done` 只会在 assistant 消息完成落库后发出；SSE 事件协议不额外扩展 citation 事件。
+  - 浏览器断开或客户端主动取消时，服务端会中止上游 LLM 请求、停止输出事件，并且不把半截 assistant 内容写成正式消息；流式阶段也不会输出半成品 `citationContent`，线程最终真相应以后续 detail/list 回读为准。
 - `PATCH /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 更新项目基础信息与 `knowledgeBaseIds / agentIds / skillIds` 资源绑定字段。

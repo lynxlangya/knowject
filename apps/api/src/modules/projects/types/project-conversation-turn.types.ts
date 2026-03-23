@@ -10,12 +10,14 @@ import type {
   ProjectConversationSourceDocument,
   ProjectConversationStreamEvent,
   ProjectConversationStreamOptions,
+  ProjectConversationCitationContent,
   ProjectDocument,
 } from "../projects.types.js";
 
 export interface ProjectConversationAssistantReply {
   content: string;
   sources: ProjectConversationSourceDocument[];
+  citationContent?: ProjectConversationCitationContent;
 }
 
 export interface PersistedProjectConversationAssistantReply {

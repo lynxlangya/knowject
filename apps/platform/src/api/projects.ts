@@ -54,6 +54,7 @@ export type ProjectConversationStreamFinishReason =
   | 'unknown';
 
 export interface ProjectConversationSourceResponse {
+  id: string;
   knowledgeId: string;
   documentId: string;
   chunkId: string;
@@ -63,6 +64,18 @@ export interface ProjectConversationSourceResponse {
   distance: number | null;
 }
 
+export interface ProjectConversationCitationSentence {
+  id: string;
+  text: string;
+  sourceIds: string[];
+  grounded: boolean;
+}
+
+export interface ProjectConversationCitationContent {
+  version: 1;
+  sentences: ProjectConversationCitationSentence[];
+}
+
 export interface ProjectConversationMessageResponse {
   id: string;
   conversationId: string;
@@ -70,6 +83,7 @@ export interface ProjectConversationMessageResponse {
   content: string;
   createdAt: string;
   sources?: ProjectConversationSourceResponse[];
+  citationContent?: ProjectConversationCitationContent;
   starred: boolean;
   starredAt: string | null;
   starredBy: string | null;

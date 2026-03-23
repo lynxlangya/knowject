@@ -141,6 +141,7 @@ export const createStreamingProjectConversationTurn = async ({
         assistantReply: {
           content: streamReply.content,
           sources: streamReply.sources,
+          citationContent: streamReply.citationContent,
         },
         locale: context.locale,
       });

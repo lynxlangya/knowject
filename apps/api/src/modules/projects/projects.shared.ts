@@ -5,10 +5,12 @@ import { DEFAULT_LOCALE, type SupportedLocale } from '@lib/locale.js';
 import { getFallbackMessage, getMessage } from '@lib/locale.messages.js';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { AuthenticatedRequestUser, AuthUserProfile } from '@modules/auth/auth.types.js';
+import { normalizeProjectConversationCitationContent } from './project-conversation-citation.js';
 import type { ProjectsRepository } from './projects.repository.js';
 import type {
   ProjectConversationDetailResponse,
   ProjectConversationDocument,
+  ProjectConversationCitationContent,
   ProjectConversationMessageDocument,
   ProjectConversationMessageRole,
   ProjectConversationMessageResponse,
@@ -216,12 +218,14 @@ export const createProjectConversationMessage = ({
   content,
   clientRequestId,
   sources,
+  citationContent,
   createdAt = new Date(),
 }: {
   role: ProjectConversationMessageRole;
   content: string;
   clientRequestId?: string;
   sources?: ProjectConversationSourceDocument[];
+  citationContent?: ProjectConversationCitationContent;
   createdAt?: Date;
 }): ProjectConversationMessageDocument => {
   return {
@@ -231,7 +235,15 @@ export const createProjectConversationMessage = ({
     createdAt,
     ...(clientRequestId !== undefined ? { clientRequestId } : {}),
     ...(sources !== undefined ? { sources } : {}),
+    ...(citationContent !== undefined ? { citationContent } : {}),
   };
+};
+
+export const getProjectConversationSourceId = (
+  source: ProjectConversationSourceDocument,
+  index: number,
+): string => {
+  return source.id ?? `s${index + 1}`;
 };
 
 export const getProjectConversations = (
@@ -321,8 +333,10 @@ const getConversationPreview = (
 
 const toProjectConversationSourceResponse = (
   source: ProjectConversationSourceDocument,
+  index: number,
 ): ProjectConversationSourceResponse => {
   return {
+    id: getProjectConversationSourceId(source, index),
     knowledgeId: source.knowledgeId,
     documentId: source.documentId,
     chunkId: source.chunkId,
@@ -362,6 +376,14 @@ export const toProjectConversationMessageResponse = (
           })
         )
       : message.content;
+  const normalizedCitationContent =
+    message.citationContent === undefined
+      ? undefined
+      : normalizeProjectConversationCitationContent(
+          message.citationContent,
+          localizedContent,
+          message.sources ?? [],
+        ) ?? undefined;
 
   return {
     id: message.id,
@@ -374,9 +396,14 @@ export const toProjectConversationMessageResponse = (
     starredBy: message.starredBy ?? null,
     ...(message.sources !== undefined
       ? {
-          sources: message.sources.map((source) =>
-            toProjectConversationSourceResponse(source),
+          sources: message.sources.map((source, index) =>
+            toProjectConversationSourceResponse(source, index),
           ),
+        }
+      : {}),
+    ...(normalizedCitationContent !== undefined
+      ? {
+          citationContent: normalizedCitationContent,
         }
       : {}),
   };

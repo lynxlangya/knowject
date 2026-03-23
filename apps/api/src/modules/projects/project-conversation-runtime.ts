@@ -7,8 +7,13 @@ import type {
 } from "@modules/knowledge/knowledge.types.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import { buildDefaultProjectConversationTitle } from "./projects.shared.js";
+import {
+  buildProjectConversationCitationSources,
+  normalizeProjectConversationCitationContent,
+} from "./project-conversation-citation.js";
 import { createProjectConversationProviderAdapter } from "./project-conversation-provider.js";
 import type {
+  ProjectConversationCitationContent,
   ProjectConversationDocument,
   ProjectConversationMessageDocument,
   ProjectConversationSourceDocument,
@@ -37,6 +42,7 @@ export interface ProjectConversationRuntime {
   }): Promise<{
     content: string;
     sources: ProjectConversationSourceDocument[];
+    citationContent?: ProjectConversationCitationContent;
   }>;
   streamAssistantReply(input: {
     actor: KnowledgeCommandContext["actor"];
@@ -50,6 +56,7 @@ export interface ProjectConversationRuntime {
     content: string;
     sources: ProjectConversationSourceDocument[];
     finishReason: ProjectConversationStreamFinishReason;
+    citationContent?: ProjectConversationCitationContent;
   }>;
 }
 
@@ -103,6 +110,42 @@ const buildProjectConversationContextPrompt = ({
     "",
     "用户问题：",
     question,
+  ].join("\n");
+};
+
+const buildProjectConversationCitationPrompt = ({
+  answer,
+  sources,
+}: {
+  answer: string;
+  sources: ProjectConversationSourceDocument[];
+}): string => {
+  const evidenceList = sources
+    .map((source) =>
+      [
+        `[${source.id}]`,
+        `source: ${source.source}`,
+        `knowledgeId: ${source.knowledgeId}`,
+        `documentId: ${source.documentId}`,
+        `chunkId: ${source.chunkId}`,
+        `chunkIndex: ${source.chunkIndex}`,
+        `snippet: ${source.snippet}`,
+      ].join("\n"),
+    )
+    .join("\n\n");
+
+  return [
+    "请为下面这段最终回答生成结构化 citation JSON。",
+    "只允许引用给定 evidence 列表中的 source id。",
+    "grounded=true 仅在句子能被 evidence 直接支撑时使用；否则必须 grounded=false 且 sourceIds=[]。",
+    "只输出 JSON，不要输出解释、Markdown 或额外文本。",
+    '返回格式：{"version":1,"sentences":[{"id":"sent-1","text":"句子","sourceIds":["s1"],"grounded":true}]}',
+    "",
+    "最终回答：",
+    answer,
+    "",
+    "evidence：",
+    evidenceList,
   ].join("\n");
 };
 
@@ -316,8 +359,55 @@ export const createProjectConversationRuntime = ({
           }),
         },
       ],
-      sources: toProjectConversationSources(retrieval),
+      sources: buildProjectConversationCitationSources(
+        toProjectConversationSources(retrieval),
+      ),
     };
+  };
+
+  const generateCitationContent = async ({
+    llmConfig,
+    answer,
+    sources,
+  }: {
+    llmConfig: Awaited<ReturnType<typeof getEffectiveLlmConfig>>;
+    answer: string;
+    sources: ProjectConversationSourceDocument[];
+  }): Promise<ProjectConversationCitationContent | undefined> => {
+    if (sources.length === 0) {
+      return undefined;
+    }
+
+    try {
+      const citationPayload = await providerAdapter.generate({
+        llmConfig,
+        messages: [
+          {
+            role: "system",
+            content:
+              "你负责为项目对话最终回答生成结构化 citation，只能输出合法 JSON。",
+          },
+          {
+            role: "user",
+            content: buildProjectConversationCitationPrompt({
+              answer,
+              sources,
+            }),
+          },
+        ],
+      });
+
+      return (
+        normalizeProjectConversationCitationContent(
+          citationPayload,
+          answer,
+          sources,
+        ) ??
+        undefined
+      );
+    } catch {
+      return undefined;
+    }
   };
 
   return {
@@ -339,10 +429,16 @@ export const createProjectConversationRuntime = ({
         llmConfig,
         messages,
       });
+      const citationContent = await generateCitationContent({
+        llmConfig,
+        answer: content,
+        sources,
+      });
 
       return {
         content,
         sources,
+        ...(citationContent !== undefined ? { citationContent } : {}),
       };
     },
 
@@ -368,11 +464,20 @@ export const createProjectConversationRuntime = ({
         signal,
         onDelta,
       });
+      const citationContent =
+        streamedReply.finishReason === "cancelled"
+          ? undefined
+          : await generateCitationContent({
+              llmConfig,
+              answer: streamedReply.content,
+              sources,
+            });
 
       return {
         content: streamedReply.content,
         sources,
         finishReason: streamedReply.finishReason,
+        ...(citationContent !== undefined ? { citationContent } : {}),
       };
     },
   };

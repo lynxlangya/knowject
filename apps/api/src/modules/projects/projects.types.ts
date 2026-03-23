@@ -35,11 +35,13 @@ export interface ProjectConversationMessageDocument {
   createdAt: Date;
   clientRequestId?: string;
   sources?: ProjectConversationSourceDocument[];
+  citationContent?: ProjectConversationCitationContent;
   starredAt?: Date;
   starredBy?: string;
 }
 
 export interface ProjectConversationSourceDocument {
+  id?: string;
   knowledgeId: string;
   documentId: string;
   chunkId: string;
@@ -47,6 +49,18 @@ export interface ProjectConversationSourceDocument {
   source: string;
   snippet: string;
   distance: number | null;
+}
+
+export interface ProjectConversationCitationSentence {
+  id: string;
+  text: string;
+  sourceIds: string[];
+  grounded: boolean;
+}
+
+export interface ProjectConversationCitationContent {
+  version: 1;
+  sentences: ProjectConversationCitationSentence[];
 }
 
 export interface ProjectConversationDocument {
@@ -204,9 +218,11 @@ export interface ProjectConversationMessageResponse {
   starredAt?: string | null;
   starredBy?: string | null;
   sources?: ProjectConversationSourceResponse[];
+  citationContent?: ProjectConversationCitationContent;
 }
 
 export interface ProjectConversationSourceResponse {
+  id: string;
   knowledgeId: string;
   documentId: string;
   chunkId: string;

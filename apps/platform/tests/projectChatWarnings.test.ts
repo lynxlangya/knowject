@@ -15,6 +15,23 @@ test('ProjectChatMarkdown sanitizes legacy class props before spreading DOM prop
   assert.match(markdownSource, /class:\s*legacyClassName/);
 });
 
+test('draft assistant bubbles keep citation payload empty until final detail reconcile', () => {
+  const adaptersSource = readFileSync(
+    new URL('../src/pages/project/projectChat.adapters.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(adaptersSource, /citationContent:\s*message\.citationContent/);
+  assert.match(
+    adaptersSource,
+    /options\.draftAssistantMessage[\s\S]*?extraInfo:\s*\{[\s\S]*?sources:\s*\[\],[\s\S]*?citationContent:\s*undefined,[\s\S]*?status:\s*options\.draftAssistantMessage\.status/,
+  );
+  assert.doesNotMatch(
+    adaptersSource,
+    /options\.draftAssistantMessage[\s\S]*?citationContent:\s*options\.draftAssistantMessage\./,
+  );
+});
+
 test('project chat drawers use Drawer size instead of deprecated width', () => {
   const projectChatPageSource = readFileSync(
     new URL('../src/pages/project/ProjectChatPage.tsx', import.meta.url),
