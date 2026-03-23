@@ -58,6 +58,24 @@ test('project chat drawers use Drawer size instead of deprecated width', () => {
   );
 });
 
+test('conversation sources use click-to-open right drawer instead of hover popover', () => {
+  const bubbleSource = readFileSync(
+    new URL('../src/pages/project/projectChatBubble.components.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(bubbleSource, /import\s+\{\s*Drawer,\s*Popover,\s*Typography\s*\}\s+from\s+'antd'/);
+  assert.match(bubbleSource, /const\s+\[sourcesDrawerOpen,\s*setSourcesDrawerOpen\]\s*=\s*React\.useState\(false\)/);
+  assert.match(bubbleSource, /<Drawer[\s\S]*?open=\{sourcesDrawerOpen\}/);
+  assert.match(bubbleSource, /<Drawer[\s\S]*?placement="right"/);
+  assert.match(bubbleSource, /<Drawer[\s\S]*?size=\{480\}/);
+  assert.match(bubbleSource, /<Drawer[\s\S]*?title=\{tp\('conversation\.sources'\)\}/);
+  assert.doesNotMatch(
+    bubbleSource,
+    /data-conversation-sources-trigger="true"[\s\S]*?<Popover[\s\S]*?trigger=\{\['hover', 'focus'\]\}/,
+  );
+});
+
 test('project knowledge draft flow source no longer keeps legacy create-then-upload copy or partial failure state', () => {
   const projectChatPageSource = readFileSync(
     new URL('../src/pages/project/ProjectChatPage.tsx', import.meta.url),

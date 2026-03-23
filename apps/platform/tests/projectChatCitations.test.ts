@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { tp as projectTp } from '../src/pages/project/project.i18n';
 
 const require = createRequire(import.meta.url);
 require.extensions['.css'] = () => undefined;
+
+const escapeRegExp = (value: string): string => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 const renderAssistantBubble = async (message: {
   id: string;
@@ -210,11 +215,22 @@ test('grounded sentences render inline citation markers and ungrounded sentences
     /data-citation-sentence="sentence-3"[\s\S]*?第二句有双重依据。[\s\S]*?data-citation-marker="1"[\s\S]*?>\[1\+\]</,
   );
   assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
+  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+  assert.match(
+    footerHtml,
+    new RegExp(
+      `aria-label="${escapeRegExp(projectTp('conversation.viewSources'))}"`,
+    ),
+  );
+  assert.match(
+    footerHtml,
+    new RegExp(`>${escapeRegExp(projectTp('conversation.sources'))}<`),
+  );
   assert.doesNotMatch(footerHtml, /spec-alpha\.md/);
   assert.doesNotMatch(footerHtml, /spec-beta\.md/);
 });
 
-test('legacy assistant messages without citationContent keep the existing source evidence block', async () => {
+test('legacy assistant messages without citationContent collapse sources into footer trigger', async () => {
   const { messageHtml, footerHtml } = await renderAssistantBubble({
     id: 'message-legacy',
     conversationId: 'chat-1',
@@ -237,7 +253,18 @@ test('legacy assistant messages without citationContent keep the existing source
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
   assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /legacy-evidence\.md/);
+  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+  assert.match(
+    footerHtml,
+    new RegExp(
+      `aria-label="${escapeRegExp(projectTp('conversation.viewSources'))}"`,
+    ),
+  );
+  assert.match(
+    footerHtml,
+    new RegExp(`>${escapeRegExp(projectTp('conversation.sources'))}<`),
+  );
+  assert.doesNotMatch(footerHtml, /legacy-evidence\.md/);
 });
 
 test('citation mode conservatively suppresses trailing pseudo citation blocks before sentence rendering', async () => {
@@ -277,6 +304,7 @@ test('citation mode conservatively suppresses trailing pseudo citation blocks be
   assert.doesNotMatch(messageHtml, /来源 2/);
   assert.doesNotMatch(messageHtml, /来源 3/);
   assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
+  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
 });
 
 test('pseudo citation suppression runs before markdown fail-closed', async () => {
@@ -313,6 +341,7 @@ test('pseudo citation suppression runs before markdown fail-closed', async () =>
 
   assert.match(messageHtml, /data-citation-sentence="sentence-1"/);
   assert.doesNotMatch(messageHtml, /依据：/);
+  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
   assert.doesNotMatch(footerHtml, /spec-alpha\.md/);
 });
 
@@ -350,7 +379,8 @@ test('markdown-rich cited assistant content fails closed to legacy markdown rend
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
   assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /markdown-evidence\.md/);
+  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+  assert.doesNotMatch(footerHtml, /markdown-evidence\.md/);
 });
 
 test('inline emphasis markdown in cited assistant content fails closed to legacy rendering', async () => {
@@ -387,7 +417,8 @@ test('inline emphasis markdown in cited assistant content fails closed to legacy
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
   assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /inline-markdown-evidence\.md/);
+  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+  assert.doesNotMatch(footerHtml, /inline-markdown-evidence\.md/);
 });
 
 test('citationContent with unresolved sourceIds fails closed to legacy source evidence block', async () => {
@@ -424,5 +455,6 @@ test('citationContent with unresolved sourceIds fails closed to legacy source ev
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
   assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /drift-fallback\.md/);
+  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+  assert.doesNotMatch(footerHtml, /drift-fallback\.md/);
 });

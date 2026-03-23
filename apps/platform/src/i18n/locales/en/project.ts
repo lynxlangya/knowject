@@ -182,6 +182,8 @@ export const projectMessages = {
     sendAria: 'Send message',
     refreshFailed: 'Failed to refresh project chat. Please try again later.',
     sourceDistance: 'distance {{value}}',
+    sources: 'Sources',
+    viewSources: 'View sources',
     externalImageLabel: 'External image',
     externalImageBlocked: 'External image loading blocked',
     missingConversation: 'Conversation not found',

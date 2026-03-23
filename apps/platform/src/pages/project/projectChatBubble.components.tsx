@@ -6,7 +6,7 @@ import {
   StarFilled,
   StarOutlined,
 } from '@ant-design/icons';
-import { Popover, Typography } from 'antd';
+import { Drawer, Popover, Typography } from 'antd';
 import React from 'react';
 import type { MouseEvent } from 'react';
 import i18n from '../../i18n';
@@ -94,56 +94,102 @@ const ProjectConversationSources = ({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {sources.map((source, index) => {
-        const fileName = getProjectChatSourceFileName(source);
+    <div
+      data-conversation-sources-panel="true"
+      className="max-w-[440px] space-y-3"
+    >
+      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+        <span className="text-slate-700">{tp('conversation.sources')}</span>
+      </div>
+      <div className="space-y-2">
+        {sources.map((source, index) => {
+          const fileName = getProjectChatSourceFileName(source);
 
-        return (
-          <Popover
-            key={`${source.knowledgeId}:${source.documentId}:${source.chunkId}:${source.chunkIndex}`}
-            trigger={['hover', 'focus']}
-            placement="topLeft"
-            mouseEnterDelay={0.12}
-            overlayClassName="max-w-[420px]"
-            content={
-              <div className="max-w-90 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
-                      {fileName}
-                    </Typography.Text>
-                    {source.source !== fileName ? (
-                      <Typography.Text className="block text-caption leading-5 text-slate-400">
-                        {source.source}
+          return (
+            <div
+              key={`${source.knowledgeId}:${source.documentId}:${source.chunkId}:${source.chunkIndex}`}
+              data-conversation-source-item={`${index + 1}`}
+              className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+            >
+              <div className="flex items-start gap-3">
+                <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-100 px-1.5 text-caption font-semibold text-slate-600">
+                  {index + 1}
+                </span>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
+                        {fileName}
+                      </Typography.Text>
+                      {source.source !== fileName ? (
+                        <Typography.Text className="block text-caption leading-5 text-slate-400">
+                          {source.source}
+                        </Typography.Text>
+                      ) : null}
+                    </div>
+                    {formatSourceDistance(source.distance) ? (
+                      <Typography.Text className="shrink-0 text-caption text-slate-400">
+                        {formatSourceDistance(source.distance)}
                       </Typography.Text>
                     ) : null}
                   </div>
-                  {formatSourceDistance(source.distance) ? (
-                    <Typography.Text className="shrink-0 text-caption text-slate-400">
-                      {formatSourceDistance(source.distance)}
-                    </Typography.Text>
-                  ) : null}
+                  <Typography.Paragraph className="mb-0! text-xs! leading-6! text-slate-600!">
+                    {source.snippet}
+                  </Typography.Paragraph>
                 </div>
-                <Typography.Paragraph className="mb-0! text-xs! leading-6! text-slate-600!">
-                  {source.snippet}
-                </Typography.Paragraph>
               </div>
-            }
-          >
-            <span
-              tabIndex={0}
-              className="inline-flex max-w-full cursor-default items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-all duration-200 hover:border-emerald-200 hover:bg-emerald-50/80 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-100"
-            >
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1 text-caption font-semibold text-slate-500">
-                {index + 1}
-              </span>
-              <FileTextOutlined className="text-xs text-slate-400" />
-              <span className="max-w-52 truncate">{fileName}</span>
-            </span>
-          </Popover>
-        );
-      })}
+            </div>
+          );
+        })}
+      </div>
     </div>
+  );
+};
+
+const ProjectConversationSourcesDrawerTrigger = ({
+  sources,
+}: {
+  sources: ProjectConversationSourceResponse[];
+}) => {
+  const [sourcesDrawerOpen, setSourcesDrawerOpen] = React.useState(false);
+
+  if (sources.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={tp('conversation.viewSources')}
+        aria-expanded={sourcesDrawerOpen}
+        aria-haspopup="dialog"
+        data-conversation-sources-trigger="true"
+        className={[
+          'inline-flex h-8 items-center gap-2 rounded-full border border-slate-200 bg-slate-100/80 px-3.5 text-xs font-medium text-slate-600 transition-colors duration-200',
+          'hover:border-slate-300 hover:bg-slate-200/80 hover:text-slate-800',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200',
+        ].join(' ')}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setSourcesDrawerOpen(true);
+        }}
+      >
+        <FileTextOutlined className="text-xs" />
+        <span>{tp('conversation.sources')}</span>
+      </button>
+      <Drawer
+        open={sourcesDrawerOpen}
+        size={480}
+        placement="right"
+        title={tp('conversation.sources')}
+        destroyOnClose={false}
+        onClose={() => setSourcesDrawerOpen(false)}
+      >
+        <ProjectConversationSources sources={sources} />
+      </Drawer>
+    </>
   );
 };
 
@@ -363,7 +409,6 @@ export const ProjectChatUserMessage = ({
 };
 
 export const ProjectChatAssistantFooter = ({
-  content = '',
   extraInfo,
 }: {
   content?: string;
@@ -374,14 +419,6 @@ export const ProjectChatAssistantFooter = ({
   }
 
   const assistantActions = extraInfo.assistantActions;
-  const citationViewModel = buildProjectChatCitationViewModel(
-    extraInfo.citationContent,
-    extraInfo.sources,
-  );
-  const useSentenceCitationMode = canUseProjectChatCitationMode({
-    content,
-    citationViewModel,
-  });
   const copyDisabled = assistantActions?.copyDisabled ?? true;
   const retryDisabled = assistantActions?.retryDisabled ?? true;
   const starDisabled =
@@ -403,90 +440,86 @@ export const ProjectChatAssistantFooter = ({
   };
 
   return (
-    <div className="mt-2.5 flex flex-col gap-2.5">
-      {!useSentenceCitationMode && extraInfo.sources.length > 0 ? (
-        <ProjectConversationSources sources={extraInfo.sources} />
+    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+      {extraInfo.status ? (
+        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700">
+          {getProjectChatBubbleStatusLabel(extraInfo.status)}
+        </span>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        {extraInfo.status ? (
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700">
-            {getProjectChatBubbleStatusLabel(extraInfo.status)}
-          </span>
-        ) : null}
-        <div className="flex items-center gap-1 text-slate-400">
-          <button
-            type="button"
-            aria-label={tp('conversation.copyReply')}
-            aria-disabled={copyDisabled}
-            tabIndex={copyDisabled ? -1 : 0}
-            className={[
-              'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600',
-              copyDisabled
-                ? 'cursor-not-allowed text-slate-300 hover:bg-transparent hover:text-slate-300'
-                : '',
-            ].join(' ')}
-            onClick={(event) =>
-              handleActionClick(event, copyDisabled, assistantActions?.onCopy)
-            }
-          >
-            <CopyOutlined className="text-xs" />
-          </button>
-          <button
-            type="button"
-            aria-label={assistantActions?.starred ? tp('conversation.unstar') : tp('conversation.star')}
-            aria-disabled={starDisabled}
-            tabIndex={starDisabled ? -1 : 0}
-            className={[
-              'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200',
-              assistantActions?.starred
-                ? [
-                    PROJECT_CHAT_STAR_CLASS_NAMES.buttonActive,
-                    starDisabled
-                      ? 'cursor-not-allowed'
-                      : '',
-                  ].join(' ')
-                : starDisabled
-                  ? PROJECT_CHAT_STAR_CLASS_NAMES.buttonDisabledInactive
-                  : PROJECT_CHAT_STAR_CLASS_NAMES.buttonInactive,
-            ].join(' ')}
-            onClick={(event) =>
-              handleActionClick(
-                event,
-                starDisabled,
-                assistantActions?.onToggleStar,
-              )
-            }
-          >
-            {assistantActions?.starred ? (
-              <StarFilled
-                className={[
-                  'text-xs',
-                  PROJECT_CHAT_STAR_CLASS_NAMES.iconActive,
-                ].join(' ')}
-              />
-            ) : (
-              <StarOutlined className="text-xs" />
-            )}
-          </button>
-          <button
-            type="button"
-            aria-label={tp('conversation.retryReply')}
-            aria-disabled={retryDisabled}
-            tabIndex={retryDisabled ? -1 : 0}
-            className={[
-              'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600',
-              retryDisabled
-                ? 'cursor-not-allowed text-slate-300 hover:bg-transparent hover:text-slate-300'
-                : '',
-            ].join(' ')}
-            onClick={(event) =>
-              handleActionClick(event, retryDisabled, assistantActions?.onRetry)
-            }
-          >
-            <RedoOutlined className="text-xs" />
-          </button>
-        </div>
+      <div className="flex items-center gap-1 text-slate-400">
+        <button
+          type="button"
+          aria-label={tp('conversation.copyReply')}
+          aria-disabled={copyDisabled}
+          tabIndex={copyDisabled ? -1 : 0}
+          className={[
+            'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600',
+            copyDisabled
+              ? 'cursor-not-allowed text-slate-300 hover:bg-transparent hover:text-slate-300'
+              : '',
+          ].join(' ')}
+          onClick={(event) =>
+            handleActionClick(event, copyDisabled, assistantActions?.onCopy)
+          }
+        >
+          <CopyOutlined className="text-xs" />
+        </button>
+        <button
+          type="button"
+          aria-label={assistantActions?.starred ? tp('conversation.unstar') : tp('conversation.star')}
+          aria-disabled={starDisabled}
+          tabIndex={starDisabled ? -1 : 0}
+          className={[
+            'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200',
+            assistantActions?.starred
+              ? [
+                  PROJECT_CHAT_STAR_CLASS_NAMES.buttonActive,
+                  starDisabled
+                    ? 'cursor-not-allowed'
+                    : '',
+                ].join(' ')
+              : starDisabled
+                ? PROJECT_CHAT_STAR_CLASS_NAMES.buttonDisabledInactive
+                : PROJECT_CHAT_STAR_CLASS_NAMES.buttonInactive,
+          ].join(' ')}
+          onClick={(event) =>
+            handleActionClick(
+              event,
+              starDisabled,
+              assistantActions?.onToggleStar,
+            )
+          }
+        >
+          {assistantActions?.starred ? (
+            <StarFilled
+              className={[
+                'text-xs',
+                PROJECT_CHAT_STAR_CLASS_NAMES.iconActive,
+              ].join(' ')}
+            />
+          ) : (
+            <StarOutlined className="text-xs" />
+          )}
+        </button>
+        <button
+          type="button"
+          aria-label={tp('conversation.retryReply')}
+          aria-disabled={retryDisabled}
+          tabIndex={retryDisabled ? -1 : 0}
+          className={[
+            'inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-200 hover:bg-slate-100 hover:text-slate-600',
+            retryDisabled
+              ? 'cursor-not-allowed text-slate-300 hover:bg-transparent hover:text-slate-300'
+              : '',
+          ].join(' ')}
+          onClick={(event) =>
+            handleActionClick(event, retryDisabled, assistantActions?.onRetry)
+          }
+        >
+          <RedoOutlined className="text-xs" />
+        </button>
       </div>
+      <ProjectConversationSourcesDrawerTrigger sources={extraInfo.sources} />
     </div>
   );
 };

@@ -165,6 +165,8 @@ export const projectMessages = {
     sendAria: '发送消息',
     refreshFailed: '刷新项目对话失败，请稍后重试',
     sourceDistance: '距离 {{value}}',
+    sources: '来源',
+    viewSources: '查看来源',
     externalImageLabel: '外部图片',
     externalImageBlocked: '已拦截外部图片加载',
     missingConversation: '对话不存在',
