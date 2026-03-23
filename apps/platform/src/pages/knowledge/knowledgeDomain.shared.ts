@@ -29,6 +29,16 @@ export interface KnowledgeDetailOverviewStat {
   emphasis: 'number' | 'time';
 }
 
+const createMetaWithRuntimeLabel = <TMeta extends Record<string, unknown>>(
+  meta: TMeta,
+  labelKey: string,
+): TMeta & { readonly label: string } => ({
+  ...meta,
+  get label(): string {
+    return tp(labelKey);
+  },
+});
+
 const getIntlLocale = (): string => {
   return i18n.resolvedLanguage === 'zh-CN' ? 'zh-CN' : 'en-US';
 };
@@ -37,11 +47,17 @@ export const KNOWLEDGE_INDEX_STATUS_META: Record<
   KnowledgeIndexStatus,
   { label: string; color: string }
 > = {
-  idle: { label: tp('indexStatus.idle'), color: 'default' },
-  pending: { label: tp('indexStatus.pending'), color: 'gold' },
-  processing: { label: tp('indexStatus.processing'), color: 'processing' },
-  completed: { label: tp('indexStatus.completed'), color: 'success' },
-  failed: { label: tp('indexStatus.failed'), color: 'error' },
+  idle: createMetaWithRuntimeLabel({ color: 'default' }, 'indexStatus.idle'),
+  pending: createMetaWithRuntimeLabel({ color: 'gold' }, 'indexStatus.pending'),
+  processing: createMetaWithRuntimeLabel(
+    { color: 'processing' },
+    'indexStatus.processing',
+  ),
+  completed: createMetaWithRuntimeLabel(
+    { color: 'success' },
+    'indexStatus.completed',
+  ),
+  failed: createMetaWithRuntimeLabel({ color: 'error' }, 'indexStatus.failed'),
 };
 
 export const KNOWLEDGE_INDEX_STATUS_CLASS: Record<
@@ -59,24 +75,36 @@ export const KNOWLEDGE_DOCUMENT_STATUS_META: Record<
   KnowledgeDocumentStatus,
   { label: string; color: string }
 > = {
-  pending: { label: tp('documentStatus.pending'), color: 'gold' },
-  processing: { label: tp('documentStatus.processing'), color: 'processing' },
-  completed: { label: tp('documentStatus.completed'), color: 'success' },
-  failed: { label: tp('documentStatus.failed'), color: 'error' },
+  pending: createMetaWithRuntimeLabel(
+    { color: 'gold' },
+    'documentStatus.pending',
+  ),
+  processing: createMetaWithRuntimeLabel(
+    { color: 'processing' },
+    'documentStatus.processing',
+  ),
+  completed: createMetaWithRuntimeLabel(
+    { color: 'success' },
+    'documentStatus.completed',
+  ),
+  failed: createMetaWithRuntimeLabel(
+    { color: 'error' },
+    'documentStatus.failed',
+  ),
 };
 
 export const KNOWLEDGE_SOURCE_TYPE_META: Record<
   KnowledgeSourceType,
   KnowledgeSourceMeta
 > = {
-  global_docs: {
-    label: tp('sourceMeta.global_docs'),
-    color: 'blue',
-  },
-  global_code: {
-    label: tp('sourceMeta.global_code'),
-    color: 'purple',
-  },
+  global_docs: createMetaWithRuntimeLabel(
+    { color: 'blue' },
+    'sourceMeta.global_docs',
+  ),
+  global_code: createMetaWithRuntimeLabel(
+    { color: 'purple' },
+    'sourceMeta.global_code',
+  ),
 };
 
 export const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {

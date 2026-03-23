@@ -18,38 +18,27 @@ interface ProjectResourceGroupProps {
   renderEmptyActions?: () => ReactNode;
 }
 
+const createTagMeta = <TColor extends string>(
+  color: TColor,
+  labelKey: string,
+) => ({
+  color,
+  get label(): string {
+    return tp(labelKey);
+  },
+});
+
 const SOURCE_TAG_META = {
-  global: {
-    color: 'blue',
-    label: tp('resources.group.sourceGlobal'),
-  },
-  project: {
-    color: 'green',
-    label: tp('resources.group.sourceProject'),
-  },
+  global: createTagMeta('blue', 'resources.group.sourceGlobal'),
+  project: createTagMeta('green', 'resources.group.sourceProject'),
 } as const;
 
 const KNOWLEDGE_INDEX_META = {
-  idle: {
-    color: 'default',
-    label: tp('resources.group.indexIdle'),
-  },
-  pending: {
-    color: 'gold',
-    label: tp('resources.group.indexPending'),
-  },
-  processing: {
-    color: 'processing',
-    label: tp('resources.group.indexProcessing'),
-  },
-  completed: {
-    color: 'success',
-    label: tp('resources.group.indexCompleted'),
-  },
-  failed: {
-    color: 'error',
-    label: tp('resources.group.indexFailed'),
-  },
+  idle: createTagMeta('default', 'resources.group.indexIdle'),
+  pending: createTagMeta('gold', 'resources.group.indexPending'),
+  processing: createTagMeta('processing', 'resources.group.indexProcessing'),
+  completed: createTagMeta('success', 'resources.group.indexCompleted'),
+  failed: createTagMeta('error', 'resources.group.indexFailed'),
 } as const;
 
 export const ProjectResourceGroup = ({
