@@ -167,6 +167,8 @@ export const projectMessages = {
     sourceDistance: '距离 {{value}}',
     sources: '来源',
     references: '参考来源',
+    evidence: '依据',
+    evidenceSource: '来源 {{index}}',
     viewSources: '查看来源',
     collapseSources: '收起',
     externalImageLabel: '外部图片',

@@ -56,6 +56,8 @@ const PROJECT_CHAT_RICH_MARKDOWN_PATTERNS = [
 const PROJECT_CHAT_PSEUDO_CITATION_HEADER_PATTERN = /^(?:依据|来源|参考来源)\s*[:：]\s*$/u;
 const PROJECT_CHAT_PSEUDO_CITATION_ENTRY_PATTERN =
   /^(?:(?:[-*•]|\d+\.)\s*)?来源\s*\d+(?:\s*[:：-]\s*.*)?$/u;
+const PROJECT_CHAT_INLINE_SOURCE_TAG_ENTRY_PATTERN =
+  /^(?:(?:[-*•]|\d+\.)\s*)?来源\s*(\d+)\s*$/u;
 
 const normalizeProjectChatCitationComparableText = (value: string): string => {
   return value.replace(/\r\n/g, '\n').trim();
@@ -65,6 +67,44 @@ const buildProjectChatDocumentGroupId = (
   source: Pick<ProjectConversationSourceResponse, 'knowledgeId' | 'documentId'>,
 ): string => {
   return `${source.knowledgeId}:${source.documentId}`;
+};
+
+export const simplifyProjectChatSourceLabel = (sourceLabel: string): string => {
+  try {
+    const sourceUrl = new URL(sourceLabel);
+    const hostname = sourceUrl.hostname.replace(/^www\./, '');
+    const hostSegments = hostname.split('.');
+    if (hostSegments.length >= 2) {
+      return hostSegments.at(-2) ?? hostname;
+    }
+
+    return hostname;
+  } catch {
+    const lastSegment =
+      sourceLabel.split(/[\\/]/).filter(Boolean).pop() ?? sourceLabel;
+
+    return lastSegment.replace(/\.[a-z0-9]{1,8}$/i, '') || sourceLabel;
+  }
+};
+
+export const buildProjectChatCitationSourcePillLabel = (
+  citationViewModel: ProjectChatCitationViewModel,
+): string | null => {
+  if (citationViewModel.mode !== 'citation' || citationViewModel.documentGroups.length === 0) {
+    return null;
+  }
+
+  const primaryDocumentGroup = citationViewModel.documentGroups[0];
+  if (!primaryDocumentGroup) {
+    return null;
+  }
+
+  const primaryLabel = simplifyProjectChatSourceLabel(
+    primaryDocumentGroup.sourceLabel,
+  );
+  const overflowCount = citationViewModel.documentGroups.length - 1;
+
+  return overflowCount > 0 ? `${primaryLabel} +${overflowCount}` : primaryLabel;
 };
 
 export const shouldProjectChatFallbackToLegacyMarkdown = (
@@ -137,6 +177,82 @@ export const suppressProjectChatTrailingPseudoCitations = (
 
   const sanitizedContent = lines.slice(0, blockStart).join('\n').trimEnd();
   return sanitizedContent.length > 0 ? sanitizedContent : content;
+};
+
+export const rewriteProjectChatMarkdownEvidenceBlocks = (
+  content: string,
+): string => {
+  const normalizedContent = content.replace(/\r\n/g, '\n');
+  const lines = normalizedContent.split('\n');
+  const rewrittenLines = [...lines];
+  let index = 0;
+
+  while (index < rewrittenLines.length) {
+    const currentLine = rewrittenLines[index]?.trim() ?? '';
+
+    if (!PROJECT_CHAT_PSEUDO_CITATION_HEADER_PATTERN.test(currentLine)) {
+      index += 1;
+      continue;
+    }
+
+    const sourceIndexes: number[] = [];
+    let blockEnd = index + 1;
+
+    while (blockEnd < rewrittenLines.length) {
+      const nextLine = rewrittenLines[blockEnd]?.trim() ?? '';
+
+      if (nextLine === '') {
+        blockEnd += 1;
+        continue;
+      }
+
+      const sourceMatch = nextLine.match(PROJECT_CHAT_INLINE_SOURCE_TAG_ENTRY_PATTERN);
+      if (!sourceMatch) {
+        break;
+      }
+
+      sourceIndexes.push(Number(sourceMatch[1]));
+      blockEnd += 1;
+    }
+
+    if (sourceIndexes.length === 0) {
+      index += 1;
+      continue;
+    }
+
+    let attachTargetIndex = index - 1;
+    while (
+      attachTargetIndex >= 0 &&
+      (rewrittenLines[attachTargetIndex]?.trim() ?? '') === ''
+    ) {
+      attachTargetIndex -= 1;
+    }
+
+    if (attachTargetIndex >= 0) {
+      rewrittenLines[attachTargetIndex] = `${rewrittenLines[
+        attachTargetIndex
+      ]?.trimEnd()} [[SOURCE_TAG:${Array.from(new Set(sourceIndexes)).join(',')}]]`;
+    }
+
+    let removalStart = index;
+    while (
+      removalStart > 0 &&
+      (rewrittenLines[removalStart - 1]?.trim() ?? '') === ''
+    ) {
+      removalStart -= 1;
+    }
+
+    for (let removalIndex = removalStart; removalIndex < blockEnd; removalIndex += 1) {
+      rewrittenLines[removalIndex] = '';
+    }
+
+    index = blockEnd;
+  }
+
+  return rewrittenLines
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
 };
 
 export const canUseProjectChatCitationMode = ({

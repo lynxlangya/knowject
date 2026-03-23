@@ -196,41 +196,29 @@ test('grounded sentences render inline citation markers and ungrounded sentences
 
   assert.match(
     messageHtml,
-    /data-citation-sentence="sentence-1"[\s\S]*?第一句结论。[\s\S]*?data-citation-marker="1"/,
+    /第一句结论。[\s\S]*?data-conversation-source-tag="true"/,
   );
   assert.match(
     messageHtml,
-    /data-citation-sentence="sentence-1"[\s\S]*?>\[1\]</,
+    />spec-alpha \+1</,
   );
+  assert.doesNotMatch(messageHtml, /data-citation-marker=/);
+  assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
+  assert.doesNotMatch(messageHtml, /data-citation-source-chip=/);
+  assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
   assert.match(
     messageHtml,
-    /data-citation-sentence="sentence-2"[^>]*data-grounded="false"[^>]*>[\s\S]*?仍需人工确认。[\s\S]*?<\/span>/,
-  );
-  assert.doesNotMatch(
-    messageHtml,
-    /data-citation-sentence="sentence-2"[^>]*>[^<]*<a/,
-  );
-  assert.match(
-    messageHtml,
-    /data-citation-sentence="sentence-3"[\s\S]*?第二句有双重依据。[\s\S]*?data-citation-marker="1"[\s\S]*?>\[1\+\]</,
-  );
-  assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
-  assert.match(
-    footerHtml,
     new RegExp(
       `aria-label="${escapeRegExp(projectTp('conversation.viewSources'))}"`,
     ),
   );
-  assert.match(
-    footerHtml,
+  assert.doesNotMatch(
+    messageHtml,
     new RegExp(`>${escapeRegExp(projectTp('conversation.sources'))}<`),
   );
-  assert.doesNotMatch(footerHtml, /spec-alpha\.md/);
-  assert.doesNotMatch(footerHtml, /spec-beta\.md/);
 });
 
-test('legacy assistant messages without citationContent collapse sources into footer trigger', async () => {
+test('legacy assistant messages without citationContent append a single inline source tag', async () => {
   const { messageHtml, footerHtml } = await renderAssistantBubble({
     id: 'message-legacy',
     conversationId: 'chat-1',
@@ -253,19 +241,19 @@ test('legacy assistant messages without citationContent collapse sources into fo
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
   assert.doesNotMatch(messageHtml, /data-conversation-references-section="true"/);
-  assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+  assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
+  assert.match(messageHtml, /data-conversation-source-tag="true"/);
   assert.match(
-    footerHtml,
+    messageHtml,
     new RegExp(
       `aria-label="${escapeRegExp(projectTp('conversation.viewSources'))}"`,
     ),
   );
   assert.match(
-    footerHtml,
-    new RegExp(`>${escapeRegExp(projectTp('conversation.sources'))}<`),
+    messageHtml,
+    />legacy-evidence</,
   );
-  assert.doesNotMatch(footerHtml, /legacy-evidence\.md/);
+  assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
 test('citation mode conservatively suppresses trailing pseudo citation blocks before sentence rendering', async () => {
@@ -300,12 +288,11 @@ test('citation mode conservatively suppresses trailing pseudo citation blocks be
     },
   });
 
-  assert.match(messageHtml, /data-citation-sentence="sentence-1"/);
   assert.doesNotMatch(messageHtml, /依据：/);
   assert.doesNotMatch(messageHtml, /来源 2/);
   assert.doesNotMatch(messageHtml, /来源 3/);
-  assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+  assert.match(messageHtml, /data-conversation-source-tag="true"/);
+  assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
 test('assistant message body no longer renders inline references section in citation mode', async () => {
@@ -341,7 +328,7 @@ test('assistant message body no longer renders inline references section in cita
   });
 
   assert.doesNotMatch(messageHtml, /data-conversation-references-section="true"/);
-  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+  assert.match(messageHtml, /data-conversation-source-tag="true"/);
 });
 
 test('pseudo citation suppression runs before markdown fail-closed', async () => {
@@ -376,10 +363,11 @@ test('pseudo citation suppression runs before markdown fail-closed', async () =>
     },
   });
 
-  assert.match(messageHtml, /data-citation-sentence="sentence-1"/);
   assert.doesNotMatch(messageHtml, /依据：/);
-  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
-  assert.doesNotMatch(footerHtml, /spec-alpha\.md/);
+  assert.match(messageHtml, /data-conversation-source-tag="true"/);
+  assert.match(messageHtml, />spec-alpha</);
+  assert.doesNotMatch(messageHtml, /依据：/);
+  assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
 test('markdown-rich cited assistant content fails closed to legacy markdown rendering', async () => {
@@ -415,9 +403,10 @@ test('markdown-rich cited assistant content fails closed to legacy markdown rend
   });
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
-  assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
-  assert.doesNotMatch(footerHtml, /markdown-evidence\.md/);
+  assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
+  assert.match(messageHtml, /data-conversation-source-tag="true"/);
+  assert.match(messageHtml, />markdown-evidence</);
+  assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
 test('inline emphasis markdown in cited assistant content fails closed to legacy rendering', async () => {
@@ -453,9 +442,10 @@ test('inline emphasis markdown in cited assistant content fails closed to legacy
   });
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
-  assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
-  assert.doesNotMatch(footerHtml, /inline-markdown-evidence\.md/);
+  assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
+  assert.match(messageHtml, /data-conversation-source-tag="true"/);
+  assert.match(messageHtml, />inline-markdown-evidence</);
+  assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
 test('citationContent with unresolved sourceIds fails closed to legacy source evidence block', async () => {
@@ -491,7 +481,92 @@ test('citationContent with unresolved sourceIds fails closed to legacy source ev
   });
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
-  assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
-  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
-  assert.doesNotMatch(footerHtml, /drift-fallback\.md/);
+  assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
+  assert.match(messageHtml, /data-conversation-source-tag="true"/);
+  assert.match(messageHtml, />drift-fallback</);
+  assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
+});
+
+test('same-document sources collapse to one summary tag without extra count', async () => {
+  const { messageHtml } = await renderAssistantBubble({
+    id: 'message-same-document-chip',
+    conversationId: 'chat-1',
+    role: 'assistant',
+    content: '这一句来自同一份文档的两个分块。',
+    createdAt: '2026-03-23T08:13:00.000Z',
+    sources: [
+      {
+        id: 'source-1',
+        knowledgeId: 'knowledge-1',
+        documentId: 'document-1',
+        chunkId: 'chunk-1',
+        chunkIndex: 0,
+        source: '/knowledge/spec-alpha.md',
+        snippet: '第一块。',
+        distance: 0.11,
+      },
+      {
+        id: 'source-2',
+        knowledgeId: 'knowledge-1',
+        documentId: 'document-1',
+        chunkId: 'chunk-2',
+        chunkIndex: 1,
+        source: '/knowledge/spec-alpha.md',
+        snippet: '第二块。',
+        distance: 0.14,
+      },
+    ],
+    citationContent: {
+      version: 1,
+      sentences: [
+        {
+          id: 'sentence-same-document',
+          text: '这一句来自同一份文档的两个分块。',
+          sourceIds: ['source-1', 'source-2'],
+          grounded: true,
+        },
+      ],
+    },
+  });
+
+  assert.match(
+    messageHtml,
+    /data-conversation-source-tag="true"[\s\S]*?>spec-alpha</,
+  );
+  assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
+});
+
+test('markdown fallback sanitizes raw pseudo evidence blocks before rendering the summary tag', async () => {
+  const {
+    rewriteProjectChatMarkdownEvidenceBlocks,
+  } = await import('../src/pages/project/projectChatCitations');
+
+  assert.equal(
+    rewriteProjectChatMarkdownEvidenceBlocks(
+      '2. 美国后续的长期趋势\n\n- 2008 年金融危机、2020 年疫情，又使自然利率进一步降低到接近 0 甚至负值。\n\n依据：\n- 来源 5\n\n如果简化成一句话：',
+    ),
+    '2. 美国后续的长期趋势\n\n- 2008 年金融危机、2020 年疫情，又使自然利率进一步降低到接近 0 甚至负值。 [[SOURCE_TAG:5]]\n\n如果简化成一句话：',
+  );
+});
+
+test('markdown fallback converts in-body evidence blocks into inline source tags', async () => {
+  const {
+    rewriteProjectChatMarkdownEvidenceBlocks,
+  } = await import('../src/pages/project/projectChatCitations');
+  const markdownSource = (
+    await import('node:fs')
+  ).readFileSync(
+    new URL('../src/pages/project/projectChat.markdown.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.equal(
+    rewriteProjectChatMarkdownEvidenceBlocks(
+      '2. 美国后续的长期趋势\n\n- 2008 年金融危机、2020 年疫情，又使自然利率进一步降低到接近 0 甚至负值。\n\n依据：\n- 来源 5\n\n如果简化成一句话：',
+    ),
+    '2. 美国后续的长期趋势\n\n- 2008 年金融危机、2020 年疫情，又使自然利率进一步降低到接近 0 甚至负值。 [[SOURCE_TAG:5]]\n\n如果简化成一句话：',
+  );
+  assert.match(markdownSource, /PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN/);
+  assert.match(markdownSource, /renderInlineSourceTag/);
+  assert.match(markdownSource, /cloneElement/);
 });

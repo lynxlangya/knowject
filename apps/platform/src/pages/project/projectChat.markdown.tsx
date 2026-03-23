@@ -2,10 +2,82 @@ import {
   XMarkdown,
   type ComponentProps as XMarkdownComponentProps,
 } from '@ant-design/x-markdown';
+import {
+  cloneElement,
+  isValidElement,
+  type ReactNode,
+} from 'react';
 import { tp } from './project.i18n';
 
 const joinClassName = (...classNames: Array<string | undefined>) => {
   return classNames.filter(Boolean).join(' ');
+};
+
+const PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN =
+  /\[\[SOURCE_TAG:([\d,]+)\]\]/g;
+
+const renderProjectChatMarkdownInlineSourceTags = (
+  node: ReactNode,
+  renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode,
+): ReactNode => {
+  if (!renderInlineSourceTag) {
+    return node;
+  }
+
+  if (typeof node === 'string' || typeof node === 'number') {
+    const text = String(node);
+    if (!PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN.test(text)) {
+      PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN.lastIndex = 0;
+      return node;
+    }
+
+    PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN.lastIndex = 0;
+    const fragments: ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null = null;
+
+    while ((match = PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN.exec(text))) {
+      const [matchedText, indicesText] = match;
+
+      if (match.index > lastIndex) {
+        fragments.push(text.slice(lastIndex, match.index));
+      }
+
+      const sourceIndexes = indicesText
+        .split(',')
+        .map((item) => Number(item.trim()))
+        .filter((item) => Number.isFinite(item));
+
+      if (sourceIndexes.length > 0) {
+        fragments.push(renderInlineSourceTag(sourceIndexes));
+      }
+
+      lastIndex = match.index + matchedText.length;
+    }
+
+    if (lastIndex < text.length) {
+      fragments.push(text.slice(lastIndex));
+    }
+
+    return fragments;
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child) =>
+      renderProjectChatMarkdownInlineSourceTags(child, renderInlineSourceTag),
+    );
+  }
+
+  if (isValidElement<{ children?: ReactNode }>(node)) {
+    return cloneElement(node, {
+      children: renderProjectChatMarkdownInlineSourceTags(
+        node.props.children,
+        renderInlineSourceTag,
+      ),
+    });
+  }
+
+  return node;
 };
 
 const splitMarkdownDomProps = <TRest extends Record<string, unknown>>(
@@ -31,8 +103,14 @@ const renderMarkdownParagraph = ({
   children,
   className,
   ...rest
-}: XMarkdownComponentProps) => {
+}: XMarkdownComponentProps & {
+  renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+}) => {
   const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+  const renderedChildren = renderProjectChatMarkdownInlineSourceTags(
+    children,
+    rest.renderInlineSourceTag,
+  );
 
   return (
     <p
@@ -43,7 +121,7 @@ const renderMarkdownParagraph = ({
         className,
       )}
     >
-      {children}
+      {renderedChildren}
     </p>
   );
 };
@@ -169,8 +247,14 @@ const renderMarkdownListItem = ({
   children,
   className,
   ...rest
-}: XMarkdownComponentProps) => {
+}: XMarkdownComponentProps & {
+  renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+}) => {
   const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
+  const renderedChildren = renderProjectChatMarkdownInlineSourceTags(
+    children,
+    rest.renderInlineSourceTag,
+  );
 
   return (
     <li
@@ -181,7 +265,7 @@ const renderMarkdownListItem = ({
         className,
       )}
     >
-      {children}
+      {renderedChildren}
     </li>
   );
 };
@@ -327,20 +411,38 @@ const renderMarkdownImage = ({
   );
 };
 
-export const ProjectChatMarkdown = ({ content }: { content: string }) => {
+export const ProjectChatMarkdown = ({
+  content,
+  renderInlineSourceTag,
+}: {
+  content: string;
+  renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+}) => {
   return (
     <XMarkdown
       content={content}
       openLinksInNewTab
       escapeRawHtml
       components={{
-        p: renderMarkdownParagraph,
+        p: (props) =>
+          renderMarkdownParagraph({
+            ...props,
+            renderInlineSourceTag,
+          } as typeof props & {
+            renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+          }),
         h1: renderMarkdownHeading1,
         h2: renderMarkdownHeading2,
         h3: renderMarkdownHeading3,
         ul: renderMarkdownList,
         ol: renderMarkdownOrderedList,
-        li: renderMarkdownListItem,
+        li: (props) =>
+          renderMarkdownListItem({
+            ...props,
+            renderInlineSourceTag,
+          } as typeof props & {
+            renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+          }),
         pre: renderMarkdownPre,
         code: renderMarkdownCode,
         a: renderMarkdownLink,

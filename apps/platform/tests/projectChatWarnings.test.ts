@@ -58,22 +58,24 @@ test('project chat drawers use Drawer size instead of deprecated width', () => {
   );
 });
 
-test('conversation sources use click-to-open right drawer instead of hover popover', () => {
+test('conversation sources use message-local popover instead of right drawer', () => {
   const bubbleSource = readFileSync(
     new URL('../src/pages/project/projectChatBubble.components.tsx', import.meta.url),
     'utf8',
   );
 
-  assert.match(bubbleSource, /import\s+\{\s*Drawer,\s*Popover,\s*Typography\s*\}\s+from\s+'antd'/);
-  assert.match(bubbleSource, /const\s+\[sourcesDrawerOpen,\s*setSourcesDrawerOpen\]\s*=\s*React\.useState\(false\)/);
-  assert.match(bubbleSource, /<Drawer[\s\S]*?open=\{sourcesDrawerOpen\}/);
-  assert.match(bubbleSource, /<Drawer[\s\S]*?placement="right"/);
-  assert.match(bubbleSource, /<Drawer[\s\S]*?size=\{480\}/);
-  assert.match(bubbleSource, /<Drawer[\s\S]*?title=\{tp\('conversation\.sources'\)\}/);
-  assert.doesNotMatch(
+  assert.match(
     bubbleSource,
-    /data-conversation-sources-trigger="true"[\s\S]*?<Popover[\s\S]*?trigger=\{\['hover', 'focus'\]\}/,
+    /import\s+\{\s*Popover,\s*Typography\s*\}\s+from\s+'antd'/,
   );
+  assert.match(bubbleSource, /data-conversation-source-tag="true"/);
+  assert.match(
+    bubbleSource,
+    /data-conversation-source-tag="true"[\s\S]*?h-5[\s\S]*?px-2[\s\S]*?text-\[8px\]/,
+  );
+  assert.match(bubbleSource, /<Popover[\s\S]*?trigger="click"/);
+  assert.doesNotMatch(bubbleSource, /const\s+\[sourcesDrawerOpen,\s*setSourcesDrawerOpen\]/);
+  assert.doesNotMatch(bubbleSource, /<Drawer[\s\S]*?placement="right"/);
 });
 
 test('project knowledge draft flow source no longer keeps legacy create-then-upload copy or partial failure state', () => {

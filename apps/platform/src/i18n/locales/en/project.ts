@@ -184,6 +184,8 @@ export const projectMessages = {
     sourceDistance: 'distance {{value}}',
     sources: 'Sources',
     references: 'References',
+    evidence: 'Evidence',
+    evidenceSource: 'Source {{index}}',
     viewSources: 'View sources',
     collapseSources: 'Collapse',
     externalImageLabel: 'External image',
