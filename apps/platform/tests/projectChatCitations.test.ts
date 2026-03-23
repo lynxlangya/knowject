@@ -252,6 +252,7 @@ test('legacy assistant messages without citationContent collapse sources into fo
   });
 
   assert.doesNotMatch(messageHtml, /data-citation-sentence=/);
+  assert.doesNotMatch(messageHtml, /data-conversation-references-section="true"/);
   assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
   assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
   assert.match(
@@ -304,6 +305,42 @@ test('citation mode conservatively suppresses trailing pseudo citation blocks be
   assert.doesNotMatch(messageHtml, /来源 2/);
   assert.doesNotMatch(messageHtml, /来源 3/);
   assert.doesNotMatch(footerHtml, /data-citation-evidence-block="true"/);
+  assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
+});
+
+test('assistant message body no longer renders inline references section in citation mode', async () => {
+  const { messageHtml, footerHtml } = await renderAssistantBubble({
+    id: 'message-inline-references-citation',
+    conversationId: 'chat-1',
+    role: 'assistant',
+    content: '这是一条带来源的回答。',
+    createdAt: '2026-03-23T08:06:00.000Z',
+    sources: [
+      {
+        id: 'source-inline-references',
+        knowledgeId: 'knowledge-1',
+        documentId: 'document-inline-references',
+        chunkId: 'chunk-inline-references',
+        chunkIndex: 0,
+        source: '/knowledge/inline-reference.md',
+        snippet: '这是引用片段。',
+        distance: 0.2,
+      },
+    ],
+    citationContent: {
+      version: 1,
+      sentences: [
+        {
+          id: 'sentence-inline-references',
+          text: '这是一条带来源的回答。',
+          sourceIds: ['source-inline-references'],
+          grounded: true,
+        },
+      ],
+    },
+  });
+
+  assert.doesNotMatch(messageHtml, /data-conversation-references-section="true"/);
   assert.match(footerHtml, /data-conversation-sources-trigger="true"/);
 });
 

@@ -6,7 +6,7 @@ import {
   StarFilled,
   StarOutlined,
 } from '@ant-design/icons';
-import { Drawer, Popover, Typography } from 'antd';
+import { Drawer, Typography } from 'antd';
 import React from 'react';
 import type { MouseEvent } from 'react';
 import i18n from '../../i18n';
@@ -18,7 +18,7 @@ import { ProjectChatMarkdown } from './projectChat.markdown';
 import {
   buildProjectChatCitationViewModel,
   canUseProjectChatCitationMode,
-  type ProjectChatCitationDocumentGroupViewModel,
+  type ProjectChatCitationDocumentEntryViewModel,
 } from './projectChatCitations';
 import { PROJECT_CHAT_STAR_CLASS_NAMES } from './projectChatStar.styles';
 import { tp } from './project.i18n';
@@ -77,225 +77,213 @@ const getProjectChatBubbleStatusLabel = (status: ProjectChatBubbleStatus): strin
   return tp(`conversation.status.${status}`);
 };
 
-const getProjectChatSourceFileName = (
-  source: Pick<ProjectConversationSourceResponse, 'source'> | Pick<ProjectChatCitationDocumentGroupViewModel, 'sourceLabel'>,
-): string => {
-  const sourceLabel = 'source' in source ? source.source : source.sourceLabel;
+const getProjectChatSourceFileName = (sourceLabel: string): string => {
   return sourceLabel.split(/[\\/]/).filter(Boolean).pop() || sourceLabel;
 };
 
-const ProjectConversationSources = ({
-  sources,
-}: {
-  sources: ProjectConversationSourceResponse[];
-}) => {
-  if (sources.length === 0) {
-    return null;
-  }
+interface ProjectConversationSourceDocumentGroup {
+  id: string;
+  sourceLabel: string;
+  entries: ProjectChatCitationDocumentEntryViewModel[];
+}
 
-  return (
-    <div
-      data-conversation-sources-panel="true"
-      className="max-w-[440px] space-y-3"
-    >
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-        <span className="text-slate-700">{tp('conversation.sources')}</span>
-      </div>
-      <div className="space-y-2">
-        {sources.map((source, index) => {
-          const fileName = getProjectChatSourceFileName(source);
+const buildProjectConversationSourceDocumentGroups = (
+  sources: ProjectConversationSourceResponse[],
+): ProjectConversationSourceDocumentGroup[] => {
+  const documentGroupById = new Map<string, ProjectConversationSourceDocumentGroup>();
+  const documentGroups: ProjectConversationSourceDocumentGroup[] = [];
 
-          return (
-            <div
-              key={`${source.knowledgeId}:${source.documentId}:${source.chunkId}:${source.chunkIndex}`}
-              data-conversation-source-item={`${index + 1}`}
-              className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-            >
-              <div className="flex items-start gap-3">
-                <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-100 px-1.5 text-caption font-semibold text-slate-600">
-                  {index + 1}
-                </span>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
-                        {fileName}
-                      </Typography.Text>
-                      {source.source !== fileName ? (
-                        <Typography.Text className="block text-caption leading-5 text-slate-400">
-                          {source.source}
-                        </Typography.Text>
-                      ) : null}
-                    </div>
-                    {formatSourceDistance(source.distance) ? (
-                      <Typography.Text className="shrink-0 text-caption text-slate-400">
-                        {formatSourceDistance(source.distance)}
-                      </Typography.Text>
-                    ) : null}
-                  </div>
-                  <Typography.Paragraph className="mb-0! text-xs! leading-6! text-slate-600!">
-                    {source.snippet}
-                  </Typography.Paragraph>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  sources.forEach((source) => {
+    const documentGroupId = `${source.knowledgeId}:${source.documentId}`;
+    let documentGroup = documentGroupById.get(documentGroupId);
+
+    if (!documentGroup) {
+      documentGroup = {
+        id: documentGroupId,
+        sourceLabel: source.source,
+        entries: [],
+      };
+      documentGroupById.set(documentGroupId, documentGroup);
+      documentGroups.push(documentGroup);
+    }
+
+    if (!documentGroup.entries.some((entry) => entry.id === source.id)) {
+      documentGroup.entries.push({
+        id: source.id,
+        snippet: source.snippet,
+        distance: source.distance,
+      });
+    }
+  });
+
+  return documentGroups;
 };
 
-const ProjectConversationSourcesDrawerTrigger = ({
-  sources,
-}: {
-  sources: ProjectConversationSourceResponse[];
-}) => {
-  const [sourcesDrawerOpen, setSourcesDrawerOpen] = React.useState(false);
-
-  if (sources.length === 0) {
-    return null;
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        aria-label={tp('conversation.viewSources')}
-        aria-expanded={sourcesDrawerOpen}
-        aria-haspopup="dialog"
-        data-conversation-sources-trigger="true"
-        className={[
-          'inline-flex h-8 items-center gap-2 rounded-full border border-slate-200 bg-slate-100/80 px-3.5 text-xs font-medium text-slate-600 transition-colors duration-200',
-          'hover:border-slate-300 hover:bg-slate-200/80 hover:text-slate-800',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200',
-        ].join(' ')}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setSourcesDrawerOpen(true);
-        }}
-      >
-        <FileTextOutlined className="text-xs" />
-        <span>{tp('conversation.sources')}</span>
-      </button>
-      <Drawer
-        open={sourcesDrawerOpen}
-        size={480}
-        placement="right"
-        title={tp('conversation.sources')}
-        destroyOnClose={false}
-        onClose={() => setSourcesDrawerOpen(false)}
-      >
-        <ProjectConversationSources sources={sources} />
-      </Drawer>
-    </>
-  );
-};
-
-const ProjectConversationCitationDocumentCard = ({
+const ProjectConversationSourceDetailCard = ({
   documentGroup,
 }: {
-  documentGroup: ProjectChatCitationDocumentGroupViewModel;
+  documentGroup: ProjectConversationSourceDocumentGroup;
 }) => {
-  const [activeEntryId, setActiveEntryId] = React.useState(
-    documentGroup.entries[0]?.id,
-  );
-  const activeEntry =
-    documentGroup.entries.find((entry) => entry.id === activeEntryId) ??
-    documentGroup.entries[0];
-
-  if (!activeEntry) {
-    return null;
-  }
-
-  const fileName = getProjectChatSourceFileName(documentGroup);
+  const fileName = getProjectChatSourceFileName(documentGroup.sourceLabel);
 
   return (
     <div
-      data-citation-document-group={documentGroup.id}
-      className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+      data-conversation-source-detail={documentGroup.id}
+      className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
     >
-      <div className="flex items-start gap-3">
-        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-100 px-1.5 text-caption font-semibold text-slate-600">
-          {documentGroup.markerNumber}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
-                {fileName}
-              </Typography.Text>
-              {documentGroup.sourceLabel !== fileName ? (
-                <Typography.Text className="block text-caption leading-5 text-slate-400">
-                  {documentGroup.sourceLabel}
-                </Typography.Text>
-              ) : null}
-            </div>
-            {formatSourceDistance(activeEntry.distance) ? (
-              <Typography.Text className="shrink-0 text-caption text-slate-400">
-                {formatSourceDistance(activeEntry.distance)}
+      <div className="space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <FileTextOutlined className="text-sm" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
+              {fileName}
+            </Typography.Text>
+            {documentGroup.sourceLabel !== fileName ? (
+              <Typography.Text className="mt-0.5 block text-caption leading-5 text-slate-400">
+                {documentGroup.sourceLabel}
               </Typography.Text>
             ) : null}
           </div>
-          <Typography.Paragraph className="mb-0! text-xs! leading-6! text-slate-600!">
-            {activeEntry.snippet}
-          </Typography.Paragraph>
-          {documentGroup.entries.length > 1 ? (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {documentGroup.entries.map((entry, index) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  data-citation-entry={entry.id}
-                  className={[
-                    'inline-flex h-6 min-w-6 items-center justify-center rounded-full border px-2 text-[11px] leading-none transition-colors duration-200',
-                    entry.id === activeEntry.id
-                      ? 'border-slate-300 bg-slate-100 text-slate-700'
-                      : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600',
-                  ].join(' ')}
-                  onClick={() => setActiveEntryId(entry.id)}
-                >
-                  {index + 1}
-                </button>
-              ))}
+        </div>
+        <div className="space-y-2">
+          {documentGroup.entries.map((entry) => (
+            <div
+              key={entry.id}
+              className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+            >
+              {formatSourceDistance(entry.distance) ? (
+                <Typography.Text className="mb-1 block text-[11px] font-medium text-slate-400">
+                  {formatSourceDistance(entry.distance)}
+                </Typography.Text>
+              ) : null}
+              <Typography.Paragraph className="mb-0! text-xs! leading-6! text-slate-600!">
+                {entry.snippet}
+              </Typography.Paragraph>
             </div>
-          ) : null}
+          ))}
         </div>
       </div>
     </div>
   );
 };
 
-const ProjectConversationCitationPopover = ({
+const ProjectConversationSourcesPanel = ({
   documentGroups,
+  activeDocumentGroupId,
+  onSelectDocumentGroup,
 }: {
-  documentGroups: ProjectChatCitationDocumentGroupViewModel[];
+  documentGroups: ProjectConversationSourceDocumentGroup[];
+  activeDocumentGroupId: string | null;
+  onSelectDocumentGroup: (documentGroupId: string) => void;
 }) => {
-  if (documentGroups.length === 0) {
+  const activeDocumentGroup =
+    documentGroups.find((documentGroup) => documentGroup.id === activeDocumentGroupId) ??
+    documentGroups[0];
+
+  if (!activeDocumentGroup) {
     return null;
   }
 
   return (
-    <div data-citation-popover="true" className="max-w-[440px] space-y-3">
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-        <span className="text-slate-700">依据</span>
-        <span className="text-slate-400">
-          [{documentGroups[0]?.markerNumber}
-          {documentGroups.length > 1 ? '+' : ''}]
-        </span>
-      </div>
-      <div className="space-y-2">
-        {documentGroups.map((documentGroup) => (
-          <div
-            key={documentGroup.id}
-            data-citation-popover-group={documentGroup.id}
-          >
-            <ProjectConversationCitationDocumentCard documentGroup={documentGroup} />
-          </div>
-        ))}
-      </div>
+    <div
+      data-conversation-sources-panel="true"
+      className="space-y-4"
+    >
+      {documentGroups.length > 1 ? (
+        <div className="flex flex-wrap gap-2">
+          {documentGroups.map((documentGroup) => {
+            const fileName = getProjectChatSourceFileName(documentGroup.sourceLabel);
+            const active = documentGroup.id === activeDocumentGroup.id;
+
+            return (
+              <button
+                key={documentGroup.id}
+                type="button"
+                data-conversation-source-switch={documentGroup.id}
+                className={[
+                  'inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200',
+                  active
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-800',
+                ].join(' ')}
+                onClick={() => onSelectDocumentGroup(documentGroup.id)}
+              >
+                <FileTextOutlined className="text-xs" />
+                <span className="max-w-52 truncate">{fileName}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+      <ProjectConversationSourceDetailCard documentGroup={activeDocumentGroup} />
     </div>
+  );
+};
+
+const ProjectConversationSourcesDrawerTrigger = ({
+  sources,
+  renderTrigger,
+}: {
+  sources: ProjectConversationSourceResponse[];
+  renderTrigger: (args: {
+    openDrawer: (documentGroupId?: string) => void;
+    open: boolean;
+  }) => React.ReactNode;
+}) => {
+  const documentGroups = buildProjectConversationSourceDocumentGroups(sources);
+  const [sourcesDrawerOpen, setSourcesDrawerOpen] = React.useState(false);
+  const [activeDocumentGroupId, setActiveDocumentGroupId] = React.useState<string | null>(
+    documentGroups[0]?.id ?? null,
+  );
+
+  React.useEffect(() => {
+    if (documentGroups.length === 0) {
+      setActiveDocumentGroupId(null);
+      return;
+    }
+
+    if (
+      activeDocumentGroupId &&
+      documentGroups.some((documentGroup) => documentGroup.id === activeDocumentGroupId)
+    ) {
+      return;
+    }
+
+    setActiveDocumentGroupId(documentGroups[0]?.id ?? null);
+  }, [activeDocumentGroupId, documentGroups]);
+
+  if (documentGroups.length === 0) {
+    return null;
+  }
+
+  const openDrawer = (documentGroupId?: string) => {
+    setActiveDocumentGroupId(documentGroupId ?? documentGroups[0]?.id ?? null);
+    setSourcesDrawerOpen(true);
+  };
+
+  return (
+    <>
+      {renderTrigger({
+        openDrawer,
+        open: sourcesDrawerOpen,
+      })}
+      <Drawer
+        open={sourcesDrawerOpen}
+        size={480}
+        placement="right"
+        title={tp('conversation.references')}
+        destroyOnClose={false}
+        onClose={() => setSourcesDrawerOpen(false)}
+      >
+        <ProjectConversationSourcesPanel
+          documentGroups={documentGroups}
+          activeDocumentGroupId={activeDocumentGroupId}
+          onSelectDocumentGroup={setActiveDocumentGroupId}
+        />
+      </Drawer>
+    </>
   );
 };
 
@@ -322,15 +310,6 @@ export const ProjectChatAssistantMessage = ({
     content,
     citationViewModel,
   });
-  const documentGroupById =
-    citationViewModel.mode === 'citation'
-      ? new Map(
-          citationViewModel.documentGroups.map((documentGroup) => [
-            documentGroup.id,
-            documentGroup,
-          ]),
-        )
-      : null;
 
   return (
     <div
@@ -346,37 +325,6 @@ export const ProjectChatAssistantMessage = ({
               data-grounded={sentence.grounded ? 'true' : 'false'}
             >
               {sentence.text}
-              {sentence.primaryMarkerNumber ? (
-                <Popover
-                  trigger={['click']}
-                  placement="topLeft"
-                  overlayClassName="max-w-[460px]"
-                  content={
-                    <ProjectConversationCitationPopover
-                      documentGroups={sentence.documentGroupIds
-                        .map((documentGroupId) =>
-                          documentGroupById?.get(documentGroupId),
-                        )
-                        .filter(
-                          (
-                            documentGroup,
-                          ): documentGroup is ProjectChatCitationDocumentGroupViewModel =>
-                            Boolean(documentGroup),
-                        )}
-                    />
-                  }
-                >
-                  <button
-                    type="button"
-                    data-citation-marker={String(sentence.primaryMarkerNumber)}
-                    className="ml-1 inline-flex align-super text-[11px] font-medium leading-none text-slate-400 transition-colors duration-200 hover:text-emerald-700 focus-visible:outline-none focus-visible:text-emerald-700"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    [{sentence.primaryMarkerNumber}
-                    {sentence.hasMoreSources ? '+' : ''}]
-                  </button>
-                </Popover>
-              ) : null}
             </span>
           ))}
         </div>
@@ -519,7 +467,31 @@ export const ProjectChatAssistantFooter = ({
           <RedoOutlined className="text-xs" />
         </button>
       </div>
-      <ProjectConversationSourcesDrawerTrigger sources={extraInfo.sources} />
+      <ProjectConversationSourcesDrawerTrigger
+        sources={extraInfo.sources}
+        renderTrigger={({ openDrawer, open }) => (
+          <button
+            type="button"
+            aria-label={tp('conversation.viewSources')}
+            aria-expanded={open}
+            aria-haspopup="dialog"
+            data-conversation-sources-trigger="true"
+            className={[
+              'inline-flex h-8 items-center gap-2 rounded-full border border-slate-200 bg-slate-100/80 px-3.5 text-xs font-medium text-slate-600 transition-colors duration-200',
+              'hover:border-slate-300 hover:bg-slate-200/80 hover:text-slate-800',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200',
+            ].join(' ')}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              openDrawer();
+            }}
+          >
+            <FileTextOutlined className="text-xs" />
+            <span>{tp('conversation.sources')}</span>
+          </button>
+        )}
+      />
     </div>
   );
 };
