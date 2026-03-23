@@ -1,4 +1,0 @@
-interface:
-  display_name: "API Contract Align Review"
-  short_description: "Audit frontend/backend API contract drift."
-  default_prompt: "Use $api-contract-align-review to review this change for frontend/backend API contract drift and missing sync work."
