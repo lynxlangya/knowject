@@ -1,5 +1,7 @@
 import { App } from 'antd';
 import {
+  type Dispatch,
+  type SetStateAction,
   useEffect,
   useRef,
   useState,
@@ -7,11 +9,17 @@ import {
 } from 'react';
 import { ApiError } from '@knowject/request';
 import { extractApiErrorMessage } from '@api/error';
-import type { ProjectConversationDetailResponse } from '@api/projects';
+import type {
+  ProjectConversationDetailResponse,
+  ProjectConversationStreamDoneEvent,
+} from '@api/projects';
 import { streamProjectConversationMessage } from '@api/projects.stream';
-import type { ConversationSummary } from '@app/project/project.types';
-import type { ProjectPageRefreshableListState } from './projectPageContext';
 import {
+  type ProjectPageConversationListState,
+} from './projectPageContext';
+import type { ConversationSummary } from '@app/project/project.types';
+import {
+  reconcileProjectConversationDetailFromStreamDone,
   reconcilePendingProjectConversationTurnSubmission,
   resolvePendingProjectConversationClientRequestId,
   type OptimisticProjectConversationReplay,
@@ -51,8 +59,12 @@ interface UseProjectConversationTurnOptions {
   activeProjectId: string;
   chatId?: string;
   latestConversationTargetRef: MutableRefObject<ProjectConversationTargetRefValue>;
-  conversations: ProjectPageRefreshableListState<ConversationSummary>;
+  conversations: ProjectPageConversationListState<ConversationSummary>;
   currentConversationDetail: ProjectConversationDetailResponse | null;
+  setConversationDetail: Dispatch<
+    SetStateAction<ProjectConversationDetailResponse | null>
+  >;
+  setDetailError: Dispatch<SetStateAction<string | null>>;
   setComposerValue: (value: string) => void;
   setChatRuntimeIssue: (issue: ProjectChatIssue | null) => void;
   buildChatIssueFromError: (
@@ -78,6 +90,8 @@ export const useProjectConversationTurn = ({
   latestConversationTargetRef,
   conversations,
   currentConversationDetail,
+  setConversationDetail,
+  setDetailError,
   setComposerValue,
   setChatRuntimeIssue,
   buildChatIssueFromError,
@@ -232,6 +246,57 @@ export const useProjectConversationTurn = ({
     }
   };
 
+  const applyStreamDoneLocally = ({
+    submission,
+    doneEvent,
+    persistedUserMessageId,
+    pendingUserMessageCreatedAt,
+  }: {
+    submission: PendingProjectConversationTurnSubmission;
+    doneEvent: ProjectConversationStreamDoneEvent;
+    persistedUserMessageId: string | null;
+    pendingUserMessageCreatedAt: string;
+  }) => {
+    if (isCurrentProject(submission.projectId)) {
+      conversations.patchSummary(doneEvent.conversationSummary);
+
+      if (
+        currentConversationDetail &&
+        isCurrentConversationTarget(
+          submission.projectId,
+          submission.conversationId,
+        )
+      ) {
+        setConversationDetail(
+          reconcileProjectConversationDetailFromStreamDone({
+            currentDetail: currentConversationDetail,
+            submission,
+            activeUserMessageId: persistedUserMessageId,
+            pendingUserMessageCreatedAt,
+            assistantMessage: doneEvent.assistantMessage,
+            conversationSummary: doneEvent.conversationSummary,
+          }),
+        );
+        setDetailError(null);
+        setComposerValue('');
+      }
+    }
+
+    pendingSubmissionRef.current =
+      reconcilePendingProjectConversationTurnSubmission({
+        pendingSubmission: pendingSubmissionRef.current,
+        submission,
+        clearPendingSubmission: true,
+      });
+
+    if (isCurrentTurn(submission)) {
+      clearDraftMessages();
+      resetTurnState();
+      setStreamStatus('idle');
+      setActiveReplay(null);
+    }
+  };
+
   const handleSendMessage = async (
     rawContent: string,
     options?: {
@@ -288,8 +353,11 @@ export const useProjectConversationTurn = ({
       ...(targetUserMessageId ? { targetUserMessageId } : {}),
     } satisfies PendingProjectConversationTurnSubmission;
     const abortController = new AbortController();
+    const pendingUserMessageCreatedAt = new Date().toISOString();
     let receivedDone = false;
     let streamEventError: ApiError | null = null;
+    let persistedUserMessageId: string | null = null;
+    let streamDoneEvent: ProjectConversationStreamDoneEvent | null = null;
 
     pendingSubmissionRef.current = currentSubmission;
     activeTurnRef.current = currentSubmission;
@@ -313,7 +381,7 @@ export const useProjectConversationTurn = ({
         id: `pending-user:${clientRequestId}`,
         conversationId: requestConversationId,
         content: nextContent,
-        createdAt: new Date().toISOString(),
+        createdAt: pendingUserMessageCreatedAt,
       });
     }
 
@@ -343,6 +411,7 @@ export const useProjectConversationTurn = ({
 
             switch (event.type) {
               case 'ack':
+                persistedUserMessageId = event.userMessageId;
                 setActiveUserMessageId(event.userMessageId);
                 if (!targetUserMessageId) {
                   setPendingUserMessage((currentValue) => {
@@ -373,6 +442,7 @@ export const useProjectConversationTurn = ({
                 return;
               case 'done':
                 receivedDone = true;
+                streamDoneEvent = event;
                 setDraftAssistantMessage((currentValue) => {
                   if (!currentValue) {
                     return currentValue;
@@ -421,10 +491,19 @@ export const useProjectConversationTurn = ({
         );
       }
 
-      await reconcileAfterStream({
+      if (!streamDoneEvent) {
+        throw new ApiError(
+          tp('conversation.turn.streamEndedEarly'),
+          502,
+          'PROJECT_CONVERSATION_STREAM_MISSING_DONE_PAYLOAD',
+        );
+      }
+
+      applyStreamDoneLocally({
         submission: currentSubmission,
-        previousMessageIds,
-        clearPendingSubmission: true,
+        doneEvent: streamDoneEvent,
+        persistedUserMessageId,
+        pendingUserMessageCreatedAt,
       });
     } catch (currentError) {
       if (abortController.signal.aborted || isAbortError(currentError)) {

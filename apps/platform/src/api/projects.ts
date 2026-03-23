@@ -147,6 +147,8 @@ export interface ProjectConversationStreamDoneEvent
   assistantMessageId: string;
   assistantMessagePersisted: true;
   finishReason: ProjectConversationStreamFinishReason;
+  assistantMessage: ProjectConversationMessageResponse;
+  conversationSummary: ProjectConversationSummaryResponse;
 }
 
 export interface ProjectConversationStreamErrorEvent

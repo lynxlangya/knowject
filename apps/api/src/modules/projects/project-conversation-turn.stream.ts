@@ -8,6 +8,8 @@ import {
 import type {
   ProjectCommandContext,
   ProjectConversationDetailEnvelope,
+  ProjectConversationMessageResponse,
+  ProjectConversationStreamDoneEvent,
   ProjectConversationStreamOptions,
 } from "./projects.types.js";
 import {
@@ -22,6 +24,42 @@ import {
 
 const isAbortError = (error: unknown): boolean => {
   return error instanceof Error && error.name === "AbortError";
+};
+
+const buildProjectConversationStreamDoneEvent = ({
+  detail,
+  assistantMessageId,
+  finishReason,
+}: {
+  detail: ProjectConversationDetailEnvelope;
+  assistantMessageId: string;
+  finishReason: ProjectConversationStreamDoneEvent["finishReason"];
+}): Omit<
+  ProjectConversationStreamDoneEvent,
+  "version" | "sequence" | "conversationId" | "clientRequestId"
+> => {
+  const assistantMessage =
+    detail.conversation.messages.find(
+      (message): message is ProjectConversationMessageResponse =>
+        message.id === assistantMessageId && message.role === "assistant",
+    ) ?? null;
+
+  if (!assistantMessage) {
+    throw new Error(
+      `assistant message ${assistantMessageId} missing from stream detail envelope`,
+    );
+  }
+
+  const { messages: _messages, ...conversationSummary } = detail.conversation;
+
+  return {
+    type: "done",
+    assistantMessageId,
+    assistantMessagePersisted: true,
+    finishReason,
+    assistantMessage,
+    conversationSummary,
+  };
 };
 
 export const createSynchronousProjectConversationTurn = async ({
@@ -101,12 +139,17 @@ export const createStreamingProjectConversationTurn = async ({
     });
 
     if (preparedTurn.existingAssistantMessage) {
-      await eventEmitter.emitEvent({
-        type: "done",
-        assistantMessageId: preparedTurn.existingAssistantMessage.id,
-        assistantMessagePersisted: true,
-        finishReason: "stop",
-      });
+      await eventEmitter.emitEvent(
+        buildProjectConversationStreamDoneEvent({
+          detail: createProjectConversationDetailEnvelope(
+            preparedTurn.project,
+            preparedTurn.conversation,
+            context.locale,
+          ),
+          assistantMessageId: preparedTurn.existingAssistantMessage.id,
+          finishReason: "stop",
+        }),
+      );
 
       return;
     }
@@ -147,12 +190,13 @@ export const createStreamingProjectConversationTurn = async ({
       });
     assistantPersisted = true;
 
-    await eventEmitter.emitEvent({
-      type: "done",
-      assistantMessageId: persistedAssistantReply.assistantMessageId,
-      assistantMessagePersisted: true,
-      finishReason: streamReply.finishReason,
-    });
+    await eventEmitter.emitEvent(
+      buildProjectConversationStreamDoneEvent({
+        detail: persistedAssistantReply.detail,
+        assistantMessageId: persistedAssistantReply.assistantMessageId,
+        finishReason: streamReply.finishReason,
+      }),
+    );
   } catch (error) {
     if (!assistantPersisted) {
       await restorePreparedReplayConversation(repository, preparedTurn);

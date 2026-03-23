@@ -1,4 +1,8 @@
-import type { ProjectConversationMessageResponse } from '@api/projects';
+import type {
+  ProjectConversationDetailResponse,
+  ProjectConversationMessageResponse,
+  ProjectConversationSummaryResponse,
+} from '@api/projects';
 
 export interface PendingProjectConversationTurnSubmission {
   projectId: string;
@@ -107,5 +111,108 @@ export const buildOptimisticProjectConversationMessages = ({
           content: replay.content,
         }
       : message,
+  );
+};
+
+const createPersistedUserMessageFromStreamDone = ({
+  conversationId,
+  userMessageId,
+  content,
+  createdAt,
+}: {
+  conversationId: string;
+  userMessageId: string;
+  content: string;
+  createdAt: string;
+}): ProjectConversationMessageResponse => {
+  return {
+    id: userMessageId,
+    conversationId,
+    role: 'user',
+    content,
+    createdAt,
+    starred: false,
+    starredAt: null,
+    starredBy: null,
+  };
+};
+
+export const reconcileProjectConversationDetailFromStreamDone = ({
+  currentDetail,
+  submission,
+  activeUserMessageId,
+  pendingUserMessageCreatedAt,
+  assistantMessage,
+  conversationSummary,
+}: {
+  currentDetail: ProjectConversationDetailResponse;
+  submission: PendingProjectConversationTurnSubmission;
+  activeUserMessageId: string | null;
+  pendingUserMessageCreatedAt: string;
+  assistantMessage: ProjectConversationMessageResponse;
+  conversationSummary: ProjectConversationSummaryResponse;
+}): ProjectConversationDetailResponse => {
+  let nextMessages = currentDetail.messages;
+
+  if (submission.targetUserMessageId) {
+    const replayTargetIndex = nextMessages.findIndex(
+      (message) =>
+        message.id === submission.targetUserMessageId && message.role === 'user',
+    );
+
+    if (replayTargetIndex >= 0) {
+      nextMessages = nextMessages.slice(0, replayTargetIndex + 1).map((message) =>
+        message.id === submission.targetUserMessageId
+          ? {
+              ...message,
+              content: submission.content,
+            }
+          : message,
+      );
+    }
+  } else if (
+    activeUserMessageId &&
+    !nextMessages.some((message) => message.id === activeUserMessageId)
+  ) {
+    nextMessages = [
+      ...nextMessages,
+      createPersistedUserMessageFromStreamDone({
+        conversationId: currentDetail.id,
+        userMessageId: activeUserMessageId,
+        content: submission.content,
+        createdAt: pendingUserMessageCreatedAt,
+      }),
+    ];
+  }
+
+  const assistantMessageIndex = nextMessages.findIndex(
+    (message) => message.id === assistantMessage.id,
+  );
+  nextMessages =
+    assistantMessageIndex >= 0
+      ? nextMessages.map((message) =>
+          message.id === assistantMessage.id ? assistantMessage : message,
+        )
+      : [...nextMessages, assistantMessage];
+
+  return {
+    ...currentDetail,
+    ...conversationSummary,
+    messages: nextMessages,
+  };
+};
+
+export const patchProjectConversationSummariesFromStreamDone = ({
+  summaries,
+  conversationSummary,
+}: {
+  summaries: ProjectConversationSummaryResponse[];
+  conversationSummary: ProjectConversationSummaryResponse;
+}): ProjectConversationSummaryResponse[] => {
+  return [conversationSummary, ...summaries.filter(
+    (summary) => summary.id !== conversationSummary.id,
+  )].sort(
+    (left, right) =>
+      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
   );
 };

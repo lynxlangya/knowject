@@ -4233,6 +4233,10 @@ test('streamProjectConversationMessage persists citationContent on final assista
   assert.equal(events[0]?.clientRequestId, 'stream-request-1');
   assert.equal(events[0]?.type, 'ack');
   assert.equal(events[events.length - 1]?.type, 'done');
+  const doneEvent = events[events.length - 1];
+  if (!doneEvent || doneEvent.type !== 'done') {
+    throw new Error('doneEvent should be a stream done event');
+  }
 
   const persistedConversation = persistedProject.conversations[0];
   assert.equal(persistedConversation?.messages.length, 2);
@@ -4254,6 +4258,32 @@ test('streamProjectConversationMessage persists citationContent on final assista
       },
     ],
   });
+  assert.equal(
+    doneEvent.assistantMessage.content,
+    '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+  );
+  assert.equal(doneEvent.assistantMessage.sources?.[0]?.id, 's1');
+  assert.deepEqual(doneEvent.assistantMessage.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'sent-1',
+        text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+    ],
+  });
+  assert.equal(doneEvent.conversationSummary.id, 'chat-streaming');
+  assert.equal(doneEvent.conversationSummary.title, '已有会话');
+  assert.equal(
+    doneEvent.conversationSummary.preview,
+    '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+  );
+  assert.equal(
+    doneEvent.conversationSummary.updatedAt,
+    persistedConversation?.updatedAt.toISOString(),
+  );
 });
 
 test('streamProjectConversationMessage emits an error event and skips assistant persistence when upstream fails', async () => {

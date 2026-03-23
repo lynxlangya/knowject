@@ -19,6 +19,11 @@ export interface ProjectPageRefreshableListState<TItem>
   refresh: () => void | Promise<void>;
 }
 
+export interface ProjectPageConversationListState<TItem>
+  extends ProjectPageRefreshableListState<TItem> {
+  patchSummary: (summary: TItem) => void;
+}
+
 export interface ProjectPageGlobalAssetCatalogs {
   knowledge: ProjectPageListState<KnowledgeSummaryResponse>;
   agents: ProjectPageListState<AgentResponse>;
@@ -34,7 +39,7 @@ export interface ProjectPageKnowledgeCatalogState
 
 export interface ProjectPageContextValue extends ProjectWorkspaceSnapshot {
   activeProject: ProjectSummary;
-  conversations: ProjectPageRefreshableListState<ConversationSummary>;
+  conversations: ProjectPageConversationListState<ConversationSummary>;
   globalAssetCatalogs: ProjectPageGlobalAssetCatalogs;
   projectKnowledge: ProjectPageKnowledgeCatalogState;
 }

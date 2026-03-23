@@ -161,6 +161,8 @@ export const ProjectChatPage = () => {
     latestConversationTargetRef,
     conversations,
     currentConversationDetail,
+    setConversationDetail,
+    setDetailError,
     setComposerValue: (value) => setComposerValue(value),
     setChatRuntimeIssue,
     buildChatIssueFromError,

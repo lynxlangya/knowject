@@ -5,12 +5,14 @@ import {
   type ProjectConversationSummaryResponse,
 } from '@api/projects';
 import { tp } from './project.i18n';
+import { patchProjectConversationSummariesFromStreamDone } from './useProjectConversationTurn.helpers';
 
 export interface UseProjectConversationsResult {
   items: ProjectConversationSummaryResponse[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  patchSummary: (summary: ProjectConversationSummaryResponse) => void;
 }
 
 export const useProjectConversations = (
@@ -74,6 +76,20 @@ export const useProjectConversations = (
     await loadConversations(requestProjectId);
   }, [loadConversations]);
 
+  const patchSummary = useCallback(
+    (summary: ProjectConversationSummaryResponse) => {
+      setItems((currentItems) =>
+        patchProjectConversationSummariesFromStreamDone({
+          summaries: currentItems,
+          conversationSummary: summary,
+        }),
+      );
+      loadedProjectIdRef.current = summary.projectId;
+      setError(null);
+    },
+    [],
+  );
+
   useEffect(() => {
     latestProjectIdRef.current = projectId;
   }, [projectId]);
@@ -91,5 +107,6 @@ export const useProjectConversations = (
     loading,
     error,
     refresh,
+    patchSummary,
   };
 };
