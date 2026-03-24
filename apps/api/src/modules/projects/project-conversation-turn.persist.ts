@@ -5,11 +5,14 @@ import {
   createProjectConversationMessage,
   createProjectConversationNotFoundError,
   createProjectNotFoundError,
-  getProjectConversationSourceId,
   getProjectConversation,
   toProjectConversationDetailResponse,
 } from "./projects.shared.js";
-import { normalizeProjectConversationCitationContent } from "./project-conversation-citation.js";
+import {
+  buildProjectConversationCitationSources,
+  normalizeProjectConversationCitationContent,
+  stripProjectConversationSourcePlaceholders,
+} from "./project-conversation-citation.js";
 import type {
   ProjectConversationDetailEnvelope,
   ProjectConversationDocument,
@@ -191,10 +194,12 @@ export const persistProjectConversationAssistantReply = async ({
     }
   }
 
-  const normalizedSources = assistantReply.sources.map((source, index) => ({
-    ...source,
-    id: getProjectConversationSourceId(source, index),
-  }));
+  const normalizedSources = buildProjectConversationCitationSources(
+    assistantReply.sources,
+  );
+  const normalizedContent = stripProjectConversationSourcePlaceholders(
+    assistantReply.content,
+  );
   const normalizedCitationContent =
     assistantReply.citationContent === undefined
       ? undefined
@@ -206,7 +211,7 @@ export const persistProjectConversationAssistantReply = async ({
   const assistantCreatedAt = new Date();
   const assistantMessage = createProjectConversationMessage({
     role: "assistant",
-    content: assistantReply.content,
+    content: normalizedContent,
     sources: normalizedSources,
     citationContent: normalizedCitationContent,
     createdAt: assistantCreatedAt,

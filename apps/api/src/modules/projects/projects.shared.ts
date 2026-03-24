@@ -246,6 +246,28 @@ export const getProjectConversationSourceId = (
   return source.id ?? `s${index + 1}`;
 };
 
+const getProjectConversationSourceGroupId = (
+  source: Pick<ProjectConversationSourceDocument, 'knowledgeId' | 'documentId'>,
+): string => {
+  return `${source.knowledgeId}::${source.documentId}`;
+};
+
+const createProjectConversationSourceKeyMap = (
+  sources: ProjectConversationSourceDocument[],
+): Map<string, string> => {
+  const sourceKeyMap = new Map<string, string>();
+
+  sources.forEach((source) => {
+    const groupId = getProjectConversationSourceGroupId(source);
+
+    if (!sourceKeyMap.has(groupId)) {
+      sourceKeyMap.set(groupId, `source${sourceKeyMap.size + 1}`);
+    }
+  });
+
+  return sourceKeyMap;
+};
+
 export const getProjectConversations = (
   project: Pick<ProjectDocument, 'name' | 'conversations'>,
 ): ProjectConversationDocument[] => {
@@ -334,9 +356,14 @@ const getConversationPreview = (
 const toProjectConversationSourceResponse = (
   source: ProjectConversationSourceDocument,
   index: number,
+  sourceKeyMap: Map<string, string>,
 ): ProjectConversationSourceResponse => {
   return {
     id: getProjectConversationSourceId(source, index),
+    sourceKey:
+      source.sourceKey ??
+      sourceKeyMap.get(getProjectConversationSourceGroupId(source)) ??
+      `source${index + 1}`,
     knowledgeId: source.knowledgeId,
     documentId: source.documentId,
     chunkId: source.chunkId,
@@ -384,6 +411,7 @@ export const toProjectConversationMessageResponse = (
           localizedContent,
           message.sources ?? [],
         ) ?? undefined;
+  const sourceKeyMap = createProjectConversationSourceKeyMap(message.sources ?? []);
 
   return {
     id: message.id,
@@ -397,7 +425,7 @@ export const toProjectConversationMessageResponse = (
     ...(message.sources !== undefined
       ? {
           sources: message.sources.map((source, index) =>
-            toProjectConversationSourceResponse(source, index),
+            toProjectConversationSourceResponse(source, index, sourceKeyMap),
           ),
         }
       : {}),

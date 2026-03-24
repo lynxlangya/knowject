@@ -3,11 +3,87 @@ import type {
   ProjectConversationSourceDocument,
 } from './projects.types.js';
 
+const PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_PATTERN =
+  /\s*\[\[source\d+\]\]/g;
+
 const getProjectConversationCitationSourceId = (
   source: ProjectConversationSourceDocument,
   index: number,
 ): string => {
   return source.id ?? `s${index + 1}`;
+};
+
+const getProjectConversationSourceGroupId = (
+  source: Pick<ProjectConversationSourceDocument, 'knowledgeId' | 'documentId'>,
+): string => {
+  return `${source.knowledgeId}::${source.documentId}`;
+};
+
+const getProjectConversationSourceRetrievalIndex = (
+  source: ProjectConversationSourceDocument,
+  fallbackIndex: number,
+): number => {
+  return Number.isFinite(source.retrievalIndex)
+    ? Number(source.retrievalIndex)
+    : fallbackIndex;
+};
+
+const getProjectConversationSourceDistanceRank = (
+  source: ProjectConversationSourceDocument,
+): number => {
+  return typeof source.distance === 'number' ? source.distance : Number.POSITIVE_INFINITY;
+};
+
+const compareProjectConversationSourceRecords = (
+  left: ProjectConversationSourceDocument,
+  right: ProjectConversationSourceDocument,
+): number => {
+  return (
+    left.retrievalIndex! - right.retrievalIndex! ||
+    getProjectConversationSourceDistanceRank(left) -
+      getProjectConversationSourceDistanceRank(right) ||
+    left.knowledgeId.localeCompare(right.knowledgeId) ||
+    left.documentId.localeCompare(right.documentId) ||
+    left.chunkIndex - right.chunkIndex ||
+    left.chunkId.localeCompare(right.chunkId) ||
+    left.source.localeCompare(right.source) ||
+    left.snippet.localeCompare(right.snippet)
+  );
+};
+
+const withProjectConversationSourceMeta = (
+  source: Omit<ProjectConversationSourceDocument, 'sourceKey' | 'retrievalIndex'> & {
+    sourceKey: string;
+    retrievalIndex: number;
+  },
+): ProjectConversationSourceDocument => {
+  const normalizedSource: ProjectConversationSourceDocument = {
+    id: source.id,
+    knowledgeId: source.knowledgeId,
+    documentId: source.documentId,
+    chunkId: source.chunkId,
+    chunkIndex: source.chunkIndex,
+    source: source.source,
+    snippet: source.snippet,
+    distance: source.distance,
+  };
+
+  Object.defineProperties(normalizedSource, {
+    sourceKey: {
+      configurable: true,
+      enumerable: false,
+      value: source.sourceKey,
+      writable: true,
+    },
+    retrievalIndex: {
+      configurable: true,
+      enumerable: false,
+      value: source.retrievalIndex,
+      writable: true,
+    },
+  });
+
+  return normalizedSource;
 };
 
 const unwrapFencedJson = (value: string): string => {
@@ -75,14 +151,73 @@ const normalizeSentenceSourceIds = (
 export const buildProjectConversationCitationSources = (
   sources: ProjectConversationSourceDocument[],
 ): ProjectConversationSourceDocument[] => {
-  return sources.map((source, index) => ({
-    ...source,
-    id: `s${index + 1}`,
-  }));
+  const groupedSources = new Map<string, ProjectConversationSourceDocument[]>();
+
+  sources.forEach((source, index) => {
+    const normalizedSource = withProjectConversationSourceMeta({
+      id: source.id,
+      sourceKey: source.sourceKey ?? '',
+      retrievalIndex: getProjectConversationSourceRetrievalIndex(source, index),
+      knowledgeId: source.knowledgeId,
+      documentId: source.documentId,
+      chunkId: source.chunkId,
+      chunkIndex: source.chunkIndex,
+      source: source.source,
+      snippet: source.snippet,
+      distance: source.distance,
+    });
+    const groupId = getProjectConversationSourceGroupId(normalizedSource);
+    const existingGroup = groupedSources.get(groupId);
+
+    if (existingGroup) {
+      existingGroup.push(normalizedSource);
+      return;
+    }
+
+    groupedSources.set(groupId, [normalizedSource]);
+  });
+
+  const orderedGroups = Array.from(groupedSources.values())
+    .map((group) => {
+      const orderedSources = [...group].sort(compareProjectConversationSourceRecords);
+
+      return {
+        defaultSource: orderedSources[0]!,
+        sources: orderedSources,
+      };
+    })
+    .sort((left, right) =>
+      compareProjectConversationSourceRecords(left.defaultSource, right.defaultSource),
+    );
+
+  let sourceIndex = 0;
+
+  return orderedGroups.flatMap((group, groupIndex) =>
+    group.sources.map((source) =>
+      withProjectConversationSourceMeta({
+        id: `s${++sourceIndex}`,
+        sourceKey: `source${groupIndex + 1}`,
+        retrievalIndex: source.retrievalIndex!,
+        knowledgeId: source.knowledgeId,
+        documentId: source.documentId,
+        chunkId: source.chunkId,
+        chunkIndex: source.chunkIndex,
+        source: source.source,
+        snippet: source.snippet,
+        distance: source.distance,
+      }),
+    ),
+  );
 };
 
+export const stripProjectConversationSourcePlaceholders = (
+  content: string,
+): string => content.replace(PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_PATTERN, '').trim();
+
 const normalizeCitationTextForComparison = (value: string): string => {
-  return value.replace(/\r\n/g, '\n').trim();
+  return stripProjectConversationSourcePlaceholders(value)
+    .replace(/\r\n/g, '\n')
+    .trim();
 };
 
 export const normalizeProjectConversationCitationContent = (

@@ -7,6 +7,7 @@ export type ProjectConversationMessageRole = 'user' | 'assistant';
 export type ProjectConversationTitleOrigin = 'default' | 'auto' | 'manual';
 export type ProjectConversationStreamEventType =
   | 'ack'
+  | 'sources_seed'
   | 'delta'
   | 'done'
   | 'error';
@@ -42,6 +43,8 @@ export interface ProjectConversationMessageDocument {
 
 export interface ProjectConversationSourceDocument {
   id?: string;
+  sourceKey?: string;
+  retrievalIndex?: number;
   knowledgeId: string;
   documentId: string;
   chunkId: string;
@@ -133,6 +136,21 @@ export interface ProjectConversationStreamDeltaEvent
   delta: string;
 }
 
+export interface ProjectConversationStreamSeedSource {
+  id: string;
+  sourceKey: string;
+  knowledgeId: string;
+  documentId: string;
+  sourceLabel: string;
+  status: 'seeded';
+}
+
+export interface ProjectConversationStreamSourcesSeedEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'sources_seed';
+  sources: ProjectConversationStreamSeedSource[];
+}
+
 export interface ProjectConversationStreamDoneEvent
   extends ProjectConversationStreamEventBase {
   type: 'done';
@@ -153,6 +171,7 @@ export interface ProjectConversationStreamErrorEvent
 
 export type ProjectConversationStreamEvent =
   | ProjectConversationStreamAckEvent
+  | ProjectConversationStreamSourcesSeedEvent
   | ProjectConversationStreamDeltaEvent
   | ProjectConversationStreamDoneEvent
   | ProjectConversationStreamErrorEvent;
@@ -225,6 +244,7 @@ export interface ProjectConversationMessageResponse {
 
 export interface ProjectConversationSourceResponse {
   id: string;
+  sourceKey: string;
   knowledgeId: string;
   documentId: string;
   chunkId: string;

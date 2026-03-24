@@ -74,6 +74,9 @@ const buildProjectConversationSystemPrompt = (projectName: string): string => {
     "1. 仅基于对话历史与提供的项目知识片段作答；信息不足时明确说明。",
     "2. 不要编造接口、状态、结论或未出现的事实。",
     "3. 使用简洁中文回答，优先给结论，再补充必要依据。",
+    "4. 若一句话由某个来源直接支撑，请仅在该句句末追加 `[[sourceN]]`。",
+    "5. 多来源则按 sourceKey 顺序依次追加多个占位。",
+    "6. 不要在代码块、链接、列表标记内部输出占位。",
   ].join("\n");
 };
 
@@ -89,7 +92,7 @@ const buildProjectConversationContextPrompt = ({
       ? retrieval.items
           .map((item, index) =>
             [
-              `[来源 ${index + 1}]`,
+              `source${index + 1}`,
               `knowledgeId: ${item.knowledgeId}`,
               `documentId: ${item.documentId}`,
               `chunkId: ${item.chunkId}`,
@@ -104,6 +107,7 @@ const buildProjectConversationContextPrompt = ({
   return [
     "请结合下列项目知识片段回答用户问题。",
     "如果片段不足以支撑结论，请直接说明当前资料不足。",
+    "引用来源时请使用 `[[sourceN]]` 形式追加在句末。",
     "",
     "项目知识片段：",
     retrievalContext,
@@ -121,9 +125,10 @@ const buildProjectConversationCitationPrompt = ({
   sources: ProjectConversationSourceDocument[];
 }): string => {
   const evidenceList = sources
-    .map((source) =>
+    .map((source, index) =>
       [
-        `[${source.id}]`,
+        `[${source.sourceKey ?? `source${index + 1}`}]`,
+        `sourceId: ${source.id ?? `s${index + 1}`}`,
         `source: ${source.source}`,
         `knowledgeId: ${source.knowledgeId}`,
         `documentId: ${source.documentId}`,
@@ -136,7 +141,8 @@ const buildProjectConversationCitationPrompt = ({
 
   return [
     "请为下面这段最终回答生成结构化 citation JSON。",
-    "只允许引用给定 evidence 列表中的 source id。",
+    "答案中的 `[[sourceN]]` 占位对应 evidence 列表中的 sourceKey。",
+    "输出 JSON 时，sourceIds 只能填写给定 evidence 列表中的 sourceId。",
     "grounded=true 仅在句子能被 evidence 直接支撑时使用；否则必须 grounded=false 且 sourceIds=[]。",
     "只输出 JSON，不要输出解释、Markdown 或额外文本。",
     '返回格式：{"version":1,"sentences":[{"id":"sent-1","text":"句子","sourceIds":["s1"],"grounded":true}]}',
@@ -178,7 +184,8 @@ const buildProjectConversationSourceSnippet = (content: string): string => {
 const toProjectConversationSources = (
   retrieval: KnowledgeSearchResponse,
 ): ProjectConversationSourceDocument[] => {
-  return retrieval.items.map((item) => ({
+  return retrieval.items.map((item, index) => ({
+    retrievalIndex: index,
     knowledgeId: item.knowledgeId,
     documentId: item.documentId,
     chunkId: item.chunkId,
