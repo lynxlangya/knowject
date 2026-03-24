@@ -17,6 +17,7 @@ import type {
   ProjectConversationDocument,
   ProjectConversationMessageDocument,
   ProjectConversationSourceDocument,
+  ProjectConversationStreamSeedSource,
   ProjectDocument,
 } from "./projects.types.js";
 import type { ProjectConversationStreamFinishReason } from "./projects.types.js";
@@ -51,6 +52,9 @@ export interface ProjectConversationRuntime {
     conversation: ProjectConversationDocument;
     userMessage: ProjectConversationMessageDocument;
     signal?: AbortSignal;
+    onSourcesSeed?(
+      sources: ProjectConversationStreamSeedSource[],
+    ): Promise<void> | void;
     onDelta(delta: string): Promise<void> | void;
   }): Promise<{
     content: string;
@@ -220,6 +224,31 @@ const toProjectConversationSources = (
     snippet: buildProjectConversationSourceSnippet(item.content),
     distance: item.distance,
   }));
+};
+
+const toProjectConversationStreamSeedSources = (
+  sources: ProjectConversationSourceDocument[],
+): ProjectConversationStreamSeedSource[] => {
+  const sourceSeeds = new Map<string, ProjectConversationStreamSeedSource>();
+
+  sources.forEach((source, index) => {
+    const sourceKey = source.sourceKey ?? `source${index + 1}`;
+
+    if (sourceSeeds.has(sourceKey)) {
+      return;
+    }
+
+    sourceSeeds.set(sourceKey, {
+      id: source.id ?? `s${index + 1}`,
+      sourceKey,
+      knowledgeId: source.knowledgeId,
+      documentId: source.documentId,
+      sourceLabel: source.source,
+      status: "seeded",
+    });
+  });
+
+  return Array.from(sourceSeeds.values());
 };
 
 const normalizeProjectConversationTitleSource = (value: string): string => {
@@ -484,6 +513,7 @@ export const createProjectConversationRuntime = ({
       conversation,
       userMessage,
       signal,
+      onSourcesSeed,
       onDelta,
     }) => {
       const { llmConfig, messages, sources } = await prepareAssistantReplyContext({
@@ -493,6 +523,12 @@ export const createProjectConversationRuntime = ({
         conversation,
         userMessage,
       });
+      const sourceSeeds = toProjectConversationStreamSeedSources(sources);
+
+      if (sourceSeeds.length > 0) {
+        await onSourcesSeed?.(sourceSeeds);
+      }
+
       const streamedReply = await providerAdapter.stream({
         llmConfig,
         messages,

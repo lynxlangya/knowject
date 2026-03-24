@@ -112,6 +112,16 @@ const createConversationRuntimeStub = (options?: {
   }>;
   streamAssistantReply?: (input: {
     signal?: AbortSignal;
+    onSourcesSeed?(
+      sources: Array<{
+        id: string;
+        sourceKey: string;
+        knowledgeId: string;
+        documentId: string;
+        sourceLabel: string;
+        status: 'seeded';
+      }>,
+    ): Promise<void> | void;
     onDelta(delta: string): Promise<void> | void;
   }) => Promise<{
     content: string;
@@ -4163,9 +4173,27 @@ test('streamProjectConversationMessage persists citationContent on final assista
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
     conversationRuntime: createConversationRuntimeStub({
-      streamAssistantReply: async ({ onDelta }) => {
+      streamAssistantReply: async ({ onSourcesSeed, onDelta }) => {
+        await onSourcesSeed?.([
+          {
+            id: 's1',
+            sourceKey: 'source1',
+            knowledgeId: 'kb-1',
+            documentId: 'doc-1',
+            sourceLabel: 'chat-core.md',
+            status: 'seeded',
+          },
+          {
+            id: 's2',
+            sourceKey: 'source2',
+            knowledgeId: 'kb-2',
+            documentId: 'doc-2',
+            sourceLabel: 'runtime.md',
+            status: 'seeded',
+          },
+        ]);
         const deltas = [
-          '当前项目已经具备最小对话写链路。[[source1]]',
+          '当前项目已经具备最小对话写链路，[[source1]]',
           '并开始接入项目级检索。[[source2]]',
         ];
 
@@ -4175,7 +4203,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
 
         return {
           content:
-            '当前项目已经具备最小对话写链路。[[source1]]并开始接入项目级检索。[[source2]]',
+            '当前项目已经具备最小对话写链路，[[source1]]并开始接入项目级检索。[[source2]]',
           sources: [
             {
               knowledgeId: 'kb-1',
@@ -4372,6 +4400,118 @@ test('streamProjectConversationMessage persists citationContent on final assista
     doneEvent.conversationSummary.updatedAt,
     persistedConversation?.updatedAt.toISOString(),
   );
+});
+
+test('streamProjectConversationMessage reuses replayed assistant result without emitting fake source seeds', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439121'),
+    name: '流式 replay 已完成',
+    description: '验证流式 replay 幂等完成态',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-stream-replay-resolved',
+        title: '已有会话',
+        titleOrigin: 'manual',
+        messages: [
+          {
+            id: 'msg-user-stream-replay-resolved',
+            role: 'user',
+            content: '重放后的问题',
+            clientRequestId: 'stream-request-replay-resolved',
+            createdAt: new Date('2026-03-17T10:00:00.000Z'),
+          },
+          {
+            id: 'msg-assistant-stream-replay-resolved',
+            role: 'assistant',
+            content: '已存在的流式 replay 回答。',
+            createdAt: new Date('2026-03-17T10:00:05.000Z'),
+            sources: [],
+          },
+        ],
+        createdAt: new Date('2026-03-17T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T10:00:05.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T10:00:05.000Z'),
+  };
+  const events: ProjectConversationStreamEvent[] = [];
+  let runtimeCalls = 0;
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      streamAssistantReply: async ({ onSourcesSeed, onDelta }) => {
+        runtimeCalls += 1;
+        await onSourcesSeed?.([
+          {
+            id: 's1',
+            sourceKey: 'source1',
+            knowledgeId: 'kb-1',
+            documentId: 'doc-1',
+            sourceLabel: 'should-not-emit.md',
+            status: 'seeded',
+          },
+        ]);
+        await onDelta('这条 delta 不应该被发送');
+
+        return {
+          content: '这条 replay assistant 不应该再次生成。',
+          sources: [],
+          finishReason: 'stop',
+        };
+      },
+    }),
+  });
+
+  await service.streamProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    project._id.toHexString(),
+    'chat-stream-replay-resolved',
+    {
+      content: '重放后的问题',
+      clientRequestId: 'stream-request-replay-resolved',
+      targetUserMessageId: 'msg-user-stream-replay-resolved',
+    },
+    {
+      onEvent: async (event) => {
+        events.push(event);
+      },
+    },
+  );
+
+  assert.equal(runtimeCalls, 0);
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ['ack', 'done'],
+  );
+  assert.equal(events[1]?.type, 'done');
+  assert.notEqual(events[1]?.type, 'sources_seed');
 });
 
 test('streamProjectConversationMessage emits an error event and skips assistant persistence when upstream fails', async () => {
@@ -5118,6 +5258,16 @@ test('createProjectConversationRuntime streams deltas from an OpenAI-compatible 
   };
   const originalFetch = global.fetch;
   const encoder = new TextEncoder();
+  const sourceSeeds: Array<
+    Array<{
+      id: string;
+      sourceKey: string;
+      knowledgeId: string;
+      documentId: string;
+      sourceLabel: string;
+      status: 'seeded';
+    }>
+  > = [];
   const receivedDeltas: string[] = [];
 
   global.fetch = async (_input, init) => {
@@ -5174,7 +5324,7 @@ test('createProjectConversationRuntime streams deltas from an OpenAI-compatible 
         searchProjectDocuments: async () => ({
           query: '请总结当前流式架构',
           sourceType: 'global_docs',
-          total: 1,
+          total: 2,
           items: [
             {
               knowledgeId: 'kb-1',
@@ -5185,6 +5335,16 @@ test('createProjectConversationRuntime streams deltas from an OpenAI-compatible 
               source: 'streaming-architecture.md',
               content: '流式架构要求服务端统一 turn owner，并在 done 后回读服务端真相。',
               distance: 0.06,
+            },
+            {
+              knowledgeId: 'kb-1',
+              documentId: 'doc-1',
+              chunkId: 'chunk-2',
+              chunkIndex: 1,
+              type: 'global_docs',
+              source: 'streaming-architecture.md',
+              content: '同一文档的第二个 chunk 继续解释 sourceKey 需要按分组稳定。',
+              distance: 0.08,
             },
           ],
         }),
@@ -5199,17 +5359,34 @@ test('createProjectConversationRuntime streams deltas from an OpenAI-compatible 
       project,
       conversation,
       userMessage: conversation.messages[0]!,
+      onSourcesSeed: async (sources) => {
+        sourceSeeds.push(sources);
+      },
       onDelta: async (delta) => {
         receivedDeltas.push(delta);
       },
     });
 
+    assert.deepEqual(sourceSeeds, [
+      [
+        {
+          id: 's1',
+          sourceKey: 'source1',
+          knowledgeId: 'kb-1',
+          documentId: 'doc-1',
+          sourceLabel: 'streaming-architecture.md',
+          status: 'seeded',
+        },
+      ],
+    ]);
     assert.deepEqual(receivedDeltas, ['当前项目对话已切到', '统一流式编排。']);
     assert.equal(result.content, '当前项目对话已切到统一流式编排。');
     assert.equal(result.finishReason, 'stop');
     assert.equal(result.citationContent, undefined);
     assert.equal(result.sources[0]?.id, 's1');
     assert.equal(result.sources[0]?.source, 'streaming-architecture.md');
+    assert.equal(result.sources[0]?.sourceKey, 'source1');
+    assert.equal(result.sources[1]?.sourceKey, 'source1');
   } finally {
     global.fetch = originalFetch;
   }

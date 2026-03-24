@@ -130,6 +130,7 @@ export const createStreamingProjectConversationTurn = async ({
     onEvent: options.onEvent,
   });
   let assistantPersisted = false;
+  let sourcesSeedEmitted = false;
 
   try {
     await eventEmitter.emitEvent({
@@ -160,6 +161,17 @@ export const createStreamingProjectConversationTurn = async ({
       conversation: preparedTurn.conversation,
       userMessage: preparedTurn.userMessage,
       signal: options.signal,
+      onSourcesSeed: async (sources) => {
+        if (sourcesSeedEmitted || sources.length === 0) {
+          return;
+        }
+
+        sourcesSeedEmitted = true;
+        await eventEmitter.emitEvent({
+          type: "sources_seed",
+          sources,
+        });
+      },
       onDelta: async (delta) => {
         if (!delta) {
           return;
