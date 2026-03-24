@@ -69,8 +69,38 @@ const normalizeSourceKey = (value: string | undefined): string | null => {
   return trimmedValue.length > 0 ? trimmedValue : null;
 };
 
-const buildSourceKeyFallbackResolver = () => {
+const buildSourceKeyFallbackResolver = (
+  sources: ProjectConversationSourceResponseLike[],
+) => {
   const sourceKeyByDocumentGroupId = new Map<string, string>();
+  const occupiedSourceKeys = new Set<string>();
+  let nextSourceIndex = 1;
+
+  sources.forEach((source) => {
+    const explicitSourceKey = normalizeSourceKey(source.sourceKey);
+
+    if (!explicitSourceKey) {
+      return;
+    }
+
+    occupiedSourceKeys.add(explicitSourceKey);
+
+    const documentGroupId = buildSourceDocumentGroupId(source);
+    if (!sourceKeyByDocumentGroupId.has(documentGroupId)) {
+      sourceKeyByDocumentGroupId.set(documentGroupId, explicitSourceKey);
+    }
+  });
+
+  const resolveNextFallbackSourceKey = (): string => {
+    while (occupiedSourceKeys.has(`source${nextSourceIndex}`)) {
+      nextSourceIndex += 1;
+    }
+
+    const nextSourceKey = `source${nextSourceIndex}`;
+    occupiedSourceKeys.add(nextSourceKey);
+    nextSourceIndex += 1;
+    return nextSourceKey;
+  };
 
   return (source: ProjectConversationSourceResponseLike): string => {
     const explicitSourceKey = normalizeSourceKey(source.sourceKey);
@@ -85,7 +115,7 @@ const buildSourceKeyFallbackResolver = () => {
       return existingSourceKey;
     }
 
-    const nextSourceKey = `source${sourceKeyByDocumentGroupId.size + 1}`;
+    const nextSourceKey = resolveNextFallbackSourceKey();
     sourceKeyByDocumentGroupId.set(documentGroupId, nextSourceKey);
     return nextSourceKey;
   };
@@ -188,7 +218,7 @@ export const resolveDraftSourceTokens = (
 export const buildProjectChatSourceEntries = (
   sources: ProjectConversationSourceResponseLike[],
 ): ProjectChatSourceEntry[] => {
-  const resolveSourceKey = buildSourceKeyFallbackResolver();
+  const resolveSourceKey = buildSourceKeyFallbackResolver(sources);
 
   return sources.map((source) => ({
     id: source.id,

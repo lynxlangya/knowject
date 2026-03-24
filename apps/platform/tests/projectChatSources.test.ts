@@ -9,6 +9,10 @@ type Source = ProjectConversationSourceResponse & {
   sourceKey: string;
 };
 
+type SourceWithOptionalKey = Omit<Source, 'sourceKey'> & {
+  sourceKey?: string;
+};
+
 type CitationContent = ProjectConversationCitationContent;
 
 type GroupedSourceEntry = {
@@ -163,6 +167,75 @@ test('buildProjectChatSourceEntries preserves raw source-entry order, resolveSen
     ['source1', 'source2'],
   );
   assert.deepEqual(entries.map((entry) => entry.id), ['chunk-0', 'chunk-9', 'chunk-1']);
+});
+
+test('buildProjectChatSourceEntries skips occupied explicit sourceKeys when assigning fallback keys', async () => {
+  const { buildProjectChatSourceEntries } = (await import(
+    '../src/pages/project/projectChatSources'
+  )) as {
+    buildProjectChatSourceEntries: (sources: SourceWithOptionalKey[]) => Array<{
+      id: string;
+      sourceKey: string;
+      documentId: string;
+    }>;
+  };
+  const entries = buildProjectChatSourceEntries([
+    {
+      id: 'explicit-source-2',
+      sourceKey: 'source2',
+      knowledgeId: 'knowledge-explicit',
+      documentId: 'document-explicit',
+      chunkId: 'chunk-explicit',
+      chunkIndex: 0,
+      source: '/knowledge/explicit.md',
+      snippet: 'explicit',
+      distance: 0.1,
+    },
+    {
+      id: 'missing-a-1',
+      knowledgeId: 'knowledge-a',
+      documentId: 'document-a',
+      chunkId: 'chunk-a-1',
+      chunkIndex: 1,
+      source: '/knowledge/a.md',
+      snippet: 'a-1',
+      distance: 0.2,
+    },
+    {
+      id: 'missing-a-2',
+      knowledgeId: 'knowledge-a',
+      documentId: 'document-a',
+      chunkId: 'chunk-a-2',
+      chunkIndex: 2,
+      source: '/knowledge/a.md',
+      snippet: 'a-2',
+      distance: 0.25,
+    },
+    {
+      id: 'missing-b-1',
+      knowledgeId: 'knowledge-b',
+      documentId: 'document-b',
+      chunkId: 'chunk-b-1',
+      chunkIndex: 3,
+      source: '/knowledge/b.md',
+      snippet: 'b-1',
+      distance: 0.3,
+    },
+  ]);
+
+  assert.deepEqual(
+    entries.map((entry) => ({
+      id: entry.id,
+      sourceKey: entry.sourceKey,
+      documentId: entry.documentId,
+    })),
+    [
+      { id: 'explicit-source-2', sourceKey: 'source2', documentId: 'document-explicit' },
+      { id: 'missing-a-1', sourceKey: 'source1', documentId: 'document-a' },
+      { id: 'missing-a-2', sourceKey: 'source1', documentId: 'document-a' },
+      { id: 'missing-b-1', sourceKey: 'source3', documentId: 'document-b' },
+    ],
+  );
 });
 
 test('drift fallback triggers on source-key set/order drift or key-to-document remapping only', async () => {
