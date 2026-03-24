@@ -42,6 +42,69 @@ type ProjectConversationRankedSourceRecord = Omit<
   retrievalIndex: number;
 };
 
+const createProjectConversationSourcePersistenceShape = (
+  source: ProjectConversationRankedSourceRecord,
+): ProjectConversationSourceDocument => ({
+  id: source.id,
+  sourceKey: source.sourceKey,
+  retrievalIndex: source.retrievalIndex,
+  knowledgeId: source.knowledgeId,
+  documentId: source.documentId,
+  chunkId: source.chunkId,
+  chunkIndex: source.chunkIndex,
+  source: source.source,
+  snippet: source.snippet,
+  distance: source.distance,
+});
+
+const createProjectConversationSourceRecord = ({
+  source,
+  exposeMetadata,
+}: {
+  source: ProjectConversationRankedSourceRecord;
+  exposeMetadata: boolean;
+}): ProjectConversationSourceDocument => {
+  const normalizedSource: ProjectConversationSourceDocument = exposeMetadata
+    ? createProjectConversationSourcePersistenceShape(source)
+    : {
+        id: source.id,
+        knowledgeId: source.knowledgeId,
+        documentId: source.documentId,
+        chunkId: source.chunkId,
+        chunkIndex: source.chunkIndex,
+        source: source.source,
+        snippet: source.snippet,
+        distance: source.distance,
+      };
+
+  if (exposeMetadata) {
+    return normalizedSource;
+  }
+
+  Object.defineProperties(normalizedSource, {
+    sourceKey: {
+      configurable: true,
+      enumerable: false,
+      value: source.sourceKey,
+      writable: true,
+    },
+    retrievalIndex: {
+      configurable: true,
+      enumerable: false,
+      value: source.retrievalIndex,
+      writable: true,
+    },
+    toBSON: {
+      configurable: true,
+      enumerable: false,
+      value: () => createProjectConversationSourcePersistenceShape(source),
+      writable: true,
+    },
+  });
+
+  return normalizedSource;
+};
+
 const compareProjectConversationSourceRecords = (
   left: Pick<
     ProjectConversationRankedSourceRecord,
@@ -196,22 +259,16 @@ export const buildProjectConversationCitationSources = (
   let sourceIndex = 0;
 
   return orderedGroups.flatMap((group, groupIndex) =>
-    group.sources.map((source) => ({
-      id: `s${++sourceIndex}`,
-      ...(shouldExposeSourceMetadata
-        ? {
-            sourceKey: `source${groupIndex + 1}`,
-            retrievalIndex: source.retrievalIndex,
-          }
-        : {}),
-      knowledgeId: source.knowledgeId,
-      documentId: source.documentId,
-      chunkId: source.chunkId,
-      chunkIndex: source.chunkIndex,
-      source: source.source,
-      snippet: source.snippet,
-      distance: source.distance,
-    })),
+    group.sources.map((source) =>
+      createProjectConversationSourceRecord({
+        source: {
+          ...source,
+          id: `s${++sourceIndex}`,
+          sourceKey: `source${groupIndex + 1}`,
+        },
+        exposeMetadata: shouldExposeSourceMetadata,
+      }),
+    ),
   );
 };
 
