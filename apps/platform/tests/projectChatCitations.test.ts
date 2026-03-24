@@ -357,17 +357,16 @@ test('legacy [[SOURCE_TAG:...]] markers remain compatible with final sourceN chi
   assert.match(
     messageHtml,
     buildSentenceEndSourcePattern({
-      sentenceText: '第一段沿用 legacy marker',
+      sentenceText: '第一段沿用 legacy marker。',
       sourceKeys: ['source1'],
-      nextText: '。第二段继续引用',
+      nextText: '第二段继续引用。',
     }),
   );
   assert.match(
     messageHtml,
     buildSentenceEndSourcePattern({
-      sentenceText: '第二段继续引用',
+      sentenceText: '第二段继续引用。',
       sourceKeys: ['source1', 'source2'],
-      nextText: '。',
     }),
   );
   assert.equal(
@@ -486,9 +485,19 @@ test('pseudo citation suppression runs before markdown fail-closed', async () =>
   });
 
   assert.doesNotMatch(messageHtml, /依据：/);
-  assert.match(messageHtml, /data-conversation-source-tag="true"/);
-  assert.match(messageHtml, />spec-alpha</);
-  assert.doesNotMatch(messageHtml, /依据：/);
+  assert.match(
+    messageHtml,
+    buildSentenceEndSourcePattern({
+      sentenceText: '第一句结论。',
+      sourceKeys: ['source1'],
+    }),
+  );
+  assert.equal(
+    countMatches(messageHtml, /data-conversation-source-tag="true"/),
+    1,
+  );
+  assert.doesNotMatch(messageHtml, />spec-alpha</);
+  assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
   assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 

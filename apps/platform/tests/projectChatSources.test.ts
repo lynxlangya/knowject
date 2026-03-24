@@ -1,27 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type {
+  ProjectConversationCitationContent,
+  ProjectConversationSourceResponse,
+} from '../src/api/projects';
 
-type Source = {
-  id: string;
+type Source = ProjectConversationSourceResponse & {
   sourceKey: string;
-  knowledgeId: string;
-  documentId: string;
-  chunkId: string;
-  chunkIndex: number;
-  source: string;
-  snippet: string;
-  distance: number | null;
 };
 
-type CitationContent = {
-  version: 1;
-  sentences: Array<{
-    id: string;
-    text: string;
-    sourceIds: string[];
-    grounded: boolean;
-  }>;
-};
+type CitationContent = ProjectConversationCitationContent;
 
 type GroupedSourceEntry = {
   sourceKey: string;

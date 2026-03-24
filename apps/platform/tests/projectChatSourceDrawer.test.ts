@@ -8,7 +8,7 @@ require.extensions['.css'] = () => undefined;
 
 type DrawerSourceEntry = {
   sourceKey: string;
-  label: string;
+  sourceLabel: string;
   activeEntry: {
     id: string;
     snippet: string;
@@ -18,7 +18,7 @@ type DrawerSourceEntry = {
 const fixtureEntries: DrawerSourceEntry[] = [
   {
     sourceKey: 'source1',
-    label: 'source1',
+    sourceLabel: 'source1',
     activeEntry: {
       id: 'chunk-0',
       snippet: 'default snippet source1',
@@ -26,7 +26,7 @@ const fixtureEntries: DrawerSourceEntry[] = [
   },
   {
     sourceKey: 'source2',
-    label: 'source2',
+    sourceLabel: 'source2',
     activeEntry: {
       id: 'chunk-9',
       snippet: 'default snippet source2',
