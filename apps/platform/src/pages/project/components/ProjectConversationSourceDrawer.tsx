@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert, Button, Skeleton, Typography } from 'antd';
+import { tp } from '../project.i18n';
 
 void React;
 
@@ -84,7 +85,7 @@ export const ProjectConversationSourceDrawer = ({
       {state === 'loading' ? (
         <div data-project-chat-source-drawer-loading="true">
           <Typography.Text className="mb-2 block text-sm text-slate-500">
-            Loading placeholder
+            {tp('conversation.sourceDrawer.loading')}
           </Typography.Text>
           <Skeleton active paragraph={{ rows: 6 }} />
         </div>
@@ -94,10 +95,10 @@ export const ProjectConversationSourceDrawer = ({
         <Alert
           type="error"
           showIcon
-          title={errorMessage ?? 'Failed to load source'}
+          title={errorMessage ?? tp('conversation.sourceDrawer.errorFallback')}
           action={
             <Button size="small" onClick={onRetry}>
-              Retry
+              {tp('conversation.sourceDrawer.retry')}
             </Button>
           }
         />
@@ -107,7 +108,7 @@ export const ProjectConversationSourceDrawer = ({
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
           <div>
             <Typography.Text className="block text-xs text-slate-500">
-              Source
+              {tp('conversation.sourceDrawer.sourceLabel')}
             </Typography.Text>
             <Typography.Text className="text-sm font-medium text-slate-800">
               {activeSource.sourceLabel}
@@ -116,7 +117,7 @@ export const ProjectConversationSourceDrawer = ({
 
           <div>
             <Typography.Text className="block text-xs text-slate-500">
-              Distance
+              {tp('conversation.sourceDrawer.distanceLabel')}
             </Typography.Text>
             <Typography.Text className="text-sm text-slate-700">
               {formatDistance(activeSource.distance)}
@@ -126,7 +127,7 @@ export const ProjectConversationSourceDrawer = ({
           {activeSource.entries.length > 1 ? (
             <div data-project-chat-source-active-chunk-id={activeEntry?.chunkId ?? ''}>
               <Typography.Text className="mb-2 block text-xs text-slate-500">
-                Chunk
+                {tp('conversation.sourceDrawer.chunkLabel')}
               </Typography.Text>
               <div className="flex flex-wrap gap-2">
                 {activeSource.entries.map((entry) => (
@@ -142,7 +143,9 @@ export const ProjectConversationSourceDrawer = ({
                     ].join(' ')}
                     onClick={() => onActiveChunkIdChange(entry.chunkId)}
                   >
-                    chunk {entry.chunkIndex + 1}
+                    {tp('conversation.sourceDrawer.chunkValue', {
+                      index: entry.chunkIndex + 1,
+                    })}
                   </button>
                 ))}
               </div>
@@ -151,7 +154,7 @@ export const ProjectConversationSourceDrawer = ({
 
           <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
             <Typography.Paragraph className="mb-0! whitespace-pre-wrap text-sm leading-6 text-slate-700">
-              {activeEntry?.snippet || 'No snippet available'}
+              {activeEntry?.snippet || tp('conversation.sourceDrawer.emptySnippet')}
             </Typography.Paragraph>
           </div>
         </div>

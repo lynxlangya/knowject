@@ -118,6 +118,11 @@ export interface CreateProjectConversationMessageRequest {
   targetUserMessageId?: string;
 }
 
+export interface CreateProjectConversationStreamMessageRequest
+  extends CreateProjectConversationMessageRequest {
+  clientRequestId: string;
+}
+
 export interface UpdateProjectConversationMessageMetadataRequest {
   starred: boolean;
 }
@@ -144,6 +149,7 @@ export interface ProjectConversationStreamDeltaEvent
 }
 
 export interface ProjectConversationStreamSourcesSeedItem {
+  id: string;
   sourceKey: string;
   knowledgeId: string;
   documentId: string;

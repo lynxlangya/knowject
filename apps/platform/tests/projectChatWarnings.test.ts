@@ -24,11 +24,7 @@ test('draft assistant bubbles keep citation payload empty until final detail rec
   assert.match(adaptersSource, /citationContent:\s*message\.citationContent/);
   assert.match(
     adaptersSource,
-    /options\.draftAssistantMessage[\s\S]*?extraInfo:\s*\{[\s\S]*?sources:\s*\[\],[\s\S]*?citationContent:\s*undefined,[\s\S]*?status:\s*options\.draftAssistantMessage\.status/,
-  );
-  assert.doesNotMatch(
-    adaptersSource,
-    /options\.draftAssistantMessage[\s\S]*?citationContent:\s*options\.draftAssistantMessage\./,
+    /options\.draftAssistantMessage[\s\S]*?extraInfo:\s*\{[\s\S]*?sources:\s*options\.draftAssistantMessage\.sources\s*\?\?\s*\[\],[\s\S]*?citationContent:\s*options\.draftAssistantMessage\.citationContent,[\s\S]*?sourceSeedEntries:\s*options\.draftAssistantMessage\.sourceSeedEntries,[\s\S]*?status:\s*options\.draftAssistantMessage\.status/,
   );
 });
 
@@ -47,6 +43,7 @@ test('project chat drawers use Drawer size instead of deprecated width', () => {
 
   assert.doesNotMatch(projectChatPageSource, /<Drawer[\s\S]*?width=\{/);
   assert.match(projectChatPageSource, /<Drawer[\s\S]*?size=\{360\}/);
+  assert.match(projectChatPageSource, /<Drawer[\s\S]*?size=\{460\}/);
 
   assert.doesNotMatch(
     projectKnowledgeDraftDrawerSource,
@@ -58,24 +55,27 @@ test('project chat drawers use Drawer size instead of deprecated width', () => {
   );
 });
 
-test('conversation sources use message-local popover instead of right drawer', () => {
+test('conversation sources use page-level right drawer instead of message-local popover', () => {
   const bubbleSource = readFileSync(
     new URL('../src/pages/project/projectChatBubble.components.tsx', import.meta.url),
     'utf8',
   );
+  const projectChatPageSource = readFileSync(
+    new URL('../src/pages/project/ProjectChatPage.tsx', import.meta.url),
+    'utf8',
+  );
 
-  assert.match(
+  assert.doesNotMatch(
     bubbleSource,
     /import\s+\{\s*Popover,\s*Typography\s*\}\s+from\s+'antd'/,
   );
   assert.match(bubbleSource, /data-conversation-source-tag="true"/);
-  assert.match(
-    bubbleSource,
-    /data-conversation-source-tag="true"[\s\S]*?h-5[\s\S]*?px-2[\s\S]*?text-\[8px\]/,
-  );
-  assert.match(bubbleSource, /<Popover[\s\S]*?trigger="click"/);
-  assert.doesNotMatch(bubbleSource, /const\s+\[sourcesDrawerOpen,\s*setSourcesDrawerOpen\]/);
-  assert.doesNotMatch(bubbleSource, /<Drawer[\s\S]*?placement="right"/);
+  assert.match(bubbleSource, /const\s+PROJECT_CHAT_SOURCE_TAG_CLASS_NAME\s*=\s*\[/);
+  assert.match(bubbleSource, /h-5 items-center/);
+  assert.match(bubbleSource, /px-2 align-middle text-\[8px\]/);
+  assert.match(projectChatPageSource, /<ProjectConversationSourceDrawer/);
+  assert.match(projectChatPageSource, /<Drawer[\s\S]*?placement="right"/);
+  assert.match(projectChatPageSource, /onOpenSource:\s*\(sourceKey:\s*string\)\s*=>/);
 });
 
 test('project knowledge draft flow source no longer keeps legacy create-then-upload copy or partial failure state', () => {

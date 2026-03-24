@@ -623,7 +623,7 @@ export const ProjectChatPage = () => {
 
             <Drawer
               open={sourceDrawer.state.open}
-              width={460}
+              size={460}
               title={tp('conversation.viewSources')}
               placement="right"
               onClose={sourceDrawer.closeDrawer}

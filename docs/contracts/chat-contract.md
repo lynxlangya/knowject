@@ -92,6 +92,7 @@ Body (stream request contract):
 {
   type: "sources_seed";
   sources: Array<{
+    id: string;
     sourceKey: string;
     knowledgeId: string;
     documentId: string;
@@ -104,7 +105,8 @@ Body (stream request contract):
 语义：
 
 - `sources_seed` 是 “源引用种子事件”，用于在 **assistant 仍处于 streaming draft** 且还没有最终 `sources[]` 时，提前提供可点击的 source 列表骨架（按 `sourceKey` 分组）。
-- seed item 只承诺最小可展示信息：`sourceKey + knowledgeId + documentId + sourceLabel`；不包含 chunk/snippet/distance。
+- seed item 只承诺最小可展示信息：`id + sourceKey + knowledgeId + documentId + sourceLabel`；不包含 chunk/snippet/distance。
+- live transport 只会在首个非空 `delta` 发送前刷出一次 `sources_seed`；若在首个非空 `delta` 前失败或取消，则不会发送 seed 事件。
 
 ### 2.4 `done`
 

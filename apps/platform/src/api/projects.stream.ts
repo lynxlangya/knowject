@@ -3,7 +3,7 @@ import {
   extractApiErrorPayload,
 } from '@knowject/request';
 import type {
-  CreateProjectConversationMessageRequest,
+  CreateProjectConversationStreamMessageRequest,
   ProjectConversationStreamEvent,
   ProjectConversationStreamEventType,
 } from './projects';
@@ -157,7 +157,7 @@ const buildStreamApiError = async (
 export const streamProjectConversationMessage = async (
   projectId: string,
   conversationId: string,
-  payload: CreateProjectConversationMessageRequest,
+  payload: CreateProjectConversationStreamMessageRequest,
   options: StreamProjectConversationMessageOptions,
 ): Promise<void> => {
   const token = getToken();
