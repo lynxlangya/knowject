@@ -46,17 +46,6 @@ const buildFixtureSources = (): Source[] => {
       distance: 0.12,
     },
     {
-      id: 'chunk-1',
-      sourceKey: 'source1',
-      knowledgeId: 'knowledge-a',
-      documentId: 'document-a',
-      chunkId: 'chunk-a-1-ref',
-      chunkIndex: 1,
-      source: '/knowledge/a.md',
-      snippet: 'A-1',
-      distance: 0.15,
-    },
-    {
       id: 'chunk-9',
       sourceKey: 'source2',
       knowledgeId: 'knowledge-b',
@@ -66,6 +55,17 @@ const buildFixtureSources = (): Source[] => {
       source: '/knowledge/b.md',
       snippet: 'B-9',
       distance: 0.21,
+    },
+    {
+      id: 'chunk-1',
+      sourceKey: 'source1',
+      knowledgeId: 'knowledge-a',
+      documentId: 'document-a',
+      chunkId: 'chunk-a-1-ref',
+      chunkIndex: 1,
+      source: '/knowledge/a.md',
+      snippet: 'A-1',
+      distance: 0.15,
     },
   ];
 };
@@ -174,7 +174,7 @@ test('buildProjectChatSourceEntries preserves raw source-entry order, resolveSen
     resolveSentenceSourceKeys(citationContent, sourcesWithUncited),
     ['source1', 'source2'],
   );
-  assert.deepEqual(entries.map((entry) => entry.id), ['chunk-0', 'chunk-1', 'chunk-9']);
+  assert.deepEqual(entries.map((entry) => entry.id), ['chunk-0', 'chunk-9', 'chunk-1']);
 });
 
 test('drift fallback triggers on source-key set/order drift or key-to-document remapping only', async () => {
@@ -210,6 +210,14 @@ test('drift fallback triggers on source-key set/order drift or key-to-document r
           ? { ...entry, knowledgeId: `${entry.knowledgeId}-drift` }
           : entry,
       ),
+    }),
+    true,
+  );
+
+  assert.equal(
+    shouldFallbackToLegacySourceRendering({
+      seedEntries,
+      persistedSources: [seedEntries[1]!, seedEntries[0]!],
     }),
     true,
   );
