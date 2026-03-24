@@ -22,6 +22,12 @@ const buildConversationSourceTagPattern = (sourceKey: string): string => {
   return String.raw`<button[^>]*data-conversation-source-tag="true"[^>]*>${PROJECT_CHAT_OPTIONAL_MARKUP}${escapeRegExp(sourceKey)}${PROJECT_CHAT_OPTIONAL_MARKUP}<\/button>`;
 };
 
+const buildConversationSourceTagTextPattern = (label: string): RegExp => {
+  return new RegExp(
+    String.raw`<button[^>]*data-conversation-source-tag="true"[^>]*>${PROJECT_CHAT_OPTIONAL_MARKUP}${escapeRegExp(label)}${PROJECT_CHAT_OPTIONAL_MARKUP}<\/button>`,
+  );
+};
+
 const buildSentenceEndSourcePattern = ({
   sentenceText,
   sourceKeys,
@@ -256,9 +262,9 @@ test('grounded sentences render inline citation markers and ungrounded sentences
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
     3,
   );
-  assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
-  assert.doesNotMatch(messageHtml, />spec-alpha</);
-  assert.doesNotMatch(messageHtml, />spec-beta</);
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-alpha +1'));
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-alpha'));
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-beta'));
   assert.doesNotMatch(messageHtml, /data-citation-marker=/);
   assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
   assert.doesNotMatch(messageHtml, /data-citation-source-chip=/);
@@ -317,7 +323,7 @@ test('legacy assistant messages without citationContent append a single inline s
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
     1,
   );
-  assert.doesNotMatch(messageHtml, />legacy-evidence</);
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('legacy-evidence'));
   assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
@@ -373,8 +379,8 @@ test('legacy [[SOURCE_TAG:...]] markers remain compatible with final sourceN chi
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
     3,
   );
-  assert.doesNotMatch(messageHtml, />legacy-1</);
-  assert.doesNotMatch(messageHtml, />legacy-2</);
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('legacy-1'));
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('legacy-2'));
 });
 
 test('citation mode conservatively suppresses trailing pseudo citation blocks before sentence rendering', async () => {
@@ -423,8 +429,8 @@ test('citation mode conservatively suppresses trailing pseudo citation blocks be
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
     1,
   );
-  assert.doesNotMatch(messageHtml, />spec-alpha</);
-  assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-alpha'));
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-alpha +1'));
   assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
@@ -508,8 +514,8 @@ test('pseudo citation suppression runs before markdown fail-closed', async () =>
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
     1,
   );
-  assert.doesNotMatch(messageHtml, />spec-alpha</);
-  assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-alpha'));
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-alpha +1'));
   assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
@@ -683,8 +689,8 @@ test('same-document sources collapse to one summary tag without extra count', as
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
     1,
   );
-  assert.doesNotMatch(messageHtml, />spec-alpha</);
-  assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-alpha'));
+  assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('spec-alpha +1'));
 });
 
 test('markdown fallback sanitizes raw pseudo evidence blocks before rendering the summary tag', async () => {
