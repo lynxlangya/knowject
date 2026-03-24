@@ -49,8 +49,10 @@ const renderProjectChatMarkdownInlineSourceTags = (
     let lastIndex = 0;
 
     tokens.forEach((token) => {
+      const renderedTag = renderInlineSourceTag(token.sourceKeys, token);
       const trailingPunctuation = text[token.end];
       const shouldMoveTrailingPunctuation =
+        renderedTag !== null &&
         trailingPunctuation !== undefined && /[。！？!?]/u.test(trailingPunctuation);
 
       if (token.start > lastIndex) {
@@ -67,7 +69,6 @@ const renderProjectChatMarkdownInlineSourceTags = (
         fragments.push(trailingPunctuation);
       }
 
-      const renderedTag = renderInlineSourceTag(token.sourceKeys, token);
       fragments.push(renderedTag ?? token.rawText);
       lastIndex = token.end + (shouldMoveTrailingPunctuation ? 1 : 0);
     });

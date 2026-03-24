@@ -176,8 +176,10 @@ const renderProjectConversationPlainTextWithSourceTags = ({
   let lastIndex = 0;
 
   tokens.forEach((token) => {
+    const renderedToken = renderToken(token.sourceKeys, token);
     const trailingPunctuation = content[token.end];
     const shouldMoveTrailingPunctuation =
+      renderedToken !== null &&
       trailingPunctuation !== undefined && /[。！？!?]/u.test(trailingPunctuation);
 
     if (token.start > lastIndex) {
@@ -194,7 +196,7 @@ const renderProjectConversationPlainTextWithSourceTags = ({
       fragments.push(trailingPunctuation);
     }
 
-    fragments.push(renderToken(token.sourceKeys, token) ?? token.rawText);
+    fragments.push(renderedToken ?? token.rawText);
     lastIndex = token.end + (shouldMoveTrailingPunctuation ? 1 : 0);
   });
 
