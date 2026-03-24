@@ -4165,8 +4165,8 @@ test('streamProjectConversationMessage persists citationContent on final assista
     conversationRuntime: createConversationRuntimeStub({
       streamAssistantReply: async ({ onDelta }) => {
         const deltas = [
-          '当前项目已经具备最小对话写链路[[source1]]，',
-          '并开始接入项目级检索[[source2]]。',
+          '当前项目已经具备最小对话写链路。[[source1]]',
+          '并开始接入项目级检索。[[source2]]',
         ];
 
         for (const delta of deltas) {
@@ -4175,7 +4175,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
 
         return {
           content:
-            '当前项目已经具备最小对话写链路[[source1]]，并开始接入项目级检索[[source2]]。',
+            '当前项目已经具备最小对话写链路。[[source1]]并开始接入项目级检索。[[source2]]',
           sources: [
             {
               knowledgeId: 'kb-1',
@@ -4267,12 +4267,12 @@ test('streamProjectConversationMessage persists citationContent on final assista
       source.status,
     ]),
     [
-      ['source1', 'kb-1', 'doc-1', 'chat-core.md', 'ready'],
-      ['source2', 'kb-2', 'doc-2', 'runtime.md', 'ready'],
+      ['source1', 'kb-1', 'doc-1', 'chat-core.md', 'seeded'],
+      ['source2', 'kb-2', 'doc-2', 'runtime.md', 'seeded'],
     ],
   );
   const sourceTaggedDeltaIndex = events.findIndex(
-    (event) => event.type === 'delta' && event.delta.includes('[[source2]]'),
+    (event) => event.type === 'delta' && event.delta.includes('[[source1]]'),
   );
   assert.notEqual(sourceTaggedDeltaIndex, -1);
   assert.ok(sourceTaggedDeltaIndex > 1);
