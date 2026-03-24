@@ -180,13 +180,13 @@ test('normalizeProjectConversationCitationContent strips source placeholders and
       sentences: [
         {
           id: 'sent-1',
-          text: '[[source1]]当前项目已经接入 merged retrieval。[[source1]]',
+          text: '当前项目已经接入 merged retrieval。[[source1]][[source1]]',
           sourceIds: ['s1'],
           grounded: true,
         },
       ],
     },
-    '[[source1]]当前项目已经接入 merged retrieval。[[source1]]',
+    '当前项目已经接入 merged retrieval。[[source1]][[source1]]',
     sources,
   );
 
