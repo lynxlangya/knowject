@@ -64,6 +64,99 @@ test('buildProjectConversationCitationSources groups chunks by document and assi
   );
 });
 
+test('buildProjectConversationCitationSources freezes sourceKey precedence across retrieval index, distance, knowledgeId, and documentId', () => {
+  type RankedSource = ProjectConversationSourceDocument & {
+    retrievalIndex: number;
+  };
+  const rankedSources: RankedSource[] = [
+    createSource({
+      knowledgeId: 'kb-z',
+      documentId: 'doc-retrieval-first',
+      chunkId: 'chunk-r1',
+      distance: 0.91,
+    }) as RankedSource,
+    createSource({
+      knowledgeId: 'kb-a',
+      documentId: 'doc-retrieval-second',
+      chunkId: 'chunk-r2',
+      distance: 0.01,
+    }) as RankedSource,
+    createSource({
+      knowledgeId: 'kb-a',
+      documentId: 'doc-distance-far',
+      chunkId: 'chunk-d2',
+      distance: 0.25,
+    }) as RankedSource,
+    createSource({
+      knowledgeId: 'kb-a',
+      documentId: 'doc-distance-near',
+      chunkId: 'chunk-d1',
+      distance: 0.05,
+    }) as RankedSource,
+    createSource({
+      knowledgeId: 'kb-b',
+      documentId: 'doc-knowledge-b',
+      chunkId: 'chunk-k2',
+      distance: 0.4,
+    }) as RankedSource,
+    createSource({
+      knowledgeId: 'kb-a',
+      documentId: 'doc-knowledge-a',
+      chunkId: 'chunk-k1',
+      distance: 0.4,
+    }) as RankedSource,
+    createSource({
+      knowledgeId: 'kb-c',
+      documentId: 'doc-b',
+      chunkId: 'chunk-doc2',
+      distance: 0.6,
+    }) as RankedSource,
+    createSource({
+      knowledgeId: 'kb-c',
+      documentId: 'doc-a',
+      chunkId: 'chunk-doc1',
+      distance: 0.6,
+    }) as RankedSource,
+  ];
+
+  rankedSources[0].retrievalIndex = 0;
+  rankedSources[1].retrievalIndex = 1;
+  rankedSources[2].retrievalIndex = 2;
+  rankedSources[3].retrievalIndex = 2;
+  rankedSources[4].retrievalIndex = 3;
+  rankedSources[5].retrievalIndex = 3;
+  rankedSources[6].retrievalIndex = 4;
+  rankedSources[7].retrievalIndex = 4;
+
+  const groupedSources = buildProjectConversationCitationSources(
+    rankedSources as ProjectConversationSourceDocument[],
+  );
+
+  const sourceKeyNumberByDocument = new Map(
+    groupedSources.map((source) => [
+      source.documentId,
+      Number(source.sourceKey?.replace('source', '')),
+    ]),
+  );
+
+  assert.ok(
+    (sourceKeyNumberByDocument.get('doc-retrieval-first') ?? Infinity) <
+      (sourceKeyNumberByDocument.get('doc-retrieval-second') ?? -Infinity),
+  );
+  assert.ok(
+    (sourceKeyNumberByDocument.get('doc-distance-near') ?? Infinity) <
+      (sourceKeyNumberByDocument.get('doc-distance-far') ?? -Infinity),
+  );
+  assert.ok(
+    (sourceKeyNumberByDocument.get('doc-knowledge-a') ?? Infinity) <
+      (sourceKeyNumberByDocument.get('doc-knowledge-b') ?? -Infinity),
+  );
+  assert.ok(
+    (sourceKeyNumberByDocument.get('doc-a') ?? Infinity) <
+      (sourceKeyNumberByDocument.get('doc-b') ?? -Infinity),
+  );
+});
+
 test('normalizeProjectConversationCitationContent strips source placeholders and keeps clean prose', () => {
   const sources = buildProjectConversationCitationSources([createSource()]);
 
