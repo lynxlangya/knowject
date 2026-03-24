@@ -10,6 +10,7 @@ import type {
   ProjectConversationDetailEnvelope,
   ProjectConversationMessageResponse,
   ProjectConversationStreamDoneEvent,
+  ProjectConversationStreamSeedSource,
   ProjectConversationStreamOptions,
 } from "./projects.types.js";
 import {
@@ -130,7 +131,7 @@ export const createStreamingProjectConversationTurn = async ({
     onEvent: options.onEvent,
   });
   let assistantPersisted = false;
-  let sourcesSeedEmitted = false;
+  let pendingSourcesSeed: ProjectConversationStreamSeedSource[] | null = null;
 
   try {
     await eventEmitter.emitEvent({
@@ -162,19 +163,23 @@ export const createStreamingProjectConversationTurn = async ({
       userMessage: preparedTurn.userMessage,
       signal: options.signal,
       onSourcesSeed: async (sources) => {
-        if (sourcesSeedEmitted || sources.length === 0) {
+        if (pendingSourcesSeed || sources.length === 0) {
           return;
         }
 
-        sourcesSeedEmitted = true;
-        await eventEmitter.emitEvent({
-          type: "sources_seed",
-          sources,
-        });
+        pendingSourcesSeed = sources;
       },
       onDelta: async (delta) => {
         if (!delta) {
           return;
+        }
+
+        if (pendingSourcesSeed) {
+          await eventEmitter.emitEvent({
+            type: "sources_seed",
+            sources: pendingSourcesSeed,
+          });
+          pendingSourcesSeed = null;
         }
 
         await eventEmitter.emitEvent({

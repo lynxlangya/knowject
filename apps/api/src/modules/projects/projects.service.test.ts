@@ -4660,6 +4660,123 @@ test('streamProjectConversationMessage emits an error event and skips assistant 
   assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
 });
 
+test('streamProjectConversationMessage does not emit source seeds when upstream fails before the first delta', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439122'),
+    name: '流式预热错误',
+    description: '验证首个 delta 前失败不会泄露 source seed',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-streaming-seed-error',
+        title: '已有会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+  let persistedProject = project;
+  const events: ProjectConversationStreamEvent[] = [];
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === persistedProject._id.toHexString() ? persistedProject : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: [...conversation.messages, message],
+                updatedAt,
+              }
+            : conversation,
+        ),
+        updatedAt,
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      streamAssistantReply: async ({ onSourcesSeed }) => {
+        await onSourcesSeed?.([
+          {
+            id: 's1',
+            sourceKey: 'source1',
+            knowledgeId: 'kb-1',
+            documentId: 'doc-1',
+            sourceLabel: 'chat-core.md',
+            status: 'seeded',
+          },
+        ]);
+
+        throw new AppError({
+          statusCode: 429,
+          code: 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR',
+          message: 'rate limit exceeded (HTTP 429)',
+          messageKey: 'project.conversation.streamFailed',
+        });
+      },
+    }),
+  });
+
+  await service.streamProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+      locale: 'en',
+    },
+    persistedProject._id.toHexString(),
+    'chat-streaming-seed-error',
+    {
+      content: '请验证预热失败',
+      clientRequestId: 'stream-request-seed-error',
+    },
+    {
+      onEvent: async (event) => {
+        events.push(event);
+      },
+    },
+  );
+
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ['ack', 'error'],
+  );
+  assert.equal(events.some((event) => event.type === 'sources_seed'), false);
+  assert.equal(persistedProject.conversations[0]?.messages.length, 1);
+  assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
+});
+
 test('streamProjectConversationMessage marks setup failures as non-retryable', async () => {
   const project: ProjectDocument & {
     _id: NonNullable<ProjectDocument['_id']>;
@@ -4888,6 +5005,129 @@ test('streamProjectConversationMessage keeps only the persisted user message whe
     events.map((event) => event.type),
     ['ack', 'delta'],
   );
+  assert.equal(persistedProject.conversations[0]?.messages.length, 1);
+  assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
+});
+
+test('streamProjectConversationMessage does not emit source seeds when cancelled before the first delta', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439123'),
+    name: '流式预热取消',
+    description: '验证首个 delta 前取消不会泄露 source seed',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-17T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: ['kb-1'],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-streaming-seed-cancel',
+        title: '已有会话',
+        messages: [],
+        createdAt: new Date('2026-03-17T09:00:00.000Z'),
+        updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-17T09:00:00.000Z'),
+    updatedAt: new Date('2026-03-17T09:00:00.000Z'),
+  };
+  let persistedProject = project;
+  const events: ProjectConversationStreamEvent[] = [];
+  const abortController = new AbortController();
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === persistedProject._id.toHexString() ? persistedProject : null,
+    appendProjectConversationMessage: async (
+      _projectId: string,
+      conversationId: string,
+      message: ProjectDocument['conversations'][number]['messages'][number],
+      updatedAt: Date,
+    ) => {
+      persistedProject = {
+        ...persistedProject,
+        conversations: persistedProject.conversations.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+                ...conversation,
+                messages: [...conversation.messages, message],
+                updatedAt,
+              }
+            : conversation,
+        ),
+        updatedAt,
+      };
+
+      return persistedProject;
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+    conversationRuntime: createConversationRuntimeStub({
+      streamAssistantReply: async ({ signal, onSourcesSeed }) => {
+        await onSourcesSeed?.([
+          {
+            id: 's1',
+            sourceKey: 'source1',
+            knowledgeId: 'kb-1',
+            documentId: 'doc-1',
+            sourceLabel: 'chat-core.md',
+            status: 'seeded',
+          },
+        ]);
+
+        abortController.abort();
+
+        if (signal?.aborted) {
+          throw new DOMException('Aborted', 'AbortError');
+        }
+
+        return {
+          content: '这段回复不应该被持久化',
+          sources: [],
+          finishReason: 'cancelled',
+        };
+      },
+    }),
+  });
+
+  await service.streamProjectConversationMessage(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    persistedProject._id.toHexString(),
+    'chat-streaming-seed-cancel',
+    {
+      content: '请验证预热取消',
+      clientRequestId: 'stream-request-seed-cancel',
+    },
+    {
+      signal: abortController.signal,
+      onEvent: async (event) => {
+        events.push(event);
+      },
+    },
+  );
+
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ['ack'],
+  );
+  assert.equal(events.some((event) => event.type === 'sources_seed'), false);
   assert.equal(persistedProject.conversations[0]?.messages.length, 1);
   assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
 });
