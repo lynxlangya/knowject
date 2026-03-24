@@ -22,6 +22,7 @@ import {
 import { KNOWJECT_BRAND } from '@styles/brand';
 import { ProjectConversationList } from './components/ProjectConversationList';
 import { ProjectConversationMessageRail } from './components/ProjectConversationMessageRail';
+import { ProjectConversationSourceDrawer } from './components/ProjectConversationSourceDrawer';
 import { ProjectKnowledgeAccessModal } from './components/ProjectKnowledgeAccessModal';
 import { ProjectKnowledgeDraftDrawer } from './components/ProjectKnowledgeDraftDrawer';
 import {
@@ -45,6 +46,7 @@ import {
 } from './useProjectConversationDetail';
 import { useProjectConversationMessageRail } from './useProjectConversationMessageRail';
 import { useProjectConversationTurn } from './useProjectConversationTurn';
+import { useProjectConversationSourceDrawer } from './useProjectConversationSourceDrawer';
 import { useProjectPageContext } from './projectPageContext';
 import { tp } from './project.i18n';
 
@@ -119,12 +121,16 @@ export const ProjectChatPage = () => {
   });
   const {
     streamStatus,
+    streamError,
     activeReplay,
     pendingUserMessage,
     draftAssistantMessage,
+    sourceDrawerDraftSnapshot,
+    assistantMessageHandoff,
     isStreaming,
     turnBusy,
     handleSendMessage,
+    retrySourceDrawerTurn,
     handleCancelStreaming,
   } = useProjectConversationTurn({
     activeProjectId: activeProject.id,
@@ -200,7 +206,7 @@ export const ProjectChatPage = () => {
     setConversationDetail,
     refreshProjectKnowledge: projectKnowledge.refresh,
   });
-  const conversationBubbleItems = buildProjectChatBubbleItems(
+  const baseConversationBubbleItems = buildProjectChatBubbleItems(
     displayMessages,
     {
       conversationId: chatId,
@@ -224,6 +230,67 @@ export const ProjectChatPage = () => {
       draftAssistantMessage?.conversationId === chatId
         ? draftAssistantMessage?.id ?? null
         : null,
+  });
+  const draftAssistantMessageWithinScope =
+    draftAssistantMessage?.conversationId === chatId ? draftAssistantMessage : null;
+  const sourceDrawerDraftSnapshotWithinScope =
+    sourceDrawerDraftSnapshot?.conversationId === chatId
+      ? sourceDrawerDraftSnapshot
+      : null;
+  const draftAssistantMessageForSourceDrawer =
+    draftAssistantMessageWithinScope
+      ? {
+          id: draftAssistantMessageWithinScope.id,
+          status: draftAssistantMessageWithinScope.status,
+          sources: draftAssistantMessageWithinScope.sources,
+          sourceSeedEntries: draftAssistantMessageWithinScope.sourceSeedEntries,
+        }
+      : sourceDrawerDraftSnapshotWithinScope
+        ? {
+            id: sourceDrawerDraftSnapshotWithinScope.id,
+            status: sourceDrawerDraftSnapshotWithinScope.status,
+            sources: [],
+            sourceSeedEntries: sourceDrawerDraftSnapshotWithinScope.sourceSeedEntries,
+          }
+        : null;
+  const sourceDrawer = useProjectConversationSourceDrawer({
+    activeProjectId: activeProject.id,
+    chatId,
+    messages: displayMessages,
+    draftAssistantMessage: draftAssistantMessageForSourceDrawer,
+    handoff: assistantMessageHandoff,
+    onRetry: retrySourceDrawerTurn,
+  });
+  const conversationBubbleItems = baseConversationBubbleItems.map((item) => {
+    if (item.role !== 'ai') {
+      return item;
+    }
+
+    const itemMessageId = String(item.key);
+    const hasSources =
+      Array.isArray(item.extraInfo?.sources) &&
+      item.extraInfo.sources.length > 0;
+    const hasSeedEntries =
+      Array.isArray(item.extraInfo?.sourceSeedEntries) &&
+      item.extraInfo.sourceSeedEntries.length > 0;
+
+    if (!hasSources && !hasSeedEntries) {
+      return item;
+    }
+
+    return {
+      ...item,
+      extraInfo: {
+        ...item.extraInfo,
+        onOpenSource: (sourceKey: string) => {
+          setMobileRailOpen(false);
+          sourceDrawer.openDrawer({
+            messageId: itemMessageId,
+            sourceKey,
+          });
+        },
+      },
+    };
   });
   const sendActionLocked =
     turnBusy ||
@@ -262,7 +329,7 @@ export const ProjectChatPage = () => {
   const railProps = {
     messages: displayMessages,
     mode: messageRail.mode,
-    expanded: messageRail.expanded,
+    expanded: sourceDrawer.state.open ? false : messageRail.expanded,
     selectedMessageIds: messageRail.selectedMessageIds,
     selectableMessageIds: messageRail.selectableMessageIds,
     starringMessageId,
@@ -394,7 +461,10 @@ export const ProjectChatPage = () => {
                   <div className="mb-4 flex justify-end xl:hidden">
                     <Button
                       icon={<PushpinOutlined />}
-                      onClick={() => setMobileRailOpen(true)}
+                      onClick={() => {
+                        sourceDrawer.closeDrawer();
+                        setMobileRailOpen(true);
+                      }}
                       className="rounded-full! border-slate-200! bg-white! text-slate-700!"
                     >
                       {tp('conversation.railTitle')}
@@ -548,6 +618,25 @@ export const ProjectChatPage = () => {
                 variant="mobile"
                 expanded
                 onExpandedChange={undefined}
+              />
+            </Drawer>
+
+            <Drawer
+              open={sourceDrawer.state.open}
+              width={460}
+              title={tp('conversation.viewSources')}
+              placement="right"
+              onClose={sourceDrawer.closeDrawer}
+            >
+              <ProjectConversationSourceDrawer
+                state={sourceDrawer.state.status}
+                sourceEntries={sourceDrawer.viewModel.sourceEntries}
+                activeSourceKey={sourceDrawer.viewModel.activeSourceKey ?? ''}
+                activeChunkId={sourceDrawer.state.activeChunkId}
+                errorMessage={streamError ?? undefined}
+                onSourceKeyChange={sourceDrawer.setActiveSourceKey}
+                onActiveChunkIdChange={sourceDrawer.setActiveChunkId}
+                onRetry={sourceDrawer.retry}
               />
             </Drawer>
 

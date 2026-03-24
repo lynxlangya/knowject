@@ -12,6 +12,9 @@ import { extractApiErrorMessage } from '@api/error';
 import type {
   ProjectConversationDetailResponse,
   ProjectConversationStreamDoneEvent,
+  ProjectConversationSourceResponse,
+  ProjectConversationCitationContent,
+  ProjectConversationStreamSourcesSeedItem,
 } from '@api/projects';
 import { streamProjectConversationMessage } from '@api/projects.stream';
 import {
@@ -44,10 +47,31 @@ interface ProjectConversationDraftUserMessage {
 
 interface ProjectConversationDraftAssistantMessage {
   id: string;
+  clientRequestId: string;
   conversationId: string;
   content: string;
   createdAt: string;
   status: Extract<ProjectConversationStreamStatus, 'streaming' | 'reconciling'>;
+  sources?: ProjectConversationSourceResponse[];
+  citationContent?: ProjectConversationCitationContent;
+  sourceSeedEntries?: ProjectConversationStreamSourcesSeedItem[];
+}
+
+interface ProjectConversationAssistantMessageHandoff {
+  clientRequestId: string;
+  draftMessageId: string;
+  assistantMessageId: string;
+}
+
+interface ProjectConversationSourceDrawerDraftSnapshot {
+  id: string;
+  conversationId: string;
+  status: 'streaming' | 'reconciling' | 'error';
+  sourceSeedEntries: ProjectConversationStreamSourcesSeedItem[];
+  retrySubmission: Pick<
+    PendingProjectConversationTurnSubmission,
+    'content' | 'targetUserMessageId'
+  >;
 }
 
 interface ProjectConversationOptimisticReplayState
@@ -111,6 +135,10 @@ export const useProjectConversationTurn = ({
     useState<ProjectConversationDraftUserMessage | null>(null);
   const [draftAssistantMessage, setDraftAssistantMessage] =
     useState<ProjectConversationDraftAssistantMessage | null>(null);
+  const [assistantMessageHandoff, setAssistantMessageHandoff] =
+    useState<ProjectConversationAssistantMessageHandoff | null>(null);
+  const [sourceDrawerDraftSnapshot, setSourceDrawerDraftSnapshot] =
+    useState<ProjectConversationSourceDrawerDraftSnapshot | null>(null);
   const [activeReplay, setActiveReplay] =
     useState<ProjectConversationOptimisticReplayState | null>(null);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
@@ -146,6 +174,8 @@ export const useProjectConversationTurn = ({
     setActiveUserMessageId(null);
     setStreamError(null);
     setStreamStatus('idle');
+    setAssistantMessageHandoff(null);
+    setSourceDrawerDraftSnapshot(null);
     activeAbortController?.abort();
   }, [activeProjectId, chatId]);
 
@@ -240,6 +270,9 @@ export const useProjectConversationTurn = ({
 
     if (isCurrentTurn(submission)) {
       clearDraftMessages();
+      if (clearPendingSubmission) {
+        setSourceDrawerDraftSnapshot(null);
+      }
       resetTurnState();
       setStreamStatus('idle');
       setActiveReplay(null);
@@ -365,8 +398,19 @@ export const useProjectConversationTurn = ({
     setChatRuntimeIssue(null);
     setStreamError(null);
     setStreamStatus('streaming');
+    setAssistantMessageHandoff(null);
     setActiveClientRequestId(clientRequestId);
     setActiveUserMessageId(null);
+    setSourceDrawerDraftSnapshot({
+      id: `draft-assistant:${clientRequestId}`,
+      conversationId: requestConversationId,
+      status: 'streaming',
+      sourceSeedEntries: [],
+      retrySubmission: {
+        content: nextContent,
+        ...(targetUserMessageId ? { targetUserMessageId } : {}),
+      },
+    });
 
     if (targetUserMessageId) {
       applyOptimisticReplay({
@@ -387,10 +431,14 @@ export const useProjectConversationTurn = ({
 
     setDraftAssistantMessage({
       id: `draft-assistant:${clientRequestId}`,
+      clientRequestId,
       conversationId: requestConversationId,
       content: '',
       createdAt: new Date().toISOString(),
       status: 'streaming',
+      sources: [],
+      citationContent: undefined,
+      sourceSeedEntries: [],
     });
 
     try {
@@ -439,11 +487,58 @@ export const useProjectConversationTurn = ({
                     status: 'streaming',
                   };
                 });
+                setSourceDrawerDraftSnapshot((currentValue) => {
+                  if (!currentValue) {
+                    return currentValue;
+                  }
+
+                  return {
+                    ...currentValue,
+                    status: 'streaming',
+                  };
+                });
+                return;
+              case 'sources_seed':
+                setDraftAssistantMessage((currentValue) => {
+                  if (!currentValue) {
+                    return currentValue;
+                  }
+
+                  return {
+                    ...currentValue,
+                    sourceSeedEntries: event.sources,
+                  };
+                });
+                setSourceDrawerDraftSnapshot((currentValue) => {
+                  if (!currentValue) {
+                    return currentValue;
+                  }
+
+                  return {
+                    ...currentValue,
+                    sourceSeedEntries: event.sources,
+                  };
+                });
                 return;
               case 'done':
                 receivedDone = true;
                 streamDoneEvent = event;
+                setAssistantMessageHandoff({
+                  clientRequestId: currentSubmission.clientRequestId,
+                  draftMessageId: `draft-assistant:${currentSubmission.clientRequestId}`,
+                  assistantMessageId: event.assistantMessageId,
+                });
                 setDraftAssistantMessage((currentValue) => {
+                  if (!currentValue) {
+                    return currentValue;
+                  }
+
+                  return {
+                    ...currentValue,
+                    status: 'reconciling',
+                  };
+                });
+                setSourceDrawerDraftSnapshot((currentValue) => {
                   if (!currentValue) {
                     return currentValue;
                   }
@@ -463,6 +558,16 @@ export const useProjectConversationTurn = ({
                   event,
                 );
                 setDraftAssistantMessage(null);
+                setSourceDrawerDraftSnapshot((currentValue) => {
+                  if (!currentValue) {
+                    return currentValue;
+                  }
+
+                  return {
+                    ...currentValue,
+                    status: 'error',
+                  };
+                });
                 setStreamStatus('error');
                 return;
             }
@@ -518,6 +623,16 @@ export const useProjectConversationTurn = ({
       console.error(currentError);
       if (isCurrentTurn(currentSubmission)) {
         clearDraftMessages();
+        setSourceDrawerDraftSnapshot((currentValue) => {
+          if (!currentValue) {
+            return currentValue;
+          }
+
+          return {
+            ...currentValue,
+            status: 'error',
+          };
+        });
         setStreamStatus('error');
         setStreamError(
           extractApiErrorMessage(currentError, tp('conversation.turn.sendFailed')),
@@ -553,8 +668,28 @@ export const useProjectConversationTurn = ({
     }
 
     setDraftAssistantMessage(null);
+    setSourceDrawerDraftSnapshot((currentValue) => {
+      if (!currentValue) {
+        return currentValue;
+      }
+
+      return {
+        ...currentValue,
+        status: 'error',
+      };
+    });
     setStreamStatus('reconciling');
     activeAbortControllerRef.current.abort();
+  };
+
+  const retrySourceDrawerTurn = () => {
+    if (!sourceDrawerDraftSnapshot?.retrySubmission) {
+      return;
+    }
+
+    void handleSendMessage(sourceDrawerDraftSnapshot.retrySubmission.content, {
+      targetUserMessageId: sourceDrawerDraftSnapshot.retrySubmission.targetUserMessageId,
+    });
   };
 
   return {
@@ -565,9 +700,12 @@ export const useProjectConversationTurn = ({
     activeReplay,
     pendingUserMessage,
     draftAssistantMessage,
+    sourceDrawerDraftSnapshot,
+    assistantMessageHandoff,
     isStreaming: streamStatus === 'streaming',
     turnBusy: streamStatus === 'streaming' || streamStatus === 'reconciling',
     handleSendMessage,
+    retrySourceDrawerTurn,
     handleCancelStreaming,
   };
 };
