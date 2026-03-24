@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import test from 'node:test';
+import type { ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { tp as projectTp } from '../src/pages/project/project.i18n';
 
@@ -18,8 +19,9 @@ test('desktop rail keeps a fixed collapsed gutter width even when expanded conte
   const { ProjectConversationMessageRail } = await import(
     '../src/pages/project/components/ProjectConversationMessageRail'
   );
+  type RailProps = ComponentProps<typeof ProjectConversationMessageRail>;
 
-  const baseProps = {
+  const baseProps: RailProps = {
     messages: [
       {
         id: 'message-1',
@@ -52,13 +54,13 @@ test('desktop rail keeps a fixed collapsed gutter width even when expanded conte
     React.createElement(ProjectConversationMessageRail, {
       ...baseProps,
       expanded: false,
-    } as any),
+    }),
   );
   const expandedHtml = renderToStaticMarkup(
     React.createElement(ProjectConversationMessageRail, {
       ...baseProps,
       expanded: true,
-    } as any),
+    }),
   );
 
   assert.match(collapsedHtml, /w-\[72px\]/);
@@ -94,25 +96,27 @@ test('selection mode keeps the desktop collapse toggle inside the inert hidden g
   const { ProjectConversationMessageRail } = await import(
     '../src/pages/project/components/ProjectConversationMessageRail'
   );
+  type RailProps = ComponentProps<typeof ProjectConversationMessageRail>;
 
+  const props: RailProps = {
+    messages: [],
+    mode: 'selection',
+    expanded: true,
+    selectedMessageIds: ['message-1'],
+    selectableMessageIds: ['message-1'],
+    starringMessageId: null,
+    exportDisabled: false,
+    knowledgeDraftDisabled: false,
+    onExpandedChange: () => undefined,
+    onModeChange: () => undefined,
+    onToggleSelectedMessageId: () => undefined,
+    onScrollToMessage: () => undefined,
+    onToggleMessageStar: () => undefined,
+    onExportMarkdown: () => undefined,
+    onGenerateKnowledgeDraft: () => undefined,
+  };
   const selectionHtml = renderToStaticMarkup(
-    React.createElement(ProjectConversationMessageRail, {
-      messages: [],
-      mode: 'selection',
-      expanded: true,
-      selectedMessageIds: ['message-1'],
-      selectableMessageIds: ['message-1'],
-      starringMessageId: null,
-      exportDisabled: false,
-      knowledgeDraftDisabled: false,
-      onExpandedChange: () => undefined,
-      onModeChange: () => undefined,
-      onToggleSelectedMessageId: () => undefined,
-      onScrollToMessage: () => undefined,
-      onToggleMessageStar: () => undefined,
-      onExportMarkdown: () => undefined,
-      onGenerateKnowledgeDraft: () => undefined,
-    } as any),
+    React.createElement(ProjectConversationMessageRail, props),
   );
 
   assert.match(
@@ -135,37 +139,39 @@ test('selection mode bulk action buttons render as readonly when nothing is sele
   const { ProjectConversationMessageRail } = await import(
     '../src/pages/project/components/ProjectConversationMessageRail'
   );
+  type RailProps = ComponentProps<typeof ProjectConversationMessageRail>;
 
+  const props: RailProps = {
+    messages: [
+      {
+        id: 'message-1',
+        conversationId: 'chat-1',
+        role: 'assistant',
+        content: '这是当前回答',
+        createdAt: '2026-03-20T08:00:00.000Z',
+        starred: false,
+        starredAt: null,
+        starredBy: null,
+        sources: [],
+      },
+    ],
+    mode: 'selection',
+    expanded: true,
+    selectedMessageIds: [],
+    selectableMessageIds: ['message-1'],
+    starringMessageId: null,
+    exportDisabled: true,
+    knowledgeDraftDisabled: true,
+    onExpandedChange: () => undefined,
+    onModeChange: () => undefined,
+    onToggleSelectedMessageId: () => undefined,
+    onScrollToMessage: () => undefined,
+    onToggleMessageStar: () => undefined,
+    onExportMarkdown: () => undefined,
+    onGenerateKnowledgeDraft: () => undefined,
+  };
   const selectionHtml = renderToStaticMarkup(
-    React.createElement(ProjectConversationMessageRail, {
-      messages: [
-        {
-          id: 'message-1',
-          conversationId: 'chat-1',
-          role: 'assistant',
-          content: '这是当前回答',
-          createdAt: '2026-03-20T08:00:00.000Z',
-          starred: false,
-          starredAt: null,
-          starredBy: null,
-          sources: [],
-        },
-      ],
-      mode: 'selection',
-      expanded: true,
-      selectedMessageIds: [],
-      selectableMessageIds: ['message-1'],
-      starringMessageId: null,
-      exportDisabled: true,
-      knowledgeDraftDisabled: true,
-      onExpandedChange: () => undefined,
-      onModeChange: () => undefined,
-      onToggleSelectedMessageId: () => undefined,
-      onScrollToMessage: () => undefined,
-      onToggleMessageStar: () => undefined,
-      onExportMarkdown: () => undefined,
-      onGenerateKnowledgeDraft: () => undefined,
-    } as any),
+    React.createElement(ProjectConversationMessageRail, props),
   );
 
   assert.match(
@@ -221,6 +227,7 @@ test('starred rail controls reuse the shared warm star affordance', async () => 
   const { ProjectConversationMessageRail } = await import(
     '../src/pages/project/components/ProjectConversationMessageRail'
   );
+  type RailProps = ComponentProps<typeof ProjectConversationMessageRail>;
 
   const baseMessage = {
     id: 'message-1',
@@ -232,7 +239,7 @@ test('starred rail controls reuse the shared warm star affordance', async () => 
     starredBy: 'user-1',
     sources: [],
   };
-  const sharedProps = {
+  const sharedProps: Omit<RailProps, 'messages' | 'mode'> = {
     expanded: true,
     selectedMessageIds: [],
     selectableMessageIds: ['message-1'],
@@ -258,7 +265,7 @@ test('starred rail controls reuse the shared warm star affordance', async () => 
         },
       ],
       mode: 'starred',
-    } as any),
+    }),
   );
 
   const browseHtml = renderToStaticMarkup(
@@ -273,7 +280,7 @@ test('starred rail controls reuse the shared warm star affordance', async () => 
         },
       ],
       mode: 'browse',
-    } as any),
+    }),
   );
 
   assert.match(

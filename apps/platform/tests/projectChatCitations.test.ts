@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
+import type { ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { tp as projectTp } from '../src/pages/project/project.i18n';
 
@@ -53,18 +54,23 @@ const renderAssistantBubble = async (message: {
 
   assert.ok(bubbleItem);
 
+  type AssistantMessageProps = ComponentProps<typeof ProjectChatAssistantMessage>;
+  type AssistantFooterProps = ComponentProps<typeof ProjectChatAssistantFooter>;
+  const messageProps: AssistantMessageProps = {
+    content: message.content,
+    extraInfo: bubbleItem.extraInfo,
+  };
+  const footerProps: AssistantFooterProps = {
+    content: message.content,
+    extraInfo: bubbleItem.extraInfo,
+  };
+
   return {
     messageHtml: renderToStaticMarkup(
-      ProjectChatAssistantMessage({
-        content: message.content,
-        extraInfo: bubbleItem.extraInfo as any,
-      } as any),
+      React.createElement(ProjectChatAssistantMessage, messageProps),
     ),
     footerHtml: renderToStaticMarkup(
-      ProjectChatAssistantFooter({
-        content: message.content,
-        extraInfo: bubbleItem.extraInfo as any,
-      } as any),
+      React.createElement(ProjectChatAssistantFooter, footerProps),
     ),
   };
 };
@@ -296,7 +302,7 @@ test('citation mode conservatively suppresses trailing pseudo citation blocks be
 });
 
 test('assistant message body no longer renders inline references section in citation mode', async () => {
-  const { messageHtml, footerHtml } = await renderAssistantBubble({
+  const { messageHtml } = await renderAssistantBubble({
     id: 'message-inline-references-citation',
     conversationId: 'chat-1',
     role: 'assistant',

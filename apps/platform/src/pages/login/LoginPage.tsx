@@ -11,9 +11,7 @@ import {
 } from '@api/auth';
 import { setAuthSession } from '@app/auth/user';
 import { PATHS } from '@app/navigation/paths';
-import {
-  useLocale,
-} from '@app/providers/LocaleProvider';
+import { useLocale } from '@app/providers/locale.context';
 import {
   type SupportedLocale,
   writeGuestLocale,

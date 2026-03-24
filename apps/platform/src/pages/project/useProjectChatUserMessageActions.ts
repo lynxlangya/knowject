@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ProjectConversationDetailResponse } from '@api/projects';
 import { copyProjectChatText } from './projectChat.clipboard';
 import type { ProjectChatUserBubbleActions } from './projectChatBubble.components';
@@ -22,7 +22,7 @@ export const useProjectChatUserMessageActions = ({
   handleSendMessage,
 }: UseProjectChatUserMessageActionsOptions) => {
   const { message } = App.useApp();
-  const [editingUserMessageId, setEditingUserMessageId] = useState<string | null>(
+  const [editingUserMessageIdState, setEditingUserMessageId] = useState<string | null>(
     null,
   );
 
@@ -34,15 +34,10 @@ export const useProjectChatUserMessageActions = ({
     );
   }, [currentConversationDetail?.messages]);
 
-  useEffect(() => {
-    if (!editingUserMessageId) {
-      return;
-    }
-
-    if (!userMessageMap.has(editingUserMessageId)) {
-      setEditingUserMessageId(null);
-    }
-  }, [editingUserMessageId, userMessageMap]);
+  const editingUserMessageId =
+    editingUserMessageIdState && userMessageMap.has(editingUserMessageIdState)
+      ? editingUserMessageIdState
+      : null;
 
   const startEditingUserMessage = (messageId: string) => {
     if (turnBusy || (editingUserMessageId && editingUserMessageId !== messageId)) {

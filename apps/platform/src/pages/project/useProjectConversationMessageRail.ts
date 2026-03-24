@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState, type SetStateAction } from 'react';
 import type { ProjectConversationMessageRole } from '@api/projects';
 
 export type ProjectConversationMessageRailMode =
@@ -36,8 +36,8 @@ export interface ProjectConversationMessageRailSnapshot {
   visibleMessageIds: string[];
 }
 
-export interface UseProjectConversationMessageRailOptions
-  extends BuildProjectConversationMessageRailSnapshotOptions {}
+export type UseProjectConversationMessageRailOptions =
+  BuildProjectConversationMessageRailSnapshotOptions;
 
 const normalizeUniqueMessageIds = (messageIds: string[]): string[] => {
   return Array.from(new Set(messageIds));
@@ -152,7 +152,7 @@ export const useProjectConversationMessageRail = ({
     initialMode,
   );
   const [panelOpen, setPanelOpen] = useState(initialPanelOpen);
-  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>(
+  const [selectedMessageIdsState, setSelectedMessageIdsState] = useState<string[]>(
     () =>
       buildProjectConversationMessageRailSnapshot({
         mode: initialMode,
@@ -186,18 +186,25 @@ export const useProjectConversationMessageRail = ({
       messages,
     });
   }, [messages, mode]);
+  const selectedMessageIds = useMemo(() => {
+    return normalizeUniqueMessageIds(selectedMessageIdsState).filter((messageId) =>
+      selectableMessageIdSet.has(messageId),
+    );
+  }, [selectedMessageIdsState, selectableMessageIdSet]);
 
-  useEffect(() => {
-    setSelectedMessageIds((currentSelectedMessageIds) => {
-      const nextSelectedMessageIds = currentSelectedMessageIds.filter((id) =>
-        selectableMessageIdSet.has(id),
-      );
+  const setSelectedMessageIds = (value: SetStateAction<string[]>) => {
+    setSelectedMessageIdsState((currentSelectedMessageIds) => {
+      const currentVisibleSelectedMessageIds = normalizeUniqueMessageIds(
+        currentSelectedMessageIds,
+      ).filter((messageId) => selectableMessageIdSet.has(messageId));
+      const nextSelectedMessageIds =
+        typeof value === 'function'
+          ? value(currentVisibleSelectedMessageIds)
+          : value;
 
-      return nextSelectedMessageIds.length === currentSelectedMessageIds.length
-        ? currentSelectedMessageIds
-        : nextSelectedMessageIds;
+      return normalizeUniqueMessageIds(nextSelectedMessageIds);
     });
-  }, [selectableMessageIdSet]);
+  };
 
   const expanded = panelOpen || mode === 'selection';
 
@@ -206,7 +213,7 @@ export const useProjectConversationMessageRail = ({
       return;
     }
 
-    setSelectedMessageIds((currentSelectedMessageIds) => {
+    setSelectedMessageIdsState((currentSelectedMessageIds) => {
       if (currentSelectedMessageIds.includes(messageId)) {
         return currentSelectedMessageIds.filter((id) => id !== messageId);
       }
@@ -219,7 +226,7 @@ export const useProjectConversationMessageRail = ({
   };
 
   const clearSelectedMessageIds = () => {
-    setSelectedMessageIds([]);
+    setSelectedMessageIdsState([]);
   };
 
   return {

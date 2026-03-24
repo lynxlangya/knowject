@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
+import type { ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import i18n from '../src/i18n';
 import { tp as agentsTp } from '../src/pages/agents/agents.i18n';
@@ -23,6 +24,7 @@ test('tag copy follows runtime locale changes after module initialization', asyn
   const { ProjectResourceGroup } = await import(
     '../src/pages/project/components/ProjectResourceGroup'
   );
+  type ProjectResourceGroupProps = ComponentProps<typeof ProjectResourceGroup>;
   const { KNOWLEDGE_DOCUMENT_STATUS_META, KNOWLEDGE_INDEX_STATUS_META, KNOWLEDGE_SOURCE_TYPE_META } =
     await import('../src/pages/knowledge/knowledgeDomain.shared');
   const { AGENT_STATUS_META } = await import(
@@ -44,30 +46,31 @@ test('tag copy follows runtime locale changes after module initialization', asyn
 
   await i18n.changeLanguage('zh-CN');
 
+  const groupProps: ProjectResourceGroupProps = {
+    group: {
+      key: 'knowledge',
+      title: '知识库',
+      description: 'desc',
+      items: [
+        {
+          id: 'knowledge-1',
+          type: 'knowledge',
+          name: '项目知识',
+          description: '项目描述',
+          updatedAt: '3/23',
+          owner: '维护者',
+          usageCount: 0,
+          source: 'project',
+          documentCount: 3,
+          indexStatus: 'completed',
+        },
+      ],
+    },
+    onAddProjectResource: () => undefined,
+    onOpenGlobal: () => undefined,
+  };
   const html = renderToStaticMarkup(
-    React.createElement(ProjectResourceGroup, {
-      group: {
-        key: 'knowledge',
-        title: '知识库',
-        description: 'desc',
-        items: [
-          {
-            id: 'knowledge-1',
-            type: 'knowledge',
-            name: '项目知识',
-            description: '项目描述',
-            updatedAt: '3/23',
-            owner: '维护者',
-            usageCount: 0,
-            source: 'project',
-            documentCount: 3,
-            indexStatus: 'completed',
-          },
-        ],
-      },
-      onAddProjectResource: () => undefined,
-      onOpenGlobal: () => undefined,
-    } as any),
+    React.createElement(ProjectResourceGroup, groupProps),
   );
 
   assert.match(

@@ -12,7 +12,7 @@ import {
   getProjectIdFromPathname,
 } from "@app/navigation/paths";
 import { getAuthUser } from "@app/auth/user";
-import { useLocale } from "@app/providers/LocaleProvider";
+import { useLocale } from "@app/providers/locale.context";
 import type { SupportedLocale } from "@app/providers/locale.storage";
 import type { ProjectSummary } from "@app/project/project.types";
 import { useProjectContext } from "@app/project/useProjectContext";

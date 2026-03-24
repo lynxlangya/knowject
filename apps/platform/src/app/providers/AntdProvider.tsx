@@ -2,7 +2,7 @@ import { App, ConfigProvider } from 'antd';
 import enUS from 'antd/locale/en_US';
 import zhCN from 'antd/locale/zh_CN';
 import type { ReactNode } from 'react';
-import { useLocale } from './LocaleProvider';
+import { useLocale } from './locale.context';
 import { themeConfig } from '@styles/antd-theme';
 
 interface AntdProviderProps {

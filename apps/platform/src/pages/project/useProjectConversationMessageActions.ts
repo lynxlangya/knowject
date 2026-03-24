@@ -23,7 +23,7 @@ import {
 import type { ProjectChatAssistantBubbleActions } from './projectChatBubble.components';
 import { tp } from './project.i18n';
 
-export interface ProjectKnowledgeDraftValues extends KnowledgeDraftDefaults {}
+export type ProjectKnowledgeDraftValues = KnowledgeDraftDefaults;
 
 export interface ProjectConversationMessageBulkActionState {
   exportDisabled: boolean;

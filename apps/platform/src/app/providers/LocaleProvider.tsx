@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -10,27 +8,19 @@ import {
 import { getAuthSession, getAuthUser, setAuthSession } from '@app/auth/user';
 import i18n from '../../i18n';
 import {
+  LocaleContext,
+  type LocaleContextValue,
+} from './locale.context';
+import {
   normalizeLocale,
   readGuestLocale,
   writeGuestLocale,
   type SupportedLocale,
 } from './locale.storage';
 
-export type LocaleSource = 'guest' | 'account';
-
-interface LocaleContextValue {
-  locale: SupportedLocale;
-  setLocale: (
-    locale: SupportedLocale,
-    source?: LocaleSource,
-  ) => Promise<void>;
-}
-
 interface LocaleProviderProps {
   children: ReactNode;
 }
-
-const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 const resolveInitialLocale = (): SupportedLocale => {
   return getAuthUser()?.locale ?? readGuestLocale();
@@ -81,13 +71,3 @@ export function LocaleProvider({ children }: LocaleProviderProps) {
     </LocaleContext.Provider>
   );
 }
-
-export const useLocale = (): LocaleContextValue => {
-  const context = useContext(LocaleContext);
-
-  if (!context) {
-    throw new Error('useLocale must be used within LocaleProvider');
-  }
-
-  return context;
-};

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
+import type { ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { tp as projectTp } from '../src/pages/project/project.i18n';
 
@@ -12,6 +13,8 @@ const escapeRegExp = (value: string): string => {
 };
 
 test('buildProjectChatBubbleItems and bubble wrappers keep stable message anchors for persisted messages', async () => {
+  const React = await import('react');
+  globalThis.React = React;
   const [
     { buildProjectChatBubbleItems },
     { ProjectChatAssistantFooter, ProjectChatUserMessage },
@@ -73,11 +76,15 @@ test('buildProjectChatBubbleItems and bubble wrappers keep stable message anchor
   assert.equal(pendingBubble?.extraInfo?.messageId, undefined);
   assert.equal(draftBubble?.extraInfo?.messageId, undefined);
 
+  type UserMessageProps = ComponentProps<typeof ProjectChatUserMessage>;
+  type AssistantFooterProps = ComponentProps<typeof ProjectChatAssistantFooter>;
+  const userProps: UserMessageProps = {
+    content: String(persistedUserBubble?.content ?? ''),
+    extraInfo: persistedUserBubble?.extraInfo,
+  };
+
   const userHtml = renderToStaticMarkup(
-    ProjectChatUserMessage({
-      content: String(persistedUserBubble?.content ?? ''),
-      extraInfo: persistedUserBubble?.extraInfo as any,
-    } as any),
+    React.createElement(ProjectChatUserMessage, userProps),
   );
 
   assert.match(userHtml, /id="project-chat-message-message-1"/);
@@ -135,20 +142,23 @@ test('buildProjectChatBubbleItems and bubble wrappers keep stable message anchor
   const inactiveAssistantBubble = bubbleItemsWithInactiveStarAction.find(
     (item) => item.key === 'message-2',
   );
+  const assistantFooterProps: AssistantFooterProps = {
+    extraInfo: assistantBubble?.extraInfo,
+  };
+  const inactiveAssistantFooterProps: AssistantFooterProps = {
+    extraInfo: inactiveAssistantBubble?.extraInfo,
+  };
+  const draftAssistantFooterProps: AssistantFooterProps = {
+    extraInfo: draftBubble?.extraInfo,
+  };
   const assistantFooterHtml = renderToStaticMarkup(
-    ProjectChatAssistantFooter({
-      extraInfo: assistantBubble?.extraInfo as any,
-    } as any),
+    React.createElement(ProjectChatAssistantFooter, assistantFooterProps),
   );
   const inactiveAssistantFooterHtml = renderToStaticMarkup(
-    ProjectChatAssistantFooter({
-      extraInfo: inactiveAssistantBubble?.extraInfo as any,
-    } as any),
+    React.createElement(ProjectChatAssistantFooter, inactiveAssistantFooterProps),
   );
   const draftAssistantFooterHtml = renderToStaticMarkup(
-    ProjectChatAssistantFooter({
-      extraInfo: draftBubble?.extraInfo as any,
-    } as any),
+    React.createElement(ProjectChatAssistantFooter, draftAssistantFooterProps),
   );
 
   assert.ok(assistantBubble?.extraInfo?.assistantActions);
