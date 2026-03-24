@@ -412,7 +412,19 @@ test('citation mode conservatively suppresses trailing pseudo citation blocks be
   assert.doesNotMatch(messageHtml, /依据：/);
   assert.doesNotMatch(messageHtml, /来源 2/);
   assert.doesNotMatch(messageHtml, /来源 3/);
-  assert.match(messageHtml, /data-conversation-source-tag="true"/);
+  assert.match(
+    messageHtml,
+    buildSentenceEndSourcePattern({
+      sentenceText: '第一句结论。',
+      sourceKeys: ['source1'],
+    }),
+  );
+  assert.equal(
+    countMatches(messageHtml, /data-conversation-source-tag="true"/),
+    1,
+  );
+  assert.doesNotMatch(messageHtml, />spec-alpha</);
+  assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
   assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
