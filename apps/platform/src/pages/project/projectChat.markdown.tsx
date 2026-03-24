@@ -8,17 +8,24 @@ import {
   type ReactNode,
 } from 'react';
 import { tp } from './project.i18n';
+import {
+  resolveDraftSourceTokens,
+  type ProjectChatDraftSourceToken,
+} from './projectChatSources';
 
 const joinClassName = (...classNames: Array<string | undefined>) => {
   return classNames.filter(Boolean).join(' ');
 };
 
 const PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN =
-  /\[\[SOURCE_TAG:([\d,]+)\]\]/g;
+  /\[\[(?:source\d+|SOURCE_TAG:[\d,\s]+)\]\]/g;
 
 const renderProjectChatMarkdownInlineSourceTags = (
   node: ReactNode,
-  renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode,
+  renderInlineSourceTag?: (
+    sourceKeys: string[],
+    token: ProjectChatDraftSourceToken,
+  ) => ReactNode | null,
 ): ReactNode => {
   if (!renderInlineSourceTag) {
     return node;
@@ -32,28 +39,24 @@ const renderProjectChatMarkdownInlineSourceTags = (
     }
 
     PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN.lastIndex = 0;
+    const tokens = resolveDraftSourceTokens(text);
+
+    if (tokens.length === 0) {
+      return node;
+    }
+
     const fragments: ReactNode[] = [];
     let lastIndex = 0;
-    let match: RegExpExecArray | null = null;
 
-    while ((match = PROJECT_CHAT_INLINE_SOURCE_TAG_PATTERN.exec(text))) {
-      const [matchedText, indicesText] = match;
-
-      if (match.index > lastIndex) {
-        fragments.push(text.slice(lastIndex, match.index));
+    tokens.forEach((token) => {
+      if (token.start > lastIndex) {
+        fragments.push(text.slice(lastIndex, token.start));
       }
 
-      const sourceIndexes = indicesText
-        .split(',')
-        .map((item) => Number(item.trim()))
-        .filter((item) => Number.isFinite(item));
-
-      if (sourceIndexes.length > 0) {
-        fragments.push(renderInlineSourceTag(sourceIndexes));
-      }
-
-      lastIndex = match.index + matchedText.length;
-    }
+      const renderedTag = renderInlineSourceTag(token.sourceKeys, token);
+      fragments.push(renderedTag ?? token.rawText);
+      lastIndex = token.end;
+    });
 
     if (lastIndex < text.length) {
       fragments.push(text.slice(lastIndex));
@@ -104,7 +107,10 @@ const renderMarkdownParagraph = ({
   className,
   ...rest
 }: XMarkdownComponentProps & {
-  renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+  renderInlineSourceTag?: (
+    sourceKeys: string[],
+    token: ProjectChatDraftSourceToken,
+  ) => ReactNode | null;
 }) => {
   const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
   const renderedChildren = renderProjectChatMarkdownInlineSourceTags(
@@ -248,7 +254,10 @@ const renderMarkdownListItem = ({
   className,
   ...rest
 }: XMarkdownComponentProps & {
-  renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+  renderInlineSourceTag?: (
+    sourceKeys: string[],
+    token: ProjectChatDraftSourceToken,
+  ) => ReactNode | null;
 }) => {
   const { legacyClassName, restProps } = splitMarkdownDomProps(rest);
   const renderedChildren = renderProjectChatMarkdownInlineSourceTags(
@@ -416,7 +425,10 @@ export const ProjectChatMarkdown = ({
   renderInlineSourceTag,
 }: {
   content: string;
-  renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+  renderInlineSourceTag?: (
+    sourceKeys: string[],
+    token: ProjectChatDraftSourceToken,
+  ) => ReactNode | null;
 }) => {
   return (
     <XMarkdown
@@ -429,7 +441,10 @@ export const ProjectChatMarkdown = ({
             ...props,
             renderInlineSourceTag,
           } as typeof props & {
-            renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+            renderInlineSourceTag?: (
+              sourceKeys: string[],
+              token: ProjectChatDraftSourceToken,
+            ) => ReactNode | null;
           }),
         h1: renderMarkdownHeading1,
         h2: renderMarkdownHeading2,
@@ -441,7 +456,10 @@ export const ProjectChatMarkdown = ({
             ...props,
             renderInlineSourceTag,
           } as typeof props & {
-            renderInlineSourceTag?: (sourceIndexes: number[]) => ReactNode;
+            renderInlineSourceTag?: (
+              sourceKeys: string[],
+              token: ProjectChatDraftSourceToken,
+            ) => ReactNode | null;
           }),
         pre: renderMarkdownPre,
         code: renderMarkdownCode,

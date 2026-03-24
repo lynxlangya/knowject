@@ -45,6 +45,7 @@ export type ProjectConversationMessageRole = "user" | "assistant";
 export type ProjectConversationStreamEventType =
   | 'ack'
   | 'delta'
+  | 'sources_seed'
   | 'done'
   | 'error';
 export type ProjectConversationStreamFinishReason =
@@ -55,6 +56,7 @@ export type ProjectConversationStreamFinishReason =
 
 export interface ProjectConversationSourceResponse {
   id: string;
+  sourceKey: string;
   knowledgeId: string;
   documentId: string;
   chunkId: string;
@@ -141,6 +143,20 @@ export interface ProjectConversationStreamDeltaEvent
   delta: string;
 }
 
+export interface ProjectConversationStreamSourcesSeedItem {
+  sourceKey: string;
+  knowledgeId: string;
+  documentId: string;
+  sourceLabel: string;
+  status: 'seeded';
+}
+
+export interface ProjectConversationStreamSourcesSeedEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'sources_seed';
+  sources: ProjectConversationStreamSourcesSeedItem[];
+}
+
 export interface ProjectConversationStreamDoneEvent
   extends ProjectConversationStreamEventBase {
   type: 'done';
@@ -162,6 +178,7 @@ export interface ProjectConversationStreamErrorEvent
 export type ProjectConversationStreamEvent =
   | ProjectConversationStreamAckEvent
   | ProjectConversationStreamDeltaEvent
+  | ProjectConversationStreamSourcesSeedEvent
   | ProjectConversationStreamDoneEvent
   | ProjectConversationStreamErrorEvent;
 

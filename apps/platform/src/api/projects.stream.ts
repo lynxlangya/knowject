@@ -5,6 +5,7 @@ import {
 import type {
   CreateProjectConversationMessageRequest,
   ProjectConversationStreamEvent,
+  ProjectConversationStreamEventType,
 } from './projects';
 import { handleUnauthorized } from './client';
 import { getToken } from '@app/auth/token';
@@ -96,6 +97,24 @@ const parseStreamEvent = (payload: string): ProjectConversationStreamEvent => {
   ) {
     throw new ApiError(
       '项目对话流事件缺少必要字段',
+      502,
+      'PROJECT_CONVERSATION_STREAM_INVALID_EVENT',
+      parsedEvent,
+    );
+  }
+
+  const eventType = (parsedEvent as { type?: unknown }).type;
+  const supportedEventTypes = new Set<ProjectConversationStreamEventType>([
+    'ack',
+    'delta',
+    'sources_seed',
+    'done',
+    'error',
+  ]);
+
+  if (typeof eventType !== 'string' || !supportedEventTypes.has(eventType as ProjectConversationStreamEventType)) {
+    throw new ApiError(
+      '项目对话流返回了未知事件类型',
       502,
       'PROJECT_CONVERSATION_STREAM_INVALID_EVENT',
       parsedEvent,

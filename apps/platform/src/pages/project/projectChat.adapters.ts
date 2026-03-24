@@ -8,7 +8,12 @@ import type { CSSProperties } from 'react';
 import { createElement, type ReactNode } from 'react';
 import i18n from '../../i18n';
 import type { ConversationSummary } from '../../app/project/project.types';
-import type { ProjectConversationMessageResponse } from '../../api/projects';
+import type {
+  ProjectConversationCitationContent,
+  ProjectConversationMessageResponse,
+  ProjectConversationSourceResponse,
+  ProjectConversationStreamSourcesSeedItem,
+} from '../../api/projects';
 import { KNOWJECT_BRAND } from '../../styles/brand';
 import {
   type ProjectChatAssistantBubbleActions,
@@ -187,6 +192,10 @@ export const buildProjectChatBubbleItems = (
       content: string;
       createdAt: string;
       status: ProjectChatBubbleStatus;
+      sources?: ProjectConversationSourceResponse[];
+      citationContent?: ProjectConversationCitationContent;
+      sourceSeedEntries?: ProjectConversationStreamSourcesSeedItem[];
+      onOpenSource?: (sourceKey: string) => void;
     } | null;
     getDraftAssistantMessageActions?: (draftMessage: {
       conversationId: string;
@@ -212,6 +221,7 @@ export const buildProjectChatBubbleItems = (
       createdAt: message.createdAt,
       sources: message.sources ?? [],
       citationContent: message.citationContent,
+      onOpenSource: undefined,
       ...(message.role === 'assistant'
         ? {
             assistantActions:
@@ -240,6 +250,7 @@ export const buildProjectChatBubbleItems = (
         createdAt: options.pendingUserMessage.createdAt,
         sources: [],
         citationContent: undefined,
+        onOpenSource: undefined,
       } satisfies ProjectChatBubbleExtraInfo,
     });
   }
@@ -254,9 +265,11 @@ export const buildProjectChatBubbleItems = (
       content: options.draftAssistantMessage.content || tp('conversation.creatingDraft'),
       extraInfo: {
         createdAt: options.draftAssistantMessage.createdAt,
-        sources: [],
-        citationContent: undefined,
+        sources: options.draftAssistantMessage.sources ?? [],
+        citationContent: options.draftAssistantMessage.citationContent,
+        sourceSeedEntries: options.draftAssistantMessage.sourceSeedEntries,
         status: options.draftAssistantMessage.status,
+        onOpenSource: options.draftAssistantMessage.onOpenSource,
         assistantActions:
           options.getDraftAssistantMessageActions?.(
             options.draftAssistantMessage,

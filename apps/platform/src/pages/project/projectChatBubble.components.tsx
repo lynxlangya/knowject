@@ -1,28 +1,35 @@
 import {
   CopyOutlined,
   EditOutlined,
-  FileTextOutlined,
   RedoOutlined,
   StarFilled,
   StarOutlined,
 } from '@ant-design/icons';
-import { Popover, Typography } from 'antd';
+import { Typography } from 'antd';
 import React from 'react';
 import type { MouseEvent } from 'react';
 import i18n from '../../i18n';
 import type {
   ProjectConversationCitationContent,
   ProjectConversationSourceResponse,
+  ProjectConversationStreamSourcesSeedItem,
 } from '../../api/projects';
 import { ProjectChatMarkdown } from './projectChat.markdown';
 import {
   buildProjectChatCitationViewModel,
   canUseProjectChatCitationMode,
   rewriteProjectChatMarkdownEvidenceBlocks,
+  shouldProjectChatFallbackToLegacyMarkdown,
   suppressProjectChatTrailingPseudoCitations,
   simplifyProjectChatSourceLabel,
-  type ProjectChatCitationDocumentEntryViewModel,
 } from './projectChatCitations';
+import {
+  buildProjectChatSourceEntries,
+  resolveCitationSentenceSourceKeys,
+  resolveDraftSourceTokens,
+  type ProjectChatDraftSourceToken,
+  type ProjectChatSourceEntry,
+} from './projectChatSources';
 import { PROJECT_CHAT_STAR_CLASS_NAMES } from './projectChatStar.styles';
 import { tp } from './project.i18n';
 
@@ -51,10 +58,12 @@ export interface ProjectChatBubbleExtraInfo {
   createdAt: string;
   sources: ProjectConversationSourceResponse[];
   citationContent?: ProjectConversationCitationContent;
+  sourceSeedEntries?: ProjectConversationStreamSourcesSeedItem[];
   messageId?: string;
   status?: ProjectChatBubbleStatus;
   assistantActions?: ProjectChatAssistantBubbleActions;
   userActions?: ProjectChatUserBubbleActions;
+  onOpenSource?: (sourceKey: string) => void;
 }
 
 export type ProjectChatBubbleStatus = 'streaming' | 'reconciling';
@@ -68,337 +77,132 @@ const formatMessageTime = (value: string): string => {
   }).format(new Date(value));
 };
 
-const formatSourceDistance = (value: number | null): string | null => {
-  if (value === null) {
-    return null;
-  }
-
-  return tp('conversation.sourceDistance', { value: value.toFixed(2) });
-};
-
 const getProjectChatBubbleStatusLabel = (status: ProjectChatBubbleStatus): string => {
   return tp(`conversation.status.${status}`);
 };
 
-const getProjectChatSourceFileName = (sourceLabel: string): string => {
-  return sourceLabel.split(/[\\/]/).filter(Boolean).pop() || sourceLabel;
-};
+const PROJECT_CHAT_SOURCE_TAG_CLASS_NAME = [
+  'ml-1.5 inline-flex h-5 items-center rounded-full border border-slate-200/90 bg-slate-100/70 px-2 align-middle text-[8px] font-medium tracking-[0.01em] text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors duration-200',
+  'hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200',
+].join(' ');
 
-const buildProjectChatSourceTagLabel = (
-  documentGroups: ProjectConversationSourceDocumentGroup[],
-): string | null => {
-  const primaryDocumentGroup = documentGroups[0];
-  if (!primaryDocumentGroup) {
-    return null;
-  }
+const buildLegacySourceTagLabelMap = (
+  sourceEntries: ProjectChatSourceEntry[],
+): Map<string, string> => {
+  const labelsBySourceKey = new Map<string, string>();
 
-  const primaryLabel = simplifyProjectChatSourceLabel(primaryDocumentGroup.sourceLabel);
-  const overflowCount = documentGroups.length - 1;
+  sourceEntries.forEach((entry) => {
+    if (labelsBySourceKey.has(entry.sourceKey)) {
+      return;
+    }
 
-  return overflowCount > 0 ? `${primaryLabel} +${overflowCount}` : primaryLabel;
-};
-
-const resolveProjectChatSourceTagGroupsByIndexes = ({
-  documentGroups,
-  sourceIndexes,
-}: {
-  documentGroups: ProjectConversationSourceDocumentGroup[];
-  sourceIndexes: number[];
-}): ProjectConversationSourceDocumentGroup[] => {
-  return sourceIndexes
-    .map((sourceIndex) =>
-      documentGroups.find(
-        (documentGroup) => documentGroup.markerNumber === sourceIndex,
-      ) ?? null,
-    )
-    .filter((documentGroup): documentGroup is ProjectConversationSourceDocumentGroup =>
-      documentGroup !== null,
+    labelsBySourceKey.set(
+      entry.sourceKey,
+      simplifyProjectChatSourceLabel(entry.sourceLabel),
     );
-};
-
-interface ProjectConversationSourceDocumentGroup {
-  id: string;
-  markerNumber: number;
-  sourceLabel: string;
-  entries: ProjectChatCitationDocumentEntryViewModel[];
-}
-
-const buildProjectConversationSourceDocumentGroups = (
-  sources: ProjectConversationSourceResponse[],
-): ProjectConversationSourceDocumentGroup[] => {
-  const documentGroupById = new Map<string, ProjectConversationSourceDocumentGroup>();
-  const documentGroups: ProjectConversationSourceDocumentGroup[] = [];
-
-  sources.forEach((source) => {
-    const documentGroupId = `${source.knowledgeId}:${source.documentId}`;
-    let documentGroup = documentGroupById.get(documentGroupId);
-
-    if (!documentGroup) {
-      documentGroup = {
-        id: documentGroupId,
-        markerNumber: documentGroups.length + 1,
-        sourceLabel: source.source,
-        entries: [],
-      };
-      documentGroupById.set(documentGroupId, documentGroup);
-      documentGroups.push(documentGroup);
-    }
-
-    if (!documentGroup.entries.some((entry) => entry.id === source.id)) {
-      documentGroup.entries.push({
-        id: source.id,
-        snippet: source.snippet,
-        distance: source.distance,
-      });
-    }
   });
 
-  return documentGroups;
+  return labelsBySourceKey;
 };
 
-const ProjectConversationSourceDetailCard = ({
-  documentGroup,
+const renderProjectConversationSourceTag = ({
+  label,
+  onOpenSource,
+  sourceKey,
 }: {
-  documentGroup: ProjectConversationSourceDocumentGroup;
+  label: string;
+  onOpenSource?: (sourceKey: string) => void;
+  sourceKey: string;
 }) => {
-  const [activeEntryId, setActiveEntryId] = React.useState<string | null>(
-    documentGroup.entries[0]?.id ?? null,
-  );
-  const sourceDisplayLabel = simplifyProjectChatSourceLabel(
-    documentGroup.sourceLabel,
-  );
-  const sourceFileName = getProjectChatSourceFileName(documentGroup.sourceLabel);
-  const activeEntry =
-    documentGroup.entries.find((entry) => entry.id === activeEntryId) ??
-    documentGroup.entries[0];
-
-  React.useEffect(() => {
-    setActiveEntryId(documentGroup.entries[0]?.id ?? null);
-  }, [documentGroup.id, documentGroup.entries]);
-
-  if (!activeEntry) {
-    return null;
-  }
-
   return (
-    <div
-      data-conversation-source-detail={documentGroup.id}
-      className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
-    >
-      <div className="space-y-3.5">
-        <div className="flex items-start gap-3.5">
-          <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-            <FileTextOutlined className="text-sm" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
-              {sourceDisplayLabel}
-            </Typography.Text>
-            {documentGroup.sourceLabel !== sourceDisplayLabel ? (
-              <Typography.Text className="mt-0.5 block text-caption leading-5 text-slate-400">
-                {sourceFileName}
-              </Typography.Text>
-            ) : null}
-          </div>
-        </div>
-        {documentGroup.entries.length > 1 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {documentGroup.entries.map((entry, index) => {
-              const active = entry.id === activeEntry.id;
-
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  data-conversation-source-entry-switch={entry.id}
-                  className={[
-                    'inline-flex min-h-8 items-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors duration-200',
-                    active
-                      ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300 hover:text-slate-800',
-                  ].join(' ')}
-                  onClick={() => setActiveEntryId(entry.id)}
-                >
-                  #{index + 1}
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-        <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
-          {formatSourceDistance(activeEntry.distance) ? (
-            <Typography.Text className="mb-1 block text-[11px] font-medium text-slate-400">
-              {formatSourceDistance(activeEntry.distance)}
-            </Typography.Text>
-          ) : null}
-          <Typography.Paragraph className="mb-0! text-xs! leading-6! text-slate-600!">
-            {activeEntry.snippet}
-          </Typography.Paragraph>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ProjectConversationSourcesPanel = ({
-  documentGroups,
-  activeDocumentGroupId,
-  visibleDocumentGroupIds,
-  onSelectDocumentGroup,
-}: {
-  documentGroups: ProjectConversationSourceDocumentGroup[];
-  activeDocumentGroupId: string | null;
-  visibleDocumentGroupIds?: string[];
-  onSelectDocumentGroup: (documentGroupId: string) => void;
-}) => {
-  const visibleDocumentGroups =
-    visibleDocumentGroupIds && visibleDocumentGroupIds.length > 0
-      ? documentGroups.filter((documentGroup) =>
-          visibleDocumentGroupIds.includes(documentGroup.id),
-        )
-      : documentGroups;
-  const activeDocumentGroup =
-    visibleDocumentGroups.find(
-      (documentGroup) => documentGroup.id === activeDocumentGroupId,
-    ) ?? visibleDocumentGroups[0];
-
-  if (!activeDocumentGroup) {
-    return null;
-  }
-
-  return (
-    <div
-      data-conversation-sources-panel="true"
-      className="w-[min(22rem,calc(100vw-3rem))] space-y-3.5"
-    >
-      <div className="space-y-1">
-        <Typography.Text className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-          {tp('conversation.references')}
-        </Typography.Text>
-        <Typography.Text className="block truncate text-sm font-semibold text-slate-800">
-          {simplifyProjectChatSourceLabel(activeDocumentGroup.sourceLabel)}
-        </Typography.Text>
-      </div>
-      {visibleDocumentGroups.length > 1 ? (
-        <div className="flex flex-wrap gap-2">
-          {visibleDocumentGroups.map((documentGroup) => {
-            const displayLabel = simplifyProjectChatSourceLabel(
-              documentGroup.sourceLabel,
-            );
-            const active = documentGroup.id === activeDocumentGroup.id;
-
-            return (
-              <button
-                key={documentGroup.id}
-                type="button"
-                data-conversation-source-switch={documentGroup.id}
-                className={[
-                  'inline-flex min-h-8 max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200',
-                  active
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-800',
-                ].join(' ')}
-                onClick={() => onSelectDocumentGroup(documentGroup.id)}
-              >
-                <FileTextOutlined className="text-xs" />
-                <span className="max-w-52 truncate">{displayLabel}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-      <ProjectConversationSourceDetailCard documentGroup={activeDocumentGroup} />
-    </div>
-  );
-};
-
-const ProjectConversationSourcesPopoverTrigger = ({
-  documentGroups,
-  visibleDocumentGroupIds,
-  defaultDocumentGroupId,
-  renderTrigger,
-}: {
-  documentGroups: ProjectConversationSourceDocumentGroup[];
-  visibleDocumentGroupIds?: string[];
-  defaultDocumentGroupId?: string;
-  renderTrigger: (args: {
-    openPopover: (documentGroupId?: string) => void;
-    open: boolean;
-  }) => React.ReactNode;
-}) => {
-  const visibleDocumentGroups =
-    visibleDocumentGroupIds && visibleDocumentGroupIds.length > 0
-      ? documentGroups.filter((documentGroup) =>
-          visibleDocumentGroupIds.includes(documentGroup.id),
-        )
-      : documentGroups;
-  const [sourcesPopoverOpen, setSourcesPopoverOpen] = React.useState(false);
-  const [activeDocumentGroupId, setActiveDocumentGroupId] = React.useState<string | null>(
-    defaultDocumentGroupId ?? visibleDocumentGroups[0]?.id ?? null,
-  );
-
-  React.useEffect(() => {
-    if (visibleDocumentGroups.length === 0) {
-      setActiveDocumentGroupId(null);
-      return;
-    }
-
-    if (
-      activeDocumentGroupId &&
-      visibleDocumentGroups.some(
-        (documentGroup) => documentGroup.id === activeDocumentGroupId,
-      )
-    ) {
-      return;
-    }
-
-    setActiveDocumentGroupId(defaultDocumentGroupId ?? visibleDocumentGroups[0]?.id ?? null);
-  }, [
-    activeDocumentGroupId,
-    defaultDocumentGroupId,
-    visibleDocumentGroups,
-  ]);
-
-  if (visibleDocumentGroups.length === 0) {
-    return null;
-  }
-
-  const openPopover = (documentGroupId?: string) => {
-    setActiveDocumentGroupId(
-      documentGroupId ?? defaultDocumentGroupId ?? visibleDocumentGroups[0]?.id ?? null,
-    );
-    setSourcesPopoverOpen(true);
-  };
-
-  return (
-    <Popover
-      trigger="click"
-      open={sourcesPopoverOpen}
-      destroyOnHidden={false}
-      onOpenChange={(nextOpen) => {
-        setSourcesPopoverOpen(nextOpen);
-
-        if (nextOpen) {
-          setActiveDocumentGroupId(
-            defaultDocumentGroupId ?? visibleDocumentGroups[0]?.id ?? null,
-          );
-        }
+    <button
+      key={sourceKey}
+      type="button"
+      aria-label={tp('conversation.viewSources')}
+      aria-haspopup="dialog"
+      data-conversation-source-tag="true"
+      data-conversation-source-key={sourceKey}
+      className={PROJECT_CHAT_SOURCE_TAG_CLASS_NAME}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onOpenSource?.(sourceKey);
       }}
-      content={
-        <ProjectConversationSourcesPanel
-          documentGroups={documentGroups}
-          visibleDocumentGroupIds={visibleDocumentGroupIds}
-          activeDocumentGroupId={activeDocumentGroupId}
-          onSelectDocumentGroup={setActiveDocumentGroupId}
-        />
-      }
     >
-      {renderTrigger({
-        openPopover,
-        open: sourcesPopoverOpen,
-      })}
-    </Popover>
+      {label}
+    </button>
   );
+};
+
+const renderProjectConversationSourceTagList = ({
+  labelsBySourceKey,
+  onOpenSource,
+  sourceKeys,
+}: {
+  labelsBySourceKey?: Map<string, string>;
+  onOpenSource?: (sourceKey: string) => void;
+  sourceKeys: string[];
+}) => {
+  if (sourceKeys.length === 0) {
+    return null;
+  }
+
+  return sourceKeys.map((sourceKey) =>
+    renderProjectConversationSourceTag({
+      label: labelsBySourceKey?.get(sourceKey) ?? sourceKey,
+      onOpenSource,
+      sourceKey,
+    }),
+  );
+};
+
+const renderProjectConversationPlainTextWithSourceTags = ({
+  content,
+  renderToken,
+}: {
+  content: string;
+  renderToken: (
+    sourceKeys: string[],
+    token: ProjectChatDraftSourceToken,
+  ) => React.ReactNode | null;
+}) => {
+  const tokens = resolveDraftSourceTokens(content);
+
+  if (tokens.length === 0) {
+    return <span>{content}</span>;
+  }
+
+  const fragments: React.ReactNode[] = [];
+  let lastIndex = 0;
+
+  tokens.forEach((token) => {
+    const trailingPunctuation = content[token.end];
+    const shouldMoveTrailingPunctuation =
+      trailingPunctuation !== undefined && /[。！？!?]/u.test(trailingPunctuation);
+
+    if (token.start > lastIndex) {
+      const textBeforeToken = content.slice(lastIndex, token.start);
+
+      fragments.push(
+        shouldMoveTrailingPunctuation
+          ? textBeforeToken.replace(/\s+$/u, '')
+          : textBeforeToken,
+      );
+    }
+
+    if (shouldMoveTrailingPunctuation) {
+      fragments.push(trailingPunctuation);
+    }
+
+    fragments.push(renderToken(token.sourceKeys, token) ?? token.rawText);
+    lastIndex = token.end + (shouldMoveTrailingPunctuation ? 1 : 0);
+  });
+
+  if (lastIndex < content.length) {
+    fragments.push(content.slice(lastIndex));
+  }
+
+  return <span>{fragments}</span>;
 };
 
 const BubbleTimestamp = ({ createdAt }: { createdAt: string }) => {
@@ -416,6 +220,14 @@ export const ProjectChatAssistantMessage = ({
   content: string;
   extraInfo?: ProjectChatBubbleExtraInfo;
 }) => {
+  const sourceEntries = buildProjectChatSourceEntries(extraInfo?.sources ?? []);
+  const availableSourceKeys = new Set(
+    sourceEntries.map((entry) => entry.sourceKey),
+  );
+  const seededSourceKeys = new Set(
+    extraInfo?.sourceSeedEntries?.map((entry) => entry.sourceKey) ?? [],
+  );
+  const legacyLabelsBySourceKey = buildLegacySourceTagLabelMap(sourceEntries);
   const citationViewModel = buildProjectChatCitationViewModel(
     extraInfo?.citationContent,
     extraInfo?.sources ?? [],
@@ -432,16 +244,54 @@ export const ProjectChatAssistantMessage = ({
     content: sanitizedContent,
     citationViewModel,
   });
-  const sourceDocumentGroups =
-    citationViewModel.mode === 'citation'
-      ? citationViewModel.documentGroups.map((documentGroup) => ({
-          id: documentGroup.id,
-          markerNumber: documentGroup.markerNumber,
-          sourceLabel: documentGroup.sourceLabel,
-          entries: documentGroup.entries,
-        }))
-      : buildProjectConversationSourceDocumentGroups(extraInfo?.sources ?? []);
-  const sourceTagLabel = buildProjectChatSourceTagLabel(sourceDocumentGroups);
+  const parsedSourceTokens = resolveDraftSourceTokens(rewrittenMarkdownContent);
+  const hasInlineSourceTokens = parsedSourceTokens.length > 0;
+  const useMarkdownFallback =
+    Boolean(extraInfo?.citationContent) &&
+    !useSentenceCitationMode &&
+    shouldProjectChatFallbackToLegacyMarkdown(rewrittenMarkdownContent);
+  const shouldRenderLegacySummaryTag = Boolean(extraInfo?.citationContent);
+  const renderSourceKeyToken = (
+    sourceKeys: string[],
+    token: ProjectChatDraftSourceToken,
+  ) => {
+    const resolvedSourceKeys =
+      token.kind === 'draft'
+        ? sourceKeys.filter((sourceKey) => seededSourceKeys.has(sourceKey))
+        : sourceKeys.filter((sourceKey) => availableSourceKeys.has(sourceKey));
+
+    if (resolvedSourceKeys.length === 0) {
+      return null;
+    }
+
+    return renderProjectConversationSourceTagList({
+      onOpenSource: extraInfo?.onOpenSource,
+      sourceKeys: resolvedSourceKeys,
+    });
+  };
+  const renderLegacyToken = (
+    sourceKeys: string[],
+    token: ProjectChatDraftSourceToken,
+  ) => {
+    const resolvedSourceKeys =
+      token.kind === 'draft'
+        ? sourceKeys.filter((sourceKey) => seededSourceKeys.has(sourceKey))
+        : sourceKeys.filter((sourceKey) => availableSourceKeys.has(sourceKey));
+
+    if (resolvedSourceKeys.length === 0) {
+      return null;
+    }
+
+    return renderProjectConversationSourceTagList({
+      labelsBySourceKey:
+        token.kind === 'draft' ? undefined : legacyLabelsBySourceKey,
+      onOpenSource: extraInfo?.onOpenSource,
+      sourceKeys: resolvedSourceKeys,
+    });
+  };
+  const summarySourceKey = sourceEntries[0]?.sourceKey ?? null;
+  const summarySourceLabel =
+    summarySourceKey ? legacyLabelsBySourceKey.get(summarySourceKey) ?? null : null;
 
   return (
     <div
@@ -450,114 +300,52 @@ export const ProjectChatAssistantMessage = ({
     >
       {useSentenceCitationMode ? (
         <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
-          <span>{sanitizedContent}</span>
-          {sourceTagLabel && sourceDocumentGroups.length > 0 ? (
-            <ProjectConversationSourcesPopoverTrigger
-              documentGroups={sourceDocumentGroups}
-              defaultDocumentGroupId={sourceDocumentGroups[0]?.id}
-              renderTrigger={({ openPopover, open }) => (
-                <button
-                  type="button"
-                  aria-label={tp('conversation.viewSources')}
-                  aria-expanded={open}
-                  aria-haspopup="dialog"
-                  data-conversation-source-tag="true"
-                  className={[
-                    'ml-1.5 inline-flex h-5 items-center rounded-full border border-slate-200/90 bg-slate-100/70 px-2 align-middle text-[8px] font-medium tracking-[0.01em] text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors duration-200',
-                    'hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200',
-                  ].join(' ')}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    openPopover(sourceDocumentGroups[0]?.id);
-                  }}
-                >
-                  {sourceTagLabel}
-                </button>
-              )}
-            />
+          {extraInfo?.citationContent?.sentences.map((sentence) => (
+            <React.Fragment key={sentence.id}>
+              <span>{sentence.text}</span>
+              {renderProjectConversationSourceTagList({
+                onOpenSource: extraInfo?.onOpenSource,
+                sourceKeys: resolveCitationSentenceSourceKeys(
+                  sentence,
+                  extraInfo?.sources ?? [],
+                ),
+              })}
+            </React.Fragment>
+          ))}
+        </div>
+      ) : useMarkdownFallback ? (
+        <div className="space-y-2">
+          <ProjectChatMarkdown
+            content={rewrittenMarkdownContent}
+            renderInlineSourceTag={renderLegacyToken}
+          />
+          {!hasInlineSourceTokens && summarySourceLabel ? (
+            renderProjectConversationSourceTag({
+              label: summarySourceLabel,
+              onOpenSource: extraInfo?.onOpenSource,
+              sourceKey: summarySourceKey ?? 'source1',
+            })
           ) : null}
         </div>
       ) : (
         <div className="space-y-2">
-          <ProjectChatMarkdown
-            content={rewrittenMarkdownContent}
-            renderInlineSourceTag={(sourceIndexes) => {
-              const inlineSourceDocumentGroups =
-                resolveProjectChatSourceTagGroupsByIndexes({
-                  documentGroups: sourceDocumentGroups,
-                  sourceIndexes,
-                });
-              const inlineSourceTagLabel = buildProjectChatSourceTagLabel(
-                inlineSourceDocumentGroups,
-              );
-
-              if (
-                inlineSourceDocumentGroups.length === 0 ||
-                !inlineSourceTagLabel
-              ) {
-                return null;
-              }
-
-              return (
-                <ProjectConversationSourcesPopoverTrigger
-                  documentGroups={sourceDocumentGroups}
-                  visibleDocumentGroupIds={inlineSourceDocumentGroups.map(
-                    (documentGroup) => documentGroup.id,
-                  )}
-                  defaultDocumentGroupId={inlineSourceDocumentGroups[0]?.id}
-                  renderTrigger={({ openPopover, open }) => (
-                    <button
-                      type="button"
-                      aria-label={tp('conversation.viewSources')}
-                      aria-expanded={open}
-                      aria-haspopup="dialog"
-                      data-conversation-source-tag="true"
-                      className={[
-                        'ml-1.5 inline-flex h-5 items-center rounded-full border border-slate-200/90 bg-slate-100/70 px-2 align-middle text-[8px] font-medium tracking-[0.01em] text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors duration-200',
-                        'hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200',
-                      ].join(' ')}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        openPopover(inlineSourceDocumentGroups[0]?.id);
-                      }}
-                    >
-                      {inlineSourceTagLabel}
-                    </button>
-                  )}
-                />
-              );
-            }}
-          />
-          {sourceTagLabel &&
-          sourceDocumentGroups.length > 0 &&
-          !rewrittenMarkdownContent.includes('[[SOURCE_TAG:') ? (
-            <ProjectConversationSourcesPopoverTrigger
-              documentGroups={sourceDocumentGroups}
-              defaultDocumentGroupId={sourceDocumentGroups[0]?.id}
-              renderTrigger={({ openPopover, open }) => (
-                <button
-                  type="button"
-                  aria-label={tp('conversation.viewSources')}
-                  aria-expanded={open}
-                  aria-haspopup="dialog"
-                  data-conversation-source-tag="true"
-                  className={[
-                    'inline-flex h-5 items-center rounded-full border border-slate-200/90 bg-slate-100/70 px-2 text-[8px] font-medium tracking-[0.01em] text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors duration-200',
-                    'hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200',
-                  ].join(' ')}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    openPopover(sourceDocumentGroups[0]?.id);
-                  }}
-                >
-                  {sourceTagLabel}
-                </button>
-              )}
-            />
-          ) : null}
+          <div className="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+            {renderProjectConversationPlainTextWithSourceTags({
+              content: rewrittenMarkdownContent,
+              renderToken: shouldRenderLegacySummaryTag
+                ? renderLegacyToken
+                : renderSourceKeyToken,
+            })}
+            {!hasInlineSourceTokens && summarySourceKey
+              ? renderProjectConversationSourceTag({
+                  label: shouldRenderLegacySummaryTag
+                    ? summarySourceLabel ?? summarySourceKey
+                    : summarySourceKey,
+                  onOpenSource: extraInfo?.onOpenSource,
+                  sourceKey: summarySourceKey,
+                })
+              : null}
+          </div>
         </div>
       )}
     </div>
@@ -601,12 +389,7 @@ export const ProjectChatAssistantFooter = ({
   const retryDisabled = assistantActions?.retryDisabled ?? true;
   const starDisabled =
     (assistantActions?.starDisabled ?? true) || assistantActions?.starring === true;
-  const citationViewModel = buildProjectChatCitationViewModel(
-    extraInfo.citationContent,
-    extraInfo.sources,
-  );
   void content;
-  void citationViewModel;
 
   const handleActionClick = (
     event: MouseEvent<HTMLButtonElement>,
