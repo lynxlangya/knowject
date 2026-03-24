@@ -3,6 +3,7 @@ import test from 'node:test';
 
 type Source = {
   id: string;
+  sourceKey: string;
   knowledgeId: string;
   documentId: string;
   chunkId: string;
@@ -26,6 +27,7 @@ const buildFixtureSources = (): Source[] => {
   return [
     {
       id: 'chunk-0',
+      sourceKey: 'source1',
       knowledgeId: 'knowledge-a',
       documentId: 'document-a',
       chunkId: 'chunk-0',
@@ -36,6 +38,7 @@ const buildFixtureSources = (): Source[] => {
     },
     {
       id: 'chunk-1',
+      sourceKey: 'source1',
       knowledgeId: 'knowledge-a',
       documentId: 'document-a',
       chunkId: 'chunk-1',
@@ -46,6 +49,7 @@ const buildFixtureSources = (): Source[] => {
     },
     {
       id: 'chunk-9',
+      sourceKey: 'source2',
       knowledgeId: 'knowledge-b',
       documentId: 'document-b',
       chunkId: 'chunk-9',
@@ -104,7 +108,7 @@ test('seeded source entries freeze source key order for drawer defaults', async 
   assert.deepEqual(entries.map((entry) => entry.id), ['chunk-0', 'chunk-1', 'chunk-9']);
 });
 
-test('drift fallback only triggers on source-key topology drift', async () => {
+test('drift fallback triggers on source-key set/order drift or key-to-document remapping only', async () => {
   const { buildProjectChatSourceEntries, shouldFallbackToLegacySourceRendering } = (await import(
     '../src/pages/project/projectChatSources'
   )) as {
