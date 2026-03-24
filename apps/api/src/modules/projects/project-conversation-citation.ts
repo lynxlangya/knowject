@@ -34,12 +34,40 @@ const getProjectConversationSourceDistanceRank = (
   return typeof source.distance === 'number' ? source.distance : Number.POSITIVE_INFINITY;
 };
 
+type ProjectConversationRankedSourceRecord = Omit<
+  ProjectConversationSourceDocument,
+  'sourceKey' | 'retrievalIndex'
+> & {
+  sourceKey: string;
+  retrievalIndex: number;
+};
+
 const compareProjectConversationSourceRecords = (
-  left: ProjectConversationSourceDocument,
-  right: ProjectConversationSourceDocument,
+  left: Pick<
+    ProjectConversationRankedSourceRecord,
+    | 'retrievalIndex'
+    | 'distance'
+    | 'knowledgeId'
+    | 'documentId'
+    | 'chunkIndex'
+    | 'chunkId'
+    | 'source'
+    | 'snippet'
+  >,
+  right: Pick<
+    ProjectConversationRankedSourceRecord,
+    | 'retrievalIndex'
+    | 'distance'
+    | 'knowledgeId'
+    | 'documentId'
+    | 'chunkIndex'
+    | 'chunkId'
+    | 'source'
+    | 'snippet'
+  >,
 ): number => {
   return (
-    left.retrievalIndex! - right.retrievalIndex! ||
+    left.retrievalIndex - right.retrievalIndex ||
     getProjectConversationSourceDistanceRank(left) -
       getProjectConversationSourceDistanceRank(right) ||
     left.knowledgeId.localeCompare(right.knowledgeId) ||
@@ -51,40 +79,21 @@ const compareProjectConversationSourceRecords = (
   );
 };
 
-const withProjectConversationSourceMeta = (
-  source: Omit<ProjectConversationSourceDocument, 'sourceKey' | 'retrievalIndex'> & {
-    sourceKey: string;
-    retrievalIndex: number;
-  },
-): ProjectConversationSourceDocument => {
-  const normalizedSource: ProjectConversationSourceDocument = {
-    id: source.id,
-    knowledgeId: source.knowledgeId,
-    documentId: source.documentId,
-    chunkId: source.chunkId,
-    chunkIndex: source.chunkIndex,
-    source: source.source,
-    snippet: source.snippet,
-    distance: source.distance,
-  };
-
-  Object.defineProperties(normalizedSource, {
-    sourceKey: {
-      configurable: true,
-      enumerable: false,
-      value: source.sourceKey,
-      writable: true,
-    },
-    retrievalIndex: {
-      configurable: true,
-      enumerable: false,
-      value: source.retrievalIndex,
-      writable: true,
-    },
-  });
-
-  return normalizedSource;
-};
+const toProjectConversationRankedSourceRecord = (
+  source: ProjectConversationSourceDocument,
+  fallbackIndex: number,
+): ProjectConversationRankedSourceRecord => ({
+  id: source.id,
+  sourceKey: source.sourceKey ?? '',
+  retrievalIndex: getProjectConversationSourceRetrievalIndex(source, fallbackIndex),
+  knowledgeId: source.knowledgeId,
+  documentId: source.documentId,
+  chunkId: source.chunkId,
+  chunkIndex: source.chunkIndex,
+  source: source.source,
+  snippet: source.snippet,
+  distance: source.distance,
+});
 
 const unwrapFencedJson = (value: string): string => {
   const trimmed = value.trim();
@@ -151,21 +160,15 @@ const normalizeSentenceSourceIds = (
 export const buildProjectConversationCitationSources = (
   sources: ProjectConversationSourceDocument[],
 ): ProjectConversationSourceDocument[] => {
-  const groupedSources = new Map<string, ProjectConversationSourceDocument[]>();
+  const shouldExposeSourceMetadata =
+    sources.length > 1 ||
+    sources.some(
+      (source) => source.sourceKey !== undefined,
+    );
+  const groupedSources = new Map<string, ProjectConversationRankedSourceRecord[]>();
 
   sources.forEach((source, index) => {
-    const normalizedSource = withProjectConversationSourceMeta({
-      id: source.id,
-      sourceKey: source.sourceKey ?? '',
-      retrievalIndex: getProjectConversationSourceRetrievalIndex(source, index),
-      knowledgeId: source.knowledgeId,
-      documentId: source.documentId,
-      chunkId: source.chunkId,
-      chunkIndex: source.chunkIndex,
-      source: source.source,
-      snippet: source.snippet,
-      distance: source.distance,
-    });
+    const normalizedSource = toProjectConversationRankedSourceRecord(source, index);
     const groupId = getProjectConversationSourceGroupId(normalizedSource);
     const existingGroup = groupedSources.get(groupId);
 
@@ -193,20 +196,22 @@ export const buildProjectConversationCitationSources = (
   let sourceIndex = 0;
 
   return orderedGroups.flatMap((group, groupIndex) =>
-    group.sources.map((source) =>
-      withProjectConversationSourceMeta({
-        id: `s${++sourceIndex}`,
-        sourceKey: `source${groupIndex + 1}`,
-        retrievalIndex: source.retrievalIndex!,
-        knowledgeId: source.knowledgeId,
-        documentId: source.documentId,
-        chunkId: source.chunkId,
-        chunkIndex: source.chunkIndex,
-        source: source.source,
-        snippet: source.snippet,
-        distance: source.distance,
-      }),
-    ),
+    group.sources.map((source) => ({
+      id: `s${++sourceIndex}`,
+      ...(shouldExposeSourceMetadata
+        ? {
+            sourceKey: `source${groupIndex + 1}`,
+            retrievalIndex: source.retrievalIndex,
+          }
+        : {}),
+      knowledgeId: source.knowledgeId,
+      documentId: source.documentId,
+      chunkId: source.chunkId,
+      chunkIndex: source.chunkIndex,
+      source: source.source,
+      snippet: source.snippet,
+      distance: source.distance,
+    })),
   );
 };
 

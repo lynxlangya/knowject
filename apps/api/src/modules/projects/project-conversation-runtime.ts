@@ -83,14 +83,40 @@ const buildProjectConversationSystemPrompt = (projectName: string): string => {
 const buildProjectConversationContextPrompt = ({
   question,
   retrieval,
+  sources,
 }: {
   question: string;
   retrieval: KnowledgeSearchResponse;
+  sources: ProjectConversationSourceDocument[];
 }): string => {
   const retrievalContext =
-    retrieval.items.length > 0
-      ? retrieval.items
-          .map((item, index) =>
+    sources.length > 0
+      ? sources
+          .map((source, index) => {
+            const retrievalItem =
+              retrieval.items[source.retrievalIndex ?? index] ??
+              retrieval.items[index];
+
+            if (!retrievalItem) {
+              return null;
+            }
+
+            return [
+              source.sourceKey ?? `source${index + 1}`,
+              `knowledgeId: ${retrievalItem.knowledgeId}`,
+              `documentId: ${retrievalItem.documentId}`,
+              `chunkId: ${retrievalItem.chunkId}`,
+              `chunkIndex: ${retrievalItem.chunkIndex}`,
+              `source: ${retrievalItem.source}`,
+              `content: ${retrievalItem.content}`,
+            ].join("\n");
+          })
+          .filter((item): item is string => item !== null)
+          .map((item) => item)
+          .join("\n\n")
+      : retrieval.items.length > 0
+        ? retrieval.items
+            .map((item, index) =>
             [
               `source${index + 1}`,
               `knowledgeId: ${item.knowledgeId}`,
@@ -102,7 +128,7 @@ const buildProjectConversationContextPrompt = ({
             ].join("\n"),
           )
           .join("\n\n")
-      : "当前没有命中的项目知识片段。";
+        : "当前没有命中的项目知识片段。";
 
   return [
     "请结合下列项目知识片段回答用户问题。",
@@ -349,6 +375,9 @@ export const createProjectConversationRuntime = ({
         repository: settingsRepository,
       }),
     ]);
+    const sources = buildProjectConversationCitationSources(
+      toProjectConversationSources(retrieval),
+    );
 
     return {
       llmConfig,
@@ -363,12 +392,11 @@ export const createProjectConversationRuntime = ({
           content: buildProjectConversationContextPrompt({
             question: userMessage.content,
             retrieval,
+            sources,
           }),
         },
       ],
-      sources: buildProjectConversationCitationSources(
-        toProjectConversationSources(retrieval),
-      ),
+      sources,
     };
   };
 
