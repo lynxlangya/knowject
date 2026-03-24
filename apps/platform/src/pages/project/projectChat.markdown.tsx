@@ -49,13 +49,27 @@ const renderProjectChatMarkdownInlineSourceTags = (
     let lastIndex = 0;
 
     tokens.forEach((token) => {
+      const trailingPunctuation = text[token.end];
+      const shouldMoveTrailingPunctuation =
+        trailingPunctuation !== undefined && /[。！？!?]/u.test(trailingPunctuation);
+
       if (token.start > lastIndex) {
-        fragments.push(text.slice(lastIndex, token.start));
+        const textBeforeToken = text.slice(lastIndex, token.start);
+
+        fragments.push(
+          shouldMoveTrailingPunctuation
+            ? textBeforeToken.replace(/\s+$/u, '')
+            : textBeforeToken,
+        );
+      }
+
+      if (shouldMoveTrailingPunctuation) {
+        fragments.push(trailingPunctuation);
       }
 
       const renderedTag = renderInlineSourceTag(token.sourceKeys, token);
       fragments.push(renderedTag ?? token.rawText);
-      lastIndex = token.end;
+      lastIndex = token.end + (shouldMoveTrailingPunctuation ? 1 : 0);
     });
 
     if (lastIndex < text.length) {

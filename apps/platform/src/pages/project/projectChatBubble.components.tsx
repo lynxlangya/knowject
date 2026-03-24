@@ -246,10 +246,23 @@ export const ProjectChatAssistantMessage = ({
   });
   const parsedSourceTokens = resolveDraftSourceTokens(rewrittenMarkdownContent);
   const hasInlineSourceTokens = parsedSourceTokens.length > 0;
-  const useMarkdownFallback =
-    Boolean(extraInfo?.citationContent) &&
-    !useSentenceCitationMode &&
-    shouldProjectChatFallbackToLegacyMarkdown(rewrittenMarkdownContent);
+  const markdownComparableContent =
+    parsedSourceTokens.length === 0
+      ? rewrittenMarkdownContent
+      : parsedSourceTokens.reduce(
+          (result, token, index) => {
+            const nextToken = parsedSourceTokens[index + 1];
+
+            return `${result}${rewrittenMarkdownContent.slice(
+              token.end,
+              nextToken?.start ?? undefined,
+            )}`;
+          },
+          rewrittenMarkdownContent.slice(0, parsedSourceTokens[0]?.start ?? 0),
+        );
+  const shouldUseLegacyMarkdownRenderer =
+    !extraInfo?.citationContent &&
+    shouldProjectChatFallbackToLegacyMarkdown(markdownComparableContent);
   const shouldRenderLegacySummaryTag = Boolean(extraInfo?.citationContent);
   const renderSourceKeyToken = (
     sourceKeys: string[],
@@ -313,19 +326,19 @@ export const ProjectChatAssistantMessage = ({
             </React.Fragment>
           ))}
         </div>
-      ) : useMarkdownFallback ? (
+      ) : shouldUseLegacyMarkdownRenderer ? (
         <div className="space-y-2">
           <ProjectChatMarkdown
             content={rewrittenMarkdownContent}
-            renderInlineSourceTag={renderLegacyToken}
+            renderInlineSourceTag={renderSourceKeyToken}
           />
-          {!hasInlineSourceTokens && summarySourceLabel ? (
-            renderProjectConversationSourceTag({
-              label: summarySourceLabel,
-              onOpenSource: extraInfo?.onOpenSource,
-              sourceKey: summarySourceKey ?? 'source1',
-            })
-          ) : null}
+          {!hasInlineSourceTokens && summarySourceKey
+            ? renderProjectConversationSourceTag({
+                label: summarySourceKey,
+                onOpenSource: extraInfo?.onOpenSource,
+                sourceKey: summarySourceKey,
+              })
+            : null}
         </div>
       ) : (
         <div className="space-y-2">
@@ -336,16 +349,16 @@ export const ProjectChatAssistantMessage = ({
                 ? renderLegacyToken
                 : renderSourceKeyToken,
             })}
-            {!hasInlineSourceTokens && summarySourceKey
-              ? renderProjectConversationSourceTag({
-                  label: shouldRenderLegacySummaryTag
-                    ? summarySourceLabel ?? summarySourceKey
-                    : summarySourceKey,
-                  onOpenSource: extraInfo?.onOpenSource,
-                  sourceKey: summarySourceKey,
-                })
-              : null}
           </div>
+          {!hasInlineSourceTokens && summarySourceKey
+            ? renderProjectConversationSourceTag({
+                label: shouldRenderLegacySummaryTag
+                  ? summarySourceLabel ?? summarySourceKey
+                  : summarySourceKey,
+                onOpenSource: extraInfo?.onOpenSource,
+                sourceKey: summarySourceKey,
+              })
+            : null}
         </div>
       )}
     </div>
