@@ -216,6 +216,18 @@ test('drift fallback triggers on source-key set/order drift or key-to-document r
 
   assert.equal(
     shouldFallbackToLegacySourceRendering({
+      seedEntries,
+      persistedSources: seedEntries.map((entry) =>
+        entry.sourceKey === 'source1'
+          ? { ...entry, documentId: `${entry.documentId}-drift` }
+          : entry,
+      ),
+    }),
+    true,
+  );
+
+  assert.equal(
+    shouldFallbackToLegacySourceRendering({
       seedEntries: [
         { sourceKey: 'source1', knowledgeId: 'k1', documentId: 'd1', snippet: 's1', distance: 0.1, chunkIds: ['c1'] },
         { sourceKey: 'source2', knowledgeId: 'k2', documentId: 'd2', snippet: 's2', distance: 0.2, chunkIds: ['c2'] },
@@ -229,6 +241,24 @@ test('drift fallback triggers on source-key set/order drift or key-to-document r
       ],
     }),
     true,
+  );
+
+  assert.equal(
+    shouldFallbackToLegacySourceRendering({
+      seedEntries,
+      persistedSources: [
+        ...seedEntries,
+        {
+          sourceKey: 'source3',
+          knowledgeId: 'knowledge-c',
+          documentId: 'document-c',
+          snippet: 'C-99',
+          distance: 0.4,
+          chunkIds: ['chunk-c-99-ref'],
+        },
+      ],
+    }),
+    false,
   );
 
   assert.equal(

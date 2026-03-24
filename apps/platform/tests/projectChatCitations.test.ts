@@ -653,8 +653,16 @@ test('same-document sources collapse to one summary tag without extra count', as
 
   assert.match(
     messageHtml,
-    /data-conversation-source-tag="true"[\s\S]*?>spec-alpha</,
+    buildSentenceEndSourcePattern({
+      sentenceText: '这一句来自同一份文档的两个分块。',
+      sourceKeys: ['source1'],
+    }),
   );
+  assert.equal(
+    countMatches(messageHtml, /data-conversation-source-tag="true"/),
+    1,
+  );
+  assert.doesNotMatch(messageHtml, />spec-alpha</);
   assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
 });
 
