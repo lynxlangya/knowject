@@ -6,6 +6,15 @@ import { renderToStaticMarkup } from 'react-dom/server';
 const require = createRequire(import.meta.url);
 require.extensions['.css'] = () => undefined;
 
+const buildDrawerTabLabelPattern = (
+  sourceKey: string,
+  sourceLabel: string,
+): RegExp => {
+  return new RegExp(
+    `data-project-chat-source-tab="${sourceKey}"[^>]*>(?:\\s|<[^>]+>)*${sourceLabel.replace('.', '\\.')}`,
+  );
+};
+
 type DrawerSourceEntry = {
   sourceKey: string;
   sourceLabel: string;
@@ -88,10 +97,8 @@ test('drawer error state keeps source tabs visible', async () => {
   );
 
   assert.match(html, /source payload unavailable/);
-  assert.match(html, /data-project-chat-source-tab="source1"/);
-  assert.match(html, /data-project-chat-source-tab="source2"/);
-  assert.match(html, />\s*architecture\.md\s*</);
-  assert.match(html, />\s*decisions\.md\s*</);
+  assert.match(html, buildDrawerTabLabelPattern('source1', 'architecture.md'));
+  assert.match(html, buildDrawerTabLabelPattern('source2', 'decisions.md'));
   assert.match(html, />\s*Retry\s*</i);
 });
 
@@ -120,6 +127,6 @@ test('drawer ready state highlights active tab and default snippet', async () =>
   );
 
   assert.match(html, /data-project-chat-source-tab-active="source2"/);
-  assert.match(html, />\s*decisions\.md\s*</);
+  assert.match(html, buildDrawerTabLabelPattern('source2', 'decisions.md'));
   assert.match(html, /default snippet source2/);
 });
