@@ -44,6 +44,7 @@ test('drawer loading state renders skeleton placeholder', async () => {
       sourceEntries: DrawerSourceEntry[];
       activeSourceKey: string;
       onSourceKeyChange: (sourceKey: string) => void;
+      onRetry: () => void;
       errorMessage?: string;
     }) => React.ReactElement;
   };
@@ -53,6 +54,7 @@ test('drawer loading state renders skeleton placeholder', async () => {
       sourceEntries: fixtureEntries,
       activeSourceKey: 'source1',
       onSourceKeyChange: () => undefined,
+      onRetry: () => undefined,
     }),
   );
 
@@ -70,6 +72,7 @@ test('drawer error state keeps source tabs visible', async () => {
       sourceEntries: DrawerSourceEntry[];
       activeSourceKey: string;
       onSourceKeyChange: (sourceKey: string) => void;
+      onRetry: () => void;
       errorMessage?: string;
     }) => React.ReactElement;
   };
@@ -79,6 +82,7 @@ test('drawer error state keeps source tabs visible', async () => {
       sourceEntries: fixtureEntries,
       activeSourceKey: 'source1',
       onSourceKeyChange: () => undefined,
+      onRetry: () => undefined,
       errorMessage: 'source payload unavailable',
     }),
   );
@@ -86,6 +90,7 @@ test('drawer error state keeps source tabs visible', async () => {
   assert.match(html, /source payload unavailable/);
   assert.match(html, /data-project-chat-source-tab="source1"/);
   assert.match(html, /data-project-chat-source-tab="source2"/);
+  assert.match(html, />\s*Retry\s*</i);
 });
 
 test('drawer ready state highlights active tab and default snippet', async () => {
@@ -98,6 +103,7 @@ test('drawer ready state highlights active tab and default snippet', async () =>
       sourceEntries: DrawerSourceEntry[];
       activeSourceKey: string;
       onSourceKeyChange: (sourceKey: string) => void;
+      onRetry: () => void;
       errorMessage?: string;
     }) => React.ReactElement;
   };
@@ -107,6 +113,7 @@ test('drawer ready state highlights active tab and default snippet', async () =>
       sourceEntries: fixtureEntries,
       activeSourceKey: 'source2',
       onSourceKeyChange: () => undefined,
+      onRetry: () => undefined,
     }),
   );
 

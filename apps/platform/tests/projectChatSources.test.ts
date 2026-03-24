@@ -70,6 +70,23 @@ const buildFixtureSources = (): Source[] => {
   ];
 };
 
+const buildFixtureSourcesWithUncited = (): Source[] => {
+  return [
+    ...buildFixtureSources(),
+    {
+      id: 'chunk-99',
+      sourceKey: 'source3',
+      knowledgeId: 'knowledge-c',
+      documentId: 'document-c',
+      chunkId: 'chunk-c-99-ref',
+      chunkIndex: 99,
+      source: '/knowledge/c.md',
+      snippet: 'C-99',
+      distance: 0.4,
+    },
+  ];
+};
+
 const buildFixtureCitationContent = (): CitationContent => {
   return {
     version: 1,
@@ -111,7 +128,7 @@ const buildFixtureSeedEntries = (): GroupedSourceEntry[] => {
   ];
 };
 
-test('buildProjectChatSourceEntries preserves raw source-entry order and resolveDrawerSource defaults source1 to first entry', async () => {
+test('buildProjectChatSourceEntries preserves raw source-entry order, resolveSentenceSourceKeys ignores uncited sources, and resolveDrawerSource scopes source1 to its grouped entries', async () => {
   const {
     buildProjectChatSourceEntries,
     resolveDrawerSource,
@@ -143,16 +160,20 @@ test('buildProjectChatSourceEntries preserves raw source-entry order and resolve
     ) => string[];
   };
   const sources = buildFixtureSources();
+  const sourcesWithUncited = buildFixtureSourcesWithUncited();
   const citationContent = buildFixtureCitationContent();
   const entries = buildProjectChatSourceEntries(sources);
   const drawerSource = resolveDrawerSource(entries, 'source1');
 
   assert.equal(drawerSource?.activeEntry.id, 'chunk-0');
-  assert.equal(
-    drawerSource?.entries[0]?.id,
-    'chunk-0',
+  assert.deepEqual(
+    drawerSource?.entries.map((entry) => entry.id),
+    ['chunk-0', 'chunk-1'],
   );
-  assert.deepEqual(resolveSentenceSourceKeys(citationContent, sources), ['source1', 'source2']);
+  assert.deepEqual(
+    resolveSentenceSourceKeys(citationContent, sourcesWithUncited),
+    ['source1', 'source2'],
+  );
   assert.deepEqual(entries.map((entry) => entry.id), ['chunk-0', 'chunk-1', 'chunk-9']);
 });
 

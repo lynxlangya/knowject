@@ -16,6 +16,35 @@ const countMatches = (value: string, pattern: RegExp): number => {
   return Array.from(value.matchAll(new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`))).length;
 };
 
+const PROJECT_CHAT_OPTIONAL_MARKUP = String.raw`(?:\s|<[^>]+>)*`;
+
+const buildConversationSourceTagPattern = (sourceKey: string): string => {
+  return String.raw`<button[^>]*data-conversation-source-tag="true"[^>]*>${PROJECT_CHAT_OPTIONAL_MARKUP}${escapeRegExp(sourceKey)}${PROJECT_CHAT_OPTIONAL_MARKUP}<\/button>`;
+};
+
+const buildSentenceEndSourcePattern = ({
+  sentenceText,
+  sourceKeys,
+  nextText,
+}: {
+  sentenceText: string;
+  sourceKeys: string[];
+  nextText?: string;
+}): RegExp => {
+  return new RegExp(
+    [
+      escapeRegExp(sentenceText),
+      PROJECT_CHAT_OPTIONAL_MARKUP,
+      sourceKeys.map((sourceKey) => buildConversationSourceTagPattern(sourceKey)).join(
+        PROJECT_CHAT_OPTIONAL_MARKUP,
+      ),
+      nextText
+        ? `${PROJECT_CHAT_OPTIONAL_MARKUP}${escapeRegExp(nextText)}`
+        : '',
+    ].join(''),
+  );
+};
+
 const renderAssistantBubble = async (message: {
   id: string;
   conversationId: string;
@@ -206,11 +235,18 @@ test('grounded sentences render inline citation markers and ungrounded sentences
 
   assert.match(
     messageHtml,
-    /第一句结论。\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>\s*仍需人工确认。/,
+    buildSentenceEndSourcePattern({
+      sentenceText: '第一句结论。',
+      sourceKeys: ['source1'],
+      nextText: '仍需人工确认。',
+    }),
   );
   assert.match(
     messageHtml,
-    /第二句有双重依据。\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source2\s*<\/button>/,
+    buildSentenceEndSourcePattern({
+      sentenceText: '第二句有双重依据。',
+      sourceKeys: ['source1', 'source2'],
+    }),
   );
   assert.doesNotMatch(
     messageHtml,
@@ -272,7 +308,10 @@ test('legacy assistant messages without citationContent append a single inline s
   );
   assert.match(
     messageHtml,
-    /这里继续沿用旧版 sources 展示。\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>/,
+    buildSentenceEndSourcePattern({
+      sentenceText: '这里继续沿用旧版 sources 展示。',
+      sourceKeys: ['source1'],
+    }),
   );
   assert.equal(
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
@@ -317,7 +356,19 @@ test('legacy [[SOURCE_TAG:...]] markers remain compatible with final sourceN chi
   assert.doesNotMatch(messageHtml, /\[\[SOURCE_TAG:/);
   assert.match(
     messageHtml,
-    /第一段沿用 legacy marker\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>。第二段继续引用\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source2\s*<\/button>。/,
+    buildSentenceEndSourcePattern({
+      sentenceText: '第一段沿用 legacy marker',
+      sourceKeys: ['source1'],
+      nextText: '。第二段继续引用',
+    }),
+  );
+  assert.match(
+    messageHtml,
+    buildSentenceEndSourcePattern({
+      sentenceText: '第二段继续引用',
+      sourceKeys: ['source1', 'source2'],
+      nextText: '。',
+    }),
   );
   assert.equal(
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
