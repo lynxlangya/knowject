@@ -18,7 +18,7 @@ type DrawerSourceEntry = {
 const fixtureEntries: DrawerSourceEntry[] = [
   {
     sourceKey: 'source1',
-    sourceLabel: 'source1',
+    sourceLabel: 'architecture.md',
     activeEntry: {
       id: 'chunk-0',
       snippet: 'default snippet source1',
@@ -26,7 +26,7 @@ const fixtureEntries: DrawerSourceEntry[] = [
   },
   {
     sourceKey: 'source2',
-    sourceLabel: 'source2',
+    sourceLabel: 'decisions.md',
     activeEntry: {
       id: 'chunk-9',
       snippet: 'default snippet source2',
@@ -90,6 +90,8 @@ test('drawer error state keeps source tabs visible', async () => {
   assert.match(html, /source payload unavailable/);
   assert.match(html, /data-project-chat-source-tab="source1"/);
   assert.match(html, /data-project-chat-source-tab="source2"/);
+  assert.match(html, />\s*architecture\.md\s*</);
+  assert.match(html, />\s*decisions\.md\s*</);
   assert.match(html, />\s*Retry\s*</i);
 });
 
@@ -118,5 +120,6 @@ test('drawer ready state highlights active tab and default snippet', async () =>
   );
 
   assert.match(html, /data-project-chat-source-tab-active="source2"/);
+  assert.match(html, />\s*decisions\.md\s*</);
   assert.match(html, /default snippet source2/);
 });
