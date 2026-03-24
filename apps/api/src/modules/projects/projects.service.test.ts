@@ -4164,17 +4164,19 @@ test('streamProjectConversationMessage persists citationContent on final assista
     skillBindingValidator: createSkillBindingValidatorStub(),
     conversationRuntime: createConversationRuntimeStub({
       streamAssistantReply: async ({ onDelta }) => {
-        const deltas = ['当前项目已经具备最小对话写链路，', '并开始接入项目级检索。'];
+        const deltas = [
+          '当前项目已经具备最小对话写链路，',
+          '并开始接入项目级检索[[source1]]。',
+        ];
 
         for (const delta of deltas) {
           await onDelta(delta);
         }
 
         return {
-          content: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+          content: '当前项目已经具备最小对话写链路，并开始接入项目级检索[[source1]]。',
           sources: [
             {
-              id: 's1',
               knowledgeId: 'kb-1',
               documentId: 'doc-1',
               chunkId: 'chunk-1',
@@ -4224,14 +4226,21 @@ test('streamProjectConversationMessage persists citationContent on final assista
 
   assert.deepEqual(
     events.map((event) => event.type),
-    ['ack', 'delta', 'delta', 'done'],
+    ['ack', 'sources_seed', 'delta', 'delta', 'done'],
   );
   assert.deepEqual(
     events.map((event) => event.sequence),
-    [1, 2, 3, 4],
+    [1, 2, 3, 4, 5],
   );
   assert.equal(events[0]?.clientRequestId, 'stream-request-1');
   assert.equal(events[0]?.type, 'ack');
+  assert.equal(events[1]?.type, 'sources_seed');
+  assert.notEqual(events[2]?.type, 'sources_seed');
+  const sourceTaggedDeltaIndex = events.findIndex(
+    (event) => event.type === 'delta' && event.delta.includes('[[source1]]'),
+  );
+  assert.notEqual(sourceTaggedDeltaIndex, -1);
+  assert.ok(sourceTaggedDeltaIndex > 1);
   assert.equal(events[events.length - 1]?.type, 'done');
   const doneEvent = events[events.length - 1];
   if (!doneEvent || doneEvent.type !== 'done') {
@@ -4246,6 +4255,10 @@ test('streamProjectConversationMessage persists citationContent on final assista
   assert.equal(
     persistedConversation?.messages[1]?.content,
     '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+  );
+  assert.equal(
+    persistedConversation?.messages[1]?.content.includes('[[source'),
+    false,
   );
   assert.deepEqual(persistedConversation?.messages[1]?.citationContent, {
     version: 1,
@@ -4263,6 +4276,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
     '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
   );
   assert.equal(doneEvent.assistantMessage.sources?.[0]?.id, 's1');
+  assert.equal(doneEvent.assistantMessage.sources?.[0]?.sourceKey, 'source1');
   assert.deepEqual(doneEvent.assistantMessage.citationContent, {
     version: 1,
     sentences: [

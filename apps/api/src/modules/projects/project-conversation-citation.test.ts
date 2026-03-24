@@ -21,26 +21,79 @@ const createSource = (
   };
 };
 
-test('buildProjectConversationCitationSources assigns stable message-local source ids', () => {
-  const result = buildProjectConversationCitationSources([
+test('buildProjectConversationCitationSources groups chunks by document and assigns stable source keys', () => {
+  const groupedSources = buildProjectConversationCitationSources([
     createSource({
       id: 'upstream-source-id',
+      knowledgeId: 'kb-1',
+      documentId: 'doc-1',
+      chunkId: 'chunk-1',
+      chunkIndex: 0,
       source: 'architecture.md',
+      distance: 0.08,
+    }),
+    createSource({
+      knowledgeId: 'kb-2',
+      documentId: 'doc-2',
+      chunkId: 'chunk-9',
+      chunkIndex: 0,
+      source: 'runtime.md',
+      distance: 0.18,
     }),
     createSource({
       id: 'another-upstream-id',
-      knowledgeId: 'kb-2',
-      documentId: 'doc-2',
+      knowledgeId: 'kb-1',
+      documentId: 'doc-1',
       chunkId: 'chunk-2',
       chunkIndex: 1,
-      source: 'runtime.md',
+      source: 'architecture.md',
+      distance: 0.12,
     }),
   ]);
 
+  assert.deepEqual(groupedSources.map((source) => source.sourceKey), [
+    'source1',
+    'source1',
+    'source2',
+  ]);
+  assert.equal(groupedSources[0]?.sourceKey, groupedSources[1]?.sourceKey);
+  assert.notEqual(groupedSources[1]?.sourceKey, groupedSources[2]?.sourceKey);
   assert.deepEqual(
-    result.map((source) => source.id),
-    ['s1', 's2'],
+    groupedSources.map((source) => source.id),
+    ['s1', 's2', 's3'],
   );
+});
+
+test('normalizeProjectConversationCitationContent strips source placeholders and keeps clean prose', () => {
+  const sources = buildProjectConversationCitationSources([createSource()]);
+
+  const result = normalizeProjectConversationCitationContent(
+    {
+      version: 1,
+      sentences: [
+        {
+          id: 'sent-1',
+          text: '当前项目已经接入 merged retrieval。',
+          sourceIds: ['s1'],
+          grounded: true,
+        },
+      ],
+    },
+    '[[source1]]当前项目已经接入 merged retrieval。[[source1]]',
+    sources,
+  );
+
+  assert.deepEqual(result, {
+    version: 1,
+    sentences: [
+      {
+        id: 'sent-1',
+        text: '当前项目已经接入 merged retrieval。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+    ],
+  });
 });
 
 test('normalizeProjectConversationCitationContent removes unknown and duplicate source ids while keeping order', () => {
