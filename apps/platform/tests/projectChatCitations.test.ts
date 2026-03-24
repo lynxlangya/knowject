@@ -204,10 +204,9 @@ test('grounded sentences render inline citation markers and ungrounded sentences
     messageHtml,
     /第一句结论。[\s\S]*?data-conversation-source-tag="true"/,
   );
-  assert.match(
-    messageHtml,
-    />spec-alpha \+1</,
-  );
+  assert.match(messageHtml, /第一句结论。[\s\S]*?>source1</);
+  assert.match(messageHtml, /第二句有双重依据。[\s\S]*?>source1</);
+  assert.match(messageHtml, /第二句有双重依据。[\s\S]*?>source2</);
   assert.doesNotMatch(messageHtml, /data-citation-marker=/);
   assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
   assert.doesNotMatch(messageHtml, /data-citation-source-chip=/);
@@ -257,9 +256,47 @@ test('legacy assistant messages without citationContent append a single inline s
   );
   assert.match(
     messageHtml,
-    />legacy-evidence</,
+    />source1</,
   );
   assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
+});
+
+test('legacy [[SOURCE_TAG:...]] markers remain compatible with final sourceN chips', async () => {
+  const { messageHtml } = await renderAssistantBubble({
+    id: 'message-legacy-inline-tags',
+    conversationId: 'chat-1',
+    role: 'assistant',
+    content:
+      '第一段沿用 legacy marker [[SOURCE_TAG:1]]。第二段继续引用 [[SOURCE_TAG:1,2]]。',
+    createdAt: '2026-03-23T08:06:30.000Z',
+    sources: [
+      {
+        id: 'source-1',
+        knowledgeId: 'knowledge-1',
+        documentId: 'document-legacy-1',
+        chunkId: 'chunk-legacy-1',
+        chunkIndex: 0,
+        source: '/knowledge/legacy-1.md',
+        snippet: 'legacy 证据 1。',
+        distance: 0.2,
+      },
+      {
+        id: 'source-2',
+        knowledgeId: 'knowledge-1',
+        documentId: 'document-legacy-2',
+        chunkId: 'chunk-legacy-2',
+        chunkIndex: 1,
+        source: '/knowledge/legacy-2.md',
+        snippet: 'legacy 证据 2。',
+        distance: 0.3,
+      },
+    ],
+  });
+
+  assert.doesNotMatch(messageHtml, /\[\[SOURCE_TAG:/);
+  assert.match(messageHtml, /第一段沿用 legacy marker[\s\S]*?>source1</);
+  assert.match(messageHtml, /第二段继续引用[\s\S]*?>source1</);
+  assert.match(messageHtml, /第二段继续引用[\s\S]*?>source2</);
 });
 
 test('citation mode conservatively suppresses trailing pseudo citation blocks before sentence rendering', async () => {
