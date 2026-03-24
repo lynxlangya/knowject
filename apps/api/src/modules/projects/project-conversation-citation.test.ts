@@ -6,6 +6,14 @@ import {
 } from './project-conversation-citation.js';
 import type { ProjectConversationSourceDocument } from './projects.types.js';
 
+type SourceWithKey = ProjectConversationSourceDocument & {
+  sourceKey?: string;
+};
+
+const asSourceWithKey = (
+  sources: ProjectConversationSourceDocument[],
+): SourceWithKey[] => sources as SourceWithKey[];
+
 const createSource = (
   overrides: Partial<ProjectConversationSourceDocument> = {},
 ): ProjectConversationSourceDocument => {
@@ -22,7 +30,7 @@ const createSource = (
 };
 
 test('buildProjectConversationCitationSources groups chunks by document and assigns stable source keys', () => {
-  const groupedSources = buildProjectConversationCitationSources([
+  const groupedSources = asSourceWithKey(buildProjectConversationCitationSources([
     createSource({
       id: 'upstream-source-id',
       knowledgeId: 'kb-1',
@@ -49,7 +57,7 @@ test('buildProjectConversationCitationSources groups chunks by document and assi
       source: 'architecture.md',
       distance: 0.12,
     }),
-  ]);
+  ]));
 
   assert.deepEqual(groupedSources.map((source) => source.sourceKey), [
     'source1',
@@ -145,9 +153,10 @@ test('buildProjectConversationCitationSources freezes sourceKey precedence acros
   const groupedSources = buildProjectConversationCitationSources(
     rankedSources as ProjectConversationSourceDocument[],
   );
+  const groupedSourcesWithKey = asSourceWithKey(groupedSources);
 
   const sourceKeyNumberByDocument = new Map(
-    groupedSources.map((source) => [
+    groupedSourcesWithKey.map((source) => [
       source.documentId,
       Number(source.sourceKey?.replace('source', '')),
     ]),

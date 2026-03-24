@@ -4281,6 +4281,13 @@ test('streamProjectConversationMessage persists citationContent on final assista
   if (!doneEvent || doneEvent.type !== 'done') {
     throw new Error('doneEvent should be a stream done event');
   }
+  const doneSources = (doneEvent.assistantMessage.sources ?? []) as Array<{
+    id: string;
+    sourceKey?: string;
+    knowledgeId: string;
+    documentId: string;
+    source: string;
+  }>;
 
   const persistedConversation = persistedProject.conversations[0];
   assert.equal(persistedConversation?.messages.length, 2);
@@ -4311,7 +4318,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
     '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
   );
   assert.deepEqual(
-    doneEvent.assistantMessage.sources?.map((source) => [
+    doneSources.map((source) => [
       source.sourceKey,
       source.knowledgeId,
       source.documentId,
@@ -4329,12 +4336,20 @@ test('streamProjectConversationMessage persists citationContent on final assista
       source.documentId,
       source.sourceLabel,
     ]),
-    doneEvent.assistantMessage.sources?.map((source) => [
+    doneSources.map((source) => [
       source.sourceKey,
       source.knowledgeId,
       source.documentId,
       source.source,
     ]),
+  );
+  assert.deepEqual(
+    doneSources.map((source) => source.id),
+    ['s1', 's2'],
+  );
+  assert.deepEqual(
+    doneEvent.assistantMessage.citationContent?.sentences[0]?.sourceIds,
+    doneSources.map((source) => source.id),
   );
   assert.deepEqual(doneEvent.assistantMessage.citationContent, {
     version: 1,
