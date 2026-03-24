@@ -12,6 +12,10 @@ const escapeRegExp = (value: string): string => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
+const countMatches = (value: string, pattern: RegExp): number => {
+  return Array.from(value.matchAll(new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`))).length;
+};
+
 const renderAssistantBubble = async (message: {
   id: string;
   conversationId: string;
@@ -212,6 +216,13 @@ test('grounded sentences render inline citation markers and ungrounded sentences
     messageHtml,
     /仍需人工确认。\s*<button[^>]*data-conversation-source-tag="true"/,
   );
+  assert.equal(
+    countMatches(messageHtml, /data-conversation-source-tag="true"/),
+    3,
+  );
+  assert.doesNotMatch(messageHtml, />spec-alpha \+1</);
+  assert.doesNotMatch(messageHtml, />spec-alpha</);
+  assert.doesNotMatch(messageHtml, />spec-beta</);
   assert.doesNotMatch(messageHtml, /data-citation-marker=/);
   assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
   assert.doesNotMatch(messageHtml, /data-citation-source-chip=/);
@@ -263,6 +274,11 @@ test('legacy assistant messages without citationContent append a single inline s
     messageHtml,
     />source1</,
   );
+  assert.equal(
+    countMatches(messageHtml, /data-conversation-source-tag="true"/),
+    1,
+  );
+  assert.doesNotMatch(messageHtml, />legacy-evidence</);
   assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });
 
@@ -303,6 +319,12 @@ test('legacy [[SOURCE_TAG:...]] markers remain compatible with final sourceN chi
     messageHtml,
     /第一段沿用 legacy marker\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>。第二段继续引用\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source2\s*<\/button>。/,
   );
+  assert.equal(
+    countMatches(messageHtml, /data-conversation-source-tag="true"/),
+    3,
+  );
+  assert.doesNotMatch(messageHtml, />legacy-1</);
+  assert.doesNotMatch(messageHtml, />legacy-2</);
 });
 
 test('citation mode conservatively suppresses trailing pseudo citation blocks before sentence rendering', async () => {
