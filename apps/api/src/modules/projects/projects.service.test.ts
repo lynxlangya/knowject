@@ -4193,8 +4193,8 @@ test('streamProjectConversationMessage persists citationContent on final assista
           },
         ]);
         const deltas = [
-          '当前项目已经具备最小对话写链路，[[source1]]',
-          '并开始接入项目级检索。[[source2]]',
+          '当前项目已经具备最小对话写链路。[[source1]]',
+          '项目级检索也已开始接入。[[source2]]',
         ];
 
         for (const delta of deltas) {
@@ -4203,7 +4203,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
 
         return {
           content:
-            '当前项目已经具备最小对话写链路，[[source1]]并开始接入项目级检索。[[source2]]',
+            '当前项目已经具备最小对话写链路。[[source1]]项目级检索也已开始接入。[[source2]]',
           sources: [
             {
               knowledgeId: 'kb-1',
@@ -4230,8 +4230,14 @@ test('streamProjectConversationMessage persists citationContent on final assista
             sentences: [
               {
                 id: 'sent-1',
-                text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
-                sourceIds: ['s1', 's2'],
+                text: '当前项目已经具备最小对话写链路。',
+                sourceIds: ['s1'],
+                grounded: true,
+              },
+              {
+                id: 'sent-2',
+                text: '项目级检索也已开始接入。',
+                sourceIds: ['s2'],
                 grounded: true,
               },
             ],
@@ -4265,6 +4271,18 @@ test('streamProjectConversationMessage persists citationContent on final assista
   assert.deepEqual(
     events.map((event) => event.type),
     ['ack', 'sources_seed', 'delta', 'delta', 'done'],
+  );
+  assert.deepEqual(
+    events
+      .filter(
+        (event): event is Extract<ProjectConversationStreamEvent, { type: 'delta' }> =>
+          event.type === 'delta',
+      )
+      .map((event) => event.delta),
+    [
+      '当前项目已经具备最小对话写链路。[[source1]]',
+      '项目级检索也已开始接入。[[source2]]',
+    ],
   );
   assert.deepEqual(
     events.map((event) => event.sequence),
@@ -4324,7 +4342,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
   assert.equal(persistedConversation?.messages[1]?.role, 'assistant');
   assert.equal(
     persistedConversation?.messages[1]?.content,
-    '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+    '当前项目已经具备最小对话写链路。项目级检索也已开始接入。',
   );
   assert.equal(
     persistedConversation?.messages[1]?.content.includes('[[source'),
@@ -4335,15 +4353,21 @@ test('streamProjectConversationMessage persists citationContent on final assista
     sentences: [
       {
         id: 'sent-1',
-        text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
-        sourceIds: ['s1', 's2'],
+        text: '当前项目已经具备最小对话写链路。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+      {
+        id: 'sent-2',
+        text: '项目级检索也已开始接入。',
+        sourceIds: ['s2'],
         grounded: true,
       },
     ],
   });
   assert.equal(
     doneEvent.assistantMessage.content,
-    '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+    '当前项目已经具备最小对话写链路。项目级检索也已开始接入。',
   );
   assert.deepEqual(
     doneSources.map((source) => [
@@ -4376,16 +4400,22 @@ test('streamProjectConversationMessage persists citationContent on final assista
     ['s1', 's2'],
   );
   assert.deepEqual(
-    doneEvent.assistantMessage.citationContent?.sentences[0]?.sourceIds,
-    doneSources.map((source) => source.id),
+    doneEvent.assistantMessage.citationContent?.sentences.map((sentence) => sentence.sourceIds),
+    [['s1'], ['s2']],
   );
   assert.deepEqual(doneEvent.assistantMessage.citationContent, {
     version: 1,
     sentences: [
       {
         id: 'sent-1',
-        text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
-        sourceIds: ['s1', 's2'],
+        text: '当前项目已经具备最小对话写链路。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+      {
+        id: 'sent-2',
+        text: '项目级检索也已开始接入。',
+        sourceIds: ['s2'],
         grounded: true,
       },
     ],
@@ -4394,7 +4424,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
   assert.equal(doneEvent.conversationSummary.title, '已有会话');
   assert.equal(
     doneEvent.conversationSummary.preview,
-    '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+    '当前项目已经具备最小对话写链路。项目级检索也已开始接入。',
   );
   assert.equal(
     doneEvent.conversationSummary.updatedAt,
