@@ -6,7 +6,6 @@ import {
 } from '@ant-design/icons';
 import { Bubble } from '@ant-design/x';
 import {
-  App,
   Alert,
   Button,
   Drawer,
@@ -20,15 +19,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   PATHS,
 } from '@app/navigation/paths';
-import { extractApiErrorMessage } from '@api/error';
-import { createProjectKnowledge } from '@api/knowledge';
 import { KNOWJECT_BRAND } from '@styles/brand';
 import { ProjectConversationList } from './components/ProjectConversationList';
 import { ProjectConversationMessageRail } from './components/ProjectConversationMessageRail';
-import {
-  ProjectKnowledgeAccessModal,
-  type ProjectKnowledgeFormValues,
-} from './components/ProjectKnowledgeAccessModal';
+import { ProjectKnowledgeAccessModal } from './components/ProjectKnowledgeAccessModal';
 import { ProjectKnowledgeDraftDrawer } from './components/ProjectKnowledgeDraftDrawer';
 import {
   buildProjectChatBubbleItems,
@@ -36,34 +30,25 @@ import {
   PROJECT_CHAT_BUBBLE_LIST_STYLES,
   PROJECT_CHAT_BUBBLE_ROLES,
 } from './projectChat.adapters';
-import {
-  buildProjectKnowledgeDraftSessionKey,
-  resolveProjectKnowledgeDraftSelection,
-} from './projectKnowledgeDraft.helpers';
 import { buildOptimisticProjectConversationMessages } from './useProjectConversationTurn.helpers';
 import { useProjectChatActions } from './useProjectChatActions';
 import { useProjectChatUserMessageActions } from './useProjectChatUserMessageActions';
 import { useProjectChatSettings } from './useProjectChatSettings';
+import { useProjectKnowledgeDraftFlow } from './useProjectKnowledgeDraftFlow';
 import {
   buildProjectConversationMessageBulkActionState,
-  type ProjectKnowledgeDraftValues,
   useProjectConversationMessageActions,
 } from './useProjectConversationMessageActions';
 import {
   type ProjectConversationTargetRefValue,
   useProjectConversationDetail,
 } from './useProjectConversationDetail';
-import {
-  closeProjectConversationMessageKnowledgeDrawer,
-  completeProjectConversationMessageKnowledgeSave,
-  useProjectConversationMessageRail,
-} from './useProjectConversationMessageRail';
+import { useProjectConversationMessageRail } from './useProjectConversationMessageRail';
 import { useProjectConversationTurn } from './useProjectConversationTurn';
 import { useProjectPageContext } from './projectPageContext';
 import { tp } from './project.i18n';
 
 export const ProjectChatPage = () => {
-  const { message } = App.useApp();
   const navigate = useNavigate();
   const { chatId } = useParams<{ chatId?: string }>();
   const {
@@ -71,25 +56,37 @@ export const ProjectChatPage = () => {
     conversations,
     projectKnowledge,
   } = useProjectPageContext();
+  const conversationScopeKey = `${activeProject.id}:${chatId ?? ''}`;
   const latestConversationTargetRef = useRef<ProjectConversationTargetRefValue>({
     projectId: activeProject.id,
     chatId,
   });
-  const [composerValue, setComposerValue] = useState('');
-  const [mobileRailOpen, setMobileRailOpen] = useState(false);
-  const [knowledgeDraftOpen, setKnowledgeDraftOpen] = useState(false);
-  const [knowledgeDraftValue, setKnowledgeDraftValue] =
-    useState<ProjectKnowledgeDraftValues | null>(null);
-  const [knowledgeDraftSelectedKnowledgeId, setKnowledgeDraftSelectedKnowledgeId] =
-    useState<string | null>(null);
-  const [knowledgeDraftPendingKnowledgeOption, setKnowledgeDraftPendingKnowledgeOption] =
-    useState<{ label: string; value: string } | null>(null);
-  const [knowledgeAccessModalOpen, setKnowledgeAccessModalOpen] =
-    useState(false);
-  const [creatingDraftKnowledge, setCreatingDraftKnowledge] =
-    useState(false);
-  const [lastUsedKnowledgeIdBySession, setLastUsedKnowledgeIdBySession] =
-    useState<Record<string, string>>({});
+  const [composerState, setComposerState] = useState(() => ({
+    scopeKey: conversationScopeKey,
+    value: '',
+  }));
+  const composerValue =
+    composerState.scopeKey === conversationScopeKey ? composerState.value : '';
+  const setComposerValue = (value: string) => {
+    setComposerState({
+      scopeKey: conversationScopeKey,
+      value,
+    });
+  };
+  const [mobileRailState, setMobileRailState] = useState(() => ({
+    scopeKey: conversationScopeKey,
+    open: false,
+  }));
+  const mobileRailOpen =
+    mobileRailState.scopeKey === conversationScopeKey
+      ? mobileRailState.open
+      : false;
+  const setMobileRailOpen = (open: boolean) => {
+    setMobileRailState({
+      scopeKey: conversationScopeKey,
+      open,
+    });
+  };
 
   useEffect(() => {
     latestConversationTargetRef.current = {
@@ -97,32 +94,6 @@ export const ProjectChatPage = () => {
       chatId,
     };
   }, [activeProject.id, chatId]);
-
-  useEffect(() => {
-    setComposerValue('');
-  }, [activeProject.id, chatId]);
-
-  useEffect(() => {
-    setMobileRailOpen(false);
-    setKnowledgeDraftOpen(false);
-    setKnowledgeDraftValue(null);
-    setKnowledgeDraftSelectedKnowledgeId(null);
-    setKnowledgeDraftPendingKnowledgeOption(null);
-    setKnowledgeAccessModalOpen(false);
-  }, [activeProject.id, chatId]);
-
-  useEffect(() => {
-    if (
-      !knowledgeDraftPendingKnowledgeOption ||
-      !projectKnowledge.items.some(
-        (knowledge) => knowledge.id === knowledgeDraftPendingKnowledgeOption.value,
-      )
-    ) {
-      return;
-    }
-
-    setKnowledgeDraftPendingKnowledgeOption(null);
-  }, [knowledgeDraftPendingKnowledgeOption, projectKnowledge.items]);
 
   const {
     chatSettingsLoading,
@@ -265,153 +236,27 @@ export const ProjectChatPage = () => {
     isStreaming,
     selectedMessageCount: messageRail.selectedMessageIds.length,
   });
-  const projectKnowledgeOptions = projectKnowledge.items.map((knowledge) => ({
-    label: knowledge.name,
-    value: knowledge.id,
-  }));
-  const knowledgeDraftProjectKnowledgeOptions =
-    knowledgeDraftPendingKnowledgeOption &&
-    !projectKnowledgeOptions.some(
-      (option) => option.value === knowledgeDraftPendingKnowledgeOption.value,
-    )
-      ? [knowledgeDraftPendingKnowledgeOption, ...projectKnowledgeOptions]
-      : projectKnowledgeOptions;
+  const knowledgeDraftFlow = useProjectKnowledgeDraftFlow({
+    activeProjectId: activeProject.id,
+    chatId,
+    projectKnowledgeItems: projectKnowledge.items,
+    projectKnowledgeLoading: projectKnowledge.loading,
+    projectKnowledgeError: projectKnowledge.error,
+    refreshProjectKnowledge: projectKnowledge.refresh,
+    savingKnowledgeDraft,
+    selectedMessageIds: messageRail.selectedMessageIds,
+    railMode: messageRail.mode,
+    setRailMode: messageRail.setMode,
+    setRailSelectedMessageIds: messageRail.setSelectedMessageIds,
+    buildKnowledgeDraftFromSelection,
+    saveKnowledgeDraft,
+  });
 
   const handleScrollToMessage = (messageId: string) => {
     document.getElementById(`project-chat-message-${messageId}`)?.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
     });
-  };
-
-  const handleOpenKnowledgeDraft = () => {
-    const nextDraft = buildKnowledgeDraftFromSelection(
-      messageRail.selectedMessageIds,
-    );
-
-    if (!nextDraft) {
-      message.warning(tp('conversation.assistantActions.selectPersisted'));
-      return;
-    }
-
-    const knowledgeIds = knowledgeDraftProjectKnowledgeOptions.map(
-      (option) => option.value,
-    );
-
-    messageRail.setMode('selection');
-    setKnowledgeDraftValue(nextDraft);
-    setKnowledgeDraftSelectedKnowledgeId(
-      chatId
-        ? resolveProjectKnowledgeDraftSelection({
-            projectId: activeProject.id,
-            chatId,
-            projectKnowledgeIds: knowledgeIds,
-            lastUsedKnowledgeIdBySession,
-          })
-        : null,
-    );
-    setKnowledgeDraftOpen(true);
-  };
-
-  const handleCloseKnowledgeDraft = () => {
-    if (savingKnowledgeDraft) {
-      return;
-    }
-
-    const nextSelectionState = closeProjectConversationMessageKnowledgeDrawer({
-      mode: messageRail.mode,
-      selectedMessageIds: messageRail.selectedMessageIds,
-    });
-
-    messageRail.setMode(nextSelectionState.mode);
-    messageRail.setSelectedMessageIds(nextSelectionState.selectedMessageIds);
-    setKnowledgeDraftOpen(false);
-    setKnowledgeDraftSelectedKnowledgeId(null);
-  };
-
-  const handleKnowledgeDraftValueChange = (
-    patch: Partial<ProjectKnowledgeDraftValues>,
-  ) => {
-    setKnowledgeDraftValue((currentValue) =>
-      currentValue
-        ? {
-            ...currentValue,
-            ...patch,
-          }
-        : currentValue,
-    );
-  };
-
-  const handleKnowledgeDraftSaveSuccess = (selectedKnowledgeId: string) => {
-    const nextSelectionState = completeProjectConversationMessageKnowledgeSave({
-      mode: messageRail.mode,
-      selectedMessageIds: messageRail.selectedMessageIds,
-    });
-
-    if (chatId) {
-      const sessionKey = buildProjectKnowledgeDraftSessionKey(
-        activeProject.id,
-        chatId,
-      );
-      setLastUsedKnowledgeIdBySession((currentValue) => ({
-        ...currentValue,
-        [sessionKey]: selectedKnowledgeId,
-      }));
-    }
-
-    messageRail.setMode(nextSelectionState.mode);
-    messageRail.setSelectedMessageIds(nextSelectionState.selectedMessageIds);
-    setKnowledgeDraftOpen(false);
-    setKnowledgeDraftValue(null);
-    setKnowledgeDraftSelectedKnowledgeId(null);
-    message.success(tp('resources.draft.saved'));
-  };
-
-  const handleCreateProjectKnowledgeForDraft = async (
-    values: ProjectKnowledgeFormValues,
-  ) => {
-    setCreatingDraftKnowledge(true);
-
-    try {
-      const result = await createProjectKnowledge(activeProject.id, {
-        name: values.name,
-        description: values.description,
-        sourceType: 'global_docs',
-      });
-
-      setKnowledgeDraftPendingKnowledgeOption({
-        label: result.knowledge.name,
-        value: result.knowledge.id,
-      });
-      setKnowledgeDraftSelectedKnowledgeId(result.knowledge.id);
-      setKnowledgeAccessModalOpen(false);
-      message.success(tp('resources.draft.createSuccess'));
-      void projectKnowledge.refresh();
-    } catch (currentError) {
-      message.error(
-        extractApiErrorMessage(currentError, tp('resources.draft.createFailed')),
-      );
-    } finally {
-      setCreatingDraftKnowledge(false);
-    }
-  };
-
-  const handleSubmitKnowledgeDraft = async () => {
-    if (!knowledgeDraftValue) {
-      return;
-    }
-
-    const selectedKnowledgeId = knowledgeDraftSelectedKnowledgeId;
-    const result = await saveKnowledgeDraft(knowledgeDraftValue, {
-      knowledgeId: selectedKnowledgeId,
-    });
-
-    if (result.status === 'success' && selectedKnowledgeId) {
-      handleKnowledgeDraftSaveSuccess(selectedKnowledgeId);
-      return;
-    }
-
-    message.error(result.message ?? tp('resources.draft.saveFailed'));
   };
 
   const railProps = {
@@ -436,7 +281,7 @@ export const ProjectChatPage = () => {
     onExportMarkdown: () => {
       exportSelectedMessagesAsMarkdown(messageRail.selectedMessageIds);
     },
-    onGenerateKnowledgeDraft: handleOpenKnowledgeDraft,
+    onGenerateKnowledgeDraft: knowledgeDraftFlow.openKnowledgeDraft,
   } as const;
 
   const renderCreateChatButton = ({
@@ -707,39 +552,11 @@ export const ProjectChatPage = () => {
             </Drawer>
 
             <ProjectKnowledgeDraftDrawer
-              open={knowledgeDraftOpen}
-              value={knowledgeDraftValue}
-              saving={savingKnowledgeDraft}
-              projectKnowledgeOptions={knowledgeDraftProjectKnowledgeOptions}
-              projectKnowledgeLoading={projectKnowledge.loading}
-              projectKnowledgeError={projectKnowledge.error}
-              selectedKnowledgeId={knowledgeDraftSelectedKnowledgeId}
-              onChange={handleKnowledgeDraftValueChange}
-              onKnowledgeChange={setKnowledgeDraftSelectedKnowledgeId}
-              onCreateKnowledge={() => setKnowledgeAccessModalOpen(true)}
-              onClose={handleCloseKnowledgeDraft}
-              onSubmit={() => void handleSubmitKnowledgeDraft()}
+              {...knowledgeDraftFlow.drawerProps}
             />
 
             <ProjectKnowledgeAccessModal
-              open={knowledgeAccessModalOpen}
-              initialMode="project"
-              allowedModes={['project']}
-              knowledgeCatalog={[]}
-              knowledgeCatalogLoading={false}
-              boundKnowledgeIds={[]}
-              binding={false}
-              creating={creatingDraftKnowledge}
-              createProjectTitle={tp('resources.access.defaultCreateTitle')}
-              createProjectDescription={tp('resources.access.defaultCreateDescription')}
-              createProjectHelperText={tp('resources.access.createContinueHint')}
-              createProjectSubmitText={tp('resources.access.createEmptySubmit')}
-              onCancel={() => setKnowledgeAccessModalOpen(false)}
-              onBindGlobalKnowledge={() => undefined}
-              onCreateProjectKnowledge={(values) => {
-                void handleCreateProjectKnowledgeForDraft(values);
-              }}
-              onOpenGlobalManagement={() => undefined}
+              {...knowledgeDraftFlow.accessModalProps}
             />
           </>
         ) : (

@@ -83,6 +83,10 @@ test('project knowledge draft flow source no longer keeps legacy create-then-upl
     new URL('../src/pages/project/ProjectChatPage.tsx', import.meta.url),
     'utf8',
   );
+  const knowledgeDraftFlowSource = readFileSync(
+    new URL('../src/pages/project/useProjectKnowledgeDraftFlow.ts', import.meta.url),
+    'utf8',
+  );
   const projectKnowledgeDraftDrawerSource = readFileSync(
     new URL(
       '../src/pages/project/components/ProjectKnowledgeDraftDrawer.tsx',
@@ -103,19 +107,19 @@ test('project knowledge draft flow source no longer keeps legacy create-then-upl
     /knowledgeDraftPartialFailureMessage/,
   );
   assert.match(
-    projectChatPageSource,
-    /projectKnowledgeLoading=\{projectKnowledge\.loading\}/,
+    knowledgeDraftFlowSource,
+    /projectKnowledgeLoading,/,
   );
   assert.match(
-    projectChatPageSource,
-    /projectKnowledgeError=\{projectKnowledge\.error\}/,
+    knowledgeDraftFlowSource,
+    /projectKnowledgeError,/,
   );
   assert.match(
-    projectChatPageSource,
+    knowledgeDraftFlowSource,
     /setKnowledgeDraftSelectedKnowledgeId\(null\);/,
   );
   assert.doesNotMatch(
-    projectChatPageSource,
+    knowledgeDraftFlowSource,
     /if \(currentKnowledgeId && knowledgeIds\.includes\(currentKnowledgeId\)\)/,
   );
 });

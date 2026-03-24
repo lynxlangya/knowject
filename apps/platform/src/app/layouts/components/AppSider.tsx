@@ -1,27 +1,6 @@
 import { useState } from "react";
 import { isApiError } from "@knowject/request";
-import {
-  DeleteOutlined,
-  EditOutlined,
-  EllipsisOutlined,
-  InboxOutlined,
-  LogoutOutlined,
-  PlusOutlined,
-  PushpinOutlined,
-  ShareAltOutlined,
-  SettingOutlined,
-  TranslationOutlined,
-} from "@ant-design/icons";
-import {
-  App,
-  Dropdown,
-  Layout,
-  Menu,
-  Popover,
-  Skeleton,
-  Typography,
-} from "antd";
-import type { MenuProps } from "antd";
+import { App, Layout, Menu } from "antd";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { updateAuthPreferences } from "@api/auth";
@@ -38,6 +17,8 @@ import type { SupportedLocale } from "@app/providers/locale.storage";
 import type { ProjectSummary } from "@app/project/project.types";
 import { useProjectContext } from "@app/project/useProjectContext";
 import { SIDER_WIDTH } from "@app/layouts/layout.constants";
+import { AppSiderAccountPanel } from "./AppSiderAccountPanel";
+import { AppSiderProjectPanel } from "./AppSiderProjectPanel";
 import {
   ProjectFormModal,
   type ProjectFormValues,
@@ -74,25 +55,11 @@ export const AppSider = ({
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [projectSubmitting, setProjectSubmitting] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [actionMenuOpenProjectId, setActionMenuOpenProjectId] = useState<
-    string | null
-  >(null);
-  const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const activeProjectId = getProjectIdFromPathname(location.pathname);
   const authUser = getAuthUser();
   const editingProject = editingProjectId
     ? (projects.find((project) => project.id === editingProjectId) ?? null)
     : null;
-  const accountPrimary =
-    authUser?.username || authUser?.name || "current@knowject.ai";
-  const accountSecondary =
-    authUser?.name && authUser.name !== accountPrimary
-      ? authUser.name
-      : t("account.current");
-  const accountAvatar = (authUser?.name || authUser?.username || "K")
-    .trim()
-    .charAt(0)
-    .toUpperCase();
   const menuItems = getMenuItems(t);
 
   const handleOpenProject = (projectId: string) => {
@@ -101,13 +68,11 @@ export const AppSider = ({
 
   const handleOpenProjectModal = () => {
     setEditingProjectId(null);
-    setActionMenuOpenProjectId(null);
     setProjectModalOpen(true);
   };
 
   const handleOpenEditProject = (project: ProjectSummary) => {
     setEditingProjectId(project.id);
-    setActionMenuOpenProjectId(null);
     setProjectModalOpen(true);
   };
 
@@ -182,7 +147,6 @@ export const AppSider = ({
 
   const handleToggleProjectPin = (project: ProjectSummary) => {
     const result = toggleProjectPin(project.id);
-    setActionMenuOpenProjectId(null);
 
     if (result === "not_found") {
       message.warning(t("messages.projectMissing"));
@@ -198,8 +162,6 @@ export const AppSider = ({
   };
 
   const handleDeleteProject = (project: ProjectSummary) => {
-    setActionMenuOpenProjectId(null);
-
     const remainingProjects = projects.filter((item) => item.id !== project.id);
 
     modal.confirm({
@@ -244,62 +206,11 @@ export const AppSider = ({
     });
   };
 
-  const getProjectActionItems = (
-    project: ProjectSummary,
-  ): MenuProps["items"] => [
-    {
-      key: "share",
-      icon: <ShareAltOutlined />,
-      label: t("projects.share"),
-      disabled: true,
-    },
-    {
-      key: "edit",
-      icon: <EditOutlined />,
-      label: t("projects.edit"),
-    },
-    {
-      key: "pin",
-      icon: <PushpinOutlined />,
-      label: project.isPinned ? t("projects.unpin") : t("projects.pin"),
-    },
-    {
-      key: "archive",
-      icon: <InboxOutlined />,
-      label: t("projects.archive"),
-      disabled: true,
-    },
-    {
-      key: "delete",
-      icon: <DeleteOutlined />,
-      label: t("projects.delete"),
-      danger: true,
-    },
-  ];
-
-  const handleProjectActionClick = (project: ProjectSummary, key: string) => {
-    if (key === "edit") {
-      handleOpenEditProject(project);
-      return;
-    }
-
-    if (key === "pin") {
-      handleToggleProjectPin(project);
-      return;
-    }
-
-    if (key === "delete") {
-      handleDeleteProject(project);
-    }
-  };
-
   const handleLocaleChange = async (nextLocale: SupportedLocale) => {
     if (nextLocale === locale) {
-      setAccountPanelOpen(false);
       return;
     }
 
-    setAccountPanelOpen(false);
     await setLocale(nextLocale, "account");
 
     try {
@@ -313,125 +224,6 @@ export const AppSider = ({
       );
     }
   };
-
-  const languagePanelContent = (
-    <div className="flex w-40 flex-col gap-1 rounded-card p-1.5">
-      {[
-        {
-          locale: "en" as const,
-          label: t("account.english"),
-        },
-        {
-          locale: "zh-CN" as const,
-          label: t("account.chineseSimplified"),
-        },
-      ].map((option) => {
-        const active = option.locale === locale;
-
-        return (
-          <button
-            key={option.locale}
-            type="button"
-            className={[
-              "flex h-9 items-center rounded-[12px] px-3 text-left text-sm font-medium transition-colors",
-              active
-                ? "text-white"
-                : "text-slate-600 hover:bg-white hover:text-slate-900",
-            ].join(" ")}
-            style={
-              active
-                ? {
-                    backgroundImage: KNOWJECT_BRAND.navGradient,
-                  }
-                : undefined
-            }
-            onClick={() => {
-              void handleLocaleChange(option.locale);
-            }}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-
-  const accountPanelContent = (
-    <div className="w-68 rounded-card p-2">
-      <div className="flex items-center gap-3 rounded-2xl px-2.5 py-2">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] text-sm font-semibold text-white"
-          style={{
-            backgroundImage: KNOWJECT_BRAND.heroGradient,
-            boxShadow: `0 8px 14px ${KNOWJECT_BRAND.primaryGlow}`,
-          }}
-        >
-          {accountAvatar}
-        </div>
-        <div className="min-w-0">
-          <Typography.Text className="block truncate text-label font-semibold text-slate-800">
-            {accountPrimary}
-          </Typography.Text>
-          <Typography.Text className="block truncate text-caption text-slate-500">
-            {accountSecondary}
-          </Typography.Text>
-        </div>
-      </div>
-
-      <div className="mx-2 my-1.5 h-px bg-slate-200/80" />
-
-      <button
-        type="button"
-        className="flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-slate-600 transition-colors hover:bg-white hover:text-slate-900"
-        onClick={() => {
-          setAccountPanelOpen(false);
-          onNavigate(PATHS.settings);
-        }}
-      >
-        <SettingOutlined className="text-body" />
-        <span className="text-sm font-medium">{t("account.settings")}</span>
-      </button>
-
-      <Popover
-        trigger={["hover"]}
-        placement="rightTop"
-        arrow={false}
-        content={languagePanelContent}
-        styles={{
-          container: {
-            padding: 0,
-            borderRadius: 18,
-            background: KNOWJECT_BRAND.shellSurfaceStrong,
-            border: "1px solid rgba(255,255,255,0.72)",
-            boxShadow: "0 18px 36px rgba(15,42,38,0.08)",
-            backdropFilter: "blur(18px)",
-          },
-        }}
-      >
-        <button
-          type="button"
-          className="flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-slate-600 transition-colors hover:bg-white hover:text-slate-900"
-        >
-          <TranslationOutlined className="text-body" />
-          <span className="text-sm font-medium">{t("account.language")}</span>
-        </button>
-      </Popover>
-
-      <div className="mx-2 my-1.5 h-px bg-slate-200/80" />
-
-      <button
-        type="button"
-        className="flex h-10 w-full items-center gap-3 rounded-[14px] px-3 text-left text-slate-600 transition-colors hover:bg-white hover:text-slate-900"
-        onClick={() => {
-          setAccountPanelOpen(false);
-          onLogout();
-        }}
-      >
-        <LogoutOutlined className="text-body" />
-        <span className="text-sm font-medium">{t("account.logout")}</span>
-      </button>
-    </div>
-  );
 
   return (
     <Sider
@@ -491,221 +283,26 @@ export const AppSider = ({
           />
         </div>
 
-        <div
-          className="mt-4 mb-3.5 flex min-h-0 flex-1 flex-col rounded-shell border p-3"
-          style={{
-            borderColor: "rgba(255,255,255,0.68)",
-            background: KNOWJECT_BRAND.shellSurface,
-          }}
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <Typography.Text className="text-sm font-semibold tracking-[0.08em] text-slate-600">
-              {t("projects.mine")}
-            </Typography.Text>
-            <button
-              type="button"
-              aria-label={t("projects.addProject")}
-              className="flex h-9 w-9 items-center justify-center rounded-[14px] border text-slate-600 transition-all duration-200 hover:-translate-y-px hover:text-slate-900"
-              style={{
-                borderColor: "rgba(255,255,255,0.72)",
-                background: KNOWJECT_BRAND.shellSurfaceStrong,
-              }}
-              onClick={handleOpenProjectModal}
-            >
-              <PlusOutlined />
-            </button>
-          </div>
+        <AppSiderProjectPanel
+          projects={projects}
+          loading={loading}
+          error={error}
+          activeProjectId={activeProjectId}
+          onRefreshProjects={refreshProjects}
+          onOpenProjectModal={handleOpenProjectModal}
+          onOpenProject={handleOpenProject}
+          onEditProject={handleOpenEditProject}
+          onToggleProjectPin={handleToggleProjectPin}
+          onDeleteProject={handleDeleteProject}
+        />
 
-          <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
-            {loading && projects.length === 0 ? (
-              <div className="px-2 py-1">
-                <Skeleton active paragraph={{ rows: 3 }} title={false} />
-              </div>
-            ) : error && projects.length === 0 ? (
-              <div className="flex flex-col gap-2 px-2 py-1">
-                <Typography.Text className="text-xs text-rose-500">
-                  {error}
-                </Typography.Text>
-                <button
-                  type="button"
-                  className="self-start text-xs font-medium text-slate-600 transition-colors hover:text-slate-900"
-                  onClick={() => void refreshProjects()}
-                >
-                  {t("projects.reload")}
-                </button>
-              </div>
-            ) : projects.length === 0 ? (
-              <div
-                className="rounded-card border px-3 py-4"
-                style={{
-                  borderColor: "rgba(226,232,240,0.96)",
-                  background: "rgba(255,255,255,0.88)",
-                }}
-              >
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <Typography.Text className="block text-label font-semibold text-slate-800">
-                      {t("projects.emptyTitle")}
-                    </Typography.Text>
-                    <Typography.Text className="mt-1 block text-xs leading-5 text-slate-500">
-                      {t("projects.emptyDescription")}
-                    </Typography.Text>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border text-xs font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-                    style={{
-                      borderColor: "rgba(203,213,225,0.88)",
-                      background: "rgba(248,250,252,0.96)",
-                    }}
-                    onClick={handleOpenProjectModal}
-                  >
-                    <PlusOutlined />
-                    <span>{t("projects.createProject")}</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {error ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2">
-                    <Typography.Text className="text-caption leading-5 text-amber-700">
-                      {t("projects.syncWarning")}
-                    </Typography.Text>
-                  </div>
-                ) : null}
-                {projects.map((project) => {
-                  const active = project.id === activeProjectId;
-                  const actionMenuOpen = actionMenuOpenProjectId === project.id;
-
-                  return (
-                    <div key={project.id} className="group relative">
-                      <button
-                        type="button"
-                        className={[
-                          "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 pr-14 text-left text-label transition-all duration-200",
-                          active
-                            ? "text-slate-900"
-                            : "text-slate-600 hover:-translate-y-px hover:text-slate-900",
-                        ].join(" ")}
-                        style={
-                          active
-                            ? {
-                                borderColor: KNOWJECT_BRAND.primaryBorder,
-                                background: KNOWJECT_BRAND.shellSurfaceStrong,
-                              }
-                            : {
-                                borderColor: "transparent",
-                                background: "transparent",
-                              }
-                        }
-                        onClick={() => handleOpenProject(project.id)}
-                      >
-                        <span
-                          className={[
-                            "flex h-8 w-8 shrink-0 items-center justify-center text-xs font-semibold",
-                            active || project.isPinned
-                              ? "rounded-[14px] border text-white"
-                              : "rounded-xl bg-slate-200/90 text-slate-600",
-                          ].join(" ")}
-                          style={
-                            active || project.isPinned
-                              ? {
-                                  borderColor: KNOWJECT_BRAND.primaryBorder,
-                                  backgroundImage: KNOWJECT_BRAND.heroGradient,
-                                }
-                              : undefined
-                          }
-                        >
-                          {(project.name.trim().charAt(0) || "P").toUpperCase()}
-                        </span>
-                        <span className="truncate font-medium">
-                          {project.name}
-                        </span>
-                      </button>
-
-                      <Dropdown
-                        trigger={["click"]}
-                        placement="bottomRight"
-                        open={actionMenuOpen}
-                        onOpenChange={(open) => {
-                          setActionMenuOpenProjectId(open ? project.id : null);
-                        }}
-                        menu={{
-                          items: getProjectActionItems(project),
-                          onClick: ({ key, domEvent }) => {
-                            domEvent.stopPropagation();
-                            handleProjectActionClick(project, String(key));
-                          },
-                        }}
-                      >
-                        <button
-                          type="button"
-                          aria-label={t("projects.actionAria", {
-                            name: project.name,
-                          })}
-                          className={[
-                            "absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border text-slate-500 transition-all duration-200",
-                            "opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto",
-                            "group-focus-within:opacity-100 group-focus-within:scale-100 group-focus-within:pointer-events-auto",
-                            actionMenuOpen
-                              ? "opacity-100 scale-100 pointer-events-auto"
-                              : "",
-                          ].join(" ")}
-                          style={{
-                            borderColor: "rgba(255,255,255,0.78)",
-                            background: KNOWJECT_BRAND.shellSurfaceStrong,
-                          }}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                          }}
-                          onMouseDown={(event) => {
-                            event.stopPropagation();
-                          }}
-                        >
-                          <EllipsisOutlined />
-                        </button>
-                      </Dropdown>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <Popover
-          open={accountPanelOpen}
-          onOpenChange={setAccountPanelOpen}
-          placement="top"
-          trigger="click"
-          content={accountPanelContent}
-          arrow={false}
-          styles={{
-            container: {
-              padding: 0,
-              borderRadius: 20,
-              background: KNOWJECT_BRAND.shellSurfaceStrong,
-              border: "1px solid rgba(255,255,255,0.72)",
-              boxShadow: "0 18px 36px rgba(15,42,38,0.08)",
-              backdropFilter: "blur(18px)",
-            },
-          }}
-        >
-          <button
-            type="button"
-            className="flex h-10 w-full items-center gap-2 rounded-2xl border px-3 text-left text-slate-700 transition-all duration-200 hover:-translate-y-px hover:border-slate-200 hover:bg-white/92 hover:text-slate-900 hover:shadow-[0_12px_24px_rgba(15,42,38,0.06)] active:translate-y-0 active:bg-white"
-            style={{
-              borderColor: "rgba(255,255,255,0.72)",
-              background: KNOWJECT_BRAND.shellSurfaceStrong,
-              boxShadow: "0 10px 24px rgba(15,42,38,0.03)",
-            }}
-          >
-            <SettingOutlined className="shrink-0 text-base text-slate-500" />
-            <span className="text-label font-semibold">{t("account.settings")}</span>
-          </button>
-        </Popover>
+        <AppSiderAccountPanel
+          authUser={authUser}
+          locale={locale}
+          onLocaleChange={handleLocaleChange}
+          onNavigateToSettings={() => onNavigate(PATHS.settings)}
+          onLogout={onLogout}
+        />
       </div>
 
       <ProjectFormModal
