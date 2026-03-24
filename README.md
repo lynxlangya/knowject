@@ -29,7 +29,7 @@ The repository is currently in an active foundation stage: the product shell, au
 - `pnpm verify:index-ops-project-consumption` now bundles the Week 5-6 minimum automated validation across project-knowledge API tests, Python indexer tests, and platform type checks.
 - Docker Compose baselines are available for both local and production-style environments with `platform + api + indexer-py + mongodb + chroma`; `platform` now has a `/healthz` readiness probe, and `pnpm docker:prod:up` now starts in image-only mode instead of implicitly building on the target machine.
 - MongoDB is the current primary datastore. Chroma now runs behind stable namespace keys such as `global_docs` and `proj_{projectId}_docs`, while the physical collections are versioned and switched through active pointers so embedding model changes do not require a service restart. `global_code` remains a reserved empty namespace.
-- `apps/indexer-py` now provides the Python indexing service used for `md / txt` parsing, cleaning, chunking, OpenAI-compatible embedding generation, provider-aware batching/error handling, and Chroma upsert/delete orchestration. Its internal control-plane docs are now disabled outside `development`, `storagePath` is constrained under `KNOWLEDGE_STORAGE_ROOT`, and internal token checks only activate when `KNOWLEDGE_INDEXER_INTERNAL_TOKEN` is explicitly configured.
+- `apps/indexer-py` now provides the Python indexing service used for `md / txt` parsing, cleaning, chunking, OpenAI-compatible embedding generation, provider-aware batching/error handling, and Chroma upsert/delete orchestration. Its internal control-plane docs are disabled outside `development`, `storagePath` is constrained under `KNOWLEDGE_STORAGE_ROOT`, and non-`development` startup now fails closed unless `KNOWLEDGE_INDEXER_INTERNAL_TOKEN(_FILE)` is configured for both the API and the indexer.
 
 ## Repository Layout
 
@@ -108,7 +108,7 @@ pnpm dev:init
 pnpm dev:up
 ```
 
-`pnpm dev:init` / `pnpm dev:up` now sync the canonical host secret trio `MONGODB_URI_FILE` / `JWT_SECRET_FILE` / `SETTINGS_ENCRYPTION_KEY_FILE` into `.env.local`, and also derive Docker's internal `docker/secrets/mongodb_uri.txt` from `.env.docker.local` plus `mongo_app_password.txt`, so host and container API boot paths no longer drift on Mongo credentials.
+`pnpm dev:init` / `pnpm dev:up` now sync the canonical host secret quartet `MONGODB_URI_FILE` / `JWT_SECRET_FILE` / `SETTINGS_ENCRYPTION_KEY_FILE` / `KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE` into `.env.local`, and also derive Docker's internal `docker/secrets/mongodb_uri.txt` from `.env.docker.local` plus `mongo_app_password.txt`, so host and container API / indexer boot paths no longer drift on Mongo credentials or internal bearer auth.
 
 ### Useful commands
 

@@ -94,7 +94,7 @@ ensure_production_docker_env() {
 }
 
 ensure_local_secrets() {
-  if [[ -s "$JWT_SECRET_FILE" && -s "$MONGO_ROOT_PASSWORD_FILE" && -s "$MONGO_APP_PASSWORD_FILE" && -s "$SETTINGS_ENCRYPTION_KEY_FILE" ]]; then
+  if [[ -s "$JWT_SECRET_FILE" && -s "$KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE" && -s "$MONGO_ROOT_PASSWORD_FILE" && -s "$MONGO_APP_PASSWORD_FILE" && -s "$SETTINGS_ENCRYPTION_KEY_FILE" ]]; then
     return
   fi
 
@@ -104,6 +104,7 @@ ensure_local_secrets() {
 
 require_secret_files() {
   require_file "$JWT_SECRET_FILE"
+  require_file "$KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE"
   require_file "$MONGO_ROOT_PASSWORD_FILE"
   require_file "$MONGO_APP_PASSWORD_FILE"
   require_file "$SETTINGS_ENCRYPTION_KEY_FILE"
@@ -159,11 +160,13 @@ sync_host_env_with_local_docker() {
 
   remove_env_key "$HOST_ENV_FILE" "MONGODB_URI"
   remove_env_key "$HOST_ENV_FILE" "JWT_SECRET"
+  remove_env_key "$HOST_ENV_FILE" "KNOWLEDGE_INDEXER_INTERNAL_TOKEN"
   remove_env_key "$HOST_ENV_FILE" "SETTINGS_ENCRYPTION_KEY"
   upsert_env_key "$HOST_ENV_FILE" "PORT" "$api_port"
   upsert_env_key "$HOST_ENV_FILE" "MONGODB_URI_FILE" "$HOST_MONGO_URI_FILE"
   upsert_env_key "$HOST_ENV_FILE" "MONGODB_DB_NAME" "$mongo_db"
   upsert_env_key "$HOST_ENV_FILE" "JWT_SECRET_FILE" "$JWT_SECRET_FILE"
+  upsert_env_key "$HOST_ENV_FILE" "KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE" "$KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE"
   upsert_env_key "$HOST_ENV_FILE" "SETTINGS_ENCRYPTION_KEY_FILE" "$SETTINGS_ENCRYPTION_KEY_FILE"
   upsert_env_key "$HOST_ENV_FILE" "CHROMA_URL" "http://127.0.0.1:${chroma_port}"
 

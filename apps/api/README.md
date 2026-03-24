@@ -306,7 +306,7 @@
 - 环境变量模板位于仓库根 [`.env.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.example)。
 - 本地真实值应放在仓库根 `.env.local`。
 - 运行时按 `.env` → `.env.local` 顺序加载；`.env.local` 可覆盖低优先级同族键，但同一份 env 文件不要同时定义 `NAME` 和 `NAME_FILE`。
-- API runtime 的 canonical secret / connection-string 键固定为：`MONGODB_URI`、`JWT_SECRET`、`SETTINGS_ENCRYPTION_KEY`，可选 secret 额外允许 `OPENAI_API_KEY`；对应高优先级来源可使用 `<NAME>_FILE`。
+- API runtime 的 canonical secret / connection-string 键固定为：`MONGODB_URI`、`JWT_SECRET`、`SETTINGS_ENCRYPTION_KEY`，可选 secret 额外允许 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN` 与 `OPENAI_API_KEY`；对应高优先级来源可使用 `<NAME>_FILE`。
 - Docker 本地 / 线上模板分别位于 [`.env.docker.local.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.docker.local.example) 与 [`.env.docker.production.example`](/Users/langya/Documents/CodeHub/ai/knowject/.env.docker.production.example)。
 - 最小必需变量：
   - `PORT`
@@ -324,12 +324,13 @@
   - `ARGON2_PARALLELISM`
   - `API_ERROR_EXPOSE_DETAILS`
   - `API_ERROR_INCLUDE_STACK`
-- 当前推荐的 `<NAME>_FILE` 只保留在 secret / connection-string 键上：`MONGODB_URI_FILE`、`JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE`，以及可选的 `OPENAI_API_KEY_FILE`；其余非 secret 配置继续用明文 env。
-- 本地推荐工作流会自动把 `JWT_SECRET_FILE`、`MONGODB_URI_FILE` 与 `SETTINGS_ENCRYPTION_KEY_FILE` 回写到宿主机 `.env.local`，并为 Docker API 容器派生 `docker/secrets/mongodb_uri.txt`。
+- 当前推荐的 `<NAME>_FILE` 只保留在 secret / connection-string 键上：`MONGODB_URI_FILE`、`JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE`、`KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE`，以及可选的 `OPENAI_API_KEY_FILE`；其余非 secret 配置继续用明文 env。
+- 本地推荐工作流会自动把 `JWT_SECRET_FILE`、`MONGODB_URI_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE` 与 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE` 回写到宿主机 `.env.local`，并为 Docker API 容器派生 `docker/secrets/mongodb_uri.txt`。
 - 若最终生效环境里同时出现 `NAME` 和 `NAME_FILE`，服务会直接启动失败；推荐只保留高优先级来源中的一个。
 - `docker/api/start-api.sh` 当前仍保留 `MONGO_APP_* / MONGO_HOST / MONGO_PORT / MONGO_AUTH_SOURCE` 的兼容 fallback，但它们已降级为迁移窗口，不再是推荐的 API runtime 主契约。
 - 容器化部署里，API 容器内部监听端口固定为 `3001`；宿主机发布端口由 `compose.local.yml` 中的 `API_PUBLISHED_PORT` 控制。
 - Docker 基线默认会把 `KNOWLEDGE_STORAGE_ROOT` 固定到共享卷路径 `/var/lib/knowject/knowledge`，并把 `KNOWLEDGE_INDEXER_URL` 指向内部服务 `http://indexer-py:8001`。
+- Docker 基线还会把同一份 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE` secret 同时挂给 `api` 与 `indexer-py`；`indexer-py` 在非 `development` 若缺少该 token 会直接启动失败，Node 调 `/internal/*` 则统一走 `Authorization: Bearer <token>`。
 - 可选 Chroma 变量：
   - `CHROMA_URL`
   - `CHROMA_HEARTBEAT_PATH`

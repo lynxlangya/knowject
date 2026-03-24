@@ -1,5 +1,9 @@
 import type { AppEnv } from "@config/env.js";
 import {
+  KnowledgeIndexerRequestError,
+  requestKnowledgeIndexer,
+} from "@lib/knowledge-indexer-request.js";
+import {
   buildApiUrl,
   normalizeIndexerErrorMessage,
   normalizeOpenAiCompatibleErrorMessage,
@@ -128,32 +132,12 @@ export const testIndexingRequest = async ({
   const startedAt = Date.now();
 
   try {
-    const response = await fetch(
-      buildApiUrl(env.knowledge.indexerUrl, "/internal/v1/index/diagnostics"),
-      {
-        method: "GET",
-        headers: {
-          accept: "application/json",
-        },
-        signal: AbortSignal.timeout(timeoutMs),
-      },
-    );
-    const responseBody = await parseResponseBody(response);
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return createUnreachableIndexingTestResponse(
-          "当前 Python indexer 不支持 diagnostics 接口，请先升级服务",
-        );
-      }
-
-      return createUnreachableIndexingTestResponse(
-        normalizeIndexerErrorMessage(
-          responseBody,
-          `索引链路测试失败（HTTP ${response.status}）`,
-        ),
-      );
-    }
+    const { responseBody } = await requestKnowledgeIndexer({
+      env,
+      path: "/internal/v1/index/diagnostics",
+      method: "GET",
+      timeoutMs,
+    });
 
     if (!isIndexerDiagnosticsResponseBody(responseBody)) {
       return createUnreachableIndexingTestResponse(
@@ -185,6 +169,21 @@ export const testIndexingRequest = async ({
       chromaReachable: responseBody.chromaReachable,
     };
   } catch (error) {
+    if (error instanceof KnowledgeIndexerRequestError && error.statusCode === 404) {
+      return createUnreachableIndexingTestResponse(
+        "当前 Python indexer 不支持 diagnostics 接口，请先升级服务",
+      );
+    }
+
+    if (error instanceof KnowledgeIndexerRequestError && error.statusCode !== null) {
+      return createUnreachableIndexingTestResponse(
+        normalizeIndexerErrorMessage(
+          error.responseBody,
+          `索引链路测试失败（HTTP ${error.statusCode})`,
+        ),
+      );
+    }
+
     return createUnreachableIndexingTestResponse(
       error instanceof Error ? error.message : "索引链路测试失败",
     );

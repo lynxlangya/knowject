@@ -22,6 +22,7 @@ create_secret() {
 }
 
 create_secret "$target_dir/jwt_secret.txt" 600 "openssl rand -base64 48"
+create_secret "$target_dir/knowledge_indexer_internal_token.txt" 600 "openssl rand -base64 48"
 create_secret "$target_dir/mongo_root_password.txt" 600 "openssl rand -hex 24"
 create_secret "$target_dir/mongo_app_password.txt" 600 "openssl rand -hex 24"
 create_secret "$target_dir/settings_encryption_key.txt" 600 "openssl rand -hex 32"

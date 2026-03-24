@@ -50,7 +50,7 @@ pnpm docker:prod:down
 ## 5. 当前操作约定
 
 - 实际 secrets 统一放在 `docker/secrets/`，不入仓。
-- API secret / connection-string canonical `*_FILE` 契约固定为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE`；可选 secret 保留 `OPENAI_API_KEY_FILE`。
+- API / indexer secret canonical `*_FILE` 契约固定为 `MONGODB_URI_FILE`、`JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE`、`KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE`；可选 secret 保留 `OPENAI_API_KEY_FILE`。
 - `pnpm dev:up` 默认运行宿主机 `platform + api + indexer-py`；`pnpm docker:local:up` 才是完整容器拓扑。
 - `pnpm docker:prod:up` 默认按 image-only 方式启动，不再隐式 `--build`；生产镜像需要预先准备好。
 - `scripts/knowject.sh` 只负责命令分发；helper 已拆到 `scripts/lib/knowject-*.sh`。

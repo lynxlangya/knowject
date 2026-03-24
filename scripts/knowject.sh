@@ -14,6 +14,7 @@ JWT_SECRET_FILE="$SECRETS_DIR/jwt_secret.txt"
 MONGO_ROOT_PASSWORD_FILE="$SECRETS_DIR/mongo_root_password.txt"
 MONGO_APP_PASSWORD_FILE="$SECRETS_DIR/mongo_app_password.txt"
 SETTINGS_ENCRYPTION_KEY_FILE="$SECRETS_DIR/settings_encryption_key.txt"
+KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE="$SECRETS_DIR/knowledge_indexer_internal_token.txt"
 DOCKER_MONGODB_URI_FILE="$SECRETS_DIR/mongodb_uri.txt"
 HOST_MONGO_URI_FILE="$SECRETS_DIR/mongodb_uri.local.txt"
 
@@ -215,7 +216,7 @@ case "$command_name" in
     ensure_production_docker_env
     mkdir -p "$SECRETS_DIR"
     info "已准备生产环境模板：$PRODUCTION_ENV_FILE"
-    info "请手动写入 ${JWT_SECRET_FILE}、${MONGO_ROOT_PASSWORD_FILE}、${MONGO_APP_PASSWORD_FILE}、${SETTINGS_ENCRYPTION_KEY_FILE}"
+    info "请手动写入 ${JWT_SECRET_FILE}、${KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE}、${MONGO_ROOT_PASSWORD_FILE}、${MONGO_APP_PASSWORD_FILE}、${SETTINGS_ENCRYPTION_KEY_FILE}"
     info "后续 docker:prod:config / up 会按生产 env + mongo_app_password 自动派生 ${DOCKER_MONGODB_URI_FILE}"
     ;;
   docker:prod:up)

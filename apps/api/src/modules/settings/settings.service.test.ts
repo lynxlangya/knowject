@@ -708,8 +708,10 @@ test('updateIndexing rejects merged chunkSize changes that invalidate existing c
 });
 
 test('testIndexing returns success when indexer diagnostics and Chroma are reachable', async () => {
+  const env = createTestEnv();
+  env.knowledge.indexerInternalToken = 'internal-secret';
   const service = createSettingsService({
-    env: createTestEnv(),
+    env,
     repository: createRepositoryStub(),
   });
   const originalFetch = globalThis.fetch;
@@ -725,6 +727,10 @@ test('testIndexing returns success when indexer diagnostics and Chroma are reach
     fetchCalls.push(url);
 
     assert.equal(init?.method, 'GET');
+    assert.equal(
+      new Headers(init?.headers).get('authorization'),
+      'Bearer internal-secret',
+    );
 
     return new Response(
       JSON.stringify({

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.domain.indexing.parser import resolve_knowledge_storage_root
 from app.domain.indexing.pipeline import IndexerError
-from app.main import app
+from app.main import app, create_app
 from app.schemas.indexing import (
     DeleteDocumentChunksSuccessResponse,
     DeleteKnowledgeChunksSuccessResponse,
@@ -105,6 +106,17 @@ def test_docs_endpoints_are_available():
     assert client.get("/openapi.json").status_code == 200
 
 
+def test_create_app_requires_internal_token_outside_development(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("NODE_ENV", "production")
+    monkeypatch.delenv("KNOWLEDGE_INDEXER_INTERNAL_TOKEN", raising=False)
+
+    with pytest.raises(
+        RuntimeError,
+        match="KNOWLEDGE_INDEXER_INTERNAL_TOKEN is required when NODE_ENV is not development",
+    ):
+        create_app()
+
+
 def test_index_documents_success_response_keeps_existing_shape():
     override_indexing_service(
         index_behavior=lambda _payload: IndexDocumentSuccessResponse(
@@ -184,6 +196,51 @@ def test_legacy_index_documents_route_still_works_for_backward_compatibility():
         "characterCount": 21,
         "parser": "text",
         "collectionName": "global_docs",
+    }
+
+
+def test_internal_routes_require_bearer_token_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("NODE_ENV", "development")
+    monkeypatch.setenv("KNOWLEDGE_INDEXER_INTERNAL_TOKEN", "internal-secret")
+    override_indexing_service(
+        diagnostics_behavior=lambda: IndexerDiagnosticsResponse(
+            status="ok",
+            service="knowject-indexer-py",
+            chunk_size=1000,
+            chunk_overlap=200,
+            supported_formats=["md", "txt", "pdf", "docx", "xlsx"],
+            embedding_provider="openai",
+            chroma_reachable=True,
+            error_message=None,
+        )
+    )
+
+    try:
+        unauthorized = client.get("/internal/v1/index/diagnostics")
+        authorized = client.get(
+            "/internal/v1/index/diagnostics",
+            headers={"authorization": "Bearer internal-secret"},
+        )
+    finally:
+        clear_overrides()
+
+    assert unauthorized.status_code == 401
+    assert unauthorized.json() == {
+        "status": "failed",
+        "errorMessage": "Unauthorized internal request",
+    }
+    assert authorized.status_code == 200
+    assert authorized.json() == {
+        "status": "ok",
+        "service": "knowject-indexer-py",
+        "chunkSize": 1000,
+        "chunkOverlap": 200,
+        "supportedFormats": ["md", "txt", "pdf", "docx", "xlsx"],
+        "embeddingProvider": "openai",
+        "chromaReachable": True,
+        "errorMessage": None,
     }
 
 

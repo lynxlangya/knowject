@@ -2,12 +2,12 @@ import { getEffectiveIndexingConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
 import { AppError } from "@lib/app-error.js";
 import { resolveLocalizedAppErrorMessage } from "@lib/app-error-message.js";
-import { DEFAULT_LOCALE, type SupportedLocale } from "@lib/locale.js";
 import {
-  buildApiUrl,
-  normalizeIndexerErrorMessage,
-  parseResponseBody,
-} from "@lib/http.js";
+  KnowledgeIndexerRequestError,
+  requestKnowledgeIndexer,
+} from "@lib/knowledge-indexer-request.js";
+import { DEFAULT_LOCALE, type SupportedLocale } from "@lib/locale.js";
+import { normalizeIndexerErrorMessage } from "@lib/http.js";
 import { getFallbackMessage, getMessage } from "@lib/locale.messages.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type {
@@ -21,14 +21,8 @@ const KNOWLEDGE_INDEXER_DIAGNOSTICS_PATHS = [
   "/health",
 ] as const;
 
-const buildKnowledgeIndexerDiagnosticsUrls = (baseUrl: string): string[] => {
-  return Array.from(
-    new Set(
-      KNOWLEDGE_INDEXER_DIAGNOSTICS_PATHS.map((path) =>
-        buildApiUrl(baseUrl, path),
-      ),
-    ),
-  );
+const buildKnowledgeIndexerDiagnosticsUrls = (): string[] => {
+  return Array.from(new Set(KNOWLEDGE_INDEXER_DIAGNOSTICS_PATHS));
 };
 
 export const isStaleProcessingDocument = (
@@ -119,9 +113,7 @@ export const readKnowledgeIndexerDiagnostics = async (
   settingsRepository: SettingsRepository,
   locale: SupportedLocale = DEFAULT_LOCALE,
 ): Promise<KnowledgeIndexerDiagnosticsResponse> => {
-  const diagnosticsUrls = buildKnowledgeIndexerDiagnosticsUrls(
-    env.knowledge.indexerUrl,
-  );
+  const diagnosticsUrls = buildKnowledgeIndexerDiagnosticsUrls();
   const indexingConfig = await getEffectiveIndexingConfig({
     env,
     repository: settingsRepository,
@@ -133,18 +125,28 @@ export const readKnowledgeIndexerDiagnostics = async (
       continue;
     }
 
-    let response: Response;
-
     try {
-      response = await fetch(diagnosticsUrl, {
+      const request = await requestKnowledgeIndexer({
+        env,
+        path: diagnosticsUrl,
         method: "GET",
-        headers: {
-          accept: "application/json",
-        },
-        signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
+        timeoutMs: indexingConfig.indexerTimeoutMs,
       });
+      return parseKnowledgeIndexerDiagnosticsResponse(request.responseBody, locale);
     } catch (error) {
-      if (index < diagnosticsUrls.length - 1) {
+      if (
+        error instanceof KnowledgeIndexerRequestError &&
+        error.statusCode === 404 &&
+        index < diagnosticsUrls.length - 1
+      ) {
+        continue;
+      }
+
+      if (
+        error instanceof KnowledgeIndexerRequestError &&
+        error.statusCode === null &&
+        index < diagnosticsUrls.length - 1
+      ) {
         continue;
       }
 
@@ -152,32 +154,11 @@ export const readKnowledgeIndexerDiagnostics = async (
         `${
           getMessage("knowledge.search.indexer.healthFailed", locale) ??
           getFallbackMessage("knowledge.search.indexer.healthFailed")
-        } (${diagnosticsUrl}): ${normalizeIndexerErrorMessage(
-          error,
-          "unknown fetch error",
-        )}`,
+        } (${
+          error instanceof KnowledgeIndexerRequestError ? error.url : diagnosticsUrl
+        }): ${normalizeIndexerErrorMessage(error, "unknown fetch error")}`,
       );
     }
-
-    const responseBody = await parseResponseBody(response);
-
-    if (response.status === 404 && index < diagnosticsUrls.length - 1) {
-      continue;
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        normalizeIndexerErrorMessage(
-          responseBody,
-          `${
-            getMessage("knowledge.search.indexer.requestFailed", locale) ??
-            getFallbackMessage("knowledge.search.indexer.requestFailed")
-          } (HTTP ${response.status})`,
-        ),
-      );
-    }
-
-    return parseKnowledgeIndexerDiagnosticsResponse(responseBody, locale);
   }
 
   throw new Error(

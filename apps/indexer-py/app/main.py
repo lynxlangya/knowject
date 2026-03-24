@@ -8,7 +8,10 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.routes.health import router as health_router
-from app.api.routes.indexing import router as indexing_router
+from app.api.routes.indexing import (
+    router as indexing_router,
+    validate_internal_auth_configuration,
+)
 from app.core.config import get_app_config
 from app.core.runtime_env import read_optional_string
 from app.domain.indexing.pipeline import IndexerError
@@ -52,6 +55,7 @@ def is_development_environment() -> bool:
 
 def create_app() -> FastAPI:
     config = get_app_config()
+    validate_internal_auth_configuration()
     docs_url = "/docs" if is_development_environment() else None
     redoc_url = "/redoc" if is_development_environment() else None
     openapi_url = "/openapi.json" if is_development_environment() else None

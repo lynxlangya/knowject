@@ -30,6 +30,7 @@ export interface AppEnv {
     storageRoot: string;
     indexerUrl: string;
     indexerRequestTimeoutMs: number;
+    indexerInternalToken?: string | null;
   };
   skills: {
     storageRoot: string;
@@ -291,6 +292,7 @@ export const getEnv = (): AppEnv => {
         'KNOWLEDGE_INDEXER_TIMEOUT_MS',
         15000,
       ),
+      indexerInternalToken: readOptionalString('KNOWLEDGE_INDEXER_INTERNAL_TOKEN'),
     },
     skills: {
       storageRoot:

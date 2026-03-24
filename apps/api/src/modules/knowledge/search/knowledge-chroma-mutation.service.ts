@@ -1,7 +1,10 @@
 import { getEffectiveIndexingConfig } from "@config/ai-config.js";
 import type { AppEnv } from "@config/env.js";
 import { AppError } from "@lib/app-error.js";
-import { buildApiUrl } from "@lib/http.js";
+import {
+  KnowledgeIndexerRequestError,
+  requestKnowledgeIndexer,
+} from "@lib/knowledge-indexer-request.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import { createKnowledgeChromaCollectionService } from "./knowledge-chroma-collection.service.js";
 import type {
@@ -52,31 +55,26 @@ export const createKnowledgeChromaMutationService = ({
     });
 
     try {
-      const response = await fetch(
-        buildApiUrl(env.knowledge.indexerUrl, "/health"),
-        {
-          method: "GET",
-          headers: {
-            accept: "application/json",
-          },
-          signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
-        },
-      );
-
-      responseBody = await response.text();
-
-      if (!response.ok) {
+      await requestKnowledgeIndexer({
+        env,
+        path: "/health",
+        method: "GET",
+        timeoutMs: indexingConfig.indexerTimeoutMs,
+      });
+    } catch (error) {
+      if (error instanceof KnowledgeIndexerRequestError && error.statusCode !== null) {
+        responseBody = error.responseBody;
         throw createGatewayError(
           "knowledge.search.indexer.healthFailed",
           {
             details: {
-              status: response.status,
+              status: error.statusCode,
               responseBody,
             },
           },
         );
       }
-    } catch (error) {
+
       if (error instanceof Error && "statusCode" in error) {
         throw error;
       }
@@ -100,46 +98,32 @@ export const createKnowledgeChromaMutationService = ({
     });
 
     try {
-      const response = await fetch(buildApiUrl(env.knowledge.indexerUrl, path), {
+      const { responseBody: bodyResponse } = await requestKnowledgeIndexer({
+        env,
+        path,
         method,
-        headers: {
-          accept: "application/json",
-          ...(body
-            ? {
-                "content-type": "application/json",
-              }
-            : {}),
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
+        body,
+        timeoutMs: indexingConfig.indexerTimeoutMs,
       });
-
-      const text = await response.text();
-
-      if (text) {
-        try {
-          responseBody = JSON.parse(text);
-        } catch {
-          responseBody = text;
-        }
+      return (bodyResponse ?? null) as T;
+    } catch (error) {
+      if (error instanceof KnowledgeIndexerRequestError && error.statusCode === 404) {
+        throw new AppError({
+          statusCode: 404,
+          code: "KNOWLEDGE_SEARCH_INDEXER_ROUTE_NOT_FOUND",
+          message: failureMessage,
+          messageKey: "knowledge.search.indexer.requestFailed",
+          details: error.responseBody,
+        });
       }
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new AppError({
-            statusCode: 404,
-            code: "KNOWLEDGE_SEARCH_INDEXER_ROUTE_NOT_FOUND",
-            message: failureMessage,
-            messageKey: "knowledge.search.indexer.requestFailed",
-            details: responseBody,
-          });
-        }
-
+      if (error instanceof KnowledgeIndexerRequestError) {
+        responseBody = error.responseBody;
         throw createGatewayError(
           "knowledge.search.indexer.requestFailed",
           {
             details: {
-              status: response.status,
+              status: error.statusCode,
               responseBody,
               failureMessage,
             },
@@ -147,8 +131,6 @@ export const createKnowledgeChromaMutationService = ({
         );
       }
 
-      return (responseBody ?? null) as T;
-    } catch (error) {
       if (error instanceof Error && "statusCode" in error) {
         throw error;
       }

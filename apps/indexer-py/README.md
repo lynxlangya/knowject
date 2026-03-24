@@ -15,7 +15,7 @@
   - `POST /internal/v1/index/knowledge/{knowledgeId}/delete`：接收知识库级向量删除请求。
   - `GET /internal/v1/index/diagnostics`：返回当前 chunk 配置、embedding provider 和 Chroma 可达性诊断。
   - 继续兼容旧入口 `POST /internal/index-documents`，用于开发态 / 滚动重启期间的平滑过渡。
-  - `/docs`、`/redoc`、`/openapi.json`：内部文档与 schema 入口。
+  - `/docs`、`/redoc`、`/openapi.json`：仅在 `development` 暴露的内部文档与 schema 入口；非 `development` 若缺少 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN(_FILE)`，应用会直接启动失败。
 - `app/domain/indexing/runtime_config.py`
   - 负责 chunk size / overlap、supported types、`indexerTimeoutMs` 的默认值、请求级 override 与校验；`chunkOverlap=0` 现在会按显式配置生效，不再被默认值静默覆盖。
 - `app/domain/indexing/parser.py`
@@ -70,6 +70,7 @@
   - `POST /internal/v1/index/knowledge/{knowledgeId}/delete`
   - `GET /internal/v1/index/diagnostics`
 - 为避免开发态 API / indexer 重启顺序导致上传 404，当前仍兼容旧路径 `POST /internal/index-documents`。
+- Node 当前对 `/internal/*` 统一使用 `Authorization: Bearer <token>`；development 允许不配置 token，但只要配置了 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN(_FILE)` 就会严格校验。
 - MongoDB 中的知识库 / 文档状态只能由 Node 回写。
 - Python 当前只返回处理结果；Node 负责把状态推进为 `processing / completed / failed`。
 - Python 负责写删侧 Chroma 索引；Node 负责读侧统一知识检索 service。
@@ -92,7 +93,7 @@ uv run uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
 
 Docker Compose 完整编排下会自动构建并启动 `indexer-py` 服务，不需要额外手动起进程；该服务默认只暴露在容器内部网络，通过共享知识存储卷读取上传文件。
 
-默认文档入口：
+默认文档入口（仅 `development`）：
 
 - `http://127.0.0.1:8001/docs`
 - `http://127.0.0.1:8001/redoc`
@@ -100,10 +101,14 @@ Docker Compose 完整编排下会自动构建并启动 `indexer-py` 服务，不
 
 可选环境变量：
 
+- `NODE_ENV`
+  - 默认 `development`；控制 `/docs` 暴露与非 development 下的 internal token fail-closed 门禁
 - `KNOWLEDGE_INDEXER_HOST`
   - 默认 `127.0.0.1`
 - `KNOWLEDGE_INDEXER_PORT`
   - 默认 `8001`
+- `KNOWLEDGE_INDEXER_INTERNAL_TOKEN`
+  - 非 `development` 必填；`/internal/*` 共享 bearer token，部署时优先使用 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE`
 - `KNOWLEDGE_CHUNK_SIZE`
   - 默认 `1000`
 - `KNOWLEDGE_CHUNK_OVERLAP`

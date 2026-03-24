@@ -19,6 +19,20 @@ from app.services.indexing_service import IndexingService, get_indexing_service
 router = APIRouter(tags=["indexing"])
 
 
+def is_development_environment() -> bool:
+    return (read_optional_string("NODE_ENV") or "development").strip() == "development"
+
+
+def validate_internal_auth_configuration() -> None:
+    if is_development_environment():
+        return
+
+    if not read_optional_string("KNOWLEDGE_INDEXER_INTERNAL_TOKEN"):
+        raise RuntimeError(
+            "KNOWLEDGE_INDEXER_INTERNAL_TOKEN is required when NODE_ENV is not development"
+        )
+
+
 def verify_internal_request(
     authorization: str | None = Header(default=None),
     x_knowject_internal_token: str | None = Header(
@@ -28,7 +42,13 @@ def verify_internal_request(
 ) -> None:
     configured_token = read_optional_string("KNOWLEDGE_INDEXER_INTERNAL_TOKEN")
     if not configured_token:
-        return
+        if is_development_environment():
+            return
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Internal authentication is unavailable",
+        )
 
     provided_token: str | None = None
     if authorization:

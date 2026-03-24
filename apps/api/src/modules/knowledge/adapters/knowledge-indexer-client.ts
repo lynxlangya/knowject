@@ -2,7 +2,10 @@ import {
   getEffectiveEmbeddingConfig,
   getEffectiveIndexingConfig,
 } from "@config/ai-config.js";
-import { buildApiUrl, normalizeIndexerErrorMessage, parseResponseBody } from "@lib/http.js";
+import {
+  KnowledgeIndexerRequestError,
+  requestKnowledgeIndexer,
+} from "@lib/knowledge-indexer-request.js";
 import {
   KNOWLEDGE_INDEXER_DOCUMENT_PATHS,
   buildKnowledgeIndexerRebuildPaths,
@@ -12,7 +15,6 @@ import type { KnowledgeIndexerResponse } from "../knowledge.types.js";
 import { assertKnowledgeIndexerResponse } from "../validators/knowledge-indexer-response.validator.js";
 
 const buildKnowledgeIndexerUrls = (
-  baseUrl: string,
   documentId: string,
   mode: "index" | "rebuild",
 ): string[] => {
@@ -21,9 +23,7 @@ const buildKnowledgeIndexerUrls = (
       ? buildKnowledgeIndexerRebuildPaths(documentId)
       : KNOWLEDGE_INDEXER_DOCUMENT_PATHS;
 
-  return Array.from(
-    new Set(paths.map((path) => buildApiUrl(baseUrl, path))),
-  );
+  return Array.from(new Set(paths));
 };
 
 export const callKnowledgeIndexer = async ({
@@ -34,11 +34,7 @@ export const callKnowledgeIndexer = async ({
   embeddingConfig: providedEmbeddingConfig,
   indexingConfig: providedIndexingConfig,
 }: CallKnowledgeIndexerInput): Promise<KnowledgeIndexerResponse> => {
-  const indexerUrls = buildKnowledgeIndexerUrls(
-    env.knowledge.indexerUrl,
-    payload.documentId,
-    mode,
-  );
+  const indexerUrls = buildKnowledgeIndexerUrls(payload.documentId, mode);
   const [embeddingConfig, indexingConfig] = await Promise.all([
     providedEmbeddingConfig
       ? Promise.resolve(providedEmbeddingConfig)
@@ -75,41 +71,36 @@ export const callKnowledgeIndexer = async ({
       continue;
     }
 
-    let response: Response;
-
     try {
-      response = await fetch(indexerUrl, {
+      const request = await requestKnowledgeIndexer({
+        env,
+        path: indexerUrl,
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify(requestPayload),
-        signal: AbortSignal.timeout(indexingConfig.indexerTimeoutMs),
+        body: requestPayload,
+        timeoutMs: indexingConfig.indexerTimeoutMs,
       });
+      const responseBody = request.responseBody;
+
+      return assertKnowledgeIndexerResponse(responseBody);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "unknown fetch error";
+      if (
+        error instanceof KnowledgeIndexerRequestError &&
+        error.statusCode === 404 &&
+        index < indexerUrls.length - 1
+      ) {
+        continue;
+      }
+
+      if (error instanceof KnowledgeIndexerRequestError && error.statusCode === null) {
+        throw new Error(
+          `Python indexer 不可达，请确认本地索引服务已启动（${error.url}）。原始错误：${error.message}`,
+        );
+      }
+
       throw new Error(
-        `Python indexer 不可达，请确认本地索引服务已启动（${indexerUrl}）。原始错误：${message}`,
+        error instanceof Error ? error.message : "Python indexer 请求失败",
       );
     }
-
-    const responseBody = await parseResponseBody(response);
-
-    if (response.status === 404 && index < indexerUrls.length - 1) {
-      continue;
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        normalizeIndexerErrorMessage(
-          responseBody,
-          `Python indexer 请求失败（HTTP ${response.status}）`,
-        ),
-      );
-    }
-
-    return assertKnowledgeIndexerResponse(responseBody);
   }
 
   throw new Error("Python indexer 请求失败（HTTP 404）");

@@ -4151,7 +4151,13 @@ test('uploadDocument falls back to legacy indexer route after 404 on versioned p
   } as unknown as AuthRepository;
 
   const service = createKnowledgeService({
-    env: createTestEnv(storageRoot),
+    env: {
+      ...createTestEnv(storageRoot),
+      knowledge: {
+        ...createTestEnv(storageRoot).knowledge,
+        indexerInternalToken: 'internal-secret',
+      },
+    },
     repository,
     searchService,
     authRepository,
@@ -4163,6 +4169,10 @@ test('uploadDocument falls back to legacy indexer route after 404 on versioned p
     fetchCalls.push(url);
 
     if (url.endsWith('/internal/v1/index/documents')) {
+      assert.equal(
+        new Headers(init?.headers).get('authorization'),
+        'Bearer internal-secret',
+      );
       return new Response(
         JSON.stringify({
           status: 'not_found',
@@ -4178,6 +4188,10 @@ test('uploadDocument falls back to legacy indexer route after 404 on versioned p
     }
 
     if (url.endsWith('/internal/index-documents')) {
+      assert.equal(
+        new Headers(init?.headers).get('authorization'),
+        'Bearer internal-secret',
+      );
       const payload = JSON.parse(String(init?.body ?? '{}')) as { documentId?: string; knowledgeId?: string };
       return new Response(
         JSON.stringify({

@@ -44,6 +44,7 @@ services:
       MONGODB_DB_NAME: ${MONGODB_DB_NAME:-knowject}
       JWT_SECRET_FILE: /run/secrets/jwt_secret
       SETTINGS_ENCRYPTION_KEY_FILE: /run/secrets/settings_encryption_key
+      KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE: /run/secrets/knowledge_indexer_internal_token
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
       JWT_ISSUER: ${JWT_ISSUER:-knowject-api}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-knowject-platform}
@@ -78,6 +79,7 @@ services:
       - mongodb_uri
       - mongo_app_password
       - settings_encryption_key
+      - knowledge_indexer_internal_token
     volumes:
       - knowledge_storage:/var/lib/knowject/knowledge
 
@@ -87,8 +89,10 @@ services:
       dockerfile: docker/indexer-py/Dockerfile
     image: ${KNOWJECT_INDEXER_IMAGE:-knowject/indexer-py:local}
     environment:
+      NODE_ENV: ${NODE_ENV:-development}
       KNOWLEDGE_INDEXER_HOST: 0.0.0.0
       KNOWLEDGE_INDEXER_PORT: ${KNOWLEDGE_INDEXER_PORT:-8001}
+      KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE: /run/secrets/knowledge_indexer_internal_token
     healthcheck:
       test:
         [
@@ -104,6 +108,8 @@ services:
     networks:
       - app
     restart: unless-stopped
+    secrets:
+      - knowledge_indexer_internal_token
     volumes:
       - knowledge_storage:/var/lib/knowject/knowledge
 
@@ -185,3 +191,5 @@ secrets:
     file: ./docker/secrets/mongo_app_password.txt
   settings_encryption_key:
     file: ./docker/secrets/settings_encryption_key.txt
+  knowledge_indexer_internal_token:
+    file: ./docker/secrets/knowledge_indexer_internal_token.txt

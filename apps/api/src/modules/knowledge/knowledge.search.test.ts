@@ -162,8 +162,10 @@ test("deleteDocumentChunks falls back to legacy Chroma delete when the indexer r
 });
 
 test("deleteKnowledgeChunks prefers the indexer delete endpoint when available", async () => {
+  const env = createTestEnv();
+  env.knowledge.indexerInternalToken = "internal-secret";
   const service = createKnowledgeSearchService({
-    env: createTestEnv(),
+    env,
   });
   const fetchCalls: string[] = [];
 
@@ -181,6 +183,10 @@ test("deleteKnowledgeChunks prefers the indexer delete endpoint when available",
       url === "http://127.0.0.1:8001/internal/v1/index/knowledge/knowledge-1/delete" &&
       init?.method === "POST"
     ) {
+      assert.equal(
+        new Headers(init.headers).get("authorization"),
+        "Bearer internal-secret",
+      );
       return new Response(
         JSON.stringify({
           status: "completed",
