@@ -36,10 +36,10 @@ const fixtureEntries: DrawerSourceEntry[] = [
 
 test('drawer loading state renders skeleton placeholder', async () => {
   const React = await import('react');
-  const { ProjectChatSourceDrawer } = (await import(
-    '../src/pages/project/projectChatSourceDrawer'
+  const { ProjectConversationSourceDrawer } = (await import(
+    '../src/pages/project/components/ProjectConversationSourceDrawer'
   )) as {
-    ProjectChatSourceDrawer: (props: {
+    ProjectConversationSourceDrawer: (props: {
       state: 'loading' | 'error' | 'ready';
       sourceEntries: DrawerSourceEntry[];
       activeSourceKey: string;
@@ -48,7 +48,7 @@ test('drawer loading state renders skeleton placeholder', async () => {
     }) => React.ReactElement;
   };
   const html = renderToStaticMarkup(
-    React.createElement(ProjectChatSourceDrawer, {
+    React.createElement(ProjectConversationSourceDrawer, {
       state: 'loading',
       sourceEntries: fixtureEntries,
       activeSourceKey: 'source1',
@@ -62,10 +62,10 @@ test('drawer loading state renders skeleton placeholder', async () => {
 
 test('drawer error state keeps source tabs visible', async () => {
   const React = await import('react');
-  const { ProjectChatSourceDrawer } = (await import(
-    '../src/pages/project/projectChatSourceDrawer'
+  const { ProjectConversationSourceDrawer } = (await import(
+    '../src/pages/project/components/ProjectConversationSourceDrawer'
   )) as {
-    ProjectChatSourceDrawer: (props: {
+    ProjectConversationSourceDrawer: (props: {
       state: 'loading' | 'error' | 'ready';
       sourceEntries: DrawerSourceEntry[];
       activeSourceKey: string;
@@ -74,7 +74,7 @@ test('drawer error state keeps source tabs visible', async () => {
     }) => React.ReactElement;
   };
   const html = renderToStaticMarkup(
-    React.createElement(ProjectChatSourceDrawer, {
+    React.createElement(ProjectConversationSourceDrawer, {
       state: 'error',
       sourceEntries: fixtureEntries,
       activeSourceKey: 'source1',
@@ -90,10 +90,10 @@ test('drawer error state keeps source tabs visible', async () => {
 
 test('drawer ready state highlights active tab and default snippet', async () => {
   const React = await import('react');
-  const { ProjectChatSourceDrawer } = (await import(
-    '../src/pages/project/projectChatSourceDrawer'
+  const { ProjectConversationSourceDrawer } = (await import(
+    '../src/pages/project/components/ProjectConversationSourceDrawer'
   )) as {
-    ProjectChatSourceDrawer: (props: {
+    ProjectConversationSourceDrawer: (props: {
       state: 'loading' | 'error' | 'ready';
       sourceEntries: DrawerSourceEntry[];
       activeSourceKey: string;
@@ -102,7 +102,7 @@ test('drawer ready state highlights active tab and default snippet', async () =>
     }) => React.ReactElement;
   };
   const html = renderToStaticMarkup(
-    React.createElement(ProjectChatSourceDrawer, {
+    React.createElement(ProjectConversationSourceDrawer, {
       state: 'ready',
       sourceEntries: fixtureEntries,
       activeSourceKey: 'source2',

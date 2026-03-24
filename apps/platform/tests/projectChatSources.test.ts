@@ -79,105 +79,117 @@ const buildFixtureCitationContent = (): CitationContent => {
 
 test('seeded source entries freeze source key order for drawer defaults', async () => {
   const {
-    seedSourceEntries,
-    resolveDrawerSource,
+    buildProjectChatSourceEntries,
     resolveSentenceSourceKeys,
   } = (await import('../src/pages/project/projectChatSources')) as {
-    seedSourceEntries: (args: {
-      sources: Source[];
-      citationContent: CitationContent;
-    }) => Array<{ id: string; sourceKey: string }>;
-    resolveDrawerSource: (
-      entries: Array<{ id: string; sourceKey: string }>,
-      sourceKey: string,
-    ) => { activeEntry: { id: string } } | null;
+    buildProjectChatSourceEntries: (sources: Source[]) => Array<{
+      id: string;
+      sourceKey: string;
+      activeEntry: { id: string };
+    }>;
     resolveSentenceSourceKeys: (
-      entries: Array<{ id: string; sourceKey: string }>,
-      sentenceSourceIds: string[],
+      citationContent: CitationContent,
+      sources: Source[],
     ) => string[];
   };
-  const entries = seedSourceEntries({
-    sources: buildFixtureSources(),
-    citationContent: buildFixtureCitationContent(),
-  });
+  const sources = buildFixtureSources();
+  const citationContent = buildFixtureCitationContent();
+  const entries = buildProjectChatSourceEntries(sources);
 
-  assert.equal(resolveDrawerSource(entries, 'source1')?.activeEntry.id, 'chunk-0');
-  assert.deepEqual(resolveSentenceSourceKeys(entries, ['chunk-0', 'chunk-9']), ['source1', 'source2']);
+  assert.equal(
+    entries.find((entry) => entry.sourceKey === 'source1')?.activeEntry.id,
+    'chunk-0',
+  );
+  assert.deepEqual(resolveSentenceSourceKeys(citationContent, sources), ['source1', 'source2']);
   assert.deepEqual(entries.map((entry) => entry.id), ['chunk-0', 'chunk-1', 'chunk-9']);
 });
 
 test('drift fallback only triggers on source-key topology drift', async () => {
-  const { shouldFallbackToLegacySourceRendering } = (await import(
+  const { buildProjectChatSourceEntries, shouldFallbackToLegacySourceRendering } = (await import(
     '../src/pages/project/projectChatSources'
   )) as {
+    buildProjectChatSourceEntries: (sources: Source[]) => Array<{
+      id: string;
+      sourceKey: string;
+      knowledgeId: string;
+      documentId: string;
+      snippet: string;
+      distance: number | null;
+      chunkIds: string[];
+    }>;
     shouldFallbackToLegacySourceRendering: (args: {
-      seedSourceKeys: string[];
-      persistedSourceKeys: string[];
-      seedSourceMetaByKey?: Record<string, { knowledgeId: string; documentId: string }>;
-      persistedSourceMetaByKey?: Record<
-        string,
-        {
-          knowledgeId: string;
-          documentId: string;
-          snippet?: string;
-          distance?: number | null;
-          chunkIds?: string[];
-        }
-      >;
+      seedEntries: Array<{
+        sourceKey: string;
+        knowledgeId: string;
+        documentId: string;
+        snippet: string;
+        distance: number | null;
+        chunkIds: string[];
+      }>;
+      persistedSources: Array<{
+        sourceKey: string;
+        knowledgeId: string;
+        documentId: string;
+        snippet: string;
+        distance: number | null;
+        chunkIds: string[];
+      }>;
     }) => boolean;
   };
-
-  assert.equal(shouldFallbackToLegacySourceRendering({
-    seedSourceKeys: ['source1', 'source2'],
-    persistedSourceKeys: ['source1', 'source3'],
-  }), true);
+  const seedEntries = buildProjectChatSourceEntries(buildFixtureSources());
 
   assert.equal(
     shouldFallbackToLegacySourceRendering({
-      seedSourceKeys: ['source1', 'source2'],
-      persistedSourceKeys: ['source1', 'source2'],
-      seedSourceMetaByKey: {
-        source1: { knowledgeId: 'knowledge-a', documentId: 'doc-a' },
-      },
-      persistedSourceMetaByKey: {
-        source1: { knowledgeId: 'knowledge-b', documentId: 'doc-a' },
-      },
+      seedEntries: [
+        { sourceKey: 'source1', knowledgeId: 'k1', documentId: 'd1', snippet: 's1', distance: 0.1, chunkIds: ['c1'] },
+        { sourceKey: 'source2', knowledgeId: 'k2', documentId: 'd2', snippet: 's2', distance: 0.2, chunkIds: ['c2'] },
+      ],
+      persistedSources: [
+        { sourceKey: 'source1', knowledgeId: 'k1', documentId: 'd1', snippet: 's1', distance: 0.1, chunkIds: ['c1'] },
+        { sourceKey: 'source3', knowledgeId: 'k3', documentId: 'd3', snippet: 's3', distance: 0.3, chunkIds: ['c3'] },
+      ],
     }),
     true,
   );
 
   assert.equal(
     shouldFallbackToLegacySourceRendering({
-      seedSourceKeys: ['source1', 'source2', 'source3'],
-      persistedSourceKeys: ['source1', 'source4', 'source2', 'source3'],
+      seedEntries,
+      persistedSources: seedEntries.map((entry) =>
+        entry.sourceKey === 'source1'
+          ? { ...entry, knowledgeId: `${entry.knowledgeId}-drift` }
+          : entry,
+      ),
     }),
     true,
   );
 
   assert.equal(
     shouldFallbackToLegacySourceRendering({
-      seedSourceKeys: ['source1', 'source2'],
-      persistedSourceKeys: ['source1', 'source2'],
-      seedSourceMetaByKey: {
-        source1: { knowledgeId: 'knowledge-a', documentId: 'doc-a' },
-        source2: { knowledgeId: 'knowledge-b', documentId: 'doc-b' },
-      },
-      persistedSourceMetaByKey: {
-        source1: {
-          knowledgeId: 'knowledge-a',
-          documentId: 'doc-a',
-          snippet: 'updated snippet only',
-          distance: 0.95,
-          chunkIds: ['chunk-100', 'chunk-101'],
-        },
-        source2: {
-          knowledgeId: 'knowledge-b',
-          documentId: 'doc-b',
-          snippet: 'updated snippet only',
-          distance: null,
-          chunkIds: ['chunk-200'],
-        },
-      },
+      seedEntries: [
+        { sourceKey: 'source1', knowledgeId: 'k1', documentId: 'd1', snippet: 's1', distance: 0.1, chunkIds: ['c1'] },
+        { sourceKey: 'source2', knowledgeId: 'k2', documentId: 'd2', snippet: 's2', distance: 0.2, chunkIds: ['c2'] },
+        { sourceKey: 'source3', knowledgeId: 'k3', documentId: 'd3', snippet: 's3', distance: 0.3, chunkIds: ['c3'] },
+      ],
+      persistedSources: [
+        { sourceKey: 'source1', knowledgeId: 'k1', documentId: 'd1', snippet: 's1', distance: 0.1, chunkIds: ['c1'] },
+        { sourceKey: 'source4', knowledgeId: 'k4', documentId: 'd4', snippet: 's4', distance: 0.4, chunkIds: ['c4'] },
+        { sourceKey: 'source2', knowledgeId: 'k2', documentId: 'd2', snippet: 's2', distance: 0.2, chunkIds: ['c2'] },
+        { sourceKey: 'source3', knowledgeId: 'k3', documentId: 'd3', snippet: 's3', distance: 0.3, chunkIds: ['c3'] },
+      ],
+    }),
+    true,
+  );
+
+  assert.equal(
+    shouldFallbackToLegacySourceRendering({
+      seedEntries,
+      persistedSources: seedEntries.map((entry) => ({
+        ...entry,
+        snippet: `${entry.snippet} (updated)`,
+        distance: entry.distance === null ? null : entry.distance + 0.3,
+        chunkIds: [...entry.chunkIds, `${entry.id}-extra`],
+      })),
     }),
     false,
   );

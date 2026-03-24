@@ -202,11 +202,16 @@ test('grounded sentences render inline citation markers and ungrounded sentences
 
   assert.match(
     messageHtml,
-    /第一句结论。[\s\S]*?data-conversation-source-tag="true"/,
+    /第一句结论。\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>\s*仍需人工确认。/,
   );
-  assert.match(messageHtml, /第一句结论。[\s\S]*?>source1</);
-  assert.match(messageHtml, /第二句有双重依据。[\s\S]*?>source1</);
-  assert.match(messageHtml, /第二句有双重依据。[\s\S]*?>source2</);
+  assert.match(
+    messageHtml,
+    /第二句有双重依据。\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source2\s*<\/button>/,
+  );
+  assert.doesNotMatch(
+    messageHtml,
+    /仍需人工确认。\s*<button[^>]*data-conversation-source-tag="true"/,
+  );
   assert.doesNotMatch(messageHtml, /data-citation-marker=/);
   assert.doesNotMatch(messageHtml, /data-citation-evidence-row=/);
   assert.doesNotMatch(messageHtml, /data-citation-source-chip=/);
@@ -294,9 +299,10 @@ test('legacy [[SOURCE_TAG:...]] markers remain compatible with final sourceN chi
   });
 
   assert.doesNotMatch(messageHtml, /\[\[SOURCE_TAG:/);
-  assert.match(messageHtml, /第一段沿用 legacy marker[\s\S]*?>source1</);
-  assert.match(messageHtml, /第二段继续引用[\s\S]*?>source1</);
-  assert.match(messageHtml, /第二段继续引用[\s\S]*?>source2</);
+  assert.match(
+    messageHtml,
+    /第一段沿用 legacy marker\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>。第二段继续引用\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source2\s*<\/button>。/,
+  );
 });
 
 test('citation mode conservatively suppresses trailing pseudo citation blocks before sentence rendering', async () => {
