@@ -23,6 +23,15 @@ type CitationContent = {
   }>;
 };
 
+type GroupedSourceEntry = {
+  sourceKey: string;
+  knowledgeId: string;
+  documentId: string;
+  snippet: string;
+  distance: number | null;
+  chunkIds: string[];
+};
+
 const buildFixtureSources = (): Source[] => {
   return [
     {
@@ -81,6 +90,27 @@ const buildFixtureCitationContent = (): CitationContent => {
   };
 };
 
+const buildFixtureSeedEntries = (): GroupedSourceEntry[] => {
+  return [
+    {
+      sourceKey: 'source1',
+      knowledgeId: 'knowledge-a',
+      documentId: 'document-a',
+      snippet: 'A-0',
+      distance: 0.12,
+      chunkIds: ['chunk-a-0-ref', 'chunk-a-1-ref'],
+    },
+    {
+      sourceKey: 'source2',
+      knowledgeId: 'knowledge-b',
+      documentId: 'document-b',
+      snippet: 'B-9',
+      distance: 0.21,
+      chunkIds: ['chunk-b-9-ref'],
+    },
+  ];
+};
+
 test('buildProjectChatSourceEntries preserves raw source-entry order and resolveDrawerSource defaults source1 to first entry', async () => {
   const {
     buildProjectChatSourceEntries,
@@ -127,38 +157,15 @@ test('buildProjectChatSourceEntries preserves raw source-entry order and resolve
 });
 
 test('drift fallback triggers on source-key set/order drift or key-to-document remapping only', async () => {
-  const { buildProjectChatSourceEntries, shouldFallbackToLegacySourceRendering } = (await import(
+  const { shouldFallbackToLegacySourceRendering } = (await import(
     '../src/pages/project/projectChatSources'
   )) as {
-    buildProjectChatSourceEntries: (sources: Source[]) => Array<{
-      id: string;
-      sourceKey: string;
-      knowledgeId: string;
-      documentId: string;
-      snippet: string;
-      distance: number | null;
-      chunkIds: string[];
-    }>;
     shouldFallbackToLegacySourceRendering: (args: {
-      seedEntries: Array<{
-        sourceKey: string;
-        knowledgeId: string;
-        documentId: string;
-        snippet: string;
-        distance: number | null;
-        chunkIds: string[];
-      }>;
-      persistedSources: Array<{
-        sourceKey: string;
-        knowledgeId: string;
-        documentId: string;
-        snippet: string;
-        distance: number | null;
-        chunkIds: string[];
-      }>;
+      seedEntries: GroupedSourceEntry[];
+      persistedSources: GroupedSourceEntry[];
     }) => boolean;
   };
-  const seedEntries = buildProjectChatSourceEntries(buildFixtureSources());
+  const seedEntries = buildFixtureSeedEntries();
 
   assert.equal(
     shouldFallbackToLegacySourceRendering({
@@ -210,7 +217,7 @@ test('drift fallback triggers on source-key set/order drift or key-to-document r
         ...entry,
         snippet: `${entry.snippet} (updated)`,
         distance: entry.distance === null ? null : entry.distance + 0.3,
-        chunkIds: [...entry.chunkIds, `${entry.id}-extra`],
+        chunkIds: [...entry.chunkIds, `${entry.sourceKey}-extra`],
       })),
     }),
     false,
