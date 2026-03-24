@@ -4236,6 +4236,20 @@ test('streamProjectConversationMessage persists citationContent on final assista
   assert.equal(events[0]?.type, 'ack');
   assert.equal(events[1]?.type, 'sources_seed');
   assert.notEqual(events[2]?.type, 'sources_seed');
+  const seedEvent = events[1] as unknown as {
+    type: 'sources_seed';
+    sources?: Array<{
+      sourceKey?: string;
+      id?: string;
+      knowledgeId?: string;
+      documentId?: string;
+    }>;
+  };
+  assert.equal(seedEvent.type, 'sources_seed');
+  assert.equal(seedEvent.sources?.length, 1);
+  assert.equal(seedEvent.sources?.[0]?.sourceKey, 'source1');
+  assert.equal(seedEvent.sources?.[0]?.knowledgeId, 'kb-1');
+  assert.equal(seedEvent.sources?.[0]?.documentId, 'doc-1');
   const sourceTaggedDeltaIndex = events.findIndex(
     (event) => event.type === 'delta' && event.delta.includes('[[source1]]'),
   );
@@ -4277,6 +4291,10 @@ test('streamProjectConversationMessage persists citationContent on final assista
   );
   assert.equal(doneEvent.assistantMessage.sources?.[0]?.id, 's1');
   assert.equal(doneEvent.assistantMessage.sources?.[0]?.sourceKey, 'source1');
+  assert.equal(
+    seedEvent.sources?.[0]?.sourceKey,
+    doneEvent.assistantMessage.sources?.[0]?.sourceKey,
+  );
   assert.deepEqual(doneEvent.assistantMessage.citationContent, {
     version: 1,
     sentences: [
