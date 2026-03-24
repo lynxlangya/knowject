@@ -272,7 +272,7 @@ test('legacy assistant messages without citationContent append a single inline s
   );
   assert.match(
     messageHtml,
-    />source1</,
+    /这里继续沿用旧版 sources 展示。\s*<button[^>]*data-conversation-source-tag="true"[^>]*>\s*source1\s*<\/button>/,
   );
   assert.equal(
     countMatches(messageHtml, /data-conversation-source-tag="true"/),

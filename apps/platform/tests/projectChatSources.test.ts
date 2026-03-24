@@ -81,16 +81,32 @@ const buildFixtureCitationContent = (): CitationContent => {
   };
 };
 
-test('seeded source entries freeze source key order for drawer defaults', async () => {
+test('buildProjectChatSourceEntries preserves raw source-entry order and resolveDrawerSource defaults source1 to first entry', async () => {
   const {
     buildProjectChatSourceEntries,
+    resolveDrawerSource,
     resolveSentenceSourceKeys,
   } = (await import('../src/pages/project/projectChatSources')) as {
     buildProjectChatSourceEntries: (sources: Source[]) => Array<{
       id: string;
       sourceKey: string;
-      activeEntry: { id: string };
+      chunkId: string;
+      chunkIndex: number;
+      snippet: string;
     }>;
+    resolveDrawerSource: (
+      entries: Array<{
+        id: string;
+        sourceKey: string;
+        chunkId: string;
+        chunkIndex: number;
+        snippet: string;
+      }>,
+      sourceKey: string,
+    ) => {
+      activeEntry: { id: string };
+      entries: Array<{ id: string }>;
+    } | null;
     resolveSentenceSourceKeys: (
       citationContent: CitationContent,
       sources: Source[],
@@ -99,9 +115,11 @@ test('seeded source entries freeze source key order for drawer defaults', async 
   const sources = buildFixtureSources();
   const citationContent = buildFixtureCitationContent();
   const entries = buildProjectChatSourceEntries(sources);
+  const drawerSource = resolveDrawerSource(entries, 'source1');
 
+  assert.equal(drawerSource?.activeEntry.id, 'chunk-0');
   assert.equal(
-    entries.find((entry) => entry.sourceKey === 'source1')?.activeEntry.id,
+    drawerSource?.entries[0]?.id,
     'chunk-0',
   );
   assert.deepEqual(resolveSentenceSourceKeys(citationContent, sources), ['source1', 'source2']);
