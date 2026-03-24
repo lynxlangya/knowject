@@ -62,6 +62,20 @@ test('buildProjectConversationCitationSources groups chunks by document and assi
     groupedSources.map((source) => source.id),
     ['s1', 's2', 's3'],
   );
+  assert.deepEqual(
+    groupedSources.map((source) => [
+      source.documentId,
+      source.chunkId,
+      source.chunkIndex,
+      source.sourceKey,
+      source.id,
+    ]),
+    [
+      ['doc-1', 'chunk-1', 0, 'source1', 's1'],
+      ['doc-1', 'chunk-2', 1, 'source1', 's2'],
+      ['doc-2', 'chunk-9', 0, 'source2', 's3'],
+    ],
+  );
 });
 
 test('buildProjectConversationCitationSources freezes sourceKey precedence across retrieval index, distance, knowledgeId, and documentId', () => {

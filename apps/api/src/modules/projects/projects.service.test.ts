@@ -4165,8 +4165,8 @@ test('streamProjectConversationMessage persists citationContent on final assista
     conversationRuntime: createConversationRuntimeStub({
       streamAssistantReply: async ({ onDelta }) => {
         const deltas = [
-          '当前项目已经具备最小对话写链路，',
-          '并开始接入项目级检索[[source1]]。',
+          '当前项目已经具备最小对话写链路[[source1]]，',
+          '并开始接入项目级检索[[source2]]。',
         ];
 
         for (const delta of deltas) {
@@ -4174,7 +4174,8 @@ test('streamProjectConversationMessage persists citationContent on final assista
         }
 
         return {
-          content: '当前项目已经具备最小对话写链路，并开始接入项目级检索[[source1]]。',
+          content:
+            '当前项目已经具备最小对话写链路[[source1]]，并开始接入项目级检索[[source2]]。',
           sources: [
             {
               knowledgeId: 'kb-1',
@@ -4186,6 +4187,15 @@ test('streamProjectConversationMessage persists citationContent on final assista
                 '项目对话已经具备最小消息写链路，并开始接入项目级 merged retrieval。',
               distance: 0.18,
             },
+            {
+              knowledgeId: 'kb-2',
+              documentId: 'doc-2',
+              chunkId: 'chunk-8',
+              chunkIndex: 2,
+              source: 'runtime.md',
+              snippet: '项目资源检索已经接入 runtime 编排与流式事件。',
+              distance: 0.27,
+            },
           ],
           citationContent: {
             version: 1,
@@ -4193,7 +4203,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
               {
                 id: 'sent-1',
                 text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
-                sourceIds: ['s1'],
+                sourceIds: ['s1', 's2'],
                 grounded: true,
               },
             ],
@@ -4243,15 +4253,26 @@ test('streamProjectConversationMessage persists citationContent on final assista
       id?: string;
       knowledgeId?: string;
       documentId?: string;
+      sourceLabel?: string;
+      status?: string;
     }>;
   };
   assert.equal(seedEvent.type, 'sources_seed');
-  assert.equal(seedEvent.sources?.length, 1);
-  assert.equal(seedEvent.sources?.[0]?.sourceKey, 'source1');
-  assert.equal(seedEvent.sources?.[0]?.knowledgeId, 'kb-1');
-  assert.equal(seedEvent.sources?.[0]?.documentId, 'doc-1');
+  assert.deepEqual(
+    seedEvent.sources?.map((source) => [
+      source.sourceKey,
+      source.knowledgeId,
+      source.documentId,
+      source.sourceLabel,
+      source.status,
+    ]),
+    [
+      ['source1', 'kb-1', 'doc-1', 'chat-core.md', 'ready'],
+      ['source2', 'kb-2', 'doc-2', 'runtime.md', 'ready'],
+    ],
+  );
   const sourceTaggedDeltaIndex = events.findIndex(
-    (event) => event.type === 'delta' && event.delta.includes('[[source1]]'),
+    (event) => event.type === 'delta' && event.delta.includes('[[source2]]'),
   );
   assert.notEqual(sourceTaggedDeltaIndex, -1);
   assert.ok(sourceTaggedDeltaIndex > 1);
@@ -4280,7 +4301,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
       {
         id: 'sent-1',
         text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
-        sourceIds: ['s1'],
+        sourceIds: ['s1', 's2'],
         grounded: true,
       },
     ],
@@ -4289,11 +4310,31 @@ test('streamProjectConversationMessage persists citationContent on final assista
     doneEvent.assistantMessage.content,
     '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
   );
-  assert.equal(doneEvent.assistantMessage.sources?.[0]?.id, 's1');
-  assert.equal(doneEvent.assistantMessage.sources?.[0]?.sourceKey, 'source1');
-  assert.equal(
-    seedEvent.sources?.[0]?.sourceKey,
-    doneEvent.assistantMessage.sources?.[0]?.sourceKey,
+  assert.deepEqual(
+    doneEvent.assistantMessage.sources?.map((source) => [
+      source.sourceKey,
+      source.knowledgeId,
+      source.documentId,
+      source.source,
+    ]),
+    [
+      ['source1', 'kb-1', 'doc-1', 'chat-core.md'],
+      ['source2', 'kb-2', 'doc-2', 'runtime.md'],
+    ],
+  );
+  assert.deepEqual(
+    seedEvent.sources?.map((source) => [
+      source.sourceKey,
+      source.knowledgeId,
+      source.documentId,
+      source.sourceLabel,
+    ]),
+    doneEvent.assistantMessage.sources?.map((source) => [
+      source.sourceKey,
+      source.knowledgeId,
+      source.documentId,
+      source.source,
+    ]),
   );
   assert.deepEqual(doneEvent.assistantMessage.citationContent, {
     version: 1,
@@ -4301,7 +4342,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
       {
         id: 'sent-1',
         text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
-        sourceIds: ['s1'],
+        sourceIds: ['s1', 's2'],
         grounded: true,
       },
     ],
