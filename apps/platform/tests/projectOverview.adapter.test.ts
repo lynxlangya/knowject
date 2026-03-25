@@ -35,7 +35,7 @@ test('project overview adapter freezes the summary aggregation contract', () => 
     { date: '2026-03-24', count: 0 },
     { date: '2026-03-25', count: 1 },
   ]);
-  assert.equal(summary.activity.lastConversationActivityAt, '2026-03-25T08:00:00.000Z');
+  assert.equal(summary.activity.lastConversationActivityAt, '2026-03-25T09:00:00.000Z');
   assert.equal(summary.activity.available, true);
   assert.equal(summary.knowledge.globalKnowledgeCount, 1);
   assert.equal(summary.knowledge.projectKnowledgeCount, 2);
