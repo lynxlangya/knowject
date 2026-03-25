@@ -109,8 +109,8 @@ const stalledSummary = {
     activeConversationCount7d: 0,
     lastConversationActivityAt: '2026-03-20T08:00:00.000Z',
     trend7d: [
-      { date: '2026-03-19', count: 3 },
-      { date: '2026-03-20', count: 1 },
+      { date: '2026-03-19', count: 0 },
+      { date: '2026-03-20', count: 0 },
       { date: '2026-03-21', count: 0 },
       { date: '2026-03-22', count: 0 },
       { date: '2026-03-23', count: 0 },
@@ -134,7 +134,7 @@ const stalledSummary = {
     },
   },
   coverage: {
-    knowledge: 2,
+    knowledge: 3,
     skills: 1,
     agents: 0,
   },
