@@ -29,7 +29,11 @@ export const buildProjectOverviewInsights = (
     summary.coverage.skills > 0 ||
     summary.coverage.agents > 0;
 
-  if (!hasAnyResources && summary.activity.activeConversationCount7d === 0) {
+  if (
+    !hasAnyResources &&
+    summary.activity.activeConversationCount7d === 0 &&
+    summary.activity.lastConversationActivityAt === null
+  ) {
     push(buildInsight("cold_start", "risk"));
   }
 
@@ -79,4 +83,3 @@ export const buildProjectOverviewInsights = (
     .slice(0, 4)
     .map(({ _order: _unused, ...insight }) => insight);
 };
-
