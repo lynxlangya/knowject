@@ -30,6 +30,15 @@ const localeSensitiveFiles = [
   '../src/pages/project/projectConversationMessageExport.ts',
 ] as const;
 
+const overviewDashboardKeys = [
+  'summary',
+  'activity',
+  'knowledge',
+  'coverage',
+  'insights',
+  'states',
+] as const;
+
 test('project locale resources expose mirrored layout, overview, members, header, chat settings, and draft defaults', () => {
   const enProject = projectMessagesEn as Record<string, unknown>;
   const zhProject = projectMessagesZhCN as Record<string, unknown>;
@@ -55,6 +64,37 @@ test('project locale resources expose mirrored layout, overview, members, header
     assert.ok(enDraft?.[key], `missing en project.resources.draft.${key}`);
     assert.ok(zhDraft?.[key], `missing zh-CN project.resources.draft.${key}`);
   }
+});
+
+test('overview locale dashboard contract exposes required sections', () => {
+  const enOverview = projectMessagesEn.overview as Record<string, unknown> | undefined;
+  const zhOverview = projectMessagesZhCN.overview as Record<string, unknown> | undefined;
+
+  assert.ok(enOverview, 'missing en project.overview');
+  assert.ok(zhOverview, 'missing zh-CN project.overview');
+
+  for (const key of overviewDashboardKeys) {
+    const enSection = enOverview?.[key];
+    const zhSection = zhOverview?.[key];
+
+    assert.ok(enSection, `missing en project.overview.${key}`);
+    assert.ok(zhSection, `missing zh-CN project.overview.${key}`);
+    assert.strictEqual(
+      typeof enSection,
+      typeof zhSection,
+      `overview section ${key} differs in type between locales`
+    );
+  }
+});
+
+test('ProjectOverviewPage no longer depends on legacy overview copy or recent resources helper', () => {
+  const source = readFileSync(new URL('../src/pages/project/ProjectOverviewPage.tsx', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(source, /overview\.recentTitle/);
+  assert.doesNotMatch(source, /overview\.resourcesTitle/);
+  assert.doesNotMatch(source, /overview\.quickActionsTitle/);
+  assert.doesNotMatch(source, /getRecentProjectResources/);
+  assert.match(source, /overview\.partialLoad/, 'partial load copy must stay available');
 });
 
 for (const file of componentFiles) {
