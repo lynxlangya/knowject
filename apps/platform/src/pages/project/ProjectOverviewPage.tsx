@@ -147,109 +147,105 @@ export const ProjectOverviewPage = () => {
         ]}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-4">
-          <OverviewActivityChart
-            title={t('overview.activity.title')}
-            description={t('overview.activity.description')}
-            points={
-              overviewSummary.activity.available
-                ? overviewSummary.activity.trend7d.map((bucket) => ({
-                    id: bucket.date,
-                    label: formatUtcWeekday(bucket.date),
-                    tooltip: formatUtcDate(bucket.date),
-                    value: bucket.count,
-                  }))
-                : []
-            }
-            avgLabel={t('overview.activity.avg')}
-            peakLabel={t('overview.activity.peak')}
-            emptyLabel={t('overview.states.unavailable')}
-          />
-          <OverviewInsightList
-            title={t('overview.insights.title')}
-            description={t('overview.insights.description')}
-            emptyLabel={t('overview.insights.empty')}
-            items={overviewInsights.map((insight) => ({
-              id: insight.id,
-              level: insight.level,
-              levelLabel: t(`overview.insights.levels.${insight.level}`),
-              title: t(`overview.insights.items.${insight.id}.title`),
-              description: t(`overview.insights.items.${insight.id}.description`),
-            }))}
-          />
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <OverviewKnowledgeHealthCard
-            title={t('overview.knowledge.title')}
-            description={t('overview.knowledge.description')}
-            stateLabel={knowledgeStateLabel}
-            knowledgeTotalLabel={t('overview.knowledge.metrics.total')}
-            knowledgeTotalValue={String(overviewSummary.knowledge.totalKnowledgeCount)}
-            documentTotalLabel={t('overview.knowledge.metrics.documents')}
-            documentTotalValue={String(overviewSummary.knowledge.knowledgeDocumentCount)}
-            indexedLabel={t('overview.knowledge.metrics.indexed')}
-            indexedValue={String(indexedCount)}
-            indexingRateLabel={t('overview.knowledge.metrics.rate')}
-            indexingRateValue={`${indexingRate}%`}
-            indexingProgressPercent={indexingRate}
-            statusItems={[
-              {
-                id: 'completed',
-                label: t('overview.knowledge.status.completed'),
-                value: overviewSummary.knowledge.statusBreakdown.completed,
-                tone: 'positive',
-              },
-              {
-                id: 'processing',
-                label: t('overview.knowledge.status.processing'),
-                value: overviewSummary.knowledge.statusBreakdown.processing,
-                tone: 'neutral',
-              },
-              {
-                id: 'pending',
-                label: t('overview.knowledge.status.pending'),
-                value: overviewSummary.knowledge.statusBreakdown.pending,
-                tone: 'warning',
-              },
-              {
-                id: 'failed',
-                label: t('overview.knowledge.status.failed'),
-                value: overviewSummary.knowledge.statusBreakdown.failed,
-                tone: 'risk',
-              },
-            ]}
-          />
-          <OverviewResourceCoverageCard
-            title={t('overview.coverage.title')}
-            description={t('overview.coverage.description')}
-            stateLabel={coverageStateLabel}
-            totalLabel={t('overview.coverage.total')}
-            totalValue={String(totalResourceCount)}
-            items={[
-              {
-                id: 'knowledge',
-                label: t('overview.coverage.items.knowledge'),
-                value: overviewSummary.coverage.knowledge,
-                share: Math.round((overviewSummary.coverage.knowledge / Math.max(totalResourceCount, 1)) * 100),
-              },
-              {
-                id: 'skills',
-                label: t('overview.coverage.items.skills'),
-                value: overviewSummary.coverage.skills,
-                share: Math.round((overviewSummary.coverage.skills / Math.max(totalResourceCount, 1)) * 100),
-              },
-              {
-                id: 'agents',
-                label: t('overview.coverage.items.agents'),
-                value: overviewSummary.coverage.agents,
-                share: Math.round((overviewSummary.coverage.agents / Math.max(totalResourceCount, 1)) * 100),
-              },
-            ]}
-          />
-        </div>
+      <div className="grid gap-4 xl:grid-cols-3">
+        <OverviewActivityChart
+          title={t('overview.activity.title')}
+          description={t('overview.activity.description')}
+          points={
+            overviewSummary.activity.available
+              ? overviewSummary.activity.trend7d.map((bucket) => ({
+                  id: bucket.date,
+                  label: formatUtcWeekday(bucket.date),
+                  tooltip: formatUtcDate(bucket.date),
+                  value: bucket.count,
+                }))
+              : []
+          }
+          avgLabel={t('overview.activity.avg')}
+          peakLabel={t('overview.activity.peak')}
+          emptyLabel={t('overview.states.unavailable')}
+        />
+        <OverviewKnowledgeHealthCard
+          title={t('overview.knowledge.title')}
+          description={t('overview.knowledge.description')}
+          stateLabel={knowledgeStateLabel}
+          knowledgeTotalLabel={t('overview.knowledge.metrics.total')}
+          knowledgeTotalValue={String(overviewSummary.knowledge.totalKnowledgeCount)}
+          documentTotalLabel={t('overview.knowledge.metrics.documents')}
+          documentTotalValue={String(overviewSummary.knowledge.knowledgeDocumentCount)}
+          indexedLabel={t('overview.knowledge.metrics.indexed')}
+          indexedValue={String(indexedCount)}
+          indexingRateLabel={t('overview.knowledge.metrics.rate')}
+          indexingRateValue={`${indexingRate}%`}
+          indexingProgressPercent={indexingRate}
+          statusItems={[
+            {
+              id: 'completed',
+              label: t('overview.knowledge.status.completed'),
+              value: overviewSummary.knowledge.statusBreakdown.completed,
+              tone: 'positive',
+            },
+            {
+              id: 'processing',
+              label: t('overview.knowledge.status.processing'),
+              value: overviewSummary.knowledge.statusBreakdown.processing,
+              tone: 'neutral',
+            },
+            {
+              id: 'pending',
+              label: t('overview.knowledge.status.pending'),
+              value: overviewSummary.knowledge.statusBreakdown.pending,
+              tone: 'warning',
+            },
+            {
+              id: 'failed',
+              label: t('overview.knowledge.status.failed'),
+              value: overviewSummary.knowledge.statusBreakdown.failed,
+              tone: 'risk',
+            },
+          ]}
+        />
+        <OverviewInsightList
+          title={t('overview.insights.title')}
+          description={t('overview.insights.description')}
+          emptyLabel={t('overview.insights.empty')}
+          items={overviewInsights.map((insight) => ({
+            id: insight.id,
+            level: insight.level,
+            levelLabel: t(`overview.insights.levels.${insight.level}`),
+            title: t(`overview.insights.items.${insight.id}.title`),
+            description: t(`overview.insights.items.${insight.id}.description`),
+          }))}
+        />
       </div>
+
+      <OverviewResourceCoverageCard
+        title={t('overview.coverage.title')}
+        description={t('overview.coverage.description')}
+        stateLabel={coverageStateLabel}
+        totalLabel={t('overview.coverage.total')}
+        totalValue={String(totalResourceCount)}
+        items={[
+          {
+            id: 'knowledge',
+            label: t('overview.coverage.items.knowledge'),
+            value: overviewSummary.coverage.knowledge,
+            share: Math.round((overviewSummary.coverage.knowledge / Math.max(totalResourceCount, 1)) * 100),
+          },
+          {
+            id: 'skills',
+            label: t('overview.coverage.items.skills'),
+            value: overviewSummary.coverage.skills,
+            share: Math.round((overviewSummary.coverage.skills / Math.max(totalResourceCount, 1)) * 100),
+          },
+          {
+            id: 'agents',
+            label: t('overview.coverage.items.agents'),
+            value: overviewSummary.coverage.agents,
+            share: Math.round((overviewSummary.coverage.agents / Math.max(totalResourceCount, 1)) * 100),
+          },
+        ]}
+      />
     </section>
   );
 };
