@@ -14,7 +14,8 @@ test('project overview adapter freezes the summary aggregation contract', () => 
   const summary = buildProjectOverviewSummary({
     project: projectFixture,
     conversations: [
-      { id: 'c-1', projectId: 'p-1', title: 'A', preview: '...', updatedAt: '2026-03-25T08:00:00.000Z' },
+    { id: 'c-1', projectId: 'p-1', title: 'A', preview: '...', updatedAt: '2026-03-25T08:00:00.000Z' },
+    { id: 'c-1', projectId: 'p-1', title: 'A', preview: 'duplicate entry for same day', updatedAt: '2026-03-25T09:00:00.000Z' },
       { id: 'c-2', projectId: 'p-1', title: 'B', preview: '...', updatedAt: '2026-03-23T08:00:00.000Z' },
     ],
     projectKnowledge: [
@@ -59,7 +60,7 @@ test('project overview adapter marks knowledge unavailable when project data is 
   const summary = buildProjectOverviewSummary({
     project: projectFixture,
     conversations: [],
-    projectKnowledge: null as never,
+    projectKnowledge: undefined,
     now: '2026-03-25T12:00:00.000Z',
   });
 

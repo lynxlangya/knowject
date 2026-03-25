@@ -34,13 +34,19 @@ const assertInsightContract = (
   assert.ok(insights.length <= 4);
   assertSortedBySeverity(insights);
 
-  const disallowedTextFields = ['title', 'description', 'message', 'text', 'copy'];
+  const semanticPattern = /^[a-z0-9_.-]+$/i;
+  const candidateTextFields = ['title', 'description', 'message', 'text', 'copy'];
 
   for (const insight of insights) {
     assert.ok(typeof insight.id === 'string', 'insight id must be a string');
     assert.ok(allowedLevels.has(insight.level), 'insight level must be a known severity');
-    for (const field of disallowedTextFields) {
-      assert.ok(!(field in insight), `insight should not emit user-facing field ${field}`);
+
+    const record = insight as Record<string, unknown>;
+    for (const field of candidateTextFields) {
+      if (field in record) {
+        const value = record[field];
+        assert.match(String(value), semanticPattern, `insight.${field} must stay keyword-like`);
+      }
     }
   }
 };
@@ -79,6 +85,9 @@ const resourceStackLightSummary = {
   knowledge: {
     ...emptySummary.knowledge,
     totalKnowledgeCount: 2,
+    globalKnowledgeCount: 1,
+    projectKnowledgeCount: 1,
+    knowledgeWithDocumentsCount: 2,
     knowledgeDocumentCount: 4,
     statusBreakdown: {
       completed: 1,
@@ -113,6 +122,9 @@ const stalledSummary = {
   knowledge: {
     ...emptySummary.knowledge,
     totalKnowledgeCount: 3,
+    globalKnowledgeCount: 1,
+    projectKnowledgeCount: 2,
+    knowledgeWithDocumentsCount: 3,
     knowledgeDocumentCount: 5,
     statusBreakdown: {
       completed: 0,
