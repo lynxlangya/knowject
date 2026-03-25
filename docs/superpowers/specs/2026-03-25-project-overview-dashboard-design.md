@@ -406,7 +406,7 @@
 
 规则示例：
 
-- 如果 `activeConversationCount7d = 0`
+- 如果 `activeConversationCount7d = 0` 且存在历史对话迹象（例如 `lastConversationActivityAt !== null`）
   - 输出：AI 使用降温
 - 如果 `totalKnowledgeCount > 0` 且项目私有知识 `completed = 0` 且存在 `pending / processing / failed`
   - 输出：知识链路未进入稳定 ready 状态
