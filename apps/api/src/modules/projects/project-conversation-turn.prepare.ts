@@ -3,7 +3,10 @@ import {
   shouldAutoGenerateProjectConversationTitle,
   shouldRefreshProjectConversationAutoTitle,
 } from "./project-conversation-runtime.js";
-import { ProjectsRepository } from "./projects.repository.js";
+import {
+  ProjectConversationsRepository,
+  ProjectsRepository,
+} from "./projects.repository.js";
 import {
   createProjectConversationMessage,
   createProjectConversationNotFoundError,
@@ -30,6 +33,7 @@ import { validateCreateProjectConversationMessageInput } from "./validators/proj
 
 export const prepareProjectConversationTurn = async ({
   repository,
+  projectConversationsRepository,
   context,
   projectId,
   conversationId,
@@ -37,31 +41,29 @@ export const prepareProjectConversationTurn = async ({
   options,
 }: {
   repository: ProjectsRepository;
+  projectConversationsRepository: ProjectConversationsRepository;
   context: ProjectCommandContext;
   projectId: string;
   conversationId: string;
   input: CreateProjectConversationMessageInput;
   options?: ProjectConversationTurnPreparationOptions;
 }): Promise<PreparedProjectConversationTurn> => {
-  const project = await requireVisibleProject(
+  let currentProject = await requireVisibleProject(
     repository,
     projectId,
     context.actor,
   );
   const { content, clientRequestId, targetUserMessageId } =
     validateCreateProjectConversationMessageInput(input, options);
-  const persistedProjectId = project._id.toHexString();
+  const persistedProjectId = currentProject._id.toHexString();
 
-  let ensuredConversationProject = await ensurePersistedConversationProject({
+  let userConversation = await ensurePersistedConversationProject({
     repository,
-    project,
+    projectConversationsRepository,
+    project: currentProject,
     projectId: persistedProjectId,
     conversationId,
   });
-  let userConversation = getRequiredPersistedConversation(
-    ensuredConversationProject,
-    conversationId,
-  );
   const existingRetryState = clientRequestId
     ? findProjectConversationRetryState(userConversation, clientRequestId)
     : null;
@@ -76,7 +78,7 @@ export const prepareProjectConversationTurn = async ({
   if (reusableRetryState?.assistantMessage) {
     return {
       projectId: persistedProjectId,
-      project: ensuredConversationProject,
+      project: currentProject,
       conversationId,
       conversation: userConversation,
       userMessage: reusableRetryState.userMessage,
@@ -100,7 +102,7 @@ export const prepareProjectConversationTurn = async ({
     });
     const shouldRefreshTitle = shouldRefreshProjectConversationAutoTitle(
       userConversation,
-      ensuredConversationProject.name,
+      currentProject.name,
     );
     const firstUserMessage =
       replayedConversation.messages.find(
@@ -109,36 +111,30 @@ export const prepareProjectConversationTurn = async ({
     const nextTitle = shouldRefreshTitle
       ? createProjectConversationAutoTitle(firstUserMessage.content)
       : undefined;
-    const replayUpdatedAt = new Date();
-    const projectWithReplay =
-      await repository.replaceProjectConversationMessages(
+    const persistedReplayConversation =
+      await projectConversationsRepository.replaceMessages(
         persistedProjectId,
         conversationId,
         replayedConversation.messages,
-        replayUpdatedAt,
         {
           ...(nextTitle !== undefined ? { title: nextTitle } : {}),
           ...(shouldRefreshTitle ? { titleOrigin: "auto" as const } : {}),
         },
       );
 
-    ensuredConversationProject =
-      projectWithReplay ??
+    userConversation =
+      persistedReplayConversation ??
       (await throwConversationPersistenceTargetError(
         repository,
         persistedProjectId,
       ));
-    userConversation = getRequiredPersistedConversation(
-      ensuredConversationProject,
-      conversationId,
-    );
     userMessage =
       userConversation.messages.find(
         (message) => message.id === replayedConversation.userMessage.id,
       ) ?? null;
     replayRestoreState = {
       conversation: originalConversation,
-      replayUpdatedAt,
+      replayUpdatedAt: userConversation.updatedAt,
     };
   }
 
@@ -150,24 +146,20 @@ export const prepareProjectConversationTurn = async ({
       clientRequestId,
       createdAt: userMessageCreatedAt,
     });
-    const persistedUserProject =
-      await repository.appendProjectConversationMessage(
+    const persistedUserConversation =
+      await projectConversationsRepository.appendMessage(
         persistedProjectId,
         conversationId,
         nextUserMessage,
         userMessageCreatedAt,
       );
 
-    ensuredConversationProject =
-      persistedUserProject ??
+    userConversation =
+      persistedUserConversation ??
       (await throwConversationPersistenceTargetError(
         repository,
         persistedProjectId,
       ));
-    userConversation = getRequiredPersistedConversation(
-      ensuredConversationProject,
-      conversationId,
-    );
     userMessage = clientRequestId
       ? (findProjectConversationRetryState(userConversation, clientRequestId)
           ?.userMessage ?? nextUserMessage)
@@ -182,45 +174,38 @@ export const prepareProjectConversationTurn = async ({
     !targetUserMessageId &&
     shouldAutoGenerateProjectConversationTitle(
       userConversation,
-      ensuredConversationProject.name,
+      currentProject.name,
     )
   ) {
     const nextTitle = createProjectConversationAutoTitle(content);
     const expectedCurrentTitle = userConversation.title;
 
     if (nextTitle !== userConversation.title) {
-      const titleUpdatedAt = new Date();
-      const projectWithUpdatedTitle =
-        await repository.updateProjectConversationTitle(
+      const conversationWithUpdatedTitle =
+        await projectConversationsRepository.updateTitle(
           persistedProjectId,
           conversationId,
           nextTitle,
-          titleUpdatedAt,
           {
             expectedCurrentTitle,
             titleOrigin: "auto",
           },
         );
 
-      if (projectWithUpdatedTitle) {
-        ensuredConversationProject = projectWithUpdatedTitle;
-        userConversation = getRequiredPersistedConversation(
-          projectWithUpdatedTitle,
-          conversationId,
-        );
+      if (conversationWithUpdatedTitle) {
+        userConversation = conversationWithUpdatedTitle;
       } else {
         const latestConversationTarget = await readPersistedConversationTarget(
           repository,
+          projectConversationsRepository,
           persistedProjectId,
           conversationId,
         );
 
-        if (!latestConversationTarget.conversation) {
-          throw createProjectConversationNotFoundError();
-        }
-
-        ensuredConversationProject = latestConversationTarget.project;
-        userConversation = latestConversationTarget.conversation;
+        currentProject = latestConversationTarget.project;
+        userConversation = getRequiredPersistedConversation(
+          latestConversationTarget.conversation,
+        );
       }
     }
   }
@@ -228,16 +213,17 @@ export const prepareProjectConversationTurn = async ({
   if (clientRequestId) {
     const latestConversationTarget = await readPersistedConversationTarget(
       repository,
+      projectConversationsRepository,
       persistedProjectId,
       conversationId,
     );
 
-    if (!latestConversationTarget.conversation) {
-      throw createProjectConversationNotFoundError();
-    }
-
-    const retryState = findProjectConversationRetryState(
+    currentProject = latestConversationTarget.project;
+    userConversation = getRequiredPersistedConversation(
       latestConversationTarget.conversation,
+    );
+    const retryState = findProjectConversationRetryState(
+      userConversation,
       clientRequestId,
     );
 
@@ -247,9 +233,9 @@ export const prepareProjectConversationTurn = async ({
 
     return {
       projectId: persistedProjectId,
-      project: latestConversationTarget.project,
+      project: currentProject,
       conversationId,
-      conversation: latestConversationTarget.conversation,
+      conversation: userConversation,
       userMessage: retryState.userMessage,
       clientRequestId,
       existingAssistantMessage: retryState.assistantMessage,
@@ -259,7 +245,7 @@ export const prepareProjectConversationTurn = async ({
 
   return {
     projectId: persistedProjectId,
-    project: ensuredConversationProject,
+    project: currentProject,
     conversationId,
     conversation: userConversation,
     userMessage,

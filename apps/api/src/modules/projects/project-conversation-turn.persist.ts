@@ -1,11 +1,10 @@
 import type { WithId } from "mongodb";
-import { ProjectsRepository } from "./projects.repository.js";
+import { ProjectConversationsRepository, ProjectsRepository } from "./projects.repository.js";
 import {
   createDefaultProjectConversation,
   createProjectConversationMessage,
   createProjectConversationNotFoundError,
   createProjectNotFoundError,
-  getProjectConversation,
   toProjectConversationDetailResponse,
 } from "./projects.shared.js";
 import {
@@ -27,11 +26,8 @@ import { findProjectConversationRetryState } from "./utils/project-conversation-
 import type { SupportedLocale } from "@lib/locale.js";
 
 export const getRequiredPersistedConversation = (
-  project: Pick<ProjectDocument, "name" | "conversations">,
-  conversationId: string,
+  conversation: ProjectConversationDocument | null,
 ): ProjectConversationDocument => {
-  const conversation = getProjectConversation(project, conversationId);
-
   if (!conversation) {
     throw createProjectConversationNotFoundError();
   }
@@ -54,39 +50,38 @@ export const throwConversationPersistenceTargetError = async (
 
 export const ensurePersistedConversationProject = async ({
   repository,
+  projectConversationsRepository,
   project,
   projectId,
   conversationId,
 }: {
   repository: ProjectsRepository;
+  projectConversationsRepository: ProjectConversationsRepository;
   project: WithId<ProjectDocument>;
   projectId: string;
   conversationId: string;
-}): Promise<WithId<ProjectDocument>> => {
+}): Promise<ProjectConversationDocument> => {
   const persistedConversation =
-    project.conversations?.find(
-      (conversation) => conversation.id === conversationId,
-    ) ?? null;
+    await projectConversationsRepository.findByProjectAndConversationId(
+      projectId,
+      conversationId,
+    );
 
   if (persistedConversation) {
-    return project;
+    return persistedConversation;
   }
 
-  if (
-    conversationId === "chat-default" &&
-    (project.conversations?.length ?? 0) === 0
-  ) {
-    const defaultConversation = createDefaultProjectConversation(project);
+  if (conversationId === "chat-default") {
+    const persistedConversations =
+      await projectConversationsRepository.listByProjectId(projectId);
 
-    const materializedProject =
-      await repository.materializeDefaultProjectConversation(
+    if (persistedConversations.length === 0) {
+      const defaultConversation = createDefaultProjectConversation(project);
+
+      return projectConversationsRepository.createConversation({
+        ...defaultConversation,
         projectId,
-        defaultConversation,
-        defaultConversation.updatedAt,
-      );
-
-    if (materializedProject) {
-      return materializedProject;
+      });
     }
   }
 
@@ -95,13 +90,20 @@ export const ensurePersistedConversationProject = async ({
 
 export const readPersistedConversationTarget = async (
   repository: ProjectsRepository,
+  projectConversationsRepository: ProjectConversationsRepository,
   projectId: string,
   conversationId: string,
 ): Promise<{
   project: WithId<ProjectDocument>;
   conversation: ProjectConversationDocument | null;
 }> => {
-  const currentProject = await repository.findById(projectId);
+  const [currentProject, conversation] = await Promise.all([
+    repository.findById(projectId),
+    projectConversationsRepository.findByProjectAndConversationId(
+      projectId,
+      conversationId,
+    ),
+  ]);
 
   if (!currentProject) {
     throw createProjectNotFoundError();
@@ -109,7 +111,7 @@ export const readPersistedConversationTarget = async (
 
   return {
     project: currentProject,
-    conversation: getProjectConversation(currentProject, conversationId),
+    conversation,
   };
 };
 
@@ -129,7 +131,8 @@ export const createProjectConversationDetailEnvelope = (
 };
 
 export const restorePreparedReplayConversation = async (
-  repository: ProjectsRepository,
+  _repository: ProjectsRepository,
+  projectConversationsRepository: ProjectConversationsRepository,
   preparedTurn: PreparedProjectConversationTurn,
 ): Promise<void> => {
   if (!preparedTurn.replayRestoreState) {
@@ -139,11 +142,10 @@ export const restorePreparedReplayConversation = async (
   const { conversation, replayUpdatedAt } = preparedTurn.replayRestoreState;
 
   try {
-    await repository.replaceProjectConversationMessages(
+    await projectConversationsRepository.replaceMessages(
       preparedTurn.projectId,
       preparedTurn.conversationId,
       conversation.messages,
-      new Date(),
       {
         title: conversation.title,
         titleOrigin: conversation.titleOrigin ?? null,
@@ -157,11 +159,13 @@ export const restorePreparedReplayConversation = async (
 
 export const persistProjectConversationAssistantReply = async ({
   repository,
+  projectConversationsRepository,
   preparedTurn,
   assistantReply,
   locale,
 }: {
   repository: ProjectsRepository;
+  projectConversationsRepository: ProjectConversationsRepository;
   preparedTurn: PreparedProjectConversationTurn;
   assistantReply: ProjectConversationAssistantReply;
   locale?: SupportedLocale;
@@ -169,16 +173,16 @@ export const persistProjectConversationAssistantReply = async ({
   if (preparedTurn.clientRequestId) {
     const latestConversationTarget = await readPersistedConversationTarget(
       repository,
+      projectConversationsRepository,
       preparedTurn.projectId,
       preparedTurn.conversationId,
     );
 
-    if (!latestConversationTarget.conversation) {
-      throw createProjectConversationNotFoundError();
-    }
-
-    const retryState = findProjectConversationRetryState(
+    const latestConversation = getRequiredPersistedConversation(
       latestConversationTarget.conversation,
+    );
+    const retryState = findProjectConversationRetryState(
+      latestConversation,
       preparedTurn.clientRequestId,
     );
 
@@ -186,7 +190,7 @@ export const persistProjectConversationAssistantReply = async ({
       return {
         detail: createProjectConversationDetailEnvelope(
           latestConversationTarget.project,
-          latestConversationTarget.conversation,
+          latestConversation,
           locale,
         ),
         assistantMessageId: retryState.assistantMessage.id,
@@ -216,28 +220,24 @@ export const persistProjectConversationAssistantReply = async ({
     citationContent: normalizedCitationContent,
     createdAt: assistantCreatedAt,
   });
-  const persistedAssistantProject =
-    await repository.appendProjectConversationMessage(
+  const persistedConversation =
+    await projectConversationsRepository.appendMessage(
       preparedTurn.projectId,
       preparedTurn.conversationId,
       assistantMessage,
       assistantCreatedAt,
     );
-  const ensuredAssistantProject =
-    persistedAssistantProject ??
+  const ensuredConversation =
+    persistedConversation ??
     (await throwConversationPersistenceTargetError(
       repository,
       preparedTurn.projectId,
     ));
-  const conversation = getRequiredPersistedConversation(
-    ensuredAssistantProject,
-    preparedTurn.conversationId,
-  );
 
   return {
     detail: createProjectConversationDetailEnvelope(
-      ensuredAssistantProject,
-      conversation,
+      preparedTurn.project,
+      ensuredConversation,
       locale,
     ),
     assistantMessageId: assistantMessage.id,

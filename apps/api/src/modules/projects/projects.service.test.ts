@@ -10,16 +10,307 @@ import type { SettingsRepository } from '@modules/settings/settings.repository.j
 import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
 import { createProjectConversationRuntime } from './project-conversation-runtime.js';
 import type { ProjectsService } from './projects.service.js';
-import { createProjectsService } from './projects.service.js';
-import type { ProjectsRepository } from './projects.repository.js';
+import { createProjectsService as createProjectsServiceBase } from './projects.service.js';
+import type {
+  ProjectConversationsRepository,
+  ProjectsRepository,
+} from './projects.repository.js';
 import type {
   ProjectCommandContext,
   ProjectConversationDocument,
   ProjectConversationCitationContent,
   ProjectConversationStreamEvent,
   ProjectConversationSourceDocument,
-  ProjectDocument,
+  ProjectDocument as ProjectModelDocument,
 } from './projects.types.js';
+
+type ProjectDocument = ProjectModelDocument & {
+  conversations: ProjectConversationDocument[];
+};
+
+type LegacyProjectConversationsRepository = Partial<ProjectConversationsRepository> & {
+  appendProjectConversation?: (
+    projectId: string,
+    conversation: ProjectConversationDocument,
+    updatedAt: Date,
+  ) => Promise<{ conversations?: ProjectConversationDocument[] } | null>;
+  materializeDefaultProjectConversation?: (
+    projectId: string,
+    conversation: ProjectConversationDocument,
+    updatedAt: Date,
+  ) => Promise<{ conversations?: ProjectConversationDocument[] } | null>;
+  appendProjectConversationMessage?: (
+    projectId: string,
+    conversationId: string,
+    message: ProjectConversationDocument['messages'][number],
+    updatedAt: Date,
+  ) => Promise<{ conversations?: ProjectConversationDocument[] } | null>;
+  updateProjectConversationTitle?: (
+    projectId: string,
+    conversationId: string,
+    title: string,
+    updatedAt: Date,
+    options?: { expectedCurrentTitle?: string; titleOrigin?: 'default' | 'auto' | 'manual' },
+  ) => Promise<{ conversations?: ProjectConversationDocument[] } | null>;
+  replaceProjectConversationMessages?: (
+    projectId: string,
+    conversationId: string,
+    messages: ProjectConversationDocument['messages'],
+    updatedAt: Date,
+    options?: {
+      title?: string;
+      titleOrigin?: 'default' | 'auto' | 'manual' | null;
+      expectedCurrentUpdatedAt?: Date;
+    },
+  ) => Promise<{ conversations?: ProjectConversationDocument[] } | null>;
+  updateProjectConversationMessageMetadata?: (
+    projectId: string,
+    conversationId: string,
+    messageId: string,
+    patch: { starred: boolean; starredAt: Date | null; starredBy: string | null },
+  ) => Promise<{ conversations?: ProjectConversationDocument[] } | null>;
+  deleteProjectConversation?: (
+    projectId: string,
+    conversationId: string,
+    updatedAt: Date,
+  ) => Promise<unknown>;
+};
+
+const toPersistedConversation = (
+  projectId: string,
+  conversation: ProjectConversationDocument,
+) => {
+  return {
+    ...conversation,
+    projectId,
+    _id: new ObjectId(),
+  };
+};
+
+const readConversationFromCarrier = (
+  projectId: string,
+  carrier: { conversations?: ProjectConversationDocument[] } | null | undefined,
+  conversationId: string,
+) => {
+  const conversation =
+    carrier?.conversations?.find(
+      (projectConversation) => projectConversation.id === conversationId,
+    ) ?? null;
+
+  return conversation ? toPersistedConversation(projectId, conversation) : null;
+};
+
+const createProjectConversationsRepositoryStub = ({
+  repository,
+}: {
+  repository: ProjectsRepository;
+}): ProjectConversationsRepository => {
+  const legacyRepository =
+    repository as unknown as ProjectsRepository & LegacyProjectConversationsRepository;
+
+  return {
+    listByProjectId: async (projectId: string) => {
+      if (legacyRepository.listByProjectId) {
+        return legacyRepository.listByProjectId(projectId);
+      }
+
+      const project = await legacyRepository.findById?.(projectId);
+      return (
+        (
+          project as (ProjectModelDocument & {
+            conversations?: ProjectConversationDocument[];
+          }) | null | undefined
+        )?.conversations ?? []
+      ).map((conversation) =>
+        toPersistedConversation(projectId, conversation),
+      );
+    },
+    findByProjectAndConversationId: async (
+      projectId: string,
+      conversationId: string,
+    ) => {
+      if (legacyRepository.findByProjectAndConversationId) {
+        return legacyRepository.findByProjectAndConversationId(
+          projectId,
+          conversationId,
+        );
+      }
+
+      const project = await legacyRepository.findById?.(projectId);
+      return readConversationFromCarrier(
+        projectId,
+        project as (ProjectModelDocument & {
+          conversations?: ProjectConversationDocument[];
+        }) | null | undefined,
+        conversationId,
+      );
+    },
+    createConversation: async (document) => {
+      if (legacyRepository.createConversation) {
+        return legacyRepository.createConversation(document);
+      }
+
+      if (legacyRepository.appendProjectConversation) {
+        const result = await legacyRepository.appendProjectConversation(
+          document.projectId,
+          document,
+          document.updatedAt,
+        );
+        return (
+          readConversationFromCarrier(document.projectId, result, document.id) ??
+          toPersistedConversation(document.projectId, document)
+        );
+      }
+
+      if (
+        legacyRepository.materializeDefaultProjectConversation &&
+        document.id === 'chat-default'
+      ) {
+        const result =
+          await legacyRepository.materializeDefaultProjectConversation(
+            document.projectId,
+            document,
+            document.updatedAt,
+          );
+        return (
+          readConversationFromCarrier(document.projectId, result, document.id) ??
+          toPersistedConversation(document.projectId, document)
+        );
+      }
+
+      return toPersistedConversation(document.projectId, document);
+    },
+    updateTitle: async (projectId, conversationId, title, options) => {
+      if (legacyRepository.updateTitle) {
+        return legacyRepository.updateTitle(projectId, conversationId, title, options);
+      }
+
+      if (!legacyRepository.updateProjectConversationTitle) {
+        return null;
+      }
+
+      const result = await legacyRepository.updateProjectConversationTitle(
+        projectId,
+        conversationId,
+        title,
+        new Date(),
+        options,
+      );
+
+      return readConversationFromCarrier(projectId, result, conversationId);
+    },
+    appendMessage: async (projectId, conversationId, message, updatedAt) => {
+      if (legacyRepository.appendMessage) {
+        return legacyRepository.appendMessage(
+          projectId,
+          conversationId,
+          message,
+          updatedAt,
+        );
+      }
+
+      if (!legacyRepository.appendProjectConversationMessage) {
+        return null;
+      }
+
+      const result = await legacyRepository.appendProjectConversationMessage(
+        projectId,
+        conversationId,
+        message,
+        updatedAt,
+      );
+
+      return readConversationFromCarrier(projectId, result, conversationId);
+    },
+    replaceMessages: async (projectId, conversationId, messages, options) => {
+      if (legacyRepository.replaceMessages) {
+        return legacyRepository.replaceMessages(
+          projectId,
+          conversationId,
+          messages,
+          options,
+        );
+      }
+
+      if (!legacyRepository.replaceProjectConversationMessages) {
+        return null;
+      }
+
+      const result = await legacyRepository.replaceProjectConversationMessages(
+        projectId,
+        conversationId,
+        messages,
+        new Date(),
+        options,
+      );
+
+      return readConversationFromCarrier(projectId, result, conversationId);
+    },
+    updateMessageMetadata: async (
+      projectId,
+      conversationId,
+      messageId,
+      patch,
+    ) => {
+      if (legacyRepository.updateMessageMetadata) {
+        return legacyRepository.updateMessageMetadata(
+          projectId,
+          conversationId,
+          messageId,
+          patch,
+        );
+      }
+
+      if (!legacyRepository.updateProjectConversationMessageMetadata) {
+        return null;
+      }
+
+      const result =
+        await legacyRepository.updateProjectConversationMessageMetadata(
+          projectId,
+          conversationId,
+          messageId,
+          patch,
+        );
+
+      return readConversationFromCarrier(projectId, result, conversationId);
+    },
+    deleteConversation: async (projectId, conversationId, updatedAt) => {
+      if (legacyRepository.deleteConversation) {
+        return legacyRepository.deleteConversation(projectId, conversationId, updatedAt);
+      }
+
+      if (!legacyRepository.deleteProjectConversation) {
+        return false;
+      }
+
+      const result = await legacyRepository.deleteProjectConversation(
+        projectId,
+        conversationId,
+        updatedAt,
+      );
+
+      return Boolean(result);
+    },
+    ensureIndexes: async () => undefined,
+  } as ProjectConversationsRepository;
+};
+
+const createProjectsService = ({
+  projectConversationsRepository,
+  ...options
+}: Omit<Parameters<typeof createProjectsServiceBase>[0], 'projectConversationsRepository'> & {
+  projectConversationsRepository?: ProjectConversationsRepository;
+}) => {
+  return createProjectsServiceBase({
+    ...options,
+    projectConversationsRepository:
+      projectConversationsRepository ??
+      createProjectConversationsRepositoryStub({
+        repository: options.repository,
+      }),
+  });
+};
 
 const TEST_ENCRYPTION_KEY =
   '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -392,11 +683,70 @@ test('createProject persists resource bindings into the formal project model', a
   assert.deepEqual(persistedProject.knowledgeBaseIds, ['kb-1', 'kb-2']);
   assert.deepEqual(persistedProject.agentIds, ['agent-1']);
   assert.deepEqual(persistedProject.skillIds, ['skill-1', 'skill-2']);
-  assert.equal(persistedProject.conversations.length, 1);
-  assert.equal(persistedProject.conversations[0]?.id, 'chat-default');
+  assert.equal(
+    (persistedProject as { conversations?: unknown }).conversations,
+    undefined,
+  );
   assert.deepEqual(response.knowledgeBaseIds, ['kb-1', 'kb-2']);
   assert.deepEqual(response.agentIds, ['agent-1']);
   assert.deepEqual(response.skillIds, ['skill-1', 'skill-2']);
+});
+
+test('createProject materializes the default conversation in the separated repository', async () => {
+  let createdConversation:
+    | {
+        projectId: string;
+        id: string;
+        title: string;
+      }
+    | null = null;
+
+  const repository = {
+    createProject: async (document: Omit<ProjectDocument, '_id'>) => {
+      return {
+        ...document,
+        _id: new ObjectId('507f1f77bcf86cd799439112'),
+      };
+    },
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    projectConversationsRepository: {
+      createConversation: async (document) => {
+        createdConversation = {
+          projectId: document.projectId,
+          id: document.id,
+          title: document.title,
+        };
+
+        return {
+          ...document,
+          _id: new ObjectId(),
+        };
+      },
+    } as ProjectConversationsRepository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  await service.createProject(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+    },
+    {
+      name: '默认对话物化',
+    },
+  );
+
+  assert.deepEqual(createdConversation, {
+    projectId: '507f1f77bcf86cd799439112',
+    id: 'chat-default',
+    title: '新对话',
+  });
 });
 
 test('listProjectConversations returns a default formal conversation when the project has no stored threads', async () => {
@@ -448,6 +798,76 @@ test('listProjectConversations returns a default formal conversation when the pr
   assert.equal(result.items[0]?.id, 'chat-default');
   assert.equal(result.items[0]?.title, '项目对话正式化 project context');
   assert.match(result.items[0]?.preview ?? '', /project conversation entry/);
+});
+
+test('listProjectConversations keeps legacy embedded conversations when the new repository is empty', async () => {
+  const project: ProjectDocument & {
+    _id: NonNullable<ProjectDocument['_id']>;
+  } = {
+    _id: new ObjectId('507f1f77bcf86cd799439013'),
+    name: 'legacy 会话兼容',
+    description: '验证旧 conversations 字段仍可读',
+    ownerId: 'user-1',
+    members: [
+      {
+        userId: 'user-1',
+        role: 'admin',
+        joinedAt: new Date('2026-03-13T00:00:00.000Z'),
+      },
+    ],
+    knowledgeBaseIds: [],
+    agentIds: [],
+    skillIds: [],
+    conversations: [
+      {
+        id: 'chat-legacy-1',
+        title: '旧会话',
+        titleOrigin: 'manual',
+        messages: [
+          {
+            id: 'msg-legacy-1',
+            role: 'user',
+            content: 'legacy question',
+            createdAt: new Date('2026-03-13T08:00:00.000Z'),
+          },
+        ],
+        createdAt: new Date('2026-03-13T08:00:00.000Z'),
+        updatedAt: new Date('2026-03-13T08:00:00.000Z'),
+      },
+    ],
+    createdAt: new Date('2026-03-13T00:00:00.000Z'),
+    updatedAt: new Date('2026-03-13T08:00:00.000Z'),
+  };
+
+  const repository = {
+    findById: async (projectId: string) =>
+      projectId === project._id.toHexString() ? project : null,
+  } as unknown as ProjectsRepository;
+
+  const service = createProjectsService({
+    repository,
+    projectConversationsRepository: {
+      listByProjectId: async () => [],
+    } as ProjectConversationsRepository,
+    authRepository: createAuthRepositoryStub(),
+    skillBindingValidator: createSkillBindingValidatorStub(),
+  });
+
+  const result = await service.listProjectConversations(
+    {
+      actor: {
+        id: 'user-1',
+        username: 'langya',
+      },
+      locale: 'zh-CN',
+    },
+    project._id.toHexString(),
+  );
+
+  assert.equal(result.total, 1);
+  assert.equal(result.items[0]?.id, 'chat-legacy-1');
+  assert.equal(result.items[0]?.title, '旧会话');
+  assert.match(result.items[0]?.preview ?? '', /legacy question/);
 });
 
 test('listProjects localizes unknown member fallback names when locale is en', async () => {
@@ -3366,29 +3786,51 @@ test('createProjectConversationMessage keeps persisted history when replay gener
     updatedAt: new Date('2026-03-17T10:01:00.000Z'),
   };
 
-  let persistedConversation = project.conversations[0]!;
+  let persistedConversation = toPersistedConversation(
+    project._id.toHexString(),
+    project.conversations[0]!,
+  );
 
   const repository = {
     findById: async (projectId: string) =>
       projectId === project._id.toHexString()
         ? {
             ...project,
-            conversations: [persistedConversation],
+            conversations: [project.conversations[0]!],
             updatedAt: persistedConversation.updatedAt,
             _id: project._id,
           }
         : null,
-    replaceProjectConversationMessages: async (
+    appendProjectConversationMessage: async () => {
+      throw new Error('appendProjectConversationMessage should not be called');
+    },
+  } as unknown as ProjectsRepository;
+
+  const projectConversationsRepository = {
+    findByProjectAndConversationId: async () => persistedConversation,
+    replaceMessages: async (
       _projectId: string,
       conversationId: string,
       messages: ProjectDocument['conversations'][number]['messages'],
-      updatedAt: Date,
       options?: {
         title?: string;
         titleOrigin?: 'default' | 'auto' | 'manual' | null;
+        expectedCurrentUpdatedAt?: Date;
       },
     ) => {
       assert.equal(conversationId, 'chat-replay-failure');
+
+      if (
+        options?.expectedCurrentUpdatedAt &&
+        options.expectedCurrentUpdatedAt.getTime() !==
+          persistedConversation.updatedAt.getTime()
+      ) {
+        return null;
+      }
+
+      const updatedAt = new Date(
+        persistedConversation.updatedAt.getTime() + 1_000,
+      );
       persistedConversation = {
         ...persistedConversation,
         messages,
@@ -3400,20 +3842,13 @@ test('createProjectConversationMessage keeps persisted history when replay gener
         updatedAt,
       };
 
-      return {
-        ...project,
-        conversations: [persistedConversation],
-        updatedAt,
-        _id: project._id,
-      };
+      return persistedConversation;
     },
-    appendProjectConversationMessage: async () => {
-      throw new Error('appendProjectConversationMessage should not be called');
-    },
-  } as unknown as ProjectsRepository;
+  } as ProjectConversationsRepository;
 
   const service = createProjectsService({
     repository,
+    projectConversationsRepository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
     conversationRuntime: createConversationRuntimeStub({
@@ -6020,7 +6455,6 @@ test('createProjectConversationRuntime rejects streaming when the provider lacks
             knowledgeBaseIds: [],
             agentIds: [],
             skillIds: [],
-            conversations: [],
             createdAt: new Date('2026-03-17T00:00:00.000Z'),
             updatedAt: new Date('2026-03-17T00:00:00.000Z'),
           },
@@ -6256,7 +6690,6 @@ test('createProjectConversationRuntime rejects anthropic until a provider-specif
             knowledgeBaseIds: [],
             agentIds: [],
             skillIds: [],
-            conversations: [],
             createdAt: new Date('2026-03-17T00:00:00.000Z'),
             updatedAt: new Date('2026-03-17T00:00:00.000Z'),
           },
@@ -6547,6 +6980,7 @@ test('deleteProject cleans up project scoped knowledge before removing the proje
     updatedAt: new Date('2026-03-15T00:00:00.000Z'),
   };
   const cleanupCalls: Array<{ projectId: string; actorId: string }> = [];
+  const deletedConversationProjectIds: string[] = [];
   let deletedProjectId = '';
 
   const repository = {
@@ -6560,6 +6994,11 @@ test('deleteProject cleans up project scoped knowledge before removing the proje
 
   const service = createProjectsService({
     repository,
+    projectConversationsRepository: {
+      deleteByProjectId: async (projectId) => {
+        deletedConversationProjectIds.push(projectId);
+      },
+    } as ProjectConversationsRepository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
     knowledgeUsage: {
@@ -6588,5 +7027,6 @@ test('deleteProject cleans up project scoped knowledge before removing the proje
       actorId: 'user-1',
     },
   ]);
+  assert.deepEqual(deletedConversationProjectIds, [project._id.toHexString()]);
   assert.equal(deletedProjectId, project._id.toHexString());
 });

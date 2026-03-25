@@ -24,6 +24,9 @@ import type {
 } from './projects.types.js';
 
 type ProjectMemberProfileMap = Map<string, AuthUserProfile>;
+type ProjectConversationLookupSource = Pick<ProjectDocument, "name"> & {
+  conversations?: ProjectConversationDocument[] | null;
+};
 const DEFAULT_PROJECT_CONVERSATION_MESSAGE_ID = 'msg-default-assistant';
 const STORED_DEFAULT_PROJECT_CONVERSATION_TITLE = '新对话';
 const DEFAULT_PROJECT_CONVERSATION_ID = 'chat-default';
@@ -269,10 +272,40 @@ const createProjectConversationSourceKeyMap = (
 };
 
 export const getProjectConversations = (
-  project: Pick<ProjectDocument, 'name' | 'conversations'>,
+  project: ProjectConversationLookupSource,
+  conversations?: ProjectConversationDocument[] | null,
 ): ProjectConversationDocument[] => {
-  if (Array.isArray(project.conversations) && project.conversations.length > 0) {
-    return [...project.conversations].sort(
+  const persistedConversations = Array.isArray(conversations)
+    ? conversations
+    : [];
+  const legacyConversations = Array.isArray(project.conversations)
+    ? project.conversations
+    : [];
+
+  if (persistedConversations.length > 0 && legacyConversations.length > 0) {
+    const mergedConversations = new Map<string, ProjectConversationDocument>();
+
+    for (const conversation of legacyConversations) {
+      mergedConversations.set(conversation.id, conversation);
+    }
+
+    for (const conversation of persistedConversations) {
+      mergedConversations.set(conversation.id, conversation);
+    }
+
+    return [...mergedConversations.values()].sort(
+      (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
+    );
+  }
+
+  if (persistedConversations.length > 0) {
+    return [...persistedConversations].sort(
+      (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
+    );
+  }
+
+  if (legacyConversations.length > 0) {
+    return [...legacyConversations].sort(
       (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
     );
   }
@@ -281,11 +314,12 @@ export const getProjectConversations = (
 };
 
 export const getProjectConversation = (
-  project: Pick<ProjectDocument, 'name' | 'conversations'>,
+  project: ProjectConversationLookupSource,
   conversationId: string,
+  conversations?: ProjectConversationDocument[] | null,
 ): ProjectConversationDocument | null => {
   return (
-    getProjectConversations(project).find(
+    getProjectConversations(project, conversations).find(
       (conversation) => conversation.id === conversationId,
     ) ?? null
   );

@@ -13,7 +13,10 @@ import {
 import type {
   ProjectConversationRuntime,
 } from "./project-conversation-runtime.js";
-import { ProjectsRepository } from "./projects.repository.js";
+import {
+  ProjectConversationsRepository,
+  ProjectsRepository,
+} from "./projects.repository.js";
 import {
   buildProjectMemberProfileMap,
   createDefaultProjectConversation,
@@ -227,12 +230,14 @@ const applyProjectPatch = (
 
 export const createProjectsService = ({
   repository,
+  projectConversationsRepository,
   authRepository,
   skillBindingValidator,
   knowledgeUsage = NOOP_PROJECT_KNOWLEDGE_USAGE,
   conversationRuntime,
 }: {
   repository: ProjectsRepository;
+  projectConversationsRepository: ProjectConversationsRepository;
   authRepository: AuthRepository;
   skillBindingValidator: SkillBindingValidator;
   knowledgeUsage?: ProjectKnowledgeUsage;
@@ -240,6 +245,7 @@ export const createProjectsService = ({
 }): ProjectsService => {
   const conversationService = createProjectConversationService({
     repository,
+    projectConversationsRepository,
     conversationRuntime,
   });
 
@@ -276,9 +282,12 @@ export const createProjectsService = ({
         knowledgeBaseIds,
         agentIds,
         skillIds,
-        conversations: [createDefaultProjectConversation({ name })],
         createdAt: now,
         updatedAt: now,
+      });
+      await projectConversationsRepository.createConversation({
+        ...createDefaultProjectConversation(project),
+        projectId: project._id.toHexString(),
       });
 
       const memberProfileMap = await buildProjectMemberProfileMap(
@@ -323,6 +332,9 @@ export const createProjectsService = ({
       await knowledgeUsage.deleteProjectKnowledge(
         project._id.toHexString(),
         actor,
+      );
+      await projectConversationsRepository.deleteByProjectId(
+        project._id.toHexString(),
       );
       const deleted = await repository.deleteProject(project._id.toHexString());
 

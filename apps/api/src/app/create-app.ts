@@ -24,7 +24,10 @@ import { createMembersService } from '@modules/members/members.service.js';
 import { createMembershipsRouter } from '@modules/memberships/memberships.router.js';
 import { createMembershipsService } from '@modules/memberships/memberships.service.js';
 import { createProjectConversationRuntime } from '@modules/projects/project-conversation-runtime.js';
-import { createProjectsRepository } from '@modules/projects/projects.repository.js';
+import {
+  createProjectConversationsRepository,
+  createProjectsRepository,
+} from '@modules/projects/projects.repository.js';
 import { createProjectsRouter } from '@modules/projects/projects.router.js';
 import { createProjectsService } from '@modules/projects/projects.service.js';
 import { createSettingsRepository } from '@modules/settings/settings.repository.js';
@@ -47,6 +50,9 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   const authRepository = createAuthRepository({ mongo });
   const authService = createAuthService({ env, repository: authRepository });
   const projectsRepository = createProjectsRepository({ mongo });
+  const projectConversationsRepository = createProjectConversationsRepository({
+    mongo,
+  });
   const settingsRepository = createSettingsRepository({ mongo });
   const skillsRepository = createSkillsRepository({ mongo });
   const skillBindingValidator = createSkillBindingValidator({
@@ -67,6 +73,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
   });
   const projectsService = createProjectsService({
     repository: projectsRepository,
+    projectConversationsRepository,
     authRepository,
     skillBindingValidator,
     knowledgeUsage: {

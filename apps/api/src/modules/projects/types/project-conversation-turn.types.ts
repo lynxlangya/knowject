@@ -1,5 +1,8 @@
 import type { WithId } from "mongodb";
-import type { ProjectsRepository } from "../projects.repository.js";
+import type {
+  ProjectConversationsRepository,
+  ProjectsRepository,
+} from "../projects.repository.js";
 import type { ProjectConversationRuntime } from "../project-conversation-runtime.js";
 import type {
   CreateProjectConversationMessageInput,
@@ -72,6 +75,7 @@ export interface ProjectConversationTurnService {
 
 export interface ProjectConversationTurnServiceDependencies {
   repository: ProjectsRepository;
+  projectConversationsRepository: ProjectConversationsRepository;
   conversationRuntime?: ProjectConversationRuntime;
 }
 

@@ -1,3 +1,4 @@
+import type { WithId } from "mongodb";
 import { AppError } from "@lib/app-error.js";
 import { getFallbackMessage } from "@lib/locale.messages.js";
 import { readMutationInput } from "@lib/mutation-input.js";
@@ -5,10 +6,12 @@ import {
   createValidationAppError,
   readOptionalStringField,
 } from "@lib/validation.js";
-import { ProjectsRepository } from "./projects.repository.js";
+import {
+  ProjectConversationsRepository,
+  ProjectsRepository,
+} from "./projects.repository.js";
 import {
   createProjectConversationTurnService,
-  getRequiredPersistedConversation,
   throwConversationPersistenceTargetError,
 } from "./project-conversation-turn.service.js";
 import {
@@ -32,10 +35,12 @@ import type {
   CreateProjectConversationInput,
   CreateProjectConversationMessageInput,
   ProjectCommandContext,
+  ProjectConversationDocument,
   ProjectConversationDetailEnvelope,
   ProjectConversationListResponse,
   ProjectConversationMessageEnvelope,
   ProjectConversationStreamOptions,
+  ProjectDocument,
   UpdateProjectConversationMessageMetadataInput,
   UpdateProjectConversationInput,
 } from "./projects.types.js";
@@ -163,22 +168,58 @@ const validateUpdateProjectConversationMessageMetadataInput = (
   };
 };
 
+const materializeDefaultProjectConversation = async ({
+  projectConversationsRepository,
+  project,
+  projectId,
+  conversationId,
+  persistedConversations,
+}: {
+  projectConversationsRepository: ProjectConversationsRepository;
+  project: WithId<ProjectDocument>;
+  projectId: string;
+  conversationId: string;
+  persistedConversations: ProjectConversationDocument[];
+}): Promise<ProjectConversationDocument | null> => {
+  if (
+    conversationId !== "chat-default" ||
+    persistedConversations.length > 0
+  ) {
+    return null;
+  }
+
+  const defaultConversation = createDefaultProjectConversation(project);
+
+  return projectConversationsRepository.createConversation({
+    ...defaultConversation,
+    projectId,
+  });
+};
+
 export const createProjectConversationService = ({
   repository,
+  projectConversationsRepository,
   conversationRuntime,
 }: {
   repository: ProjectsRepository;
+  projectConversationsRepository: ProjectConversationsRepository;
   conversationRuntime?: ProjectConversationRuntime;
 }): ProjectConversationService => {
   const turnService = createProjectConversationTurnService({
     repository,
+    projectConversationsRepository,
     conversationRuntime,
   });
 
   return {
     listProjectConversations: async ({ actor, locale }, projectId) => {
       const project = await requireVisibleProject(repository, projectId, actor);
-      const conversations = getProjectConversations(project);
+      const persistedConversations =
+        await projectConversationsRepository.listByProjectId(projectId);
+      const conversations = getProjectConversations(
+        project,
+        persistedConversations,
+      );
 
       return {
         total: conversations.length,
@@ -202,21 +243,17 @@ export const createProjectConversationService = ({
         titleOrigin,
         createdAt: now,
       });
-      const updatedProject = await repository.appendProjectConversation(
-        project._id.toHexString(),
-        conversation,
-        now,
-      );
-
-      if (!updatedProject) {
-        throw createProjectNotFoundError();
-      }
+      const persistedConversation =
+        await projectConversationsRepository.createConversation({
+          ...conversation,
+          projectId: project._id.toHexString(),
+        });
 
       return {
         conversation: toProjectConversationDetailResponse(
-          updatedProject._id.toHexString(),
-          updatedProject.name,
-          getRequiredPersistedConversation(updatedProject, conversation.id),
+          project._id.toHexString(),
+          project.name,
+          persistedConversation,
           locale,
         ),
       };
@@ -229,54 +266,50 @@ export const createProjectConversationService = ({
       input,
     ) => {
       const project = await requireVisibleProject(repository, projectId, actor);
+      const persistedProjectId = project._id.toHexString();
+      const persistedConversations =
+        await projectConversationsRepository.listByProjectId(persistedProjectId);
       const { title } = validateUpdateProjectConversationInput(input);
       const currentConversation = getProjectConversation(
         project,
         conversationId,
+        persistedConversations,
       );
 
       if (!currentConversation) {
         throw createProjectConversationNotFoundError();
       }
 
-      const now = new Date();
-      const persistedProjectId = project._id.toHexString();
-      let updatedProject = await repository.updateProjectConversationTitle(
+      let updatedConversation = await projectConversationsRepository.updateTitle(
         persistedProjectId,
         conversationId,
         title,
-        now,
         {
           titleOrigin: "manual",
         },
       );
 
-      if (
-        !updatedProject &&
-        conversationId === "chat-default" &&
-        (project.conversations?.length ?? 0) === 0
-      ) {
-        const defaultConversation = createDefaultProjectConversation(project);
+      if (!updatedConversation) {
+        await materializeDefaultProjectConversation({
+          projectConversationsRepository,
+          project,
+          projectId: persistedProjectId,
+          conversationId,
+          persistedConversations,
+        });
 
-        await repository.materializeDefaultProjectConversation(
-          persistedProjectId,
-          defaultConversation,
-          defaultConversation.updatedAt,
-        );
-
-        updatedProject = await repository.updateProjectConversationTitle(
+        updatedConversation = await projectConversationsRepository.updateTitle(
           persistedProjectId,
           conversationId,
           title,
-          now,
           {
             titleOrigin: "manual",
           },
         );
       }
 
-      const ensuredUpdatedProject =
-        updatedProject ??
+      const ensuredUpdatedConversation =
+        updatedConversation ??
         (await throwConversationPersistenceTargetError(
           repository,
           persistedProjectId,
@@ -284,12 +317,9 @@ export const createProjectConversationService = ({
 
       return {
         conversation: toProjectConversationDetailResponse(
-          ensuredUpdatedProject._id.toHexString(),
-          ensuredUpdatedProject.name,
-          getRequiredPersistedConversation(
-            ensuredUpdatedProject,
-            conversationId,
-          ),
+          project._id.toHexString(),
+          project.name,
+          ensuredUpdatedConversation,
           locale,
         ),
       };
@@ -303,7 +333,14 @@ export const createProjectConversationService = ({
       input,
     ) => {
       const project = await requireVisibleProject(repository, projectId, actor);
-      const conversation = getProjectConversation(project, conversationId);
+      const persistedProjectId = project._id.toHexString();
+      const persistedConversations =
+        await projectConversationsRepository.listByProjectId(persistedProjectId);
+      const conversation = getProjectConversation(
+        project,
+        conversationId,
+        persistedConversations,
+      );
 
       if (!conversation) {
         throw createProjectConversationNotFoundError();
@@ -321,9 +358,8 @@ export const createProjectConversationService = ({
         input,
       );
       const now = new Date();
-      const persistedProjectId = project._id.toHexString();
-      let updatedProject =
-        await repository.updateProjectConversationMessageMetadata(
+      let updatedConversation =
+        await projectConversationsRepository.updateMessageMetadata(
           persistedProjectId,
           conversationId,
           messageId,
@@ -334,48 +370,36 @@ export const createProjectConversationService = ({
           },
         );
 
-      if (
-        !updatedProject &&
-        conversationId === "chat-default" &&
-        (project.conversations?.length ?? 0) === 0
-      ) {
-        const defaultConversation = createDefaultProjectConversation(project);
-
-        await repository.materializeDefaultProjectConversation(
-          persistedProjectId,
-          defaultConversation,
-          defaultConversation.updatedAt,
-        );
-
-        updatedProject = await repository.updateProjectConversationMessageMetadata(
-          persistedProjectId,
+      if (!updatedConversation) {
+        await materializeDefaultProjectConversation({
+          projectConversationsRepository,
+          project,
+          projectId: persistedProjectId,
           conversationId,
-          messageId,
-          {
-            starred,
-            starredAt: starred ? now : null,
-            starredBy: starred ? actor.id : null,
-          },
-        );
+          persistedConversations,
+        });
+
+        updatedConversation =
+          await projectConversationsRepository.updateMessageMetadata(
+            persistedProjectId,
+            conversationId,
+            messageId,
+            {
+              starred,
+              starredAt: starred ? now : null,
+              starredBy: starred ? actor.id : null,
+            },
+          );
       }
 
-      const ensuredUpdatedProject =
-        updatedProject ??
+      const ensuredUpdatedConversation =
+        updatedConversation ??
         (await throwConversationPersistenceTargetError(
           repository,
           persistedProjectId,
         ));
 
-      const updatedConversation = getProjectConversation(
-        ensuredUpdatedProject,
-        conversationId,
-      );
-
-      if (!updatedConversation) {
-        throw createProjectConversationMessageNotFoundError();
-      }
-
-      const updatedMessage = updatedConversation.messages.find(
+      const updatedMessage = ensuredUpdatedConversation.messages.find(
         (conversationMessage) => conversationMessage.id === messageId,
       );
 
@@ -423,35 +447,42 @@ export const createProjectConversationService = ({
 
     deleteProjectConversation: async ({ actor }, projectId, conversationId) => {
       const project = await requireVisibleProject(repository, projectId, actor);
+      const persistedProjectId = project._id.toHexString();
+      const persistedConversations =
+        await projectConversationsRepository.listByProjectId(persistedProjectId);
       const currentConversation = getProjectConversation(
         project,
         conversationId,
+        persistedConversations,
       );
 
       if (!currentConversation) {
         throw createProjectConversationNotFoundError();
       }
 
-      if (getProjectConversations(project).length <= 1) {
+      if (getProjectConversations(project, persistedConversations).length <= 1) {
         throw createProjectConversationLastThreadForbiddenError();
       }
 
-      const deletedProject = await repository.deleteProjectConversation(
-        project._id.toHexString(),
+      const deletedConversation = await projectConversationsRepository.deleteConversation(
+        persistedProjectId,
         conversationId,
         new Date(),
       );
 
-      if (!deletedProject) {
-        const latestProject = await repository.findById(
-          project._id.toHexString(),
-        );
+      if (!deletedConversation) {
+        const [latestProject, latestConversations] = await Promise.all([
+          repository.findById(persistedProjectId),
+          projectConversationsRepository.listByProjectId(persistedProjectId),
+        ]);
 
         if (!latestProject) {
           throw createProjectNotFoundError();
         }
 
-        if (getProjectConversations(latestProject).length <= 1) {
+        if (
+          getProjectConversations(latestProject, latestConversations).length <= 1
+        ) {
           throw createProjectConversationLastThreadForbiddenError();
         }
 
@@ -465,7 +496,13 @@ export const createProjectConversationService = ({
       conversationId,
     ) => {
       const project = await requireVisibleProject(repository, projectId, actor);
-      const conversation = getProjectConversation(project, conversationId);
+      const persistedConversations =
+        await projectConversationsRepository.listByProjectId(projectId);
+      const conversation = getProjectConversation(
+        project,
+        conversationId,
+        persistedConversations,
+      );
 
       if (!conversation) {
         throw createProjectConversationNotFoundError();

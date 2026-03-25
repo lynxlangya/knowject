@@ -25,12 +25,14 @@ export {
 
 export const createProjectConversationTurnService = ({
   repository,
+  projectConversationsRepository,
   conversationRuntime,
 }: ProjectConversationTurnServiceDependencies): ProjectConversationTurnService => {
   return {
     prepareTurn: async (context, projectId, conversationId, input, options) => {
       return prepareProjectConversationTurn({
         repository,
+        projectConversationsRepository,
         context,
         projectId,
         conversationId,
@@ -45,6 +47,7 @@ export const createProjectConversationTurnService = ({
     ): Promise<PersistedProjectConversationAssistantReply> => {
       return persistProjectConversationAssistantReply({
         repository,
+        projectConversationsRepository,
         preparedTurn,
         assistantReply,
       });
@@ -58,6 +61,7 @@ export const createProjectConversationTurnService = ({
     ) => {
       const preparedTurn = await prepareProjectConversationTurn({
         repository,
+        projectConversationsRepository,
         context,
         projectId,
         conversationId,
@@ -66,6 +70,7 @@ export const createProjectConversationTurnService = ({
 
       return createSynchronousProjectConversationTurn({
         repository,
+        projectConversationsRepository,
         conversationRuntime,
         context,
         preparedTurn,
@@ -81,6 +86,7 @@ export const createProjectConversationTurnService = ({
     ) => {
       const preparedTurn = await prepareProjectConversationTurn({
         repository,
+        projectConversationsRepository,
         context,
         projectId,
         conversationId,
@@ -92,6 +98,7 @@ export const createProjectConversationTurnService = ({
 
       await createStreamingProjectConversationTurn({
         repository,
+        projectConversationsRepository,
         conversationRuntime,
         context,
         preparedTurn,

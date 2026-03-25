@@ -228,6 +228,7 @@ const waitForJsonFile = async (
 const startIndexerCaptureServer = async (
   capturePath: string,
   storageRoot: string,
+  internalToken?: string,
 ): Promise<{ baseUrl: string; stop: () => Promise<void> }> => {
   const port = await reserveAvailablePort();
   const stderrChunks: string[] = [];
@@ -250,6 +251,12 @@ const startIndexerCaptureServer = async (
       env: {
         ...process.env,
         KNOWLEDGE_STORAGE_ROOT: storageRoot,
+        ...(internalToken !== undefined
+          ? {
+              KNOWLEDGE_INDEXER_INTERNAL_TOKEN: internalToken,
+              KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE: '',
+            }
+          : {}),
         PYTHONPATH: [indexerPyPackageRoot, process.env.PYTHONPATH]
           .filter((value): value is string => Boolean(value))
           .join(delimiter),
@@ -1105,12 +1112,15 @@ test('uploadDocument rejects files disabled by indexing supportedTypes before pe
 test('uploadProjectKnowledgeDocument payload is accepted by Python indexer override route', async () => {
   const storageRoot = await mkdtemp(join(tmpdir(), 'knowject-project-knowledge-boundary-'));
   const capturePath = join(storageRoot, 'indexer-capture.json');
+  const internalToken = 'internal-secret';
   const { baseUrl, stop } = await startIndexerCaptureServer(
     capturePath,
     storageRoot,
+    internalToken,
   );
   const env = createTestEnv(storageRoot);
   env.knowledge.indexerUrl = baseUrl;
+  env.knowledge.indexerInternalToken = internalToken;
 
   const originalEncryptionKey = process.env.SETTINGS_ENCRYPTION_KEY;
   process.env.SETTINGS_ENCRYPTION_KEY = env.settings.encryptionKey;

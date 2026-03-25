@@ -75,6 +75,12 @@ export interface ProjectConversationDocument {
   updatedAt: Date;
 }
 
+export interface ProjectConversationCollectionDocument
+  extends ProjectConversationDocument {
+  _id?: ObjectId;
+  projectId: string;
+}
+
 export interface ProjectDocument {
   _id?: ObjectId;
   name: string;
@@ -84,7 +90,6 @@ export interface ProjectDocument {
   knowledgeBaseIds: string[];
   agentIds: string[];
   skillIds: string[];
-  conversations: ProjectConversationDocument[];
   createdAt: Date;
   updatedAt: Date;
 }

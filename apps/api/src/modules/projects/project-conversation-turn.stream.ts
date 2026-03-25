@@ -1,5 +1,8 @@
 import type { ProjectConversationRuntime } from "./project-conversation-runtime.js";
-import { ProjectsRepository } from "./projects.repository.js";
+import {
+  ProjectConversationsRepository,
+  ProjectsRepository,
+} from "./projects.repository.js";
 import {
   createProjectConversationDetailEnvelope,
   persistProjectConversationAssistantReply,
@@ -65,11 +68,13 @@ const buildProjectConversationStreamDoneEvent = ({
 
 export const createSynchronousProjectConversationTurn = async ({
   repository,
+  projectConversationsRepository,
   conversationRuntime,
   context,
   preparedTurn,
 }: {
   repository: ProjectsRepository;
+  projectConversationsRepository: ProjectConversationsRepository;
   conversationRuntime?: ProjectConversationRuntime;
   context: ProjectCommandContext;
   preparedTurn: PreparedProjectConversationTurn;
@@ -93,6 +98,7 @@ export const createSynchronousProjectConversationTurn = async ({
     const persistedAssistantReply =
       await persistProjectConversationAssistantReply({
         repository,
+        projectConversationsRepository,
         preparedTurn,
         assistantReply,
         locale: context.locale,
@@ -100,19 +106,25 @@ export const createSynchronousProjectConversationTurn = async ({
 
     return persistedAssistantReply.detail;
   } catch (error) {
-    await restorePreparedReplayConversation(repository, preparedTurn);
+    await restorePreparedReplayConversation(
+      repository,
+      projectConversationsRepository,
+      preparedTurn,
+    );
     throw error;
   }
 };
 
 export const createStreamingProjectConversationTurn = async ({
   repository,
+  projectConversationsRepository,
   conversationRuntime,
   context,
   preparedTurn,
   options,
 }: {
   repository: ProjectsRepository;
+  projectConversationsRepository: ProjectConversationsRepository;
   conversationRuntime?: ProjectConversationRuntime;
   context: ProjectCommandContext;
   preparedTurn: PreparedProjectConversationTurn;
@@ -190,13 +202,18 @@ export const createStreamingProjectConversationTurn = async ({
     });
 
     if (options.signal?.aborted || streamReply.finishReason === "cancelled") {
-      await restorePreparedReplayConversation(repository, preparedTurn);
+      await restorePreparedReplayConversation(
+        repository,
+        projectConversationsRepository,
+        preparedTurn,
+      );
       return;
     }
 
     const persistedAssistantReply =
       await persistProjectConversationAssistantReply({
         repository,
+        projectConversationsRepository,
         preparedTurn,
         assistantReply: {
           content: streamReply.content,
@@ -216,7 +233,11 @@ export const createStreamingProjectConversationTurn = async ({
     );
   } catch (error) {
     if (!assistantPersisted) {
-      await restorePreparedReplayConversation(repository, preparedTurn);
+      await restorePreparedReplayConversation(
+        repository,
+        projectConversationsRepository,
+        preparedTurn,
+      );
     }
 
     if (options.signal?.aborted || isAbortError(error)) {
