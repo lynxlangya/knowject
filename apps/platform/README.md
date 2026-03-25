@@ -46,7 +46,7 @@
 
 - `/login`：登录页。
 - `/home`：登录后默认首页。
-- `/project/:projectId/overview`：项目概览。
+- `/project/:projectId/overview`：项目概览（判断 / dashboard），以聚合指标与风险提示为主，不再是 recent-entry 列表页。
 - `/project/:projectId/chat`、`/project/:projectId/chat/:chatId`：项目对话。
 - `/project/:projectId/resources`：项目资源。
 - `/project/:projectId/members`：项目成员。
@@ -72,7 +72,8 @@
 - `src/app/project/project.storage.ts`：仅负责 `knowject_project_pins` 的本地持久化。
 - `src/app/project/project.catalog.ts`：成员基础档案 Mock 源；项目创建 / 编辑表单的资源选项已经迁到 `useProjectResourceOptions.ts` 运行时拉取正式 `/api/knowledge`、`/api/skills` 与 `/api/agents`，这里只保留历史演示数据兼容。
 - `src/app/layouts/components/AppSider.tsx`：侧栏 shell、导航 / mutation / locale 编排层；项目列表面板与账号 / 语言面板已拆到 `src/app/layouts/components/AppSiderProjectPanel.tsx` 与 `src/app/layouts/components/AppSiderAccountPanel.tsx`，项目表单已拆到 `src/app/layouts/components/ProjectFormModal.tsx`，知识库 / Skill options 与未知已选项保留逻辑下沉到 `src/app/project/useProjectResourceOptions.ts` 与 `src/app/project/projectResourceOptions.shared.ts`。
-- `src/pages/project/projectWorkspaceSnapshot.mock.ts`：项目概览补充文案与成员协作快照；仅承载演示补充层，不作为正式成员关系主数据源。
+- `src/pages/project/projectWorkspaceSnapshot.mock.ts`：仅用于 `ProjectHeader` 的 header-level member roster 映射与 meta summary fallback（以及基于项目快照计数的 header stats）；不再作为 `/project/:projectId/overview` 主体内容的数据源。
+- `src/pages/project/ProjectOverviewPage.tsx`、`src/pages/project/projectOverview.adapter.ts`、`src/pages/project/projectOverview.insights.ts`：概览 dashboard 的主链路；页面从 `useProjectPageContext` 取正式项目态数据，先用 adapter 聚合出 summary，再用 insights 生成可展示的风险/提示集合；当 `conversations` 或 `projectKnowledge` 部分加载失败时会降级到 `unavailable` 展示（例如 `—`）并提示 partial-load，而不是静默渲染为 0。
 - `src/pages/project/projectResourceMappers.ts`：项目资源展示映射；知识库分组会同时合并“绑定的全局知识”和“项目私有知识”，未知 `skills / agents` ID 会渲染占位项而不是静默丢失。
 - `src/pages/project/ProjectChatPage.tsx`：项目对话编排层；对话配置、详情读取、流式 turn、用户消息 `retry / edit / copy`、消息 Rail state / action、knowledge draft flow，以及 create / rename / delete 动作已分别拆到 `useProjectChatSettings.ts`、`useProjectConversationDetail.ts`、`useProjectConversationTurn.ts`、`useProjectChatUserMessageActions.ts`、`useProjectConversationMessageRail.ts`、`useProjectConversationMessageActions.ts`、`useProjectKnowledgeDraftFlow.ts` 与 `useProjectChatActions.ts`，markdown / bubble 展示与 clipboard fallback 拆到 `projectChat.markdown.tsx`、`projectChatBubble.components.tsx` 与 `projectChat.clipboard.ts`，右侧 Rail 与知识草稿抽屉分别落在 `components/ProjectConversationMessageRail.tsx` 与 `components/ProjectKnowledgeDraftDrawer.tsx`；knowledge draft drawer 当前要求先选择已有项目私有知识库，再把共享选择整理出的 Markdown 文档上传进去；若当前项目还没有私有知识库，则会在聊天页内复用 `ProjectKnowledgeAccessModal` 先创建一个空知识库后回填；desktop rail 当前采用显式展开 / 收起，不再依赖 hover 展开。
 - `src/pages/assets/components/GlobalAssetLayout.tsx`、`src/pages/assets/components/globalAsset.shared.ts`：全局资产页共享的 summary/filter/meta/updateAt 展示基元，当前供 `/skills` 与 `/agents` 复用。

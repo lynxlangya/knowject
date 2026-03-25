@@ -136,3 +136,13 @@ token 被解析为：
 - rail 与 source drawer 在页面上是互斥显示的。
 - 优先级为：打开 source drawer 会压制/关闭 rail；打开 rail 会关闭 source drawer。
 
+## 7. 项目概览（Dashboard）当前事实
+
+本节只记录 `apps/platform` 已实现的 `/project/:projectId/overview` 行为与数据链路事实，不展开未来规划。
+
+- `/project/:projectId/overview` 当前是判断 / dashboard 页，不再是 recent-entry 列表页。
+- Overview 主体数据来自 `ProjectLayout -> Outlet context` 注入的 `useProjectPageContext()`（`ProjectPageContextValue`），并通过纯 domain helper 链路聚合：
+  - `projectOverview.adapter.ts` 的 `buildProjectOverviewSummary(...)`：把 `activeProject + conversations + projectKnowledge` 聚合成可计算的 summary（同时显式标记 `available`）。
+  - `projectOverview.insights.ts` 的 `buildProjectOverviewInsights(summary)`：把 summary 转换为有限条可展示 insight（按 severity 排序并截断）。
+- `ProjectHeader` 仍使用 `projectWorkspaceSnapshot.mock.ts`（`getProjectWorkspaceSnapshot`）做 header-level 的 member roster 映射与 meta summary fallback；该 mock 不再作为 Overview 主体内容的数据源。
+- Partial-load / error 降级：当 `conversations` 或 `projectKnowledge` 读取失败时，Overview 会以 warning 提示 partial-load，并把对应指标 fail-closed 到 `unavailable` 展示（例如 `—` / `unavailable` label），避免静默渲染出误导性的 0。
