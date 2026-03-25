@@ -186,3 +186,15 @@ test('project overview insights do not emit cold start when knowledge is unavail
 
   assertInsightContract(insights, []);
 });
+
+test('project overview insights do not emit resource stack light when knowledge is unavailable', () => {
+  const insights = buildProjectOverviewInsights({
+    ...resourceStackLightSummary,
+    knowledge: {
+      ...resourceStackLightSummary.knowledge,
+      available: false,
+    },
+  });
+
+  assertInsightContract(insights, []);
+});

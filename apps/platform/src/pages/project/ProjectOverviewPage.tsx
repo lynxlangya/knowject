@@ -9,6 +9,7 @@ import { OverviewResourceCoverageCard } from './components/overview/OverviewReso
 import { useProjectPageContext } from './projectPageContext';
 import { buildProjectOverviewSummary } from './projectOverview.adapter';
 import { buildProjectOverviewInsights } from './projectOverview.insights';
+import { resolveProjectOverviewSummaryItems } from './projectOverviewPage.helpers';
 
 export const ProjectOverviewPage = () => {
   const { t, i18n } = useTranslation('project');
@@ -39,13 +40,23 @@ export const ProjectOverviewPage = () => {
   const overviewSummary = useMemo(() => {
     return buildProjectOverviewSummary({
       project: activeProject,
-      conversations: conversations.error ? undefined : conversations.items,
-      projectKnowledge: projectKnowledge.error ? undefined : projectKnowledge.items,
+      conversations: resolveProjectOverviewSummaryItems({
+        loading: conversations.loading,
+        error: conversations.error,
+        items: conversations.items,
+      }),
+      projectKnowledge: resolveProjectOverviewSummaryItems({
+        loading: projectKnowledge.loading,
+        error: projectKnowledge.error,
+        items: projectKnowledge.items,
+      }),
     });
   }, [
     activeProject,
+    conversations.loading,
     conversations.error,
     conversations.items,
+    projectKnowledge.loading,
     projectKnowledge.error,
     projectKnowledge.items,
   ]);

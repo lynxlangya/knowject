@@ -4,6 +4,7 @@ import type {
   ProjectConversationSourceResponse,
   ProjectConversationStreamSourcesSeedItem,
 } from '@api/projects';
+import { useLocation } from 'react-router-dom';
 import {
   buildProjectConversationSourceDrawerViewModel,
   type ProjectChatSourceGroupEntry,
@@ -33,6 +34,54 @@ export interface ProjectConversationSourceDrawerState {
   activeChunkId: string | null;
   status: ProjectConversationSourceDrawerStatus;
 }
+
+export interface ProjectConversationSourceDrawerPersistedState {
+  scopeKey: string;
+  open: boolean;
+  messageId: string | null;
+  activeSourceKey: string | null;
+  activeChunkId: string | null;
+}
+
+const buildProjectConversationSourceDrawerPersistedState = ({
+  scopeKey,
+}: {
+  scopeKey: string;
+}): ProjectConversationSourceDrawerPersistedState => ({
+  scopeKey,
+  open: false,
+  messageId: null,
+  activeSourceKey: null,
+  activeChunkId: null,
+});
+
+export const invalidateProjectConversationSourceDrawerStateOnScopeChange = ({
+  current,
+  nextScopeKey,
+}: {
+  current: ProjectConversationSourceDrawerPersistedState;
+  nextScopeKey: string;
+}): ProjectConversationSourceDrawerPersistedState => {
+  if (current.scopeKey === nextScopeKey) {
+    return current;
+  }
+
+  return buildProjectConversationSourceDrawerPersistedState({ scopeKey: nextScopeKey });
+};
+
+const resolveProjectConversationSourceDrawerScopedState = ({
+  current,
+  scopeKey,
+}: {
+  current: ProjectConversationSourceDrawerPersistedState;
+  scopeKey: string;
+}): ProjectConversationSourceDrawerPersistedState => {
+  if (current.scopeKey === scopeKey) {
+    return current;
+  }
+
+  return buildProjectConversationSourceDrawerPersistedState({ scopeKey });
+};
 
 export const resolveProjectConversationSourceDrawerMessageId = ({
   currentMessageId,
@@ -121,30 +170,16 @@ export const useProjectConversationSourceDrawer = ({
   handoff,
   onRetry,
 }: UseProjectConversationSourceDrawerOptions) => {
-  const scopeKey = `${activeProjectId}:${chatId ?? ''}`;
-  const [drawerState, setDrawerState] = useState<{
-    scopeKey: string;
-    open: boolean;
-    messageId: string | null;
-    activeSourceKey: string | null;
-    activeChunkId: string | null;
-  }>(() => ({
-    scopeKey,
-    open: false,
-    messageId: null,
-    activeSourceKey: null,
-    activeChunkId: null,
-  }));
+  const location = useLocation();
+  const scopeKey = `${activeProjectId}:${chatId ?? ''}:${location.key}`;
+  const [drawerState, setDrawerState] = useState<ProjectConversationSourceDrawerPersistedState>(
+    () => buildProjectConversationSourceDrawerPersistedState({ scopeKey }),
+  );
 
-  const scopedDrawerState = drawerState.scopeKey === scopeKey
-    ? drawerState
-    : {
-        scopeKey,
-        open: false,
-        messageId: null,
-        activeSourceKey: null,
-        activeChunkId: null,
-      };
+  const scopedDrawerState = resolveProjectConversationSourceDrawerScopedState({
+    current: drawerState,
+    scopeKey,
+  });
 
   const hasPersistedMessage = useMemo(() => {
     return Boolean(
@@ -283,30 +318,14 @@ export const useProjectConversationSourceDrawer = ({
 
   const closeDrawer = () => {
     setDrawerState((currentValue) => ({
-      ...(currentValue.scopeKey === scopeKey
-        ? currentValue
-        : {
-            scopeKey,
-            open: false,
-            messageId: null,
-            activeSourceKey: null,
-            activeChunkId: null,
-          }),
+      ...resolveProjectConversationSourceDrawerScopedState({ current: currentValue, scopeKey }),
       open: false,
     }));
   };
 
   const setActiveSourceKey = (sourceKey: string) => {
     setDrawerState((currentValue) => ({
-      ...(currentValue.scopeKey === scopeKey
-        ? currentValue
-        : {
-            scopeKey,
-            open: false,
-            messageId: null,
-            activeSourceKey: null,
-            activeChunkId: null,
-          }),
+      ...resolveProjectConversationSourceDrawerScopedState({ current: currentValue, scopeKey }),
       activeSourceKey: sourceKey,
       activeChunkId: null,
     }));
@@ -314,15 +333,7 @@ export const useProjectConversationSourceDrawer = ({
 
   const setActiveChunkId = (chunkId: string) => {
     setDrawerState((currentValue) => ({
-      ...(currentValue.scopeKey === scopeKey
-        ? currentValue
-        : {
-            scopeKey,
-            open: false,
-            messageId: null,
-            activeSourceKey: null,
-            activeChunkId: null,
-          }),
+      ...resolveProjectConversationSourceDrawerScopedState({ current: currentValue, scopeKey }),
       activeChunkId: chunkId,
     }));
   };

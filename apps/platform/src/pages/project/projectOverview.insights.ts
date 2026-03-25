@@ -72,6 +72,7 @@ export const buildProjectOverviewInsights = (
   }
 
   if (
+    summary.knowledge.available &&
     summary.coverage.knowledge > 0 &&
     summary.coverage.skills === 0 &&
     summary.coverage.agents === 0

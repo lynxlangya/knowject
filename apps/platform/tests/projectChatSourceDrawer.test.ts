@@ -296,3 +296,54 @@ test('draft to persisted message handoff keeps drawer shell target stable', asyn
     'ready',
   );
 });
+
+test('drawer scope changes invalidate state and do not resurrect on returning', async () => {
+  const { invalidateProjectConversationSourceDrawerStateOnScopeChange } = (await import(
+    '../src/pages/project/useProjectConversationSourceDrawer'
+  )) as {
+    invalidateProjectConversationSourceDrawerStateOnScopeChange: (args: {
+      current: {
+        scopeKey: string;
+        open: boolean;
+        messageId: string | null;
+        activeSourceKey: string | null;
+        activeChunkId: string | null;
+      };
+      nextScopeKey: string;
+    }) => {
+      scopeKey: string;
+      open: boolean;
+      messageId: string | null;
+      activeSourceKey: string | null;
+      activeChunkId: string | null;
+    };
+  };
+
+  const persistedStateA = {
+    scopeKey: 'project-a:chat-a:visit-1',
+    open: true,
+    messageId: 'assistant-1',
+    activeSourceKey: 'source1',
+    activeChunkId: 'chunk-0',
+  };
+
+  const stateOnScopeB = invalidateProjectConversationSourceDrawerStateOnScopeChange({
+    current: persistedStateA,
+    nextScopeKey: 'project-b:chat-b:visit-2',
+  });
+
+  assert.equal(stateOnScopeB.open, false);
+  assert.equal(stateOnScopeB.messageId, null);
+  assert.equal(stateOnScopeB.activeSourceKey, null);
+  assert.equal(stateOnScopeB.activeChunkId, null);
+
+  const stateBackOnScopeA = invalidateProjectConversationSourceDrawerStateOnScopeChange({
+    current: stateOnScopeB,
+    nextScopeKey: 'project-a:chat-a:visit-3',
+  });
+
+  assert.equal(stateBackOnScopeA.open, false);
+  assert.equal(stateBackOnScopeA.messageId, null);
+  assert.equal(stateBackOnScopeA.activeSourceKey, null);
+  assert.equal(stateBackOnScopeA.activeChunkId, null);
+});
