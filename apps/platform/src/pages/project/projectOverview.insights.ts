@@ -32,6 +32,7 @@ export const buildProjectOverviewInsights = (
 
   if (summary.activity.available) {
     if (
+      summary.knowledge.available &&
       !hasAnyResources &&
       summary.activity.activeConversationCount7d === 0 &&
       summary.activity.lastConversationActivityAt === null

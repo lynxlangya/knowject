@@ -174,3 +174,15 @@ test('project overview insights do not emit cold start or ai cooling when activi
 
   assertInsightContract(insights, []);
 });
+
+test('project overview insights do not emit cold start when knowledge is unavailable', () => {
+  const insights = buildProjectOverviewInsights({
+    ...emptySummary,
+    knowledge: {
+      ...emptySummary.knowledge,
+      available: false,
+    },
+  });
+
+  assertInsightContract(insights, []);
+});
