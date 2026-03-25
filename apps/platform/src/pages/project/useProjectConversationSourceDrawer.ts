@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type {
   ProjectConversationMessageResponse,
   ProjectConversationSourceResponse,
@@ -121,55 +121,52 @@ export const useProjectConversationSourceDrawer = ({
   handoff,
   onRetry,
 }: UseProjectConversationSourceDrawerOptions) => {
-  const [drawerState, setDrawerState] = useState<ProjectConversationSourceDrawerState>({
+  const scopeKey = `${activeProjectId}:${chatId ?? ''}`;
+  const [drawerState, setDrawerState] = useState<{
+    scopeKey: string;
+    open: boolean;
+    messageId: string | null;
+    activeSourceKey: string | null;
+    activeChunkId: string | null;
+  }>(() => ({
+    scopeKey,
     open: false,
     messageId: null,
     activeSourceKey: null,
     activeChunkId: null,
-    status: 'loading',
-  });
-  const [retryNonce, setRetryNonce] = useState(0);
+  }));
 
-  useEffect(() => {
-    setDrawerState({
-      open: false,
-      messageId: null,
-      activeSourceKey: null,
-      activeChunkId: null,
-      status: 'loading',
-    });
-    setRetryNonce(0);
-  }, [activeProjectId, chatId]);
-
-  useEffect(() => {
-    setDrawerState((currentValue) => {
-      const hasPersistedMessage = Boolean(
-        handoff?.assistantMessageId &&
-          messages.some(
-            (message) =>
-              message.id === handoff.assistantMessageId &&
-              message.role === 'assistant',
-          ),
-      );
-      const nextMessageId = resolveProjectConversationSourceDrawerMessageId({
-        currentMessageId: currentValue.messageId,
-        handoff,
-        hasPersistedMessage,
-      });
-
-      if (nextMessageId === currentValue.messageId) {
-        return currentValue;
-      }
-
-      return {
-        ...currentValue,
-        messageId: nextMessageId,
+  const scopedDrawerState = drawerState.scopeKey === scopeKey
+    ? drawerState
+    : {
+        scopeKey,
+        open: false,
+        messageId: null,
+        activeSourceKey: null,
+        activeChunkId: null,
       };
-    });
+
+  const hasPersistedMessage = useMemo(() => {
+    return Boolean(
+      handoff?.assistantMessageId &&
+        messages.some(
+          (message) =>
+            message.id === handoff.assistantMessageId &&
+            message.role === 'assistant',
+        ),
+    );
   }, [handoff, messages]);
 
+  const resolvedMessageId = useMemo(() => {
+    return resolveProjectConversationSourceDrawerMessageId({
+      currentMessageId: scopedDrawerState.messageId,
+      handoff,
+      hasPersistedMessage,
+    });
+  }, [scopedDrawerState.messageId, handoff, hasPersistedMessage]);
+
   const drawerPayload = useMemo(() => {
-    if (!drawerState.messageId) {
+    if (!resolvedMessageId) {
       return {
         persistedSources: [] as ProjectConversationSourceResponse[],
         seedEntries: [] as ProjectChatSourceGroupEntry[],
@@ -177,7 +174,7 @@ export const useProjectConversationSourceDrawer = ({
       };
     }
 
-    if (draftAssistantMessage?.id === drawerState.messageId) {
+    if (draftAssistantMessage?.id === resolvedMessageId) {
       return {
         persistedSources: draftAssistantMessage.sources ?? [],
         seedEntries: buildSourceSeedGroupEntries(
@@ -189,7 +186,7 @@ export const useProjectConversationSourceDrawer = ({
 
     const matchedMessage = messages.find(
       (message) =>
-        message.id === drawerState.messageId && message.role === 'assistant',
+        message.id === resolvedMessageId && message.role === 'assistant',
     );
 
     return {
@@ -197,90 +194,76 @@ export const useProjectConversationSourceDrawer = ({
       seedEntries: [] as ProjectChatSourceGroupEntry[],
       draftStatus: null as 'streaming' | 'reconciling' | 'error' | null,
     };
-  }, [drawerState.messageId, draftAssistantMessage, messages, retryNonce]);
+  }, [resolvedMessageId, draftAssistantMessage, messages]);
 
   const viewModel = useMemo(() => {
     return buildProjectConversationSourceDrawerViewModel({
-      activeSourceKey: drawerState.activeSourceKey,
+      activeSourceKey: scopedDrawerState.activeSourceKey,
       persistedSources: drawerPayload.persistedSources,
       seedEntries: drawerPayload.seedEntries,
     });
   }, [
-    drawerState.activeSourceKey,
+    scopedDrawerState.activeSourceKey,
     drawerPayload.persistedSources,
     drawerPayload.seedEntries,
   ]);
 
-  useEffect(() => {
-    if (!drawerState.open) {
-      return;
+  const resolvedStatus: ProjectConversationSourceDrawerStatus = useMemo(() => {
+    if (!scopedDrawerState.open) {
+      return 'loading';
     }
 
-    const nextStatus: ProjectConversationSourceDrawerStatus =
-      resolveProjectConversationSourceDrawerStatus({
-        hasPersistedSources: drawerPayload.persistedSources.length > 0,
-        hasSeedEntries: drawerPayload.seedEntries.length > 0,
-        draftStatus: drawerPayload.draftStatus,
-      });
-
-    if (
-      drawerState.status !== nextStatus ||
-      drawerState.activeSourceKey !== viewModel.activeSourceKey
-    ) {
-      setDrawerState((currentValue) => ({
-        ...currentValue,
-        status: nextStatus,
-        activeSourceKey: viewModel.activeSourceKey,
-      }));
-    }
+    return resolveProjectConversationSourceDrawerStatus({
+      hasPersistedSources: drawerPayload.persistedSources.length > 0,
+      hasSeedEntries: drawerPayload.seedEntries.length > 0,
+      draftStatus: drawerPayload.draftStatus,
+    });
   }, [
-    drawerState.open,
-    drawerState.status,
-    drawerState.activeSourceKey,
+    scopedDrawerState.open,
     drawerPayload.persistedSources.length,
     drawerPayload.seedEntries.length,
     drawerPayload.draftStatus,
-    viewModel.activeSourceKey,
   ]);
 
-  useEffect(() => {
+  const resolvedActiveChunkId = useMemo(() => {
     const activeDrawerSource =
       viewModel.sourceEntries.find(
         (entry) => entry.sourceKey === viewModel.activeSourceKey,
       ) ?? null;
 
-    if (!drawerState.open || !activeDrawerSource) {
-      return;
+    if (!scopedDrawerState.open || !activeDrawerSource) {
+      return null;
     }
 
+    const currentChunkId = scopedDrawerState.activeChunkId;
     const hasCurrentChunk = Boolean(
-      drawerState.activeChunkId &&
-        activeDrawerSource.entries.some(
-          (entry) => entry.chunkId === drawerState.activeChunkId,
-        ),
+      currentChunkId &&
+        activeDrawerSource.entries.some((entry) => entry.chunkId === currentChunkId),
     );
 
     if (hasCurrentChunk) {
-      return;
+      return currentChunkId;
     }
 
-    const fallbackChunkId =
+    return (
       activeDrawerSource.activeEntry.chunkId ??
       activeDrawerSource.entries[0]?.chunkId ??
-      null;
-
-    if (fallbackChunkId !== drawerState.activeChunkId) {
-      setDrawerState((currentValue) => ({
-        ...currentValue,
-        activeChunkId: fallbackChunkId,
-      }));
-    }
+      null
+    );
   }, [
-    drawerState.open,
-    drawerState.activeChunkId,
+    scopedDrawerState.open,
+    scopedDrawerState.activeChunkId,
     viewModel.activeSourceKey,
     viewModel.sourceEntries,
   ]);
+
+  const resolvedState: ProjectConversationSourceDrawerState = {
+    open: scopedDrawerState.open,
+    messageId: resolvedMessageId,
+    activeSourceKey: viewModel.activeSourceKey,
+    activeChunkId: resolvedActiveChunkId,
+    status: resolvedStatus,
+  };
 
   const openDrawer = ({
     messageId,
@@ -290,24 +273,40 @@ export const useProjectConversationSourceDrawer = ({
     sourceKey?: string;
   }) => {
     setDrawerState({
+      scopeKey,
       open: true,
       messageId,
       activeSourceKey: sourceKey ?? null,
       activeChunkId: null,
-      status: 'loading',
     });
   };
 
   const closeDrawer = () => {
     setDrawerState((currentValue) => ({
-      ...currentValue,
+      ...(currentValue.scopeKey === scopeKey
+        ? currentValue
+        : {
+            scopeKey,
+            open: false,
+            messageId: null,
+            activeSourceKey: null,
+            activeChunkId: null,
+          }),
       open: false,
     }));
   };
 
   const setActiveSourceKey = (sourceKey: string) => {
     setDrawerState((currentValue) => ({
-      ...currentValue,
+      ...(currentValue.scopeKey === scopeKey
+        ? currentValue
+        : {
+            scopeKey,
+            open: false,
+            messageId: null,
+            activeSourceKey: null,
+            activeChunkId: null,
+          }),
       activeSourceKey: sourceKey,
       activeChunkId: null,
     }));
@@ -315,22 +314,25 @@ export const useProjectConversationSourceDrawer = ({
 
   const setActiveChunkId = (chunkId: string) => {
     setDrawerState((currentValue) => ({
-      ...currentValue,
+      ...(currentValue.scopeKey === scopeKey
+        ? currentValue
+        : {
+            scopeKey,
+            open: false,
+            messageId: null,
+            activeSourceKey: null,
+            activeChunkId: null,
+          }),
       activeChunkId: chunkId,
     }));
   };
 
   const retry = () => {
-    setRetryNonce((value) => value + 1);
-    setDrawerState((currentValue) => ({
-      ...currentValue,
-      status: 'loading',
-    }));
     void onRetry?.();
   };
 
   return {
-    state: drawerState,
+    state: resolvedState,
     viewModel,
     openDrawer,
     closeDrawer,
