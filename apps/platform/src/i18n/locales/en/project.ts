@@ -32,26 +32,106 @@ export const projectMessages = {
     reload: 'Reload',
   },
   overview: {
-    partialLoad: 'Some project context failed to load',
-    conversationsEyebrow: 'Project chat',
-    recentCount: 'Recent {{count}}',
-    recentTitle: 'Recent conversations',
-    recentDescription: 'Jump back into the latest discussions quickly.',
-    viewAll: 'View all',
-    recentActive: 'Recently active',
-    emptyConversations: 'No conversations yet',
-    resourcesTitle: 'Recently connected resources',
-    resourcesDescription:
-      'Shows both globally bound assets and project-private knowledge so you can jump back into the current context quickly.',
-    openResources: 'Open resources',
-    emptyResources: 'No connected resources yet',
-    quickActionsEyebrow: 'Quick actions',
-    quickActionsTitle: 'Choose the next step from project overview',
-    quickActionsDescription:
-      'Review project status first, then jump to chat, resources, or members to reduce context switching.',
-    continueChat: 'Continue chat',
-    addResources: 'Add resources',
-    viewMembers: 'View members',
+    summary: {
+      eyebrow: 'AI operations',
+      title: 'Project AI dashboard',
+      description:
+        'Compact runtime snapshot from conversation activity, knowledge readiness, and resource composition.',
+      metrics: {
+        activeConversations: 'Active conversations (7d)',
+        knowledgeTotal: 'Connected knowledge',
+        documents: 'Indexed documents',
+        resourceCoverage: 'Resource coverage',
+      },
+      hints: {
+        lastActivity: 'Last activity: {{value}}',
+        indexReady: 'Ready {{completed}} / {{total}}',
+        knowledgeWithDocuments: '{{count}} knowledge bases contain documents',
+        coverageMix: 'K {{knowledge}} · S {{skills}} · A {{agents}}',
+      },
+    },
+    activity: {
+      title: 'Conversation activity trend',
+      description: 'Unique active conversations by UTC day over the last 7 days.',
+      avg: 'Daily avg',
+      peak: 'Peak',
+    },
+    knowledge: {
+      title: 'Knowledge health',
+      description:
+        'Indexing readiness and document footprint for the current project context.',
+      metrics: {
+        total: 'Knowledge total',
+        documents: 'Document total',
+        indexed: 'Completed indexing',
+        rate: 'Readiness rate',
+      },
+      status: {
+        completed: 'Completed',
+        processing: 'Processing',
+        pending: 'Pending',
+        failed: 'Failed',
+      },
+    },
+    coverage: {
+      title: 'Resource coverage',
+      description: 'Current composition across knowledge, skills, and agents.',
+      total: 'Total connected resources',
+      items: {
+        knowledge: 'Knowledge',
+        skills: 'Skills',
+        agents: 'Agents',
+      },
+    },
+    insights: {
+      title: 'Operational insights',
+      description: 'Risk-first diagnostics generated from overview signals.',
+      empty: 'No high-priority insights right now.',
+      levels: {
+        positive: 'Positive',
+        neutral: 'Neutral',
+        warning: 'Warning',
+        risk: 'Risk',
+      },
+      items: {
+        cold_start: {
+          title: 'Project remains in cold start',
+          description:
+            'No resources and no conversation activity were detected yet.',
+        },
+        ai_cooling: {
+          title: 'Conversation momentum is cooling',
+          description:
+            'No conversations were active in the last 7 days.',
+        },
+        knowledge_not_ready: {
+          title: 'Knowledge indexing is not ready',
+          description:
+            'Knowledge exists but no completed index is available yet.',
+        },
+        knowledge_empty: {
+          title: 'Knowledge entries are still empty',
+          description:
+            'Project knowledge is connected but document count is zero.',
+        },
+        resource_stack_light: {
+          title: 'Resource stack is light',
+          description:
+            'Only knowledge is connected; skills and agents are missing.',
+        },
+      },
+    },
+    states: {
+      partialLoadTitle: 'Some dashboard data failed to load',
+      unavailable: 'Unavailable',
+      noActivity: 'No recent activity',
+      requiresAttention: 'Requires attention',
+      syncing: 'Syncing',
+      healthy: 'Healthy',
+      noResources: 'No resources connected',
+      partialCoverage: 'Partial coverage',
+      ready: 'Ready',
+    },
   },
   header: {
     activeMembers: 'Active members',

@@ -29,26 +29,100 @@ export const projectMessages = {
     reload: '重新加载',
   },
   overview: {
-    partialLoad: '项目上下文加载部分失败',
-    conversationsEyebrow: '项目对话',
-    recentCount: '最近 {{count}} 条',
-    recentTitle: '最近对话',
-    recentDescription: '快速回到最近推进的讨论。',
-    viewAll: '查看全部',
-    recentActive: '最近活跃',
-    emptyConversations: '当前暂无对话',
-    resourcesTitle: '最近接入资源',
-    resourcesDescription:
-      '这里同时展示项目绑定的全局资产和项目私有知识，便于快速回到当前上下文。',
-    openResources: '进入资源页',
-    emptyResources: '当前暂无接入资源',
-    quickActionsEyebrow: '快捷操作',
-    quickActionsTitle: '从项目概览进入下一步',
-    quickActionsDescription:
-      '先看项目状态，再进入对话、资源和成员页，能显著降低工作台的认知切换成本。',
-    continueChat: '继续对话',
-    addResources: '引入资源',
-    viewMembers: '查看成员',
+    summary: {
+      eyebrow: 'AI 运行态',
+      title: '项目 AI 仪表盘',
+      description:
+        '用对话活跃度、知识健康度和资源覆盖结构，快速查看当前项目运行态。',
+      metrics: {
+        activeConversations: '活跃对话（7 天）',
+        knowledgeTotal: '接入知识总量',
+        documents: '已索引文档',
+        resourceCoverage: '资源覆盖',
+      },
+      hints: {
+        lastActivity: '最近活动：{{value}}',
+        indexReady: '就绪 {{completed}} / {{total}}',
+        knowledgeWithDocuments: '{{count}} 个知识库已包含文档',
+        coverageMix: '知 {{knowledge}} · 技 {{skills}} · 体 {{agents}}',
+      },
+    },
+    activity: {
+      title: '对话活跃趋势',
+      description: '按 UTC 日期统计最近 7 天内的唯一活跃对话数量。',
+      avg: '日均',
+      peak: '峰值',
+    },
+    knowledge: {
+      title: '知识健康度',
+      description: '展示当前项目上下文的索引就绪状态与文档规模。',
+      metrics: {
+        total: '知识总量',
+        documents: '文档总量',
+        indexed: '完成索引',
+        rate: '就绪率',
+      },
+      status: {
+        completed: '已完成',
+        processing: '处理中',
+        pending: '待处理',
+        failed: '失败',
+      },
+    },
+    coverage: {
+      title: '资源覆盖',
+      description: '当前知识、技能、智能体三类资源的接入构成。',
+      total: '已接入资源总数',
+      items: {
+        knowledge: '知识',
+        skills: '技能',
+        agents: '智能体',
+      },
+    },
+    insights: {
+      title: '运行洞察',
+      description: '基于概览信号生成的风险优先诊断。',
+      empty: '当前没有高优先级洞察。',
+      levels: {
+        positive: '正向',
+        neutral: '中性',
+        warning: '预警',
+        risk: '风险',
+      },
+      items: {
+        cold_start: {
+          title: '项目仍处于冷启动阶段',
+          description: '尚未检测到资源接入和对话活动。',
+        },
+        ai_cooling: {
+          title: '对话推进动能在下降',
+          description: '最近 7 天没有活跃对话。',
+        },
+        knowledge_not_ready: {
+          title: '知识索引尚未就绪',
+          description: '已有知识接入，但尚无完成索引的条目。',
+        },
+        knowledge_empty: {
+          title: '知识条目仍为空',
+          description: '项目知识已接入，但文档总数为 0。',
+        },
+        resource_stack_light: {
+          title: '资源栈偏轻',
+          description: '仅接入了知识，尚未配置技能和智能体。',
+        },
+      },
+    },
+    states: {
+      partialLoadTitle: '部分仪表盘数据加载失败',
+      unavailable: '暂不可用',
+      noActivity: '暂无近期活动',
+      requiresAttention: '需要关注',
+      syncing: '同步中',
+      healthy: '健康',
+      noResources: '尚未接入资源',
+      partialCoverage: '覆盖不完整',
+      ready: '已就绪',
+    },
   },
   header: {
     activeMembers: '活跃成员',
