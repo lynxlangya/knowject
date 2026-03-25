@@ -1,5 +1,6 @@
 import type {
   ProjectOverviewInsight,
+  ProjectOverviewInsightId,
   ProjectOverviewInsightLevel,
   ProjectOverviewSummary,
 } from "./projectOverview.types";
@@ -12,7 +13,7 @@ const severityRank: Record<ProjectOverviewInsightLevel, number> = {
 };
 
 const buildInsight = (
-  id: string,
+  id: ProjectOverviewInsightId,
   level: ProjectOverviewInsightLevel,
 ): ProjectOverviewInsight => ({ id, level });
 
@@ -29,12 +30,14 @@ export const buildProjectOverviewInsights = (
     summary.coverage.skills > 0 ||
     summary.coverage.agents > 0;
 
-  if (
-    !hasAnyResources &&
-    summary.activity.activeConversationCount7d === 0 &&
-    summary.activity.lastConversationActivityAt === null
-  ) {
-    push(buildInsight("cold_start", "risk"));
+  if (summary.activity.available) {
+    if (
+      !hasAnyResources &&
+      summary.activity.activeConversationCount7d === 0 &&
+      summary.activity.lastConversationActivityAt === null
+    ) {
+      push(buildInsight("cold_start", "risk"));
+    }
   }
 
   const completed = summary.knowledge.statusBreakdown.completed ?? 0;
@@ -50,11 +53,13 @@ export const buildProjectOverviewInsights = (
     push(buildInsight("knowledge_not_ready", "risk"));
   }
 
-  if (
-    summary.activity.activeConversationCount7d === 0 &&
-    summary.activity.lastConversationActivityAt !== null
-  ) {
-    push(buildInsight("ai_cooling", "warning"));
+  if (summary.activity.available) {
+    if (
+      summary.activity.activeConversationCount7d === 0 &&
+      summary.activity.lastConversationActivityAt !== null
+    ) {
+      push(buildInsight("ai_cooling", "warning"));
+    }
   }
 
   if (

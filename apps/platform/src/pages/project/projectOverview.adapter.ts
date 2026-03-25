@@ -15,7 +15,7 @@ type ProjectKnowledgeSummary = Pick<
 
 export interface BuildProjectOverviewSummaryInput {
   project: Pick<ProjectSummary, "id" | "knowledgeBaseIds" | "skillIds" | "agentIds">;
-  conversations: ConversationSummary[];
+  conversations: ConversationSummary[] | undefined;
   projectKnowledge: ProjectKnowledgeSummary[] | undefined;
   now?: string;
 }
@@ -58,6 +58,9 @@ export const buildProjectOverviewSummary = ({
   projectKnowledge,
   now = new Date().toISOString(),
 }: BuildProjectOverviewSummaryInput): ProjectOverviewSummary => {
+  const conversationsAvailable = conversations !== undefined;
+  const conversationItems = conversations ?? [];
+
   const trend7d = buildRecent7dBuckets(now);
   const bucketIndexByDate = new Map<string, number>(
     trend7d.map((bucket, index) => [bucket.date, index]),
@@ -72,7 +75,7 @@ export const buildProjectOverviewSummary = ({
   let latestActivityAt: string | null = null;
   let latestActivityMs = -1;
 
-  for (const conversation of conversations) {
+  for (const conversation of conversationItems) {
     const timestamp = new Date(conversation.updatedAt);
     const timestampMs = timestamp.getTime();
     if (Number.isNaN(timestampMs)) continue;
@@ -144,7 +147,7 @@ export const buildProjectOverviewSummary = ({
       activeConversationCount7d: activeConversationIds7d.size,
       lastConversationActivityAt: latestActivityAt,
       trend7d,
-      available: true,
+      available: conversationsAvailable,
     },
     knowledge: {
       globalKnowledgeCount,
@@ -162,4 +165,3 @@ export const buildProjectOverviewSummary = ({
     },
   };
 };
-

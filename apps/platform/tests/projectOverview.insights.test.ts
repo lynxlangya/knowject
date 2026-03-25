@@ -160,3 +160,17 @@ test('project overview insights freeze ai cooling and knowledge not ready diagno
     { id: 'ai_cooling', level: 'warning' },
   ]);
 });
+
+test('project overview insights do not emit cold start or ai cooling when activity is unavailable', () => {
+  const insights = buildProjectOverviewInsights({
+    ...emptySummary,
+    activity: {
+      activeConversationCount7d: 0,
+      lastConversationActivityAt: '2026-03-20T08:00:00.000Z',
+      trend7d: [],
+      available: false,
+    },
+  });
+
+  assertInsightContract(insights, []);
+});

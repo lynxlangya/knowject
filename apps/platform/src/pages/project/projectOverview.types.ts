@@ -28,8 +28,14 @@ export interface ProjectOverviewSummary {
 
 export type ProjectOverviewInsightLevel = "positive" | "neutral" | "warning" | "risk";
 
+export type ProjectOverviewInsightId =
+  | "cold_start"
+  | "ai_cooling"
+  | "knowledge_not_ready"
+  | "knowledge_empty"
+  | "resource_stack_light";
+
 export interface ProjectOverviewInsight {
-  id: string;
+  id: ProjectOverviewInsightId;
   level: ProjectOverviewInsightLevel;
 }
-
