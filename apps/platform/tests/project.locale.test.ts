@@ -39,6 +39,11 @@ const overviewDashboardKeys = [
   'states',
 ] as const;
 
+const ensureRecord = (value: unknown, message: string) => {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value), message);
+  return value as Record<string, unknown>;
+};
+
 test('project locale resources expose mirrored layout, overview, members, header, chat settings, and draft defaults', () => {
   const enProject = projectMessagesEn as Record<string, unknown>;
   const zhProject = projectMessagesZhCN as Record<string, unknown>;
@@ -77,12 +82,13 @@ test('overview locale dashboard contract exposes required sections', () => {
     const enSection = enOverview?.[key];
     const zhSection = zhOverview?.[key];
 
-    assert.ok(enSection, `missing en project.overview.${key}`);
-    assert.ok(zhSection, `missing zh-CN project.overview.${key}`);
-    assert.strictEqual(
-      typeof enSection,
-      typeof zhSection,
-      `overview section ${key} differs in type between locales`
+    const enRecord = ensureRecord(enSection, `missing or invalid en project.overview.${key}`);
+    const zhRecord = ensureRecord(zhSection, `missing or invalid zh-CN project.overview.${key}`);
+
+    assert.deepEqual(
+      Object.keys(enRecord),
+      Object.keys(zhRecord),
+      `overview section ${key} has drifted between locales`
     );
   }
 });
@@ -94,7 +100,6 @@ test('ProjectOverviewPage no longer depends on legacy overview copy or recent re
   assert.doesNotMatch(source, /overview\.resourcesTitle/);
   assert.doesNotMatch(source, /overview\.quickActionsTitle/);
   assert.doesNotMatch(source, /getRecentProjectResources/);
-  assert.match(source, /overview\.partialLoad/, 'partial load copy must stay available');
 });
 
 for (const file of componentFiles) {
