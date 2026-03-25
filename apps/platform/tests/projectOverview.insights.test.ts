@@ -25,16 +25,23 @@ const assertSortedBySeverity = (insights: Array<{ level: string }>) => {
   }
 };
 
-const assertInsightContract = (insights: Array<{ id: string; level: string }>, expectedIds: string[]) => {
-  assert.deepEqual(insights.map((item) => item.id), expectedIds);
+const assertInsightContract = (
+  insights: Array<{ id: string; level: string }>,
+  expected: Array<{ id: string; level: string }>,
+) => {
+  assert.deepEqual(insights.map((item) => item.id), expected.map((item) => item.id));
+  assert.deepEqual(insights.map((item) => item.level), expected.map((item) => item.level));
   assert.ok(insights.length <= 4);
   assertSortedBySeverity(insights);
 
+  const disallowedTextFields = ['title', 'description', 'message', 'text', 'copy'];
+
   for (const insight of insights) {
-    const keys = Object.keys(insight).sort();
-    assert.deepEqual(keys, ['id', 'level']);
     assert.ok(typeof insight.id === 'string', 'insight id must be a string');
     assert.ok(allowedLevels.has(insight.level), 'insight level must be a known severity');
+    for (const field of disallowedTextFields) {
+      assert.ok(!(field in insight), `insight should not emit user-facing field ${field}`);
+    }
   }
 };
 
@@ -97,6 +104,9 @@ const stalledSummary = {
       { date: '2026-03-20', count: 1 },
       { date: '2026-03-21', count: 0 },
       { date: '2026-03-22', count: 0 },
+      { date: '2026-03-23', count: 0 },
+      { date: '2026-03-24', count: 0 },
+      { date: '2026-03-25', count: 0 },
     ],
     available: true,
   },
@@ -121,17 +131,20 @@ const stalledSummary = {
 test('project overview insights freeze cold start rule', () => {
   const insights = buildProjectOverviewInsights(emptySummary);
 
-  assertInsightContract(insights, ['cold_start']);
+  assertInsightContract(insights, [{ id: 'cold_start', level: 'risk' }]);
 });
 
 test('project overview insights freeze resource stack light rule', () => {
   const insights = buildProjectOverviewInsights(resourceStackLightSummary);
 
-  assertInsightContract(insights, ['resource_stack_light']);
+  assertInsightContract(insights, [{ id: 'resource_stack_light', level: 'warning' }]);
 });
 
 test('project overview insights freeze ai cooling and knowledge not ready diagnostics', () => {
   const insights = buildProjectOverviewInsights(stalledSummary);
 
-  assertInsightContract(insights, ['ai_cooling', 'knowledge_not_ready']);
+  assertInsightContract(insights, [
+    { id: 'knowledge_not_ready', level: 'risk' },
+    { id: 'ai_cooling', level: 'warning' },
+  ]);
 });

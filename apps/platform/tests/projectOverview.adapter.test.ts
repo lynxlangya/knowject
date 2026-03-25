@@ -35,6 +35,12 @@ test('project overview adapter freezes the summary aggregation contract', () => 
     { date: '2026-03-25', count: 1 },
   ]);
   assert.equal(summary.activity.lastConversationActivityAt, '2026-03-25T08:00:00.000Z');
+  assert.equal(summary.activity.available, true);
+  assert.equal(summary.knowledge.globalKnowledgeCount, 1);
+  assert.equal(summary.knowledge.projectKnowledgeCount, 2);
+  assert.equal(summary.knowledge.knowledgeWithDocumentsCount, 1);
+  assert.equal(summary.knowledge.knowledgeDocumentCount, 2);
+  assert.equal(summary.knowledge.available, true);
   assert.equal(summary.knowledge.totalKnowledgeCount, 3);
   assert.deepEqual(summary.knowledge.statusBreakdown, {
     completed: 1,
@@ -47,4 +53,21 @@ test('project overview adapter freezes the summary aggregation contract', () => 
     skills: 1,
     agents: 0,
   });
+});
+
+test('project overview adapter marks knowledge unavailable when project data is missing', () => {
+  const summary = buildProjectOverviewSummary({
+    project: projectFixture,
+    conversations: [],
+    projectKnowledge: null as never,
+    now: '2026-03-25T12:00:00.000Z',
+  });
+
+  assert.equal(summary.activity.available, true);
+  assert.equal(summary.knowledge.available, false);
+  assert.equal(summary.knowledge.globalKnowledgeCount, 1);
+  assert.equal(summary.knowledge.projectKnowledgeCount, 0);
+  assert.equal(summary.knowledge.knowledgeWithDocumentsCount, 0);
+  assert.equal(summary.knowledge.knowledgeDocumentCount, 0);
+  assert.equal(summary.knowledge.totalKnowledgeCount, 1);
 });
