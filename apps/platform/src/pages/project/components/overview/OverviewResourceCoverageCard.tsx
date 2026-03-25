@@ -3,8 +3,8 @@ import { Card, Typography } from 'antd';
 export interface OverviewCoverageItem {
   id: string;
   label: string;
-  value: number;
-  share: number;
+  value: number | string;
+  share: number | null;
 }
 
 export interface OverviewResourceCoverageCardProps {
@@ -14,6 +14,7 @@ export interface OverviewResourceCoverageCardProps {
   totalLabel: string;
   totalValue: string;
   items: OverviewCoverageItem[];
+  unavailableLabel: string;
 }
 
 export const OverviewResourceCoverageCard = ({
@@ -23,6 +24,7 @@ export const OverviewResourceCoverageCard = ({
   totalLabel,
   totalValue,
   items,
+  unavailableLabel,
 }: OverviewResourceCoverageCardProps) => {
   return (
     <Card
@@ -62,13 +64,19 @@ export const OverviewResourceCoverageCard = ({
                 {item.value}
               </Typography.Text>
             </div>
-            <div className="h-2 rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-blue-500"
-                style={{ width: `${item.share}%` }}
-                aria-hidden="true"
-              />
-            </div>
+            {item.share === null ? (
+              <Typography.Text className="text-caption text-slate-500">
+                {unavailableLabel}
+              </Typography.Text>
+            ) : (
+              <div className="h-2 rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-blue-500"
+                  style={{ width: `${item.share}%` }}
+                  aria-hidden="true"
+                />
+              </div>
+            )}
           </article>
         ))}
       </div>

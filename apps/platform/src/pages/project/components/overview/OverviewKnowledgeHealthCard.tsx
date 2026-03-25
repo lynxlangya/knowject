@@ -5,7 +5,7 @@ export type OverviewKnowledgeStatusTone = 'positive' | 'neutral' | 'warning' | '
 export interface OverviewKnowledgeStatusItem {
   id: string;
   label: string;
-  value: number;
+  value: number | string;
   tone: OverviewKnowledgeStatusTone;
 }
 
@@ -21,7 +21,7 @@ export interface OverviewKnowledgeHealthCardProps {
   indexedValue: string;
   indexingRateLabel: string;
   indexingRateValue: string;
-  indexingProgressPercent: number;
+  indexingProgressPercent?: number | null;
   statusItems: OverviewKnowledgeStatusItem[];
 }
 
@@ -47,7 +47,10 @@ export const OverviewKnowledgeHealthCard = ({
   indexingProgressPercent,
   statusItems,
 }: OverviewKnowledgeHealthCardProps) => {
-  const safePercent = Math.max(0, Math.min(100, indexingProgressPercent));
+  const safePercent =
+    typeof indexingProgressPercent === 'number'
+      ? Math.max(0, Math.min(100, indexingProgressPercent))
+      : null;
 
   return (
     <Card
@@ -94,13 +97,17 @@ export const OverviewKnowledgeHealthCard = ({
             {indexedValue}
           </Typography.Text>
         </div>
-        <div className="h-2 rounded-full bg-blue-100">
-          <div
-            className="h-full rounded-full bg-blue-500"
-            style={{ width: `${safePercent}%` }}
-            aria-hidden="true"
-          />
-        </div>
+        {safePercent !== null ? (
+          <div className="h-2 rounded-full bg-blue-100">
+            <div
+              className="h-full rounded-full bg-blue-500"
+              style={{ width: `${safePercent}%` }}
+              aria-hidden="true"
+            />
+          </div>
+        ) : (
+          <div className="h-2 rounded-full bg-blue-100" aria-hidden="true" />
+        )}
         <Typography.Text className="mt-2 block text-caption text-blue-700">
           {indexingRateLabel}: {indexingRateValue}
         </Typography.Text>

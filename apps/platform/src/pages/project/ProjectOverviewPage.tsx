@@ -63,9 +63,12 @@ export const ProjectOverviewPage = () => {
     overviewSummary.coverage.skills +
     overviewSummary.coverage.agents;
   const indexedCount = overviewSummary.knowledge.statusBreakdown.completed;
-  const indexingRate = overviewSummary.knowledge.totalKnowledgeCount
-    ? Math.round((indexedCount / overviewSummary.knowledge.totalKnowledgeCount) * 100)
-    : 0;
+  const readinessBaseCount = overviewSummary.knowledge.projectKnowledgeCount;
+  const hasKnowledgeReadinessRate =
+    overviewSummary.knowledge.available && readinessBaseCount > 0;
+  const indexingRate = hasKnowledgeReadinessRate
+    ? Math.round((indexedCount / readinessBaseCount) * 100)
+    : null;
 
   const knowledgeStateLabel = !overviewSummary.knowledge.available
     ? t('overview.states.unavailable')
@@ -77,11 +80,13 @@ export const ProjectOverviewPage = () => {
         ? t('overview.states.syncing')
         : t('overview.states.healthy');
 
-  const coverageStateLabel = totalResourceCount === 0
-    ? t('overview.states.noResources')
-    : overviewSummary.coverage.skills === 0 || overviewSummary.coverage.agents === 0
-      ? t('overview.states.partialCoverage')
-      : t('overview.states.ready');
+  const coverageStateLabel = !overviewSummary.knowledge.available
+    ? t('overview.states.unavailable')
+    : totalResourceCount === 0
+      ? t('overview.states.noResources')
+      : overviewSummary.coverage.skills === 0 || overviewSummary.coverage.agents === 0
+        ? t('overview.states.partialCoverage')
+        : t('overview.states.ready');
 
   return (
     <section className="flex flex-col gap-4">
@@ -102,7 +107,9 @@ export const ProjectOverviewPage = () => {
           {
             id: 'active-conversations',
             label: t('overview.summary.metrics.activeConversations'),
-            value: String(overviewSummary.activity.activeConversationCount7d),
+            value: overviewSummary.activity.available
+              ? String(overviewSummary.activity.activeConversationCount7d)
+              : '—',
             hint: overviewSummary.activity.available
               ? overviewSummary.activity.lastConversationActivityAt
                 ? t('overview.summary.hints.lastActivity', {
@@ -115,34 +122,56 @@ export const ProjectOverviewPage = () => {
           {
             id: 'knowledge-total',
             label: t('overview.summary.metrics.knowledgeTotal'),
-            value: String(overviewSummary.knowledge.totalKnowledgeCount),
+            value: overviewSummary.knowledge.available
+              ? String(overviewSummary.knowledge.totalKnowledgeCount)
+              : '—',
             hint: overviewSummary.knowledge.available
-              ? t('overview.summary.hints.indexReady', {
-                  completed: overviewSummary.knowledge.statusBreakdown.completed,
-                  total: overviewSummary.knowledge.totalKnowledgeCount,
-                })
+              ? readinessBaseCount > 0
+                ? t('overview.summary.hints.indexReady', {
+                    completed: overviewSummary.knowledge.statusBreakdown.completed,
+                    total: readinessBaseCount,
+                  })
+                : t('overview.states.unavailable')
               : t('overview.states.unavailable'),
-            tone: overviewSummary.knowledge.statusBreakdown.failed > 0 ? 'warning' : 'positive',
+            tone: !overviewSummary.knowledge.available
+              ? 'warning'
+              : overviewSummary.knowledge.statusBreakdown.failed > 0
+                ? 'warning'
+                : 'positive',
           },
           {
             id: 'documents-total',
             label: t('overview.summary.metrics.documents'),
-            value: String(overviewSummary.knowledge.knowledgeDocumentCount),
-            hint: t('overview.summary.hints.knowledgeWithDocuments', {
-              count: overviewSummary.knowledge.knowledgeWithDocumentsCount,
-            }),
-            tone: overviewSummary.knowledge.knowledgeDocumentCount > 0 ? 'positive' : 'warning',
+            value: overviewSummary.knowledge.available
+              ? String(overviewSummary.knowledge.knowledgeDocumentCount)
+              : '—',
+            hint: overviewSummary.knowledge.available
+              ? t('overview.summary.hints.knowledgeWithDocuments', {
+                  count: overviewSummary.knowledge.knowledgeWithDocumentsCount,
+                })
+              : t('overview.states.unavailable'),
+            tone: !overviewSummary.knowledge.available
+              ? 'warning'
+              : overviewSummary.knowledge.knowledgeDocumentCount > 0
+                ? 'positive'
+                : 'warning',
           },
           {
             id: 'resource-coverage',
             label: t('overview.summary.metrics.resourceCoverage'),
-            value: String(totalResourceCount),
-            hint: t('overview.summary.hints.coverageMix', {
-              knowledge: overviewSummary.coverage.knowledge,
-              skills: overviewSummary.coverage.skills,
-              agents: overviewSummary.coverage.agents,
-            }),
-            tone: totalResourceCount > 0 ? 'default' : 'warning',
+            value: overviewSummary.knowledge.available ? String(totalResourceCount) : '—',
+            hint: overviewSummary.knowledge.available
+              ? t('overview.summary.hints.coverageMix', {
+                  knowledge: overviewSummary.coverage.knowledge,
+                  skills: overviewSummary.coverage.skills,
+                  agents: overviewSummary.coverage.agents,
+                })
+              : t('overview.states.unavailable'),
+            tone: !overviewSummary.knowledge.available
+              ? 'warning'
+              : totalResourceCount > 0
+                ? 'default'
+                : 'warning',
           },
         ]}
       />
@@ -164,43 +193,60 @@ export const ProjectOverviewPage = () => {
           avgLabel={t('overview.activity.avg')}
           peakLabel={t('overview.activity.peak')}
           emptyLabel={t('overview.states.unavailable')}
+          statsAvailable={overviewSummary.activity.available}
         />
         <OverviewKnowledgeHealthCard
           title={t('overview.knowledge.title')}
           description={t('overview.knowledge.description')}
           stateLabel={knowledgeStateLabel}
           knowledgeTotalLabel={t('overview.knowledge.metrics.total')}
-          knowledgeTotalValue={String(overviewSummary.knowledge.totalKnowledgeCount)}
+          knowledgeTotalValue={
+            overviewSummary.knowledge.available
+              ? String(overviewSummary.knowledge.totalKnowledgeCount)
+              : '—'
+          }
           documentTotalLabel={t('overview.knowledge.metrics.documents')}
-          documentTotalValue={String(overviewSummary.knowledge.knowledgeDocumentCount)}
+          documentTotalValue={
+            overviewSummary.knowledge.available
+              ? String(overviewSummary.knowledge.knowledgeDocumentCount)
+              : '—'
+          }
           indexedLabel={t('overview.knowledge.metrics.indexed')}
-          indexedValue={String(indexedCount)}
+          indexedValue={overviewSummary.knowledge.available ? String(indexedCount) : '—'}
           indexingRateLabel={t('overview.knowledge.metrics.rate')}
-          indexingRateValue={`${indexingRate}%`}
+          indexingRateValue={indexingRate === null ? '—' : `${indexingRate}%`}
           indexingProgressPercent={indexingRate}
           statusItems={[
             {
               id: 'completed',
               label: t('overview.knowledge.status.completed'),
-              value: overviewSummary.knowledge.statusBreakdown.completed,
+              value: overviewSummary.knowledge.available
+                ? overviewSummary.knowledge.statusBreakdown.completed
+                : '—',
               tone: 'positive',
             },
             {
               id: 'processing',
               label: t('overview.knowledge.status.processing'),
-              value: overviewSummary.knowledge.statusBreakdown.processing,
+              value: overviewSummary.knowledge.available
+                ? overviewSummary.knowledge.statusBreakdown.processing
+                : '—',
               tone: 'neutral',
             },
             {
               id: 'pending',
               label: t('overview.knowledge.status.pending'),
-              value: overviewSummary.knowledge.statusBreakdown.pending,
+              value: overviewSummary.knowledge.available
+                ? overviewSummary.knowledge.statusBreakdown.pending
+                : '—',
               tone: 'warning',
             },
             {
               id: 'failed',
               label: t('overview.knowledge.status.failed'),
-              value: overviewSummary.knowledge.statusBreakdown.failed,
+              value: overviewSummary.knowledge.available
+                ? overviewSummary.knowledge.statusBreakdown.failed
+                : '—',
               tone: 'risk',
             },
           ]}
@@ -224,25 +270,44 @@ export const ProjectOverviewPage = () => {
         description={t('overview.coverage.description')}
         stateLabel={coverageStateLabel}
         totalLabel={t('overview.coverage.total')}
-        totalValue={String(totalResourceCount)}
+        totalValue={overviewSummary.knowledge.available ? String(totalResourceCount) : '—'}
+        unavailableLabel={t('overview.states.unavailable')}
         items={[
           {
             id: 'knowledge',
             label: t('overview.coverage.items.knowledge'),
-            value: overviewSummary.coverage.knowledge,
-            share: Math.round((overviewSummary.coverage.knowledge / Math.max(totalResourceCount, 1)) * 100),
+            value: overviewSummary.knowledge.available
+              ? overviewSummary.coverage.knowledge
+              : '—',
+            share: overviewSummary.knowledge.available
+              ? Math.round(
+                  (overviewSummary.coverage.knowledge /
+                    Math.max(totalResourceCount, 1)) *
+                    100,
+                )
+              : null,
           },
           {
             id: 'skills',
             label: t('overview.coverage.items.skills'),
             value: overviewSummary.coverage.skills,
-            share: Math.round((overviewSummary.coverage.skills / Math.max(totalResourceCount, 1)) * 100),
+            share: overviewSummary.knowledge.available
+              ? Math.round(
+                  (overviewSummary.coverage.skills / Math.max(totalResourceCount, 1)) *
+                    100,
+                )
+              : null,
           },
           {
             id: 'agents',
             label: t('overview.coverage.items.agents'),
             value: overviewSummary.coverage.agents,
-            share: Math.round((overviewSummary.coverage.agents / Math.max(totalResourceCount, 1)) * 100),
+            share: overviewSummary.knowledge.available
+              ? Math.round(
+                  (overviewSummary.coverage.agents / Math.max(totalResourceCount, 1)) *
+                    100,
+                )
+              : null,
           },
         ]}
       />

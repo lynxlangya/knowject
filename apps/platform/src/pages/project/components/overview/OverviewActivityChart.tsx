@@ -14,6 +14,7 @@ export interface OverviewActivityChartProps {
   avgLabel: string;
   peakLabel: string;
   emptyLabel: string;
+  statsAvailable?: boolean;
 }
 
 const chartWidth = 560;
@@ -29,6 +30,7 @@ export const OverviewActivityChart = ({
   avgLabel,
   peakLabel,
   emptyLabel,
+  statsAvailable = true,
 }: OverviewActivityChartProps) => {
   const hasPoints = points.length > 0;
   const safePoints = hasPoints ? points : [{ id: 'placeholder', label: '-', tooltip: '-', value: 0 }];
@@ -56,6 +58,8 @@ export const OverviewActivityChart = ({
     (current, point) => (point.value > current ? point.value : current),
     0,
   );
+  const displayAverage = statsAvailable ? average : '—';
+  const displayPeak = statsAvailable ? String(peak) : '—';
 
   return (
     <Card
@@ -71,10 +75,10 @@ export const OverviewActivityChart = ({
         </div>
         <div className="flex items-center gap-2 text-caption text-slate-600">
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-            {avgLabel}: {average}
+            {avgLabel}: {displayAverage}
           </span>
           <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-700">
-            {peakLabel}: {peak}
+            {peakLabel}: {displayPeak}
           </span>
         </div>
       </div>
