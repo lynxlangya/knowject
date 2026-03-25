@@ -5,6 +5,9 @@ import { buildProjectOverviewSummary } from '../src/pages/project/projectOvervie
 const projectFixture = {
   id: 'p-1',
   name: 'Project One',
+  knowledgeBaseIds: ['kb-1', 'kb-2', 'kb-3'],
+  skillIds: ['skill-1'],
+  agentIds: [],
 };
 
 test('project overview adapter freezes the summary aggregation contract', () => {
@@ -22,6 +25,16 @@ test('project overview adapter freezes the summary aggregation contract', () => 
   });
 
   assert.equal(summary.activity.activeConversationCount7d, 2);
+  assert.deepEqual(summary.activity.trend7d, [
+    { date: '2026-03-19', count: 0 },
+    { date: '2026-03-20', count: 0 },
+    { date: '2026-03-21', count: 0 },
+    { date: '2026-03-22', count: 0 },
+    { date: '2026-03-23', count: 1 },
+    { date: '2026-03-24', count: 0 },
+    { date: '2026-03-25', count: 1 },
+  ]);
+  assert.equal(summary.activity.lastConversationActivityAt, '2026-03-25T08:00:00.000Z');
   assert.equal(summary.knowledge.totalKnowledgeCount, 3);
   assert.deepEqual(summary.knowledge.statusBreakdown, {
     completed: 1,

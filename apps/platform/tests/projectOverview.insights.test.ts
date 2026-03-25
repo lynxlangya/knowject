@@ -9,12 +9,36 @@ const severityRank = {
   positive: 1,
 } as const;
 
+const allowedLevels = new Set(['positive', 'neutral', 'warning', 'risk']);
+
 const projectFixture = {
   id: 'p-1',
   name: 'Project One',
 };
 
-const baseSummary = {
+const assertSortedBySeverity = (insights: Array<{ level: string }>) => {
+  const severity = (level: string) => severityRank[level as keyof typeof severityRank] ?? 0;
+  for (let index = 1; index < insights.length; index += 1) {
+    const previous = severity(insights[index - 1].level);
+    const current = severity(insights[index].level);
+    assert.ok(previous >= current, 'insights should be sorted by descending severity');
+  }
+};
+
+const assertInsightContract = (insights: Array<{ id: string; level: string }>, expectedIds: string[]) => {
+  assert.deepEqual(insights.map((item) => item.id), expectedIds);
+  assert.ok(insights.length <= 4);
+  assertSortedBySeverity(insights);
+
+  for (const insight of insights) {
+    const keys = Object.keys(insight).sort();
+    assert.deepEqual(keys, ['id', 'level']);
+    assert.ok(typeof insight.id === 'string', 'insight id must be a string');
+    assert.ok(allowedLevels.has(insight.level), 'insight level must be a known severity');
+  }
+};
+
+const emptySummary = {
   project: projectFixture,
   activity: {
     activeConversationCount7d: 0,
@@ -43,22 +67,28 @@ const baseSummary = {
   },
 };
 
-const coldStartSummary = {
-  ...baseSummary,
+const resourceStackLightSummary = {
+  ...emptySummary,
   knowledge: {
-    ...baseSummary.knowledge,
-    totalKnowledgeCount: 1,
-    knowledgeDocumentCount: 1,
+    ...emptySummary.knowledge,
+    totalKnowledgeCount: 2,
+    knowledgeDocumentCount: 4,
+    statusBreakdown: {
+      completed: 1,
+      pending: 0,
+      processing: 0,
+      failed: 0,
+    },
   },
   coverage: {
-    knowledge: 3,
+    knowledge: 2,
     skills: 0,
     agents: 0,
   },
 };
 
 const stalledSummary = {
-  ...baseSummary,
+  ...emptySummary,
   activity: {
     activeConversationCount7d: 0,
     lastConversationActivityAt: '2026-03-20T08:00:00.000Z',
@@ -71,7 +101,7 @@ const stalledSummary = {
     available: true,
   },
   knowledge: {
-    ...baseSummary.knowledge,
+    ...emptySummary.knowledge,
     totalKnowledgeCount: 3,
     knowledgeDocumentCount: 5,
     statusBreakdown: {
@@ -88,29 +118,20 @@ const stalledSummary = {
   },
 };
 
-const assertSortedBySeverity = (insights: Array<{ id: string; level: string }>) => {
-  const severity = (level: string) => severityRank[level as keyof typeof severityRank] ?? 0;
-  for (let index = 1; index < insights.length; index += 1) {
-    const previous = severity(insights[index - 1].level);
-    const current = severity(insights[index].level);
-    assert.ok(previous >= current, 'insights should be sorted by descending severity');
-  }
-};
+test('project overview insights freeze cold start rule', () => {
+  const insights = buildProjectOverviewInsights(emptySummary);
 
-test('project overview insights freeze cold start and resource stack light inspections', () => {
-  const insights = buildProjectOverviewInsights(coldStartSummary);
-
-  assert.deepEqual(insights.map((item) => item.id), ['cold_start', 'resource_stack_light']);
-  assert.ok(insights.length <= 4);
-  assertSortedBySeverity(insights);
-  assert.ok(insights.every((item) => typeof item.level === 'string'));
+  assertInsightContract(insights, ['cold_start']);
 });
 
-test('project overview insights freeze ai cooling and knowledge not ready inspections', () => {
+test('project overview insights freeze resource stack light rule', () => {
+  const insights = buildProjectOverviewInsights(resourceStackLightSummary);
+
+  assertInsightContract(insights, ['resource_stack_light']);
+});
+
+test('project overview insights freeze ai cooling and knowledge not ready diagnostics', () => {
   const insights = buildProjectOverviewInsights(stalledSummary);
 
-  assert.deepEqual(insights.map((item) => item.id), ['ai_cooling', 'knowledge_not_ready']);
-  assert.ok(insights.length <= 4);
-  assertSortedBySeverity(insights);
-  assert.ok(insights.every((item) => typeof item.level === 'string'));
+  assertInsightContract(insights, ['ai_cooling', 'knowledge_not_ready']);
 });
