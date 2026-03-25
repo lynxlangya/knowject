@@ -5,7 +5,7 @@ import { buildProjectOverviewSummary } from '../src/pages/project/projectOvervie
 const projectFixture = {
   id: 'p-1',
   name: 'Project One',
-  knowledgeBaseIds: ['kb-1', 'kb-2', 'kb-3'],
+  knowledgeBaseIds: ['kb-1'],
   skillIds: ['skill-1'],
   agentIds: [],
 };
