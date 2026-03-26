@@ -26,7 +26,7 @@ export interface OverviewKnowledgeHealthCardProps {
 }
 
 const toneBadgeStyles: Record<OverviewKnowledgeStatusTone, string> = {
-  positive: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  positive: 'border-[#C2EDE6] bg-[#F2FDFB] text-[#1A8A77]',
   neutral: 'border-slate-200 bg-slate-50 text-slate-600',
   warning: 'border-amber-200 bg-amber-50 text-amber-700',
   risk: 'border-rose-200 bg-rose-50 text-rose-700',
@@ -88,27 +88,27 @@ export const OverviewKnowledgeHealthCard = ({
         </article>
       </div>
 
-      <div className="mt-4 rounded-panel border border-blue-100 bg-blue-50/55 px-4 py-3">
+      <div className="mt-4 rounded-panel border border-[#C2EDE6] bg-[#F2FDFB] px-4 py-3">
         <div className="mb-2 flex items-center justify-between gap-3">
-          <Typography.Text className="text-caption uppercase tracking-[0.12em] text-blue-700">
+          <Typography.Text className="text-caption uppercase tracking-[0.12em] text-[#1A8A77]">
             {indexedLabel}
           </Typography.Text>
-          <Typography.Text className="text-caption font-semibold text-blue-700">
+          <Typography.Text className="text-caption font-semibold text-[#1A8A77]">
             {indexedValue}
           </Typography.Text>
         </div>
         {safePercent !== null ? (
-          <div className="h-2 rounded-full bg-blue-100">
+          <div className="h-2 rounded-full bg-[#E3F8F4]">
             <div
-              className="h-full rounded-full bg-blue-500"
+              className="h-full rounded-full bg-[#28B8A0]"
               style={{ width: `${safePercent}%` }}
               aria-hidden="true"
             />
           </div>
         ) : (
-          <div className="h-2 rounded-full bg-blue-100" aria-hidden="true" />
+          <div className="h-2 rounded-full bg-[#E3F8F4]" aria-hidden="true" />
         )}
-        <Typography.Text className="mt-2 block text-caption text-blue-700">
+        <Typography.Text className="mt-2 block text-caption text-[#1A8A77]">
           {indexingRateLabel}: {indexingRateValue}
         </Typography.Text>
       </div>

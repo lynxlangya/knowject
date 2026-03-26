@@ -19,7 +19,7 @@ export interface OverviewMetricStripProps {
 
 const toneStyles: Record<OverviewMetricTone, string> = {
   default: 'border-slate-200 bg-slate-50/70 text-slate-700',
-  positive: 'border-emerald-200 bg-emerald-50/70 text-emerald-700',
+  positive: 'border-[#C2EDE6] bg-[#F2FDFB] text-[#1A8A77]',
   warning: 'border-amber-200 bg-amber-50/80 text-amber-800',
 };
 

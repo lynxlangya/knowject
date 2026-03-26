@@ -29,6 +29,7 @@ export interface SparkPoint {
   left: string;
   top: string;
   animation: string;
+  duration: string;
 }
 
 export const REMEMBERED_USERNAME_KEY = 'knowject_remembered_username';
@@ -57,14 +58,14 @@ export const FLOW_SEGMENTS: FlowSegment[] = [
 ];
 
 export const FLOW_SPARK_POINTS: SparkPoint[] = [
-  { left: '9.4%', top: '13.4%', animation: 'sparkFloatA_2.7s_ease-in-out_infinite' },
-  { left: '17.1%', top: '20.4%', animation: 'sparkFloatB_3.2s_ease-in-out_infinite' },
-  { left: '67.2%', top: '87.4%', animation: 'sparkFloatC_2.3s_ease-in-out_infinite' },
-  { left: '74.8%', top: '91.6%', animation: 'sparkFloatA_2.9s_ease-in-out_infinite' },
+  { left: '9.4%', top: '13.4%', animation: 'sparkFloatA', duration: '2.7s' },
+  { left: '17.1%', top: '20.4%', animation: 'sparkFloatB', duration: '3.2s' },
+  { left: '67.2%', top: '87.4%', animation: 'sparkFloatC', duration: '2.3s' },
+  { left: '74.8%', top: '91.6%', animation: 'sparkFloatA', duration: '2.9s' },
 ];
 
 export const LOGIN_PAGE_BACKGROUND =
-  'radial-gradient(circle at 14% 20%, rgba(191, 219, 254, 0.42) 0, rgba(191, 219, 254, 0) 38%), radial-gradient(circle at 86% 78%, rgba(219, 234, 254, 0.38) 0, rgba(219, 234, 254, 0) 42%), linear-gradient(180deg, #f4f7fc 0%, #edf2fb 100%)';
+  'radial-gradient(circle at 12% 18%, rgba(40, 184, 160, 0.18) 0%, transparent 35%), radial-gradient(circle at 88% 82%, rgba(40, 184, 160, 0.10) 0%, transparent 40%), linear-gradient(180deg, #F0F8F6 0%, #F6FBFA 100%)';
 
 export const FLOW_MASK_IMAGE =
   'linear-gradient(90deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 22%, rgba(0, 0, 0, 0.08) 34%, rgba(0, 0, 0, 0.08) 66%, rgba(0, 0, 0, 1) 78%, rgba(0, 0, 0, 1) 100%)';

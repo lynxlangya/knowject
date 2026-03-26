@@ -19,7 +19,7 @@ const createInitialAvatarDataUrl = (
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" role="img" aria-label="${name}">
       <rect width="80" height="80" rx="20" fill="${backgroundColor}" />
-      <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="${foregroundColor}" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">${initials}</text>
+      <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="${foregroundColor}" font-family="'Plus Jakarta Sans', sans-serif" font-size="28" font-weight="700">${initials}</text>
     </svg>
   `;
 

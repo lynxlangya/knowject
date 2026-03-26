@@ -29,7 +29,21 @@ export const KNOWJECT_BRAND = {
   heroGradient: 'linear-gradient(145deg, #1E3580 0%, #1A7A8A 55%, #28B8A0 100%)',
   navGradient:  'linear-gradient(135deg, #1E3580 0%, #28B8A0 100%)',
 
+  // 内容区卡片/面板背景渐变（标准 slate→white 换 brand mint 白）
+  cardSurfaceGradient:
+    'linear-gradient(180deg, rgba(242,253,251,0.96) 0%, rgba(232,248,245,0.92) 100%)',
+  // Shell 内容区背景渐变
+  shellContentGradient:
+    'linear-gradient(180deg, rgba(246,251,250,0.98) 0%, rgba(240,248,246,0.98) 56%, rgba(238,243,240,0.9) 100%)',
+  // 卡片内嵌光晕渐变（mint radial，用于 chat 输入区等）
+  cardGlowGradient:
+    'radial-gradient(circle at bottom, rgba(40,184,160,0.08), transparent 34%)',
+
   // 保留天青 accent，天然和薄荷+蓝都兼容
   accent:               '#5EC8E8',
   accentSurface:        '#EDF9FD',
+
+  // Typography
+  displayFont:          "'Syne', sans-serif",
+  bodyFont:             "'Plus Jakarta Sans', 'Noto Sans SC', sans-serif",
 } as const;

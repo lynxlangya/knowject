@@ -15,7 +15,9 @@ export const themeConfig: ThemeConfig = {
     borderRadius: 12,
     colorBgLayout: KNOWJECT_BRAND.canvasBg,
     fontFamily:
-      "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "'Plus Jakarta Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontFamilyCode:
+      "'Plus Jakarta Sans', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', monospace",
   },
   components: {
     Layout: {

@@ -77,14 +77,14 @@ export const OverviewActivityChart = ({
           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
             {avgLabel}: {displayAverage}
           </span>
-          <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-700">
+          <span className="rounded-full border border-[#C2EDE6] bg-[#F2FDFB] px-2.5 py-1 text-[#1A8A77]">
             {peakLabel}: {displayPeak}
           </span>
         </div>
       </div>
 
       {hasPoints ? (
-        <div className="overflow-hidden rounded-panel border border-slate-200 bg-gradient-to-b from-slate-50 to-white px-3 py-3">
+        <div className="overflow-hidden rounded-panel border border-[#D2E8E4] bg-[#F2FDFB] px-3 py-3">
           <svg
             className="h-48 w-full"
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
@@ -93,8 +93,8 @@ export const OverviewActivityChart = ({
           >
             <defs>
               <linearGradient id="overview-activity-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.36" />
-                <stop offset="100%" stopColor="#dbeafe" stopOpacity="0.08" />
+                <stop offset="0%" stopColor="#86E3D0" stopOpacity="0.38" />
+                <stop offset="100%" stopColor="#D1F7F2" stopOpacity="0.1" />
               </linearGradient>
             </defs>
             <line
@@ -102,14 +102,14 @@ export const OverviewActivityChart = ({
               y1={baselineY}
               x2={chartWidth - paddingX}
               y2={baselineY}
-              stroke="#dbe2ef"
+              stroke="#D2E8E4"
               strokeWidth={1}
             />
             <path d={areaPath} fill="url(#overview-activity-fill)" />
             <path
               d={linePath}
               fill="none"
-              stroke="#2563eb"
+              stroke="#28B8A0"
               strokeWidth={2.5}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -118,7 +118,7 @@ export const OverviewActivityChart = ({
               const coordinate = coordinates[index];
               return (
                 <g key={point.id}>
-                  <circle cx={coordinate.x} cy={coordinate.y} r={3.5} fill="#1d4ed8" />
+                  <circle cx={coordinate.x} cy={coordinate.y} r={3.5} fill="#1FA08A" />
                   <text
                     x={coordinate.x}
                     y={baselineY + 20}
