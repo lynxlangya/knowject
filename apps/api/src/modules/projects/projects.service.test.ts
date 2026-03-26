@@ -4872,6 +4872,23 @@ test('streamProjectConversationMessage emits done before citation_patch and pers
     false,
     'stream should stay open until citation patch work finishes',
   );
+  assert.deepEqual(persistedConversation?.messages[1]?.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'placeholder-sent-1',
+        text: '当前项目已经具备最小对话写链路。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+      {
+        id: 'placeholder-sent-2',
+        text: '项目级检索也已开始接入。',
+        sourceIds: ['s2'],
+        grounded: true,
+      },
+    ],
+  });
 
   resolveCitationGeneration?.();
   await streamPromise;
@@ -4996,7 +5013,23 @@ test('streamProjectConversationMessage emits done before citation_patch and pers
     doneSources.map((source) => source.id),
     ['s1', 's2'],
   );
-  assert.equal(doneEvent.assistantMessage.citationContent, undefined);
+  assert.deepEqual(doneEvent.assistantMessage.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'placeholder-sent-1',
+        text: '当前项目已经具备最小对话写链路。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+      {
+        id: 'placeholder-sent-2',
+        text: '项目级检索也已开始接入。',
+        sourceIds: ['s2'],
+        grounded: true,
+      },
+    ],
+  });
   assert.equal(doneEvent.conversationSummary.id, 'chat-streaming');
   assert.equal(doneEvent.conversationSummary.title, '已有会话');
   assert.equal(
@@ -5017,6 +5050,23 @@ test('streamProjectConversationMessage emits done before citation_patch and pers
     citationPatchEvent.assistantMessageId,
     persistedConversation?.messages[1]?.id,
   );
+  assert.deepEqual(citationPatchEvent.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'sent-1',
+        text: '当前项目已经具备最小对话写链路。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+      {
+        id: 'sent-2',
+        text: '项目级检索也已开始接入。',
+        sourceIds: ['s2'],
+        grounded: true,
+      },
+    ],
+  });
   assert.deepEqual(citationPatchEvent.citationContent, {
     version: 1,
     sentences: [

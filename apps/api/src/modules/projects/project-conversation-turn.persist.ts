@@ -8,6 +8,7 @@ import {
   toProjectConversationDetailResponse,
 } from "./projects.shared.js";
 import {
+  buildProjectConversationCitationContentFromSourcePlaceholders,
   buildProjectConversationCitationSources,
   normalizeProjectConversationCitationContent,
   stripProjectConversationSourcePlaceholders,
@@ -224,13 +225,20 @@ export const persistProjectConversationAssistantReply = async ({
     assistantReply.content,
   );
   const normalizedCitationContent =
-    assistantReply.citationContent === undefined
-      ? undefined
-      : normalizeProjectConversationCitationContent(
-          assistantReply.citationContent,
-          assistantReply.content,
-          normalizedSources,
-        ) ?? undefined;
+    (
+      assistantReply.citationContent === undefined
+        ? undefined
+        : normalizeProjectConversationCitationContent(
+            assistantReply.citationContent,
+            assistantReply.content,
+            normalizedSources,
+          )
+    ) ??
+    buildProjectConversationCitationContentFromSourcePlaceholders(
+      assistantReply.content,
+      normalizedSources,
+    ) ??
+    undefined;
   const assistantCreatedAt = new Date();
   const assistantMessage = createProjectConversationMessage({
     role: "assistant",

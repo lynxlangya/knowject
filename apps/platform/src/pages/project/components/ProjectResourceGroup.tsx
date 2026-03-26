@@ -71,9 +71,9 @@ export const ProjectResourceGroup = ({
     <article
       key={item.id}
       className={[
-        'rounded-card border border-slate-200 bg-slate-50/55 p-4 shadow-[0_4px_16px_rgba(15,23,42,0.02)] transition',
+        'rounded-card border border-slate-200 bg-white p-4 shadow-[0_4px_16px_rgba(15,23,42,0.03)] transition-shadow duration-200',
         onItemClick
-          ? 'cursor-pointer hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_12px_24px_rgba(15,23,42,0.06)]'
+          ? 'cursor-pointer hover:border-[#C2EDE6] hover:shadow-[0_8px_24px_rgba(15,42,38,0.08)]'
           : '',
       ].join(' ')}
       role={onItemClick ? 'button' : undefined}
@@ -151,7 +151,9 @@ export const ProjectResourceGroup = ({
     <section
       className={[
         'rounded-3xl border bg-white p-5 shadow-surface transition-colors',
-        highlighted ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200',
+        highlighted
+          ? 'border-[#C2EDE6] bg-[#F2FDFB]/60'
+          : 'border-slate-200',
       ].join(' ')}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -184,7 +186,7 @@ export const ProjectResourceGroup = ({
               {knowledgeSections.map((section, index) => (
                 <div
                   key={section.key}
-                  className={index > 0 ? 'border-t border-slate-100 pt-5' : ''}
+                  className={index > 0 ? 'border-t border-[#C2EDE6] pt-5' : ''}
                 >
                   <div className="mb-3">
                     <Typography.Text className="text-sm font-medium text-slate-500">
@@ -207,7 +209,7 @@ export const ProjectResourceGroup = ({
             </div>
           )
         ) : (
-          <div className="rounded-card border border-dashed border-slate-200 bg-slate-50/50 px-4 py-8">
+          <div className="rounded-card border border-dashed border-[#C2EDE6] bg-[#F2FDFB] px-4 py-8 shadow-[inset_0_2px_8px_rgba(40,184,160,0.04)]">
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={tp('resources.group.empty', { title: group.title })}

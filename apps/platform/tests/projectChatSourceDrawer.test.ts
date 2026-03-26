@@ -8,9 +8,16 @@ require.extensions['.css'] = () => undefined;
 
 const buildDrawerTabLabelPattern = (
   sourceKey: string,
+  sourceLabel: string,
 ): RegExp => {
   return new RegExp(
-    `data-project-chat-source-tab="${sourceKey}"[^>]*>(?:\\s|<[^>]+>)*${sourceKey}`,
+    `data-project-chat-source-tab="${sourceKey}"[^>]*>(?:\\s|<[^>]+>)*${sourceLabel.replace('.', '\\.')}`,
+  );
+};
+
+const buildDrawerTabLegacySourceKeyPattern = (sourceKey: string): RegExp => {
+  return new RegExp(
+    `data-project-chat-source-tab="${sourceKey}"[^>]*>(?:\\s|<[^>]+>)*${sourceKey}(?:\\s|<[^>]+>)*`,
   );
 };
 
@@ -135,8 +142,10 @@ test('drawer error state keeps source tabs visible', async () => {
   );
 
   assert.match(html, /source payload unavailable/);
-  assert.match(html, buildDrawerTabLabelPattern('source1'));
-  assert.match(html, buildDrawerTabLabelPattern('source2'));
+  assert.match(html, buildDrawerTabLabelPattern('source1', 'architecture.md'));
+  assert.match(html, buildDrawerTabLabelPattern('source2', 'decisions.md'));
+  assert.doesNotMatch(html, buildDrawerTabLegacySourceKeyPattern('source1'));
+  assert.doesNotMatch(html, buildDrawerTabLegacySourceKeyPattern('source2'));
   assert.match(html, />\s*Retry\s*</i);
 });
 
@@ -169,8 +178,12 @@ test('drawer ready state highlights active tab and default snippet', async () =>
   );
 
   assert.match(html, /data-project-chat-source-tab-active="source2"/);
-  assert.match(html, buildDrawerTabLabelPattern('source2'));
+  assert.match(html, buildDrawerTabLabelPattern('source2', 'decisions.md'));
+  assert.doesNotMatch(html, buildDrawerTabLegacySourceKeyPattern('source2'));
   assert.match(html, /default snippet source2/);
+  assert.match(html, /data-project-chat-source-drawer-panel="true"/);
+  assert.match(html, /data-project-chat-source-metadata-card="source"/);
+  assert.match(html, /data-project-chat-source-snippet-panel="true"/);
 });
 
 test('drawer ready state renders distance and chunk switcher for active source', async () => {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildProjectConversationCitationContentFromSourcePlaceholders,
   buildProjectConversationCitationSources,
   normalizeProjectConversationCitationContent,
 } from './project-conversation-citation.js';
@@ -207,6 +208,53 @@ test('normalizeProjectConversationCitationContent strips source placeholders and
         text: '当前项目已经接入 merged retrieval。',
         sourceIds: ['s1'],
         grounded: true,
+      },
+    ],
+  });
+});
+
+test('buildProjectConversationCitationContentFromSourcePlaceholders preserves inline source positions for grounded and ungrounded segments', () => {
+  const sources = buildProjectConversationCitationSources([
+    createSource({
+      id: 's1',
+      sourceKey: 'source1',
+    }),
+    createSource({
+      id: 's2',
+      knowledgeId: 'kb-2',
+      documentId: 'doc-2',
+      chunkId: 'chunk-2',
+      chunkIndex: 1,
+      source: 'runtime.md',
+      sourceKey: 'source2',
+    }),
+  ]);
+
+  const result = buildProjectConversationCitationContentFromSourcePlaceholders(
+    '第一段结论。[[source1]]\n\n第二段补充。[[source1]][[source2]]\n\n最后一段暂时没有来源。',
+    sources,
+  );
+
+  assert.deepEqual(result, {
+    version: 1,
+    sentences: [
+      {
+        id: 'placeholder-sent-1',
+        text: '第一段结论。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+      {
+        id: 'placeholder-sent-2',
+        text: '\n\n第二段补充。',
+        sourceIds: ['s1', 's2'],
+        grounded: true,
+      },
+      {
+        id: 'placeholder-sent-3',
+        text: '\n\n最后一段暂时没有来源。',
+        sourceIds: [],
+        grounded: false,
       },
     ],
   });

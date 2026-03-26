@@ -19,7 +19,7 @@ const countMatches = (value: string, pattern: RegExp): number => {
 const PROJECT_CHAT_OPTIONAL_MARKUP = String.raw`(?:\s|<[^>]+>)*`;
 
 const buildConversationSourceTagPattern = (sourceKey: string): string => {
-  return String.raw`<button[^>]*data-conversation-source-tag="true"[^>]*>${PROJECT_CHAT_OPTIONAL_MARKUP}${escapeRegExp(sourceKey)}${PROJECT_CHAT_OPTIONAL_MARKUP}<\/button>`;
+  return String.raw`<button[^>]*data-conversation-source-tag="true"[^>]*data-conversation-source-key="${escapeRegExp(sourceKey)}"[^>]*>[\s\S]*?<\/button>`;
 };
 
 const buildConversationSourceTagTextPattern = (label: string): RegExp => {
@@ -323,6 +323,9 @@ test('legacy assistant messages without citationContent append a single inline s
     countMatches(messageHtml, /data-conversation-source-tag="true"/),
     1,
   );
+  assert.match(messageHtml, /data-conversation-source-tag-shell="true"/);
+  assert.match(messageHtml, /data-conversation-source-tag-icon="true"/);
+  assert.doesNotMatch(messageHtml, /data-conversation-source-tag-accent="true"/);
   assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('legacy-evidence'));
   assert.doesNotMatch(footerHtml, /data-conversation-sources-trigger=/);
 });

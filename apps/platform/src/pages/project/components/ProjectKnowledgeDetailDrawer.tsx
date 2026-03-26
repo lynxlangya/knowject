@@ -149,7 +149,7 @@ export const ProjectKnowledgeDetailDrawer = ({
     return (
       <article
         key={document.id}
-        className="rounded-card border border-slate-200 bg-slate-50/80 p-4"
+        className="rounded-card border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-[#C2EDE6] hover:shadow-[0_4px_16px_rgba(15,42,38,0.07)]"
       >
         <div className="flex items-start justify-between gap-3">
           <Tooltip
@@ -337,9 +337,15 @@ export const ProjectKnowledgeDetailDrawer = ({
         />
       ) : knowledge ? (
         <div className="space-y-5">
-          <section className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] p-5">
+          <section className="rounded-3xl border border-[#C2EDE6] bg-[linear-gradient(180deg,rgba(242,253,251,0.96),rgba(232,248,245,0.92))] p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <Tag color={readOnlyGlobal ? "blue" : "green"}>
+              <Tag
+                style={{
+                  borderColor: 'rgba(40,184,160,0.35)',
+                  backgroundColor: 'rgba(40,184,160,0.08)',
+                  color: '#1A8A77',
+                }}
+              >
                 {readOnlyGlobal
                   ? tp('resources.group.sourceGlobal')
                   : tp('resources.group.sourceProject')}
@@ -359,9 +365,9 @@ export const ProjectKnowledgeDetailDrawer = ({
               }).map((item) => (
                 <div
                   key={item.label}
-                  className="rounded-panel border border-white/70 bg-white/80 px-4 py-3"
+                  className="rounded-panel border border-[#C2EDE6] bg-white/90 px-4 py-3"
                 >
-                  <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                  <Typography.Text className="text-xs uppercase tracking-[0.12em] text-[#1A8A77]">
                     {item.label}
                   </Typography.Text>
                   <Typography.Title
@@ -440,8 +446,8 @@ export const ProjectKnowledgeDetailDrawer = ({
                 ) : diagnostics ? (
                   <div className="space-y-4">
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4">
-                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                      <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] px-4 py-4">
+                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-[#1A8A77]">
                           Collection
                         </Typography.Text>
                         <Typography.Title
@@ -450,12 +456,12 @@ export const ProjectKnowledgeDetailDrawer = ({
                         >
                           {diagnostics.collection.exists ? 'OK' : 'N/A'}
                         </Typography.Title>
-                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-[#4A6260]!">
                           {diagnostics.expectedCollectionName}
                         </Typography.Paragraph>
                       </div>
-                      <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4">
-                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                      <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] px-4 py-4">
+                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-[#1A8A77]">
                           Indexer
                         </Typography.Text>
                         <Typography.Title
@@ -466,12 +472,12 @@ export const ProjectKnowledgeDetailDrawer = ({
                             ? 'OK'
                             : 'Degraded'}
                         </Typography.Title>
-                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-[#4A6260]!">
                           {diagnostics.indexer.service ?? 'N/A'}
                         </Typography.Paragraph>
                       </div>
-                      <div className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4">
-                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-slate-400">
+                      <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] px-4 py-4">
+                        <Typography.Text className="text-xs uppercase tracking-[0.12em] text-[#1A8A77]">
                           {tp('resources.detail.abnormalDocs')}
                         </Typography.Text>
                         <Typography.Title
@@ -482,7 +488,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                             diagnostics.documentSummary.missingStorage +
                             diagnostics.documentSummary.staleProcessing}
                         </Typography.Title>
-                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                        <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-[#4A6260]!">
                           {tp('resources.detail.abnormalDocsHint')}
                         </Typography.Paragraph>
                       </div>
@@ -506,10 +512,10 @@ export const ProjectKnowledgeDetailDrawer = ({
                       />
                     ) : null}
 
-                    <div className="rounded-card border border-slate-200 bg-white p-4">
+                    <div className="rounded-card border border-[#C2EDE6] bg-white p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <FileTextOutlined className="text-slate-400" />
+                          <FileTextOutlined className="text-[#28B8A0]" />
                           <Typography.Title
                             level={5}
                             className="mb-0! text-slate-800!"
@@ -527,7 +533,7 @@ export const ProjectKnowledgeDetailDrawer = ({
                           diagnostics.documents.map((document) => (
                             <div
                               key={document.id}
-                              className="rounded-panel border border-slate-200 bg-slate-50/70 px-4 py-3"
+                              className="rounded-panel border border-slate-200 bg-white px-4 py-3 transition-all duration-200 hover:border-[#C2EDE6]"
                             >
                               <div className="flex flex-wrap items-center gap-2">
                                 <Typography.Text className="font-medium text-slate-800!">

@@ -332,29 +332,38 @@ export const ProjectMembersPage = () => {
   return (
     <section className="flex min-h-full flex-col gap-4">
       <Card
-        className="rounded-3xl! border-slate-200! shadow-surface!"
+        className="rounded-3xl! border-[#C2EDE6]! shadow-surface!"
         styles={{ body: { padding: "22px 22px 20px" } }}
       >
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
-            <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+            <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1A8A77]">
               {t("members.pageEyebrow")}
             </Typography.Text>
             <Typography.Title level={3} className="mb-0! mt-2 text-slate-800!">
               {t("members.pageTitle")}
             </Typography.Title>
-            <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
+            <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-[#4A6260]!">
               {t("members.pageDescription")}
             </Typography.Paragraph>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:min-w-155 xl:grid-cols-4">
-            {summaryItems.map((item) => (
+            {summaryItems.map((item, index) => (
               <div
                 key={item.label}
-                className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4"
+                className="group relative overflow-hidden rounded-panel border border-[#C2EDE6] bg-[#F2FDFB] px-4 py-4 transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(15,42,38,0.08)]"
+                style={{
+                  animation: `metricFadeIn 360ms cubic-bezier(0.22,1,0.36,1) both`,
+                  animationDelay: `${index * 60}ms`,
+                }}
               >
-                <Typography.Text className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+                <span
+                  className="absolute inset-x-0 top-0 h-0.5 rounded-b-full opacity-60 transition-opacity duration-200 group-hover:opacity-100"
+                  style={{ backgroundColor: '#28B8A0' }}
+                  aria-hidden="true"
+                />
+                <Typography.Text className="text-xs font-semibold uppercase tracking-[0.14em] text-[#1A8A77]">
                   {item.label}
                 </Typography.Text>
                 <Typography.Title
@@ -363,7 +372,7 @@ export const ProjectMembersPage = () => {
                 >
                   {item.value}
                 </Typography.Title>
-                <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-slate-500!">
+                <Typography.Paragraph className="mb-0! mt-2 text-xs! leading-5! text-[#4A6260]!">
                   {item.hint}
                 </Typography.Paragraph>
               </div>
@@ -374,11 +383,11 @@ export const ProjectMembersPage = () => {
 
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
         <Card
-          className="rounded-3xl! border-slate-200! shadow-surface!"
+          className="rounded-3xl! border-[#C2EDE6]! shadow-surface!"
           styles={{ body: { padding: "20px" } }}
         >
           <div className="flex items-center gap-2">
-            <UserAddOutlined className="text-slate-400" />
+            <UserAddOutlined className="text-[#28B8A0]" />
             <Typography.Title level={5} className="mb-0! text-slate-800!">
               {t("members.formTitle")}
             </Typography.Title>
@@ -482,12 +491,12 @@ export const ProjectMembersPage = () => {
         </Card>
 
         <Card
-          className="rounded-3xl! border-slate-200! shadow-surface!"
+          className="rounded-3xl! border-[#C2EDE6]! shadow-surface!"
           styles={{ body: { padding: "20px" } }}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+              <Typography.Text className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1A8A77]">
                 {t("members.listEyebrow")}
               </Typography.Text>
               <Typography.Title
@@ -497,7 +506,7 @@ export const ProjectMembersPage = () => {
                 {t("members.listTitle")}
               </Typography.Title>
             </div>
-            <Typography.Text className="text-sm text-slate-400">
+            <Typography.Text className="text-sm text-[#4A6260]">
               {t("members.listProjectLabel", { name: activeProject.name })}
             </Typography.Text>
           </div>
@@ -517,7 +526,7 @@ export const ProjectMembersPage = () => {
                 return (
                   <article
                     key={member.userId}
-                    className="flex flex-col gap-4 rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4 lg:flex-row lg:items-center lg:justify-between"
+                    className="group flex flex-col gap-4 rounded-card border border-slate-200 bg-white px-4 py-4 transition-all duration-200 hover:border-[#C2EDE6] hover:shadow-[0_4px_12px_rgba(15,42,38,0.06)] lg:flex-row lg:items-center lg:justify-between"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -525,7 +534,7 @@ export const ProjectMembersPage = () => {
                           {member.name}
                         </Typography.Text>
                         {isCurrentUser ? (
-                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-500">
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500">
                             {t("members.currentAccount")}
                           </span>
                         ) : null}

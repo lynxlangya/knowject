@@ -70,12 +70,39 @@ test('conversation sources use page-level right drawer instead of message-local 
     /import\s+\{\s*Popover,\s*Typography\s*\}\s+from\s+'antd'/,
   );
   assert.match(bubbleSource, /data-conversation-source-tag="true"/);
+  assert.match(bubbleSource, /data-conversation-source-tag-shell="true"/);
+  assert.match(bubbleSource, /data-conversation-source-tag-icon="true"/);
+  assert.doesNotMatch(bubbleSource, /data-conversation-source-tag-accent="true"/);
   assert.match(bubbleSource, /const\s+PROJECT_CHAT_SOURCE_TAG_CLASS_NAME\s*=\s*\[/);
-  assert.match(bubbleSource, /h-5 items-center/);
-  assert.match(bubbleSource, /px-2 align-middle text-\[8px\]/);
+  assert.match(bubbleSource, /group\/source/);
+  assert.match(bubbleSource, /rounded-full/);
   assert.match(projectChatPageSource, /<ProjectConversationSourceDrawer/);
   assert.match(projectChatPageSource, /<Drawer[\s\S]*?placement="right"/);
   assert.match(projectChatPageSource, /onOpenSource:\s*\(sourceKey:\s*string\)\s*=>/);
+});
+
+test('conversation source drawer uses a custom shell instead of default drawer chrome', () => {
+  const projectChatPageSource = readFileSync(
+    new URL('../src/pages/project/ProjectChatPage.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    projectChatPageSource,
+    /const\s+PROJECT_CHAT_SOURCE_SHELL_DRAWER_CLASS_NAMES\s*=\s*\{[\s\S]*?header:\s*['"`][^'"`]*[\s\S]*?body:\s*['"`][^'"`]*[\s\S]*?close:\s*['"`][^'"`]*[\s\S]*?\}\s+as const;/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /const\s+PROJECT_CHAT_SOURCE_SHELL_DRAWER_STYLES\s*=\s*\{[\s\S]*?body:\s*\{[\s\S]*?padding:\s*['"`]12px 12px 14px['"`]/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /const\s+sourceDrawerTitle\s*=\s*\([\s\S]*?data-project-chat-source-drawer-shell-title="true"[\s\S]*?tp\('conversation\.references'\)[\s\S]*?tp\('conversation\.viewSources'\)/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /<Drawer[\s\S]*?title=\{sourceDrawerTitle\}[\s\S]*?classNames=\{PROJECT_CHAT_SOURCE_SHELL_DRAWER_CLASS_NAMES\}[\s\S]*?styles=\{PROJECT_CHAT_SOURCE_SHELL_DRAWER_STYLES\}/,
+  );
 });
 
 test('project knowledge draft flow source no longer keeps legacy create-then-upload copy or partial failure state', () => {

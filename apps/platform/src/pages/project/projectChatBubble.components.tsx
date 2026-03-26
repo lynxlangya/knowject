@@ -1,6 +1,7 @@
 import {
   CopyOutlined,
   EditOutlined,
+  LinkOutlined,
   RedoOutlined,
   StarFilled,
   StarOutlined,
@@ -82,8 +83,13 @@ const getProjectChatBubbleStatusLabel = (status: ProjectChatBubbleStatus): strin
 };
 
 const PROJECT_CHAT_SOURCE_TAG_CLASS_NAME = [
-  'ml-1.5 inline-flex h-5 items-center rounded-full border border-slate-200/90 bg-slate-100/70 px-2 align-middle text-[8px] font-medium tracking-[0.01em] text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors duration-200',
-  'hover:border-slate-300 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-200',
+  'group/source ml-1.5 inline-flex h-5.5 w-5.5 items-center justify-center rounded-full border border-[#cfe4de] bg-white/92 align-middle shadow-[0_2px_8px_rgba(31,122,103,0.08)] transition-all duration-200',
+  'hover:-translate-y-px hover:border-[#9cd4c8] hover:bg-[#f7fcfa] hover:shadow-[0_6px_14px_rgba(31,122,103,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b0e6dc] focus-visible:ring-offset-2',
+].join(' ');
+
+const PROJECT_CHAT_SOURCE_TAG_ICON_CLASS_NAME = [
+  'inline-flex items-center justify-center text-[11px] text-[#5a8077]',
+  'transition-colors duration-200 group-hover/source:text-[#18463d]',
 ].join(' ');
 
 const buildLegacySourceTagLabelMap = (
@@ -121,6 +127,7 @@ const renderProjectConversationSourceTag = ({
       aria-label={tp('conversation.viewSources')}
       aria-haspopup="dialog"
       data-conversation-source-tag="true"
+      data-conversation-source-tag-shell="true"
       data-conversation-source-key={sourceKey}
       className={PROJECT_CHAT_SOURCE_TAG_CLASS_NAME}
       onClick={(event) => {
@@ -129,7 +136,14 @@ const renderProjectConversationSourceTag = ({
         onOpenSource?.(sourceKey);
       }}
     >
-      {label}
+      <span
+        aria-hidden="true"
+        data-conversation-source-tag-icon="true"
+        className={PROJECT_CHAT_SOURCE_TAG_ICON_CLASS_NAME}
+      >
+        <LinkOutlined />
+      </span>
+      <span className="sr-only">{label}</span>
     </button>
   );
 };

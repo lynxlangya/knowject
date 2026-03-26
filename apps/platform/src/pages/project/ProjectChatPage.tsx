@@ -1,5 +1,6 @@
 import {
   ArrowUpOutlined,
+  CloseOutlined,
   PlusOutlined,
   PushpinOutlined,
   StopOutlined,
@@ -49,6 +50,25 @@ import { useProjectConversationTurn } from './useProjectConversationTurn';
 import { useProjectConversationSourceDrawer } from './useProjectConversationSourceDrawer';
 import { useProjectPageContext } from './projectPageContext';
 import { tp } from './project.i18n';
+
+const PROJECT_CHAT_SOURCE_SHELL_DRAWER_CLASS_NAMES = {
+  header:
+    'border-b-0 bg-[linear-gradient(180deg,rgba(251,255,254,0.98),rgba(244,250,248,0.94))] px-4! pb-2! pt-4!',
+  body:
+    'bg-[linear-gradient(180deg,rgba(249,253,252,0.98),rgba(242,249,247,0.96))]',
+  close:
+    'mt-1 rounded-full border border-[#d7ebe5] bg-white/92 text-slate-500 shadow-[0_6px_16px_rgba(15,23,42,0.05)] transition-colors hover:border-[#bfe3da] hover:bg-[#f9fdfc] hover:text-[#1f7a67]',
+} as const;
+
+const PROJECT_CHAT_SOURCE_SHELL_DRAWER_STYLES = {
+  body: {
+    padding: '12px 12px 14px',
+  },
+  mask: {
+    backdropFilter: 'blur(4px)',
+    background: 'rgba(15, 23, 42, 0.16)',
+  },
+} as const;
 
 export const ProjectChatPage = () => {
   const navigate = useNavigate();
@@ -318,6 +338,19 @@ export const ProjectChatPage = () => {
     buildKnowledgeDraftFromSelection,
     saveKnowledgeDraft,
   });
+  const sourceDrawerTitle = (
+    <div
+      data-project-chat-source-drawer-shell-title="true"
+      className="flex min-w-0 flex-col gap-1"
+    >
+      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b8f86]">
+        {tp('conversation.references')}
+      </span>
+      <span className="truncate text-[18px] font-semibold tracking-[-0.02em] text-[#173c35]">
+        {tp('conversation.viewSources')}
+      </span>
+    </div>
+  );
 
   const handleScrollToMessage = (messageId: string) => {
     document.getElementById(`project-chat-message-${messageId}`)?.scrollIntoView({
@@ -624,8 +657,11 @@ export const ProjectChatPage = () => {
             <Drawer
               open={sourceDrawer.state.open}
               size={460}
-              title={tp('conversation.viewSources')}
+              title={sourceDrawerTitle}
               placement="right"
+              closeIcon={<CloseOutlined className="text-[13px]" />}
+              classNames={PROJECT_CHAT_SOURCE_SHELL_DRAWER_CLASS_NAMES}
+              styles={PROJECT_CHAT_SOURCE_SHELL_DRAWER_STYLES}
               onClose={sourceDrawer.closeDrawer}
             >
               <ProjectConversationSourceDrawer

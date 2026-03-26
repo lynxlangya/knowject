@@ -5,6 +5,8 @@ import type {
 
 const PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_PATTERN =
   /\s*\[\[source\d+\]\]/g;
+const PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_CAPTURE_PATTERN =
+  /\s*\[\[(source\d+)\]\]/g;
 
 const getProjectConversationCitationSourceId = (
   source: ProjectConversationSourceDocument,
@@ -282,6 +284,98 @@ const normalizeCitationTextForComparison = (value: string): string => {
     .trim();
 };
 
+export const buildProjectConversationCitationContentFromSourcePlaceholders = (
+  answer: string,
+  sources: ProjectConversationSourceDocument[],
+): ProjectConversationCitationContent | null => {
+  const normalizedAnswer = answer.replace(/\r\n/g, '\n').trim();
+
+  if (!normalizedAnswer.includes('[[source')) {
+    return null;
+  }
+
+  const sourceIdByKey = new Map(
+    sources.map((source, index) => [
+      source.sourceKey ?? `source${index + 1}`,
+      getProjectConversationCitationSourceId(source, index),
+    ]),
+  );
+  const sentences: ProjectConversationCitationContent['sentences'] = [];
+  let sentenceIndex = 1;
+  let cursor = 0;
+  let match: RegExpExecArray | null =
+    PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_CAPTURE_PATTERN.exec(
+      normalizedAnswer,
+    );
+
+  while (match) {
+    const sentenceText = normalizedAnswer.slice(cursor, match.index);
+    const sourceIds: string[] = [];
+    const seenSourceIds = new Set<string>();
+    let groupEnd = PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_CAPTURE_PATTERN.lastIndex;
+    let currentMatch: RegExpExecArray | null = match;
+
+    while (currentMatch) {
+      const sourceKey = currentMatch[1];
+      const sourceId = sourceKey ? sourceIdByKey.get(sourceKey) : undefined;
+
+      if (sourceId && !seenSourceIds.has(sourceId)) {
+        sourceIds.push(sourceId);
+        seenSourceIds.add(sourceId);
+      }
+
+      const nextMatch =
+        PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_CAPTURE_PATTERN.exec(
+          normalizedAnswer,
+        );
+
+      if (!nextMatch || nextMatch.index !== groupEnd) {
+        match = nextMatch;
+        break;
+      }
+
+      groupEnd = PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_CAPTURE_PATTERN.lastIndex;
+      currentMatch = nextMatch;
+    }
+
+    if (sentenceText.length > 0) {
+      sentences.push({
+        id: `placeholder-sent-${sentenceIndex++}`,
+        text: sentenceText,
+        sourceIds,
+        grounded: sourceIds.length > 0,
+      });
+    }
+
+    cursor = groupEnd;
+  }
+
+  PROJECT_CONVERSATION_SOURCE_PLACEHOLDER_CAPTURE_PATTERN.lastIndex = 0;
+
+  const trailingText = normalizedAnswer.slice(cursor);
+  if (trailingText.length > 0) {
+    sentences.push({
+      id: `placeholder-sent-${sentenceIndex++}`,
+      text: trailingText,
+      sourceIds: [],
+      grounded: false,
+    });
+  }
+
+  if (sentences.length === 0) {
+    return null;
+  }
+
+  return normalizeProjectConversationCitationContent(
+    {
+      version: 1,
+      sentences,
+    },
+    normalizedAnswer,
+    sources,
+  );
+};
+
 export const normalizeProjectConversationCitationContent = (
   payload: unknown,
   answer: string,
@@ -304,6 +398,7 @@ export const normalizeProjectConversationCitationContent = (
     ),
   );
   const normalizedSentences: ProjectConversationCitationContent['sentences'] = [];
+  let answerCursor = 0;
 
   for (const sentence of parsedPayload.sentences) {
     if (!isRecord(sentence) || typeof sentence.grounded !== 'boolean') {
@@ -313,7 +408,7 @@ export const normalizeProjectConversationCitationContent = (
     const sentenceId =
       typeof sentence.id === 'string' ? sentence.id.trim() : '';
     const sentenceText =
-      typeof sentence.text === 'string' ? sentence.text.trim() : '';
+      typeof sentence.text === 'string' ? sentence.text : '';
     const normalizedSourceIds = normalizeSentenceSourceIds(
       sentence.sourceIds,
       allowedSourceIds,
@@ -324,7 +419,26 @@ export const normalizeProjectConversationCitationContent = (
     }
 
     const grounded = sentence.grounded && normalizedSourceIds.length > 0;
-    const normalizedSentenceText = normalizeCitationTextForComparison(sentenceText);
+    const sentenceCoreText = normalizeCitationTextForComparison(sentenceText);
+
+    if (!sentenceCoreText) {
+      return null;
+    }
+
+    const remainingAnswer = normalizedAnswer.slice(answerCursor);
+    const sentenceOffset = remainingAnswer.indexOf(sentenceCoreText);
+
+    if (sentenceOffset < 0) {
+      return null;
+    }
+
+    const leadingBoundary = remainingAnswer.slice(0, sentenceOffset);
+    if (leadingBoundary.trim() !== '') {
+      return null;
+    }
+
+    const normalizedSentenceText = `${leadingBoundary}${sentenceCoreText}`;
+    answerCursor += sentenceOffset + sentenceCoreText.length;
 
     normalizedSentences.push({
       id: sentenceId,
@@ -338,11 +452,7 @@ export const normalizeProjectConversationCitationContent = (
     return null;
   }
 
-  if (
-    normalizedSentences
-      .map((sentence) => sentence.text)
-      .join('') !== normalizedAnswer
-  ) {
+  if (normalizedAnswer.slice(answerCursor).trim() !== '') {
     return null;
   }
 
