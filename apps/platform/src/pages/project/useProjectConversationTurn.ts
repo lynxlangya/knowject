@@ -285,12 +285,14 @@ export const useProjectConversationTurn = ({
     doneEvent,
     persistedUserMessageId,
     pendingUserMessageCreatedAt,
+    draftAssistantContent,
     citationPatch,
   }: {
     submission: PendingProjectConversationTurnSubmission;
     doneEvent: ProjectConversationStreamDoneEvent;
     persistedUserMessageId: string | null;
     pendingUserMessageCreatedAt: string;
+    draftAssistantContent?: string;
     citationPatch?: Pick<
       ProjectConversationStreamCitationPatchEvent,
       'assistantMessageId' | 'citationContent'
@@ -312,6 +314,7 @@ export const useProjectConversationTurn = ({
             submission,
             activeUserMessageId: persistedUserMessageId,
             pendingUserMessageCreatedAt,
+            draftAssistantContent,
             assistantMessage: doneEvent.assistantMessage,
             conversationSummary: doneEvent.conversationSummary,
             citationPatch,
@@ -400,6 +403,7 @@ export const useProjectConversationTurn = ({
     let streamDoneEvent: ProjectConversationStreamDoneEvent | null = null;
     let streamCitationPatchEvent: ProjectConversationStreamCitationPatchEvent | undefined =
       undefined;
+    let streamedAssistantContent = '';
 
     pendingSubmissionRef.current = currentSubmission;
     activeTurnRef.current = currentSubmission;
@@ -485,6 +489,7 @@ export const useProjectConversationTurn = ({
                 }
                 return;
               case 'delta':
+                streamedAssistantContent = `${streamedAssistantContent}${event.delta}`;
                 setDraftAssistantMessage((currentValue) => {
                   if (!currentValue) {
                     return currentValue;
@@ -621,6 +626,7 @@ export const useProjectConversationTurn = ({
         doneEvent: streamDoneEvent,
         persistedUserMessageId,
         pendingUserMessageCreatedAt,
+        draftAssistantContent: streamedAssistantContent,
         citationPatch: streamCitationPatchEvent ?? undefined,
       });
     } catch (currentError) {

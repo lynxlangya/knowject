@@ -383,6 +383,54 @@ test('legacy [[SOURCE_TAG:...]] markers remain compatible with final sourceN chi
   assert.doesNotMatch(messageHtml, buildConversationSourceTagTextPattern('legacy-2'));
 });
 
+test('draft [[sourceN]] markers still render after sync when persisted sources exist but citationContent is absent', async () => {
+  const { messageHtml } = await renderAssistantBubble({
+    id: 'message-draft-inline-tags',
+    conversationId: 'chat-1',
+    role: 'assistant',
+    content:
+      '第一段先引用 [[source1]]。第二段继续引用 [[source1]][[source2]]。',
+    createdAt: '2026-03-23T08:06:45.000Z',
+    sources: [
+      {
+        id: 'source-1',
+        knowledgeId: 'knowledge-1',
+        documentId: 'document-draft-1',
+        chunkId: 'chunk-draft-1',
+        chunkIndex: 0,
+        source: '/knowledge/draft-1.md',
+        snippet: 'draft 证据 1。',
+        distance: 0.2,
+      },
+      {
+        id: 'source-2',
+        knowledgeId: 'knowledge-1',
+        documentId: 'document-draft-2',
+        chunkId: 'chunk-draft-2',
+        chunkIndex: 1,
+        source: '/knowledge/draft-2.md',
+        snippet: 'draft 证据 2。',
+        distance: 0.3,
+      },
+    ],
+  });
+
+  assert.match(
+    messageHtml,
+    buildSentenceEndSourcePattern({
+      sentenceText: '第一段先引用。',
+      sourceKeys: ['source1'],
+      nextText: '第二段继续引用',
+    }),
+  );
+  assert.match(messageHtml, /第二段继续引用[\s\S]*source1[\s\S]*source2/);
+  assert.equal(
+    countMatches(messageHtml, /data-conversation-source-tag="true"/),
+    3,
+  );
+  assert.doesNotMatch(messageHtml, /\[\[source\d+\]\]/);
+});
+
 test('citation mode conservatively suppresses trailing pseudo citation blocks before sentence rendering', async () => {
   const { messageHtml, footerHtml } = await renderAssistantBubble({
     id: 'message-pseudo-citation',

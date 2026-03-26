@@ -272,7 +272,11 @@ export const ProjectChatAssistantMessage = ({
   ) => {
     const resolvedSourceKeys =
       token.kind === 'draft'
-        ? sourceKeys.filter((sourceKey) => seededSourceKeys.has(sourceKey))
+        ? (
+            seededSourceKeys.size > 0
+              ? sourceKeys.filter((sourceKey) => seededSourceKeys.has(sourceKey))
+              : sourceKeys.filter((sourceKey) => availableSourceKeys.has(sourceKey))
+          )
         : sourceKeys.filter((sourceKey) => availableSourceKeys.has(sourceKey));
 
     if (resolvedSourceKeys.length === 0) {

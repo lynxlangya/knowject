@@ -316,6 +316,73 @@ test('reconcileProjectConversationDetailFromStreamDone applies a buffered citati
   });
 });
 
+test('reconcileProjectConversationDetailFromStreamDone preserves draft source markers when citation patch is absent', () => {
+  const submission = createPendingSubmission();
+  const detail = createConversationDetail();
+
+  const nextDetail = reconcileProjectConversationDetailFromStreamDone({
+    currentDetail: detail,
+    submission,
+    activeUserMessageId: 'msg-user-new',
+    pendingUserMessageCreatedAt: '2026-03-23T10:00:00.000Z',
+    draftAssistantContent:
+      '当前项目已经具备最小对话写链路。[[source1]]项目级检索也已开始接入。[[source2]]',
+    assistantMessage: {
+      id: 'msg-assistant-new',
+      conversationId: 'chat-1',
+      role: 'assistant',
+      content: '当前项目已经具备最小对话写链路。项目级检索也已开始接入。',
+      createdAt: '2026-03-23T10:00:10.000Z',
+      sources: [
+        {
+          id: 's1',
+          knowledgeId: 'kb-1',
+          documentId: 'doc-1',
+          chunkId: 'chunk-1',
+          chunkIndex: 0,
+          source: 'chat-core.md',
+          snippet:
+            '项目对话已经具备最小消息写链路，并开始接入项目级 merged retrieval。',
+          distance: 0.18,
+        },
+        {
+          id: 's2',
+          knowledgeId: 'kb-2',
+          documentId: 'doc-2',
+          chunkId: 'chunk-2',
+          chunkIndex: 1,
+          source: 'chat-retrieval.md',
+          snippet: '项目级检索已开始接入。',
+          distance: 0.22,
+        },
+      ],
+      starred: false,
+      starredAt: null,
+      starredBy: null,
+    },
+    conversationSummary: {
+      id: 'chat-1',
+      projectId: 'project-1',
+      projectName: '当前项目',
+      title: '已有会话',
+      preview: '当前项目已经具备最小对话写链路。项目级检索也已开始接入。',
+      updatedAt: '2026-03-23T10:00:10.000Z',
+      createdAt: '2026-03-22T09:00:00.000Z',
+      messageCount: 3,
+    },
+  });
+
+  const persistedAssistantMessage = nextDetail.messages.find(
+    (message) => message.id === 'msg-assistant-new',
+  );
+
+  assert.equal(
+    persistedAssistantMessage?.content,
+    '当前项目已经具备最小对话写链路。[[source1]]项目级检索也已开始接入。[[source2]]',
+  );
+  assert.equal(persistedAssistantMessage?.citationContent, undefined);
+});
+
 test('buildOptimisticProjectConversationMessages restores the original thread when replay clears', () => {
   const messages = [
     {

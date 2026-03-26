@@ -144,6 +144,7 @@ export const reconcileProjectConversationDetailFromStreamDone = ({
   submission,
   activeUserMessageId,
   pendingUserMessageCreatedAt,
+  draftAssistantContent,
   assistantMessage,
   conversationSummary,
   citationPatch,
@@ -152,6 +153,7 @@ export const reconcileProjectConversationDetailFromStreamDone = ({
   submission: PendingProjectConversationTurnSubmission;
   activeUserMessageId: string | null;
   pendingUserMessageCreatedAt: string;
+  draftAssistantContent?: string;
   assistantMessage: ProjectConversationMessageResponse;
   conversationSummary: ProjectConversationSummaryResponse;
   citationPatch?: Pick<
@@ -160,6 +162,17 @@ export const reconcileProjectConversationDetailFromStreamDone = ({
   >;
 }): ProjectConversationDetailResponse => {
   let nextMessages = currentDetail.messages;
+  const shouldPreserveDraftSourceMarkers =
+    !citationPatch &&
+    assistantMessage.citationContent === undefined &&
+    typeof draftAssistantContent === 'string' &&
+    /\[\[source\d+\]\]/i.test(draftAssistantContent);
+  const reconciledAssistantMessage = shouldPreserveDraftSourceMarkers
+    ? {
+        ...assistantMessage,
+        content: draftAssistantContent,
+      }
+    : assistantMessage;
 
   if (submission.targetUserMessageId) {
     const replayTargetIndex = nextMessages.findIndex(
@@ -193,16 +206,21 @@ export const reconcileProjectConversationDetailFromStreamDone = ({
   }
 
   const assistantMessageIndex = nextMessages.findIndex(
-    (message) => message.id === assistantMessage.id,
+    (message) => message.id === reconciledAssistantMessage.id,
   );
   nextMessages =
     assistantMessageIndex >= 0
       ? nextMessages.map((message) =>
-          message.id === assistantMessage.id ? assistantMessage : message,
+          message.id === reconciledAssistantMessage.id
+            ? reconciledAssistantMessage
+            : message,
         )
-      : [...nextMessages, assistantMessage];
+      : [...nextMessages, reconciledAssistantMessage];
 
-  if (citationPatch && citationPatch.assistantMessageId === assistantMessage.id) {
+  if (
+    citationPatch &&
+    citationPatch.assistantMessageId === reconciledAssistantMessage.id
+  ) {
     nextMessages = nextMessages.map((message) =>
       message.id === citationPatch.assistantMessageId
         ? {
