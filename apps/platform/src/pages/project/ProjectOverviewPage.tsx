@@ -5,7 +5,6 @@ import { OverviewActivityChart } from './components/overview/OverviewActivityCha
 import { OverviewInsightList } from './components/overview/OverviewInsightList';
 import { OverviewKnowledgeHealthCard } from './components/overview/OverviewKnowledgeHealthCard';
 import { OverviewMetricStrip } from './components/overview/OverviewMetricStrip';
-import { OverviewResourceCoverageCard } from './components/overview/OverviewResourceCoverageCard';
 import { useProjectPageContext } from './projectPageContext';
 import { buildProjectOverviewSummary } from './projectOverview.adapter';
 import { buildProjectOverviewInsights } from './projectOverview.insights';
@@ -90,14 +89,6 @@ export const ProjectOverviewPage = () => {
           0
         ? t('overview.states.syncing')
         : t('overview.states.healthy');
-
-  const coverageStateLabel = !overviewSummary.knowledge.available
-    ? t('overview.states.unavailable')
-    : totalResourceCount === 0
-      ? t('overview.states.noResources')
-      : overviewSummary.coverage.skills === 0 || overviewSummary.coverage.agents === 0
-        ? t('overview.states.partialCoverage')
-        : t('overview.states.ready');
 
   return (
     <section className="flex flex-col gap-4">
@@ -275,53 +266,6 @@ export const ProjectOverviewPage = () => {
           }))}
         />
       </div>
-
-      <OverviewResourceCoverageCard
-        title={t('overview.coverage.title')}
-        description={t('overview.coverage.description')}
-        stateLabel={coverageStateLabel}
-        totalLabel={t('overview.coverage.total')}
-        totalValue={overviewSummary.knowledge.available ? String(totalResourceCount) : '—'}
-        unavailableLabel={t('overview.states.unavailable')}
-        items={[
-          {
-            id: 'knowledge',
-            label: t('overview.coverage.items.knowledge'),
-            value: overviewSummary.knowledge.available
-              ? overviewSummary.coverage.knowledge
-              : '—',
-            share: overviewSummary.knowledge.available
-              ? Math.round(
-                  (overviewSummary.coverage.knowledge /
-                    Math.max(totalResourceCount, 1)) *
-                    100,
-                )
-              : null,
-          },
-          {
-            id: 'skills',
-            label: t('overview.coverage.items.skills'),
-            value: overviewSummary.coverage.skills,
-            share: overviewSummary.knowledge.available
-              ? Math.round(
-                  (overviewSummary.coverage.skills / Math.max(totalResourceCount, 1)) *
-                    100,
-                )
-              : null,
-          },
-          {
-            id: 'agents',
-            label: t('overview.coverage.items.agents'),
-            value: overviewSummary.coverage.agents,
-            share: overviewSummary.knowledge.available
-              ? Math.round(
-                  (overviewSummary.coverage.agents / Math.max(totalResourceCount, 1)) *
-                    100,
-                )
-              : null,
-          },
-        ]}
-      />
     </section>
   );
 };
