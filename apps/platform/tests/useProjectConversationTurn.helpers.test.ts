@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import * as turnHelpers from '../src/pages/project/useProjectConversationTurn.helpers';
 import {
   patchProjectConversationSummariesFromStreamDone,
   buildOptimisticProjectConversationMessages,
@@ -157,6 +158,162 @@ test('buildOptimisticProjectConversationMessages truncates later turns and updat
       },
     ],
   );
+});
+
+test('patchMessageCitationContent replaces citationContent for the targeted assistant message only', () => {
+  const detail = createConversationDetail();
+  const patchMessageCitationContent = (
+    turnHelpers as Record<string, unknown>
+  ).patchMessageCitationContent as
+    | ((
+        currentDetail: ProjectConversationDetailResponse,
+        messageId: string,
+        citationContent: NonNullable<ProjectConversationMessageResponse['citationContent']>,
+      ) => ProjectConversationDetailResponse)
+    | undefined;
+
+  assert.equal(typeof patchMessageCitationContent, 'function');
+
+  const nextDetail = patchMessageCitationContent!(
+    {
+      ...detail,
+      messages: [
+        ...detail.messages,
+        {
+          id: 'msg-assistant-new',
+          conversationId: 'chat-1',
+          role: 'assistant',
+          content: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+          createdAt: '2026-03-23T10:00:10.000Z',
+          sources: [
+            {
+              id: 's1',
+              knowledgeId: 'kb-1',
+              documentId: 'doc-1',
+              chunkId: 'chunk-1',
+              chunkIndex: 0,
+              source: 'chat-core.md',
+              snippet:
+                '项目对话已经具备最小消息写链路，并开始接入项目级 merged retrieval。',
+              distance: 0.18,
+            },
+          ],
+          starred: false,
+          starredAt: null,
+          starredBy: null,
+        },
+      ],
+    },
+    'msg-assistant-new',
+    {
+      version: 1,
+      sentences: [
+        {
+          id: 'sent-1',
+          text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+          sourceIds: ['s1'],
+          grounded: true,
+        },
+      ],
+    },
+  );
+
+  assert.equal(nextDetail.messages[1]?.citationContent, undefined);
+  const persistedAssistantMessage = nextDetail.messages.find(
+    (message) => message.id === 'msg-assistant-new',
+  );
+
+  assert.deepEqual(persistedAssistantMessage?.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'sent-1',
+        text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+    ],
+  });
+});
+
+test('reconcileProjectConversationDetailFromStreamDone applies a buffered citation patch to the persisted assistant message', () => {
+  const submission = createPendingSubmission();
+  const detail = createConversationDetail();
+
+  const nextDetail = reconcileProjectConversationDetailFromStreamDone({
+    currentDetail: detail,
+    submission,
+    activeUserMessageId: 'msg-user-new',
+    pendingUserMessageCreatedAt: '2026-03-23T10:00:00.000Z',
+    assistantMessage: {
+      id: 'msg-assistant-new',
+      conversationId: 'chat-1',
+      role: 'assistant',
+      content: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+      createdAt: '2026-03-23T10:00:10.000Z',
+      sources: [
+        {
+          id: 's1',
+          knowledgeId: 'kb-1',
+          documentId: 'doc-1',
+          chunkId: 'chunk-1',
+          chunkIndex: 0,
+          source: 'chat-core.md',
+          snippet:
+            '项目对话已经具备最小消息写链路，并开始接入项目级 merged retrieval。',
+          distance: 0.18,
+        },
+      ],
+      starred: false,
+      starredAt: null,
+      starredBy: null,
+    },
+    conversationSummary: {
+      id: 'chat-1',
+      projectId: 'project-1',
+      projectName: '当前项目',
+      title: '已有会话',
+      preview: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+      updatedAt: '2026-03-23T10:00:10.000Z',
+      createdAt: '2026-03-22T09:00:00.000Z',
+      messageCount: 3,
+    },
+    citationPatch: {
+      assistantMessageId: 'msg-assistant-new',
+      citationContent: {
+        version: 1,
+        sentences: [
+          {
+            id: 'sent-1',
+            text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+            sourceIds: ['s1'],
+            grounded: true,
+          },
+        ],
+      },
+    },
+  } as Parameters<typeof reconcileProjectConversationDetailFromStreamDone>[0] & {
+    citationPatch: {
+      assistantMessageId: string;
+      citationContent: NonNullable<ProjectConversationMessageResponse['citationContent']>;
+    };
+  });
+
+  const persistedAssistantMessage = nextDetail.messages.find(
+    (message) => message.id === 'msg-assistant-new',
+  );
+
+  assert.deepEqual(persistedAssistantMessage?.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'sent-1',
+        text: '当前项目已经具备最小对话写链路，并开始接入项目级检索。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+    ],
+  });
 });
 
 test('buildOptimisticProjectConversationMessages restores the original thread when replay clears', () => {

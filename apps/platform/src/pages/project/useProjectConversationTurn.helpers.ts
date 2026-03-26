@@ -1,7 +1,9 @@
 import type {
+  ProjectConversationCitationContent,
   ProjectConversationDetailResponse,
   ProjectConversationMessageResponse,
   ProjectConversationSummaryResponse,
+  ProjectConversationStreamCitationPatchEvent,
 } from '@api/projects';
 
 export interface PendingProjectConversationTurnSubmission {
@@ -144,6 +146,7 @@ export const reconcileProjectConversationDetailFromStreamDone = ({
   pendingUserMessageCreatedAt,
   assistantMessage,
   conversationSummary,
+  citationPatch,
 }: {
   currentDetail: ProjectConversationDetailResponse;
   submission: PendingProjectConversationTurnSubmission;
@@ -151,6 +154,10 @@ export const reconcileProjectConversationDetailFromStreamDone = ({
   pendingUserMessageCreatedAt: string;
   assistantMessage: ProjectConversationMessageResponse;
   conversationSummary: ProjectConversationSummaryResponse;
+  citationPatch?: Pick<
+    ProjectConversationStreamCitationPatchEvent,
+    'assistantMessageId' | 'citationContent'
+  >;
 }): ProjectConversationDetailResponse => {
   let nextMessages = currentDetail.messages;
 
@@ -195,10 +202,39 @@ export const reconcileProjectConversationDetailFromStreamDone = ({
         )
       : [...nextMessages, assistantMessage];
 
+  if (citationPatch && citationPatch.assistantMessageId === assistantMessage.id) {
+    nextMessages = nextMessages.map((message) =>
+      message.id === citationPatch.assistantMessageId
+        ? {
+            ...message,
+            citationContent: citationPatch.citationContent,
+          }
+        : message,
+    );
+  }
+
   return {
     ...currentDetail,
     ...conversationSummary,
     messages: nextMessages,
+  };
+};
+
+export const patchMessageCitationContent = (
+  detail: ProjectConversationDetailResponse,
+  messageId: string,
+  citationContent: ProjectConversationCitationContent,
+): ProjectConversationDetailResponse => {
+  return {
+    ...detail,
+    messages: detail.messages.map((message) =>
+      message.id === messageId
+        ? {
+            ...message,
+            citationContent,
+          }
+        : message,
+    ),
   };
 };
 

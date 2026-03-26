@@ -47,7 +47,8 @@ export type ProjectConversationStreamEventType =
   | 'delta'
   | 'sources_seed'
   | 'done'
-  | 'error';
+  | 'error'
+  | 'citation_patch';
 export type ProjectConversationStreamFinishReason =
   | 'stop'
   | 'length'
@@ -173,6 +174,13 @@ export interface ProjectConversationStreamDoneEvent
   conversationSummary: ProjectConversationSummaryResponse;
 }
 
+export interface ProjectConversationStreamCitationPatchEvent
+  extends ProjectConversationStreamEventBase {
+  type: 'citation_patch';
+  assistantMessageId: string;
+  citationContent: ProjectConversationCitationContent;
+}
+
 export interface ProjectConversationStreamErrorEvent
   extends ProjectConversationStreamEventBase {
   type: 'error';
@@ -186,6 +194,7 @@ export type ProjectConversationStreamEvent =
   | ProjectConversationStreamDeltaEvent
   | ProjectConversationStreamSourcesSeedEvent
   | ProjectConversationStreamDoneEvent
+  | ProjectConversationStreamCitationPatchEvent
   | ProjectConversationStreamErrorEvent;
 
 const PROJECT_CHAT_MESSAGE_TIMEOUT_MS = 30000;

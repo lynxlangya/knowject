@@ -12,10 +12,12 @@ import type {
   ProjectCommandContext,
   ProjectConversationDetailEnvelope,
   ProjectConversationMessageResponse,
+  ProjectConversationSourceDocument,
   ProjectConversationStreamDoneEvent,
   ProjectConversationStreamSeedSource,
   ProjectConversationStreamOptions,
 } from "./projects.types.js";
+import type { EffectiveLlmConfig } from "@modules/settings/settings.types.js";
 import {
   createProjectConversationStreamErrorEvent,
   createProjectConversationStreamEventEmitter,
@@ -144,6 +146,53 @@ export const createStreamingProjectConversationTurn = async ({
   });
   let assistantPersisted = false;
   let pendingSourcesSeed: ProjectConversationStreamSeedSource[] | null = null;
+  const generateCitationAfterDone = async ({
+    assistantMessageId,
+    content,
+    sources,
+    llmConfig,
+  }: {
+    assistantMessageId: string;
+    content: string;
+    sources: ProjectConversationSourceDocument[];
+    llmConfig: EffectiveLlmConfig;
+  }): Promise<void> => {
+    if (sources.length === 0) {
+      return;
+    }
+
+    try {
+      const citationContent = await conversationRuntime.generateCitationContent({
+        llmConfig,
+        answer: content,
+        sources,
+      });
+
+      if (!citationContent) {
+        return;
+      }
+
+      const updatedConversation =
+        await projectConversationsRepository.updateMessageCitationContent(
+          preparedTurn.projectId,
+          preparedTurn.conversationId,
+          assistantMessageId,
+          citationContent,
+        );
+
+      if (!updatedConversation) {
+        return;
+      }
+
+      await eventEmitter.emitEvent({
+        type: "citation_patch",
+        assistantMessageId,
+        citationContent,
+      });
+    } catch (error) {
+      console.error("[Citation] Failed to generate citation patch:", error);
+    }
+  };
 
   try {
     await eventEmitter.emitEvent({
@@ -218,7 +267,6 @@ export const createStreamingProjectConversationTurn = async ({
         assistantReply: {
           content: streamReply.content,
           sources: streamReply.sources,
-          citationContent: streamReply.citationContent,
         },
         locale: context.locale,
       });
@@ -231,6 +279,13 @@ export const createStreamingProjectConversationTurn = async ({
         finishReason: streamReply.finishReason,
       }),
     );
+
+    await generateCitationAfterDone({
+      assistantMessageId: persistedAssistantReply.assistantMessageId,
+      content: streamReply.content,
+      sources: streamReply.sources,
+      llmConfig: streamReply.llmConfig,
+    });
   } catch (error) {
     if (!assistantPersisted) {
       await restorePreparedReplayConversation(

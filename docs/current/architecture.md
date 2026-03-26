@@ -22,9 +22,9 @@
 核心参与者（只列出与 Task 7 同步相关部分）：
 
 - `useProjectConversationTurn`
-  - 发起 `POST .../messages/stream`，消费 SSE events（`ack/delta/sources_seed/done/error`）
+  - 发起 `POST .../messages/stream`，消费 SSE events（`ack/delta/sources_seed/done/citation_patch/error`）
   - 维护 draft assistant message（streaming 文本）与 source seed 暂存
-  - 在 `done` 后触发 draft-to-persisted handoff 所需状态（`assistantMessageHandoff`）
+  - 在 `done` 后触发 draft-to-persisted handoff 所需状态（`assistantMessageHandoff`），并在 `citation_patch` 到达后补丁更新 persisted message 的 `citationContent`
 - `useProjectConversationSourceDrawer`
   - 管理 sources Drawer 的 open/messageId/activeSourceKey/activeChunkId/status
   - 负责把 Drawer 的 `messageId` 从 draft id 平滑切换到 persisted assistantMessageId

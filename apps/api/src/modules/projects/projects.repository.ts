@@ -3,6 +3,7 @@ import type { MongoDatabaseManager } from "@db/mongo.js";
 import { toObjectId } from "@lib/mongo-id.js";
 import type {
   ProjectConversationCollectionDocument,
+  ProjectConversationCitationContent,
   ProjectConversationMessageDocument,
   ProjectConversationTitleOrigin,
   ProjectDocument,
@@ -421,6 +422,32 @@ export class ProjectConversationsRepository {
             "message.id": messageId,
           },
         ],
+        returnDocument: "after",
+      },
+    );
+
+    return result;
+  }
+
+  async updateMessageCitationContent(
+    projectId: string,
+    conversationId: string,
+    messageId: string,
+    citationContent: ProjectConversationCitationContent,
+  ): Promise<WithId<ProjectConversationCollectionDocument> | null> {
+    const collection = await this.getCollection();
+    const result = await collection.findOneAndUpdate(
+      {
+        projectId,
+        id: conversationId,
+        "messages.id": messageId,
+      },
+      {
+        $set: {
+          "messages.$.citationContent": citationContent,
+        },
+      },
+      {
         returnDocument: "after",
       },
     );

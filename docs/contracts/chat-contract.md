@@ -48,7 +48,13 @@ Body (stream request contract):
 ```ts
 {
   version: "v1";
-  type: "ack" | "delta" | "sources_seed" | "done" | "error";
+  type:
+    | "ack"
+    | "delta"
+    | "sources_seed"
+    | "done"
+    | "citation_patch"
+    | "error";
   sequence: number;
   conversationId: string;
   clientRequestId: string;
@@ -130,9 +136,33 @@ Body (stream request contract):
 语义：
 
 - 表示本次 turn 已结束，且 assistant message 已落库（`assistantMessagePersisted: true`）。
-- `assistantMessage` 是最终 persisted assistant message 的真相源（包含可选 `sources[] / citationContent`）。
+- `assistantMessage` 是 `done` 时刻的 persisted assistant message 真相源（包含 `sources[]`，`citationContent` 可能仍为空）。
 
-### 2.5 `error`
+### 2.5 `citation_patch`
+
+```ts
+{
+  type: "citation_patch";
+  assistantMessageId: string;
+  citationContent: {
+    version: 1;
+    sentences: Array<{
+      id: string;
+      text: string;
+      sourceIds: string[];
+      grounded: boolean;
+    }>;
+  };
+}
+```
+
+语义：
+
+- 表示同一 turn 的 citation grounding 在 `done` 之后异步完成。
+- 客户端必须按 `assistantMessageId` 幂等覆盖目标 assistant message 的 `citationContent`。
+- `citation_patch` 是增强事件，不保证一定发送；失败或取消时可缺席。
+
+### 2.6 `error`
 
 ```ts
 {
@@ -192,6 +222,7 @@ Body (stream request contract):
 
 - `sources[].id` 是 message-local 稳定 id；`citationContent.sentences[].sourceIds[]` 引用该 `id`。
 - `citationContent` 可选；当不存在或不通过校验时，客户端会回退到 legacy source 渲染路径。
+- 流式主路径下，`citationContent` 允许在 `done` 时暂时缺席，稍后由 `citation_patch` 补齐。
 
 ## 4. Source Semantics
 

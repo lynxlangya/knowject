@@ -103,9 +103,11 @@ const splitMarkdownDomProps = <TRest extends Record<string, unknown>>(
 ) => {
   const {
     class: legacyClassName,
+    renderInlineSourceTag: _renderInlineSourceTag,
     ...restProps
   } = props as TRest & {
     class?: unknown;
+    renderInlineSourceTag?: unknown;
   };
 
   return {

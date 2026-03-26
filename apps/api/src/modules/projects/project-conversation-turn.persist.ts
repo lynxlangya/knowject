@@ -71,6 +71,18 @@ export const ensurePersistedConversationProject = async ({
     return persistedConversation;
   }
 
+  // Fallback: check legacy embedded conversations if not migrated yet
+  // (MongoDB documents may have conversations field not declared in TypeScript type)
+  const legacyConversations = (project as ProjectDocument & {
+    conversations?: ProjectConversationDocument[];
+  }).conversations;
+  const legacyConversation = legacyConversations?.find(
+    (c) => c.id === conversationId,
+  );
+  if (legacyConversation) {
+    return legacyConversation;
+  }
+
   if (conversationId === "chat-default") {
     const persistedConversations =
       await projectConversationsRepository.listByProjectId(projectId);
@@ -109,9 +121,16 @@ export const readPersistedConversationTarget = async (
     throw createProjectNotFoundError();
   }
 
+  // Fallback: check legacy embedded conversations if not migrated yet
+  const legacyConversations = (currentProject as ProjectDocument & {
+    conversations?: ProjectConversationDocument[];
+  }).conversations;
+  const effectiveConversation =
+    conversation ?? legacyConversations?.find((c) => c.id === conversationId) ?? null;
+
   return {
     project: currentProject,
-    conversation,
+    conversation: effectiveConversation,
   };
 };
 

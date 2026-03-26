@@ -94,27 +94,18 @@ Canonical 路由：
 - Secret 键支持 `<NAME>_FILE` 形式：`MONGODB_URI_FILE`、`JWT_SECRET_FILE`、`SETTINGS_ENCRYPTION_KEY_FILE`、`KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE`
 - 同一 env 文件中禁止同时定义 `NAME` 和 `NAME_FILE`
 
-## i18n 约束
+## 前端规范
 
-- 所有用户可见文案必须走 `react-i18next`，不能保留自然语言字面量
-- helper / constants 产出可见文案时同样必须从 i18n 读取
-- locale source guard 测试在 `apps/platform/tests/*.locale.test.ts`，改动文案时须通过
+详细规范见 [.claude/rules/frontend.md](.claude/rules/frontend.md)
 
-## 代码结构治理红线
+## 后端规范
 
-**不可逾越的红线：**
-- 明文 secrets 不进入代码或 git
-- Docker/数据库不对外暴露（除显式 dev 端口）
-- internal 路由在非 development 环境须 fail-close（见 `apps/indexer-py` 实现）
-- 新增/变更接口须同步对应契约文档
+详细规范见 [.claude/rules/backend.md](.claude/rules/backend.md)
 
-**当前结构治理 hotspot（每次改动前重新对齐职责）：**
-- `apps/platform/src/pages/project/ProjectChatPage.tsx`
-- `apps/platform/src/app/layouts/components/AppSider.tsx`
-- `apps/api/src/modules/knowledge/knowledge.repository.ts`
+## 安全红线
 
-文件行数接近或超过 550 行且存在多重职责时，须触发结构治理判断。
+详细规范见 [.claude/rules/safety.md](.claude/rules/safety.md)
 
-## 提交信息约定
+## Git 约定
 
-用户要求提交时，默认提供草案而非直接执行 `git commit`。提交信息须包含标题 + `Why`、`What`、`Validation`、`Risk` 四段正文；多个单一目的改动优先拆分为多个 commit 草案。
+详细规范见 [.claude/rules/git.md](.claude/rules/git.md)

@@ -6,6 +6,7 @@ import type {
   KnowledgeSearchResponse,
 } from "@modules/knowledge/knowledge.types.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
+import type { EffectiveLlmConfig } from "@modules/settings/settings.types.js";
 import { buildDefaultProjectConversationTitle } from "./projects.shared.js";
 import {
   buildProjectConversationCitationSources,
@@ -60,8 +61,13 @@ export interface ProjectConversationRuntime {
     content: string;
     sources: ProjectConversationSourceDocument[];
     finishReason: ProjectConversationStreamFinishReason;
-    citationContent?: ProjectConversationCitationContent;
+    llmConfig: EffectiveLlmConfig;
   }>;
+  generateCitationContent(input: {
+    llmConfig: EffectiveLlmConfig;
+    answer: string;
+    sources: ProjectConversationSourceDocument[];
+  }): Promise<ProjectConversationCitationContent | undefined>;
 }
 
 export const DEFAULT_PROJECT_CONVERSATION_TITLE = "新对话";
@@ -434,7 +440,7 @@ export const createProjectConversationRuntime = ({
     answer,
     sources,
   }: {
-    llmConfig: Awaited<ReturnType<typeof getEffectiveLlmConfig>>;
+    llmConfig: EffectiveLlmConfig;
     answer: string;
     sources: ProjectConversationSourceDocument[];
   }): Promise<ProjectConversationCitationContent | undefined> => {
@@ -475,6 +481,8 @@ export const createProjectConversationRuntime = ({
   };
 
   return {
+    generateCitationContent,
+
     generateAssistantReply: async ({
       actor,
       locale,
@@ -535,20 +543,12 @@ export const createProjectConversationRuntime = ({
         signal,
         onDelta,
       });
-      const citationContent =
-        streamedReply.finishReason === "cancelled"
-          ? undefined
-          : await generateCitationContent({
-              llmConfig,
-              answer: streamedReply.content,
-              sources,
-            });
 
       return {
         content: streamedReply.content,
         sources,
         finishReason: streamedReply.finishReason,
-        ...(citationContent !== undefined ? { citationContent } : {}),
+        llmConfig,
       };
     },
   };

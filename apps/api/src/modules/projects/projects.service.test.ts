@@ -7,8 +7,10 @@ import { encryptApiKey } from '@lib/crypto.js';
 import { ObjectId } from 'mongodb';
 import type { AuthRepository } from '@modules/auth/auth.repository.js';
 import type { SettingsRepository } from '@modules/settings/settings.repository.js';
+import type { EffectiveLlmConfig } from '@modules/settings/settings.types.js';
 import type { SkillBindingValidator } from '@modules/skills/skills.binding.js';
 import { createProjectConversationRuntime } from './project-conversation-runtime.js';
+import type { ProjectConversationRuntime } from './project-conversation-runtime.js';
 import type { ProjectsService } from './projects.service.js';
 import { createProjectsService as createProjectsServiceBase } from './projects.service.js';
 import type {
@@ -69,6 +71,12 @@ type LegacyProjectConversationsRepository = Partial<ProjectConversationsReposito
     messageId: string,
     patch: { starred: boolean; starredAt: Date | null; starredBy: string | null },
   ) => Promise<{ conversations?: ProjectConversationDocument[] } | null>;
+  updateProjectConversationMessageCitationContent?: (
+    projectId: string,
+    conversationId: string,
+    messageId: string,
+    citationContent: ProjectConversationCitationContent,
+  ) => Promise<{ conversations?: ProjectConversationDocument[] } | null>;
   deleteProjectConversation?: (
     projectId: string,
     conversationId: string,
@@ -107,8 +115,19 @@ const createProjectConversationsRepositoryStub = ({
 }): ProjectConversationsRepository => {
   const legacyRepository =
     repository as unknown as ProjectsRepository & LegacyProjectConversationsRepository;
-
-  return {
+  const projectConversationsRepository: Pick<
+    ProjectConversationsRepository,
+    | 'listByProjectId'
+    | 'findByProjectAndConversationId'
+    | 'createConversation'
+    | 'updateTitle'
+    | 'appendMessage'
+    | 'replaceMessages'
+    | 'updateMessageMetadata'
+    | 'updateMessageCitationContent'
+    | 'deleteConversation'
+    | 'ensureIndexes'
+  > = {
     listByProjectId: async (projectId: string) => {
       if (legacyRepository.listByProjectId) {
         return legacyRepository.listByProjectId(projectId);
@@ -275,6 +294,35 @@ const createProjectConversationsRepositoryStub = ({
 
       return readConversationFromCarrier(projectId, result, conversationId);
     },
+    updateMessageCitationContent: async (
+      projectId,
+      conversationId,
+      messageId,
+      citationContent,
+    ) => {
+      if (legacyRepository.updateMessageCitationContent) {
+        return legacyRepository.updateMessageCitationContent(
+          projectId,
+          conversationId,
+          messageId,
+          citationContent,
+        );
+      }
+
+      if (!legacyRepository.updateProjectConversationMessageCitationContent) {
+        return null;
+      }
+
+      const result =
+        await legacyRepository.updateProjectConversationMessageCitationContent(
+          projectId,
+          conversationId,
+          messageId,
+          citationContent,
+        );
+
+      return readConversationFromCarrier(projectId, result, conversationId);
+    },
     deleteConversation: async (projectId, conversationId, updatedAt) => {
       if (legacyRepository.deleteConversation) {
         return legacyRepository.deleteConversation(projectId, conversationId, updatedAt);
@@ -293,7 +341,9 @@ const createProjectConversationsRepositoryStub = ({
       return Boolean(result);
     },
     ensureIndexes: async () => undefined,
-  } as ProjectConversationsRepository;
+  };
+
+  return projectConversationsRepository as unknown as ProjectConversationsRepository;
 };
 
 const createProjectsService = ({
@@ -395,51 +445,69 @@ const createDefaultAssistantReply = (): {
   };
 };
 
+type ConversationRuntimeStubStreamReply = Omit<
+  Awaited<ReturnType<ProjectConversationRuntime['streamAssistantReply']>>,
+  'llmConfig'
+> & {
+  citationContent?: ProjectConversationCitationContent;
+  llmConfig?: EffectiveLlmConfig;
+};
+
 const createConversationRuntimeStub = (options?: {
   generateAssistantReply?: () => Promise<{
     content: string;
     sources: ProjectConversationSourceDocument[];
     citationContent?: ProjectConversationCitationContent;
   }>;
-  streamAssistantReply?: (input: {
-    signal?: AbortSignal;
-    onSourcesSeed?(
-      sources: Array<{
-        id: string;
-        sourceKey: string;
-        knowledgeId: string;
-        documentId: string;
-        sourceLabel: string;
-        status: 'seeded';
-      }>,
-    ): Promise<void> | void;
-    onDelta(delta: string): Promise<void> | void;
-  }) => Promise<{
-    content: string;
-    sources: ProjectConversationSourceDocument[];
-    finishReason: 'stop' | 'length' | 'cancelled' | 'unknown';
-    citationContent?: ProjectConversationCitationContent;
-  }>;
-}) => {
+  streamAssistantReply?: (
+    input: Parameters<ProjectConversationRuntime['streamAssistantReply']>[0],
+  ) => Promise<ConversationRuntimeStubStreamReply>;
+  generateCitationContent?: ProjectConversationRuntime['generateCitationContent'];
+}): ProjectConversationRuntime => {
+  const defaultLlmConfig: EffectiveLlmConfig = {
+    source: 'environment',
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-5.4',
+    apiKey: 'openai-api-key',
+    requestTimeoutMs: 30000,
+  };
+
   return {
     generateAssistantReply:
       options?.generateAssistantReply ??
       (async () => createDefaultAssistantReply()),
-    streamAssistantReply:
-      options?.streamAssistantReply ??
-      (async ({ onDelta }) => {
-        const reply = createDefaultAssistantReply();
-        const deltas = ['当前项目已经具备最小对话写链路，', '并开始接入项目级检索。'];
-
-        for (const delta of deltas) {
-          await onDelta(delta);
-        }
+    streamAssistantReply: async (
+      input: Parameters<ProjectConversationRuntime['streamAssistantReply']>[0],
+    ) => {
+      if (options?.streamAssistantReply) {
+        const result = await options.streamAssistantReply(input);
 
         return {
-          ...reply,
-          finishReason: 'stop',
+          content: result.content,
+          sources: result.sources,
+          finishReason: result.finishReason,
+          llmConfig: result.llmConfig ?? defaultLlmConfig,
         };
-      }),
+      }
+
+      const { onDelta } = input;
+      const reply = createDefaultAssistantReply();
+      const deltas = ['当前项目已经具备最小对话写链路，', '并开始接入项目级检索。'];
+
+      for (const delta of deltas) {
+        await onDelta(delta);
+      }
+
+      return {
+        ...reply,
+        finishReason: 'stop',
+        llmConfig: defaultLlmConfig,
+      };
+    },
+    generateCitationContent:
+      options?.generateCitationContent ??
+      (async () => createDefaultAssistantReply().citationContent),
   };
 };
 
@@ -713,7 +781,9 @@ test('createProject materializes the default conversation in the separated repos
   const service = createProjectsService({
     repository,
     projectConversationsRepository: {
-      createConversation: async (document) => {
+      createConversation: async (
+        document: Parameters<ProjectConversationsRepository['createConversation']>[0],
+      ) => {
         createdConversation = {
           projectId: document.projectId,
           id: document.id,
@@ -725,7 +795,7 @@ test('createProject materializes the default conversation in the separated repos
           _id: new ObjectId(),
         };
       },
-    } as ProjectConversationsRepository,
+    } as unknown as ProjectConversationsRepository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
   });
@@ -848,7 +918,7 @@ test('listProjectConversations keeps legacy embedded conversations when the new 
     repository,
     projectConversationsRepository: {
       listByProjectId: async () => [],
-    } as ProjectConversationsRepository,
+    } as unknown as ProjectConversationsRepository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
   });
@@ -3844,7 +3914,7 @@ test('createProjectConversationMessage keeps persisted history when replay gener
 
       return persistedConversation;
     },
-  } as ProjectConversationsRepository;
+  } as unknown as ProjectConversationsRepository;
 
   const service = createProjectsService({
     repository,
@@ -4543,7 +4613,7 @@ test('createProjectConversationMessage localizes canonical default-thread conten
   );
 });
 
-test('streamProjectConversationMessage persists citationContent on final assistant reply', async () => {
+test('streamProjectConversationMessage emits done before citation_patch and persists citation asynchronously', async () => {
   const project: ProjectDocument & {
     _id: NonNullable<ProjectDocument['_id']>;
   } = {
@@ -4573,42 +4643,88 @@ test('streamProjectConversationMessage persists citationContent on final assista
     createdAt: new Date('2026-03-17T09:00:00.000Z'),
     updatedAt: new Date('2026-03-17T09:00:00.000Z'),
   };
-  let persistedProject = project;
+  let persistedConversation = toPersistedConversation(
+    project._id.toHexString(),
+    project.conversations[0]!,
+  );
   const events: ProjectConversationStreamEvent[] = [];
+  let resolveCitationPatchSeen: (() => void) | null = null;
+  const citationPatchSeen = new Promise<void>((resolve) => {
+    resolveCitationPatchSeen = resolve;
+  });
+  let resolveDoneSeen: (() => void) | null = null;
+  const doneSeen = new Promise<void>((resolve) => {
+    resolveDoneSeen = resolve;
+  });
+  let resolveCitationGeneration!: (() => void) | null;
+  const citationGeneration = new Promise<void>((resolve) => {
+    resolveCitationGeneration = resolve;
+  });
 
   const repository = {
     findById: async (projectId: string) =>
-      projectId === persistedProject._id.toHexString() ? persistedProject : null,
-    appendProjectConversationMessage: async (
+      projectId === project._id.toHexString() ? project : null,
+  } as unknown as ProjectsRepository;
+
+  const projectConversationsRepository = {
+    findByProjectAndConversationId: async () => persistedConversation,
+    appendMessage: async (
       _projectId: string,
       conversationId: string,
       message: ProjectDocument['conversations'][number]['messages'][number],
       updatedAt: Date,
     ) => {
-      persistedProject = {
-        ...persistedProject,
-        conversations: persistedProject.conversations.map((conversation) =>
-          conversation.id === conversationId
-            ? {
-                ...conversation,
-                messages: [...conversation.messages, message],
-                updatedAt,
-              }
-            : conversation,
-        ),
+      assert.equal(conversationId, 'chat-streaming');
+      persistedConversation = {
+        ...persistedConversation,
+        messages: [...persistedConversation.messages, message],
         updatedAt,
       };
 
-      return persistedProject;
+      return persistedConversation;
     },
-  } as unknown as ProjectsRepository;
+    updateMessageCitationContent: async (
+      _projectId: string,
+      conversationId: string,
+      messageId: string,
+      citationContent: ProjectConversationCitationContent,
+    ) => {
+      assert.equal(conversationId, 'chat-streaming');
+      persistedConversation = {
+        ...persistedConversation,
+        messages: persistedConversation.messages.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                citationContent,
+              }
+            : message,
+        ),
+      };
+
+      return persistedConversation;
+    },
+  } as unknown as ProjectConversationsRepository;
+
+  const llmConfig: EffectiveLlmConfig = {
+    source: 'environment',
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-5.4',
+    apiKey: 'openai-api-key',
+    requestTimeoutMs: 30000,
+  };
 
   const service = createProjectsService({
     repository,
+    projectConversationsRepository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
-    conversationRuntime: createConversationRuntimeStub({
-      streamAssistantReply: async ({ onSourcesSeed, onDelta }) => {
+    conversationRuntime: {
+      streamAssistantReply: async ({
+        onSourcesSeed,
+        onDelta,
+      }: Parameters<ProjectConversationRuntime['streamAssistantReply']>[0]) => {
         await onSourcesSeed?.([
           {
             id: 's1',
@@ -4678,34 +4794,100 @@ test('streamProjectConversationMessage persists citationContent on final assista
             ],
           },
           finishReason: 'stop',
+          llmConfig,
         };
       },
-    }),
+      generateCitationContent: async ({
+        answer,
+        sources,
+      }: {
+        answer: string;
+        sources: ProjectConversationSourceDocument[];
+      }) => {
+        assert.equal(
+          answer,
+          '当前项目已经具备最小对话写链路。[[source1]]项目级检索也已开始接入。[[source2]]',
+        );
+        assert.equal(sources.length, 2);
+        await citationGeneration;
+
+        return {
+          version: 1,
+          sentences: [
+            {
+              id: 'sent-1',
+              text: '当前项目已经具备最小对话写链路。',
+              sourceIds: ['s1'],
+              grounded: true,
+            },
+            {
+              id: 'sent-2',
+              text: '项目级检索也已开始接入。',
+              sourceIds: ['s2'],
+              grounded: true,
+            },
+          ],
+        };
+      },
+    } as unknown as ProjectConversationRuntime,
   });
 
-  await service.streamProjectConversationMessage(
-    {
-      actor: {
-        id: 'user-1',
-        username: 'langya',
+  let streamResolved = false;
+  const streamPromise = service
+    .streamProjectConversationMessage(
+      {
+        actor: {
+          id: 'user-1',
+          username: 'langya',
+        },
       },
-    },
-    persistedProject._id.toHexString(),
-    'chat-streaming',
-    {
-      content: '请总结当前项目对话现状',
-      clientRequestId: 'stream-request-1',
-    },
-    {
-      onEvent: async (event) => {
-        events.push(event);
+      project._id.toHexString(),
+      'chat-streaming',
+      {
+        content: '请总结当前项目对话现状',
+        clientRequestId: 'stream-request-1',
       },
-    },
+      {
+        onEvent: async (event) => {
+          events.push(event);
+
+          if (event.type === 'done') {
+            resolveDoneSeen?.();
+          }
+
+          if (event.type === 'citation_patch') {
+            resolveCitationPatchSeen?.();
+          }
+        },
+      },
+    )
+    .finally(() => {
+      streamResolved = true;
+    });
+
+  await doneSeen;
+  await delay(0);
+  assert.equal(
+    streamResolved,
+    false,
+    'stream should stay open until citation patch work finishes',
   );
+
+  resolveCitationGeneration?.();
+  await streamPromise;
+
+  await Promise.race([
+    citationPatchSeen,
+    delay(50).then(() => {
+      throw new Error('citation patch event not observed');
+    }),
+  ]);
 
   assert.deepEqual(
     events.map((event) => event.type),
-    ['ack', 'sources_seed', 'delta', 'delta', 'done'],
+    ['ack', 'sources_seed', 'delta', 'delta', 'done', 'citation_patch'] as Array<
+      ProjectConversationStreamEvent['type'] | 'citation_patch'
+    >,
   );
   assert.deepEqual(
     events
@@ -4721,7 +4903,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
   );
   assert.deepEqual(
     events.map((event) => event.sequence),
-    [1, 2, 3, 4, 5],
+    [1, 2, 3, 4, 5, 6],
   );
   assert.equal(events[0]?.clientRequestId, 'stream-request-1');
   assert.equal(events[0]?.type, 'ack');
@@ -4757,8 +4939,7 @@ test('streamProjectConversationMessage persists citationContent on final assista
   );
   assert.notEqual(sourceTaggedDeltaIndex, -1);
   assert.ok(sourceTaggedDeltaIndex > 1);
-  assert.equal(events[events.length - 1]?.type, 'done');
-  const doneEvent = events[events.length - 1];
+  const doneEvent = events.find((event) => event.type === 'done');
   if (!doneEvent || doneEvent.type !== 'done') {
     throw new Error('doneEvent should be a stream done event');
   }
@@ -4769,8 +4950,6 @@ test('streamProjectConversationMessage persists citationContent on final assista
     documentId: string;
     source: string;
   }>;
-
-  const persistedConversation = persistedProject.conversations[0];
   assert.equal(persistedConversation?.messages.length, 2);
   assert.equal(persistedConversation?.messages[0]?.role, 'user');
   assert.equal(persistedConversation?.messages[0]?.clientRequestId, 'stream-request-1');
@@ -4783,23 +4962,6 @@ test('streamProjectConversationMessage persists citationContent on final assista
     persistedConversation?.messages[1]?.content.includes('[[source'),
     false,
   );
-  assert.deepEqual(persistedConversation?.messages[1]?.citationContent, {
-    version: 1,
-    sentences: [
-      {
-        id: 'sent-1',
-        text: '当前项目已经具备最小对话写链路。',
-        sourceIds: ['s1'],
-        grounded: true,
-      },
-      {
-        id: 'sent-2',
-        text: '项目级检索也已开始接入。',
-        sourceIds: ['s2'],
-        grounded: true,
-      },
-    ],
-  });
   assert.equal(
     doneEvent.assistantMessage.content,
     '当前项目已经具备最小对话写链路。项目级检索也已开始接入。',
@@ -4834,11 +4996,28 @@ test('streamProjectConversationMessage persists citationContent on final assista
     doneSources.map((source) => source.id),
     ['s1', 's2'],
   );
-  assert.deepEqual(
-    doneEvent.assistantMessage.citationContent?.sentences.map((sentence) => sentence.sourceIds),
-    [['s1'], ['s2']],
+  assert.equal(doneEvent.assistantMessage.citationContent, undefined);
+  assert.equal(doneEvent.conversationSummary.id, 'chat-streaming');
+  assert.equal(doneEvent.conversationSummary.title, '已有会话');
+  assert.equal(
+    doneEvent.conversationSummary.preview,
+    '当前项目已经具备最小对话写链路。项目级检索也已开始接入。',
   );
-  assert.deepEqual(doneEvent.assistantMessage.citationContent, {
+  assert.equal(
+    doneEvent.conversationSummary.updatedAt,
+    persistedConversation?.updatedAt.toISOString(),
+  );
+  const citationPatchEvent = events[5] as unknown as {
+    type: 'citation_patch';
+    assistantMessageId: string;
+    citationContent: ProjectConversationCitationContent;
+  };
+  assert.equal(citationPatchEvent.type, 'citation_patch');
+  assert.equal(
+    citationPatchEvent.assistantMessageId,
+    persistedConversation?.messages[1]?.id,
+  );
+  assert.deepEqual(citationPatchEvent.citationContent, {
     version: 1,
     sentences: [
       {
@@ -4855,16 +5034,23 @@ test('streamProjectConversationMessage persists citationContent on final assista
       },
     ],
   });
-  assert.equal(doneEvent.conversationSummary.id, 'chat-streaming');
-  assert.equal(doneEvent.conversationSummary.title, '已有会话');
-  assert.equal(
-    doneEvent.conversationSummary.preview,
-    '当前项目已经具备最小对话写链路。项目级检索也已开始接入。',
-  );
-  assert.equal(
-    doneEvent.conversationSummary.updatedAt,
-    persistedConversation?.updatedAt.toISOString(),
-  );
+  assert.deepEqual(persistedConversation?.messages[1]?.citationContent, {
+    version: 1,
+    sentences: [
+      {
+        id: 'sent-1',
+        text: '当前项目已经具备最小对话写链路。',
+        sourceIds: ['s1'],
+        grounded: true,
+      },
+      {
+        id: 'sent-2',
+        text: '项目级检索也已开始接入。',
+        sourceIds: ['s2'],
+        grounded: true,
+      },
+    ],
+  });
 });
 
 test('streamProjectConversationMessage reuses replayed assistant result without emitting fake source seeds', async () => {
@@ -5440,6 +5626,7 @@ test('streamProjectConversationMessage keeps only the persisted user message whe
     events.map((event) => event.type),
     ['ack', 'delta'],
   );
+  assert.equal(events.some((event) => event.type === 'citation_patch'), false);
   assert.equal(persistedProject.conversations[0]?.messages.length, 1);
   assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
 });
@@ -5563,6 +5750,7 @@ test('streamProjectConversationMessage does not emit source seeds when cancelled
     ['ack'],
   );
   assert.equal(events.some((event) => event.type === 'sources_seed'), false);
+  assert.equal(events.some((event) => event.type === 'citation_patch'), false);
   assert.equal(persistedProject.conversations[0]?.messages.length, 1);
   assert.equal(persistedProject.conversations[0]?.messages[0]?.role, 'user');
 });
@@ -6087,7 +6275,8 @@ test('createProjectConversationRuntime streams deltas from an OpenAI-compatible 
     assert.deepEqual(receivedDeltas, ['当前项目对话已切到', '统一流式编排。']);
     assert.equal(result.content, '当前项目对话已切到统一流式编排。');
     assert.equal(result.finishReason, 'stop');
-    assert.equal(result.citationContent, undefined);
+  assert.equal(result.llmConfig.provider, 'openai');
+  assert.equal(result.llmConfig.model, 'gpt-5.4');
     assert.equal(result.sources[0]?.id, 's1');
     assert.equal(result.sources[0]?.source, 'streaming-architecture.md');
     assert.equal(result.sources[0]?.sourceKey, 'source1');
@@ -6995,10 +7184,10 @@ test('deleteProject cleans up project scoped knowledge before removing the proje
   const service = createProjectsService({
     repository,
     projectConversationsRepository: {
-      deleteByProjectId: async (projectId) => {
+      deleteByProjectId: async (projectId: string) => {
         deletedConversationProjectIds.push(projectId);
       },
-    } as ProjectConversationsRepository,
+    } as unknown as ProjectConversationsRepository,
     authRepository: createAuthRepositoryStub(),
     skillBindingValidator: createSkillBindingValidatorStub(),
     knowledgeUsage: {

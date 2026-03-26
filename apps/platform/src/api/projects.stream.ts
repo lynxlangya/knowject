@@ -110,6 +110,7 @@ const parseStreamEvent = (payload: string): ProjectConversationStreamEvent => {
     'sources_seed',
     'done',
     'error',
+    'citation_patch',
   ]);
 
   if (typeof eventType !== 'string' || !supportedEventTypes.has(eventType as ProjectConversationStreamEventType)) {

@@ -12,6 +12,7 @@ import { extractApiErrorMessage } from '@api/error';
 import type {
   ProjectConversationDetailResponse,
   ProjectConversationStreamDoneEvent,
+  ProjectConversationStreamCitationPatchEvent,
   ProjectConversationSourceResponse,
   ProjectConversationCitationContent,
   ProjectConversationStreamSourcesSeedItem,
@@ -284,11 +285,16 @@ export const useProjectConversationTurn = ({
     doneEvent,
     persistedUserMessageId,
     pendingUserMessageCreatedAt,
+    citationPatch,
   }: {
     submission: PendingProjectConversationTurnSubmission;
     doneEvent: ProjectConversationStreamDoneEvent;
     persistedUserMessageId: string | null;
     pendingUserMessageCreatedAt: string;
+    citationPatch?: Pick<
+      ProjectConversationStreamCitationPatchEvent,
+      'assistantMessageId' | 'citationContent'
+    >;
   }) => {
     if (isCurrentProject(submission.projectId)) {
       conversations.patchSummary(doneEvent.conversationSummary);
@@ -308,6 +314,7 @@ export const useProjectConversationTurn = ({
             pendingUserMessageCreatedAt,
             assistantMessage: doneEvent.assistantMessage,
             conversationSummary: doneEvent.conversationSummary,
+            citationPatch,
           }),
         );
         setDetailError(null);
@@ -391,6 +398,8 @@ export const useProjectConversationTurn = ({
     let streamEventError: ApiError | null = null;
     let persistedUserMessageId: string | null = null;
     let streamDoneEvent: ProjectConversationStreamDoneEvent | null = null;
+    let streamCitationPatchEvent: ProjectConversationStreamCitationPatchEvent | undefined =
+      undefined;
 
     pendingSubmissionRef.current = currentSubmission;
     activeTurnRef.current = currentSubmission;
@@ -550,6 +559,9 @@ export const useProjectConversationTurn = ({
                 });
                 setStreamStatus('reconciling');
                 return;
+              case 'citation_patch':
+                streamCitationPatchEvent = event;
+                return;
               case 'error':
                 streamEventError = new ApiError(
                   event.message,
@@ -609,6 +621,7 @@ export const useProjectConversationTurn = ({
         doneEvent: streamDoneEvent,
         persistedUserMessageId,
         pendingUserMessageCreatedAt,
+        citationPatch: streamCitationPatchEvent ?? undefined,
       });
     } catch (currentError) {
       if (abortController.signal.aborted || isAbortError(currentError)) {
