@@ -70,6 +70,25 @@ const PROJECT_CHAT_SOURCE_SHELL_DRAWER_STYLES = {
   },
 } as const;
 
+const PROJECT_CHAT_MESSAGE_RAIL_DRAWER_CLASS_NAMES = {
+  header:
+    'border-b-0 bg-[linear-gradient(180deg,rgba(248,252,251,0.98),rgba(243,247,245,0.96))] px-4! pb-2! pt-4!',
+  body:
+    'bg-[linear-gradient(180deg,rgba(249,252,251,0.98),rgba(242,247,245,0.96))]',
+  close:
+    'mt-1 rounded-full border border-[#d7e7e1] bg-white/92 text-slate-500 shadow-[0_6px_16px_rgba(15,23,42,0.05)] transition-colors hover:border-[#bfded4] hover:bg-[#f8fcfb] hover:text-[#1f7a67]',
+} as const;
+
+const PROJECT_CHAT_MESSAGE_RAIL_DRAWER_STYLES = {
+  body: {
+    padding: 0,
+  },
+  mask: {
+    backdropFilter: 'blur(4px)',
+    background: 'rgba(15, 23, 42, 0.16)',
+  },
+} as const;
+
 export const ProjectChatPage = () => {
   const navigate = useNavigate();
   const { chatId } = useParams<{ chatId?: string }>();
@@ -498,7 +517,7 @@ export const ProjectChatPage = () => {
                         sourceDrawer.closeDrawer();
                         setMobileRailOpen(true);
                       }}
-                      className="rounded-full! border-slate-200! bg-white! text-slate-700!"
+                      className="rounded-full! border-[#d7e7e1]! bg-[#f8fcfb]! text-[#305f56]! shadow-[0_10px_24px_rgba(15,23,42,0.05)]!"
                     >
                       {tp('conversation.railTitle')}
                     </Button>
@@ -644,6 +663,8 @@ export const ProjectChatPage = () => {
               title={tp('conversation.railTitle')}
               placement="right"
               className="xl:hidden"
+              classNames={PROJECT_CHAT_MESSAGE_RAIL_DRAWER_CLASS_NAMES}
+              styles={PROJECT_CHAT_MESSAGE_RAIL_DRAWER_STYLES}
               onClose={() => setMobileRailOpen(false)}
             >
               <ProjectConversationMessageRail
