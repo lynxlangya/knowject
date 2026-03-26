@@ -61,7 +61,7 @@ export const LoginFormPanel = ({
                     className={[
                       'rounded-full px-3 py-1.5 text-xs font-semibold tracking-[0.01em] transition-colors',
                       active
-                        ? 'text-white shadow-[0_8px_18px_rgba(27,80,183,0.24)]'
+                        ? 'text-white! shadow-[0_8px_18px_rgba(27,80,183,0.24)]'
                         : 'text-slate-500 hover:text-slate-900',
                     ].join(' ')}
                     style={

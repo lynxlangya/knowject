@@ -68,7 +68,7 @@ export const AppSiderAccountPanel = ({
             className={[
               'flex h-9 items-center rounded-[12px] px-3 text-left text-sm font-medium transition-colors',
               active
-                ? 'text-white'
+                ? 'text-white!'
                 : 'text-slate-600 hover:bg-white hover:text-slate-900',
             ].join(' ')}
             style={

@@ -24,7 +24,7 @@ const levelBadgeStyles: Record<ProjectOverviewInsightLevel, string> = {
 };
 
 const levelRowStyles: Record<ProjectOverviewInsightLevel, string> = {
-  positive: 'border-emerald-100 bg-emerald-50/40',
+  positive: 'border-[#C2EDE6] bg-[#F2FDFB]',
   neutral: 'border-slate-200 bg-slate-50/60',
   warning: 'border-amber-100 bg-amber-50/45',
   risk: 'border-rose-100 bg-rose-50/45',
@@ -52,13 +52,13 @@ export const OverviewInsightList = ({
 
       {items.length > 0 ? (
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <li
               key={item.id}
-              className={`rounded-panel border px-4 py-3 ${levelRowStyles[item.level]}`}
+              className={`rounded-panel border px-4 py-3 ${levelRowStyles[item.level]} ${index === 0 ? 'border-l-[3px] border-l-[#28B8A0]' : ''}`}
             >
               <div className="mb-2 flex items-center justify-between gap-3">
-                <Typography.Text className="text-sm font-semibold text-slate-800">
+                <Typography.Text className={`text-sm font-semibold ${index === 0 ? 'text-white' : 'text-slate-800'}`}>
                   {item.title}
                 </Typography.Text>
                 <span
@@ -67,7 +67,7 @@ export const OverviewInsightList = ({
                   {item.levelLabel}
                 </span>
               </div>
-              <Typography.Text className="text-sm text-slate-600">
+              <Typography.Text className={`text-sm ${index === 0 ? 'text-white/75' : 'text-slate-600'}`}>
                 {item.description}
               </Typography.Text>
             </li>
