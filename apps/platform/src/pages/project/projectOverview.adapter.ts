@@ -16,6 +16,7 @@ type ProjectKnowledgeSummary = Pick<
 export interface BuildProjectOverviewSummaryInput {
   project: Pick<ProjectSummary, "id" | "knowledgeBaseIds" | "skillIds" | "agentIds">;
   conversations: ConversationSummary[] | undefined;
+  boundKnowledge: ProjectKnowledgeSummary[] | undefined;
   projectKnowledge: ProjectKnowledgeSummary[] | undefined;
   now?: string;
 }
@@ -55,6 +56,7 @@ const createEmptyStatusBreakdown = (): Record<
 export const buildProjectOverviewSummary = ({
   project,
   conversations,
+  boundKnowledge,
   projectKnowledge,
   now = new Date().toISOString(),
 }: BuildProjectOverviewSummaryInput): ProjectOverviewSummary => {
@@ -108,16 +110,30 @@ export const buildProjectOverviewSummary = ({
     for (const id of ids) activeConversationIds7d.add(id);
   }
 
-  const globalKnowledgeCount = new Set(project.knowledgeBaseIds).size;
-  const knowledgeAvailable = projectKnowledge !== undefined;
-  const projectKnowledgeCount = knowledgeAvailable ? projectKnowledge.length : 0;
+  const knowledgeAvailable =
+    boundKnowledge !== undefined && projectKnowledge !== undefined;
+  const boundKnowledgeItems = boundKnowledge ?? [];
+  const projectKnowledgeItems = projectKnowledge ?? [];
+  const globalKnowledgeCount = knowledgeAvailable
+    ? new Set(boundKnowledgeItems.map((item) => item.id)).size
+    : 0;
+  const projectKnowledgeCount = knowledgeAvailable
+    ? new Set(projectKnowledgeItems.map((item) => item.id)).size
+    : 0;
+  const trackedKnowledge = knowledgeAvailable
+    ? Array.from(
+        new Map(
+          [...boundKnowledgeItems, ...projectKnowledgeItems].map((item) => [item.id, item] as const),
+        ).values(),
+      )
+    : [];
 
   const statusBreakdown = createEmptyStatusBreakdown();
   let knowledgeWithDocumentsCount = 0;
   let knowledgeDocumentCount = 0;
 
   if (knowledgeAvailable) {
-    for (const item of projectKnowledge) {
+    for (const item of trackedKnowledge) {
       knowledgeDocumentCount += item.documentCount;
       if (item.documentCount > 0) knowledgeWithDocumentsCount += 1;
 
@@ -140,7 +156,7 @@ export const buildProjectOverviewSummary = ({
     }
   }
 
-  const totalKnowledgeCount = globalKnowledgeCount + projectKnowledgeCount;
+  const totalKnowledgeCount = trackedKnowledge.length;
 
   return {
     activity: {

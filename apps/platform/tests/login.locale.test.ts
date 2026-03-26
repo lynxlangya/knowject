@@ -11,5 +11,13 @@ test('LoginPage wires account locale and guest locale switching', () => {
   assert.match(source, /result\.user\.locale/);
   assert.match(source, /writeGuestLocale/);
   assert.match(source, /setLocale\(/);
+  assert.match(
+    source,
+    /name: values\.name\?\.trim\(\) \?\? '',\s*locale,\s*\}\s*satisfies RegisterRequest/s,
+  );
+  assert.match(
+    source,
+    /password: values\.password,\s*locale,\s*\}\s*satisfies LoginRequest/s,
+  );
   assert.match(source, /message\.success\(/);
 });

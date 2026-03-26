@@ -14,13 +14,15 @@ test('project overview adapter freezes the summary aggregation contract', () => 
   const summary = buildProjectOverviewSummary({
     project: projectFixture,
     conversations: [
-    { id: 'c-1', projectId: 'p-1', title: 'A', preview: '...', updatedAt: '2026-03-25T08:00:00.000Z' },
-    { id: 'c-1', projectId: 'p-1', title: 'A', preview: 'duplicate entry for same day', updatedAt: '2026-03-25T09:00:00.000Z' },
+      { id: 'c-1', projectId: 'p-1', title: 'A', preview: '...', updatedAt: '2026-03-25T08:00:00.000Z' },
+      { id: 'c-1', projectId: 'p-1', title: 'A', preview: 'duplicate entry for same day', updatedAt: '2026-03-25T09:00:00.000Z' },
       { id: 'c-2', projectId: 'p-1', title: 'B', preview: '...', updatedAt: '2026-03-23T08:00:00.000Z' },
     ],
+    boundKnowledge: [
+      { id: 'kb-1', indexStatus: 'completed', documentCount: 4, chunkCount: 16, updatedAt: '2026-03-24T00:00:00.000Z' },
+    ],
     projectKnowledge: [
-      { id: 'pk-1', indexStatus: 'completed', documentCount: 2, chunkCount: 8, updatedAt: '2026-03-24T00:00:00.000Z' },
-      { id: 'pk-2', indexStatus: 'processing', documentCount: 0, chunkCount: 0, updatedAt: '2026-03-25T00:00:00.000Z' },
+      { id: 'pk-1', indexStatus: 'processing', documentCount: 2, chunkCount: 8, updatedAt: '2026-03-25T00:00:00.000Z' },
     ],
     now: '2026-03-25T12:00:00.000Z',
   });
@@ -38,11 +40,11 @@ test('project overview adapter freezes the summary aggregation contract', () => 
   assert.equal(summary.activity.lastConversationActivityAt, '2026-03-25T09:00:00.000Z');
   assert.equal(summary.activity.available, true);
   assert.equal(summary.knowledge.globalKnowledgeCount, 1);
-  assert.equal(summary.knowledge.projectKnowledgeCount, 2);
-  assert.equal(summary.knowledge.knowledgeWithDocumentsCount, 1);
-  assert.equal(summary.knowledge.knowledgeDocumentCount, 2);
+  assert.equal(summary.knowledge.projectKnowledgeCount, 1);
+  assert.equal(summary.knowledge.knowledgeWithDocumentsCount, 2);
+  assert.equal(summary.knowledge.knowledgeDocumentCount, 6);
   assert.equal(summary.knowledge.available, true);
-  assert.equal(summary.knowledge.totalKnowledgeCount, 3);
+  assert.equal(summary.knowledge.totalKnowledgeCount, 2);
   assert.deepEqual(summary.knowledge.statusBreakdown, {
     completed: 1,
     pending: 0,
@@ -50,33 +52,38 @@ test('project overview adapter freezes the summary aggregation contract', () => 
     failed: 0,
   });
   assert.deepEqual(summary.coverage, {
-    knowledge: 3,
+    knowledge: 2,
     skills: 1,
     agents: 0,
   });
 });
 
-test('project overview adapter marks knowledge unavailable when project data is missing', () => {
+test('project overview adapter marks knowledge unavailable when bound global knowledge data is missing', () => {
   const summary = buildProjectOverviewSummary({
     project: projectFixture,
     conversations: [],
+    boundKnowledge: undefined,
     projectKnowledge: undefined,
     now: '2026-03-25T12:00:00.000Z',
   });
 
   assert.equal(summary.activity.available, true);
   assert.equal(summary.knowledge.available, false);
-  assert.equal(summary.knowledge.globalKnowledgeCount, 1);
+  assert.equal(summary.knowledge.globalKnowledgeCount, 0);
   assert.equal(summary.knowledge.projectKnowledgeCount, 0);
   assert.equal(summary.knowledge.knowledgeWithDocumentsCount, 0);
   assert.equal(summary.knowledge.knowledgeDocumentCount, 0);
-  assert.equal(summary.knowledge.totalKnowledgeCount, 1);
+  assert.equal(summary.knowledge.totalKnowledgeCount, 0);
+  assert.equal(summary.coverage.knowledge, 0);
 });
 
 test('project overview adapter marks activity unavailable when conversation data is missing', () => {
   const summary = buildProjectOverviewSummary({
     project: projectFixture,
     conversations: undefined,
+    boundKnowledge: [
+      { id: 'kb-1', indexStatus: 'completed', documentCount: 1, chunkCount: 4, updatedAt: '2026-03-24T00:00:00.000Z' },
+    ],
     projectKnowledge: [],
     now: '2026-03-25T12:00:00.000Z',
   });

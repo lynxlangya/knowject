@@ -12,8 +12,10 @@ import { resolveProjectOverviewSummaryItems } from './projectOverviewPage.helper
 
 export const ProjectOverviewPage = () => {
   const { t, i18n } = useTranslation('project');
-  const { activeProject, conversations, projectKnowledge } = useProjectPageContext();
+  const { activeProject, conversations, globalAssetCatalogs, projectKnowledge } =
+    useProjectPageContext();
   const locale = i18n.resolvedLanguage || 'en';
+  const requiresBoundGlobalKnowledge = activeProject.knowledgeBaseIds.length > 0;
   const formatDateTime = (value: string): string => {
     return new Intl.DateTimeFormat(locale, {
       month: 'numeric',
@@ -36,6 +38,32 @@ export const ProjectOverviewPage = () => {
     }).format(new Date(`${value}T00:00:00.000Z`));
   };
 
+  const boundKnowledge = useMemo(() => {
+    if (!requiresBoundGlobalKnowledge) {
+      return [];
+    }
+
+    const globalKnowledgeItems = resolveProjectOverviewSummaryItems({
+      loading: globalAssetCatalogs.knowledge.loading,
+      error: globalAssetCatalogs.knowledge.error,
+      items: globalAssetCatalogs.knowledge.items,
+    });
+
+    if (!globalKnowledgeItems) {
+      return undefined;
+    }
+
+    const boundKnowledgeIdSet = new Set(activeProject.knowledgeBaseIds);
+
+    return globalKnowledgeItems.filter((item) => boundKnowledgeIdSet.has(item.id));
+  }, [
+    activeProject.knowledgeBaseIds,
+    globalAssetCatalogs.knowledge.loading,
+    globalAssetCatalogs.knowledge.error,
+    globalAssetCatalogs.knowledge.items,
+    requiresBoundGlobalKnowledge,
+  ]);
+
   const overviewSummary = useMemo(() => {
     return buildProjectOverviewSummary({
       project: activeProject,
@@ -44,6 +72,7 @@ export const ProjectOverviewPage = () => {
         error: conversations.error,
         items: conversations.items,
       }),
+      boundKnowledge,
       projectKnowledge: resolveProjectOverviewSummaryItems({
         loading: projectKnowledge.loading,
         error: projectKnowledge.error,
@@ -55,6 +84,7 @@ export const ProjectOverviewPage = () => {
     conversations.loading,
     conversations.error,
     conversations.items,
+    boundKnowledge,
     projectKnowledge.loading,
     projectKnowledge.error,
     projectKnowledge.items,
@@ -64,16 +94,18 @@ export const ProjectOverviewPage = () => {
     return buildProjectOverviewInsights(overviewSummary);
   }, [overviewSummary]);
 
-  const partialLoadErrors = [conversations.error, projectKnowledge.error].filter(
-    (value): value is string => Boolean(value),
-  );
+  const partialLoadErrors = [
+    conversations.error,
+    requiresBoundGlobalKnowledge ? globalAssetCatalogs.knowledge.error : null,
+    projectKnowledge.error,
+  ].filter((value): value is string => Boolean(value));
 
   const totalResourceCount =
     overviewSummary.coverage.knowledge +
     overviewSummary.coverage.skills +
     overviewSummary.coverage.agents;
   const indexedCount = overviewSummary.knowledge.statusBreakdown.completed;
-  const readinessBaseCount = overviewSummary.knowledge.projectKnowledgeCount;
+  const readinessBaseCount = overviewSummary.knowledge.totalKnowledgeCount;
   const hasKnowledgeReadinessRate =
     overviewSummary.knowledge.available && readinessBaseCount > 0;
   const indexingRate = hasKnowledgeReadinessRate

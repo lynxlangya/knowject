@@ -79,10 +79,12 @@ export const LoginPage = () => {
               username,
               password: values.password,
               name: values.name?.trim() ?? '',
+              locale,
             } satisfies RegisterRequest)
           : await login({
               username,
               password: values.password,
+              locale,
             } satisfies LoginRequest);
 
       persistRememberedUsername(username, values.remember);

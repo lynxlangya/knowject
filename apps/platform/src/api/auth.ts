@@ -8,12 +8,14 @@ import { client, publicClient } from './client';
 export interface LoginRequest {
   username: string;
   password: string;
+  locale: SupportedLocale;
 }
 
 export interface RegisterRequest {
   username: string;
   password: string;
   name: string;
+  locale: SupportedLocale;
 }
 
 export interface UserProfile {

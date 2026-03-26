@@ -142,7 +142,7 @@ token 被解析为：
 
 - `/project/:projectId/overview` 当前是判断 / dashboard 页，不再是 recent-entry 列表页。
 - Overview 主体数据来自 `ProjectLayout -> Outlet context` 注入的 `useProjectPageContext()`（`ProjectPageContextValue`），并通过纯 domain helper 链路聚合：
-  - `projectOverview.adapter.ts` 的 `buildProjectOverviewSummary(...)`：把 `activeProject + conversations + projectKnowledge` 聚合成可计算的 summary（同时显式标记 `available`）。
+  - `projectOverview.adapter.ts` 的 `buildProjectOverviewSummary(...)`：把 `activeProject + conversations + bound global knowledge + projectKnowledge` 聚合成可计算的 summary（同时显式标记 `available`）。
   - `projectOverview.insights.ts` 的 `buildProjectOverviewInsights(summary)`：把 summary 转换为有限条可展示 insight（按 severity 排序并截断）。
 - `ProjectHeader` 仍使用 `projectWorkspaceSnapshot.mock.ts`（`getProjectWorkspaceSnapshot`）做 header-level 的 member roster 映射与 meta summary fallback；该 mock 不再作为 Overview 主体内容的数据源。
-- Partial-load / error 降级：当 `conversations` 或 `projectKnowledge` 读取失败时，Overview 会以 warning 提示 partial-load，并把对应指标 fail-closed 到 `unavailable` 展示（例如 `—` / `unavailable` label），避免静默渲染出误导性的 0。
+- Partial-load / error 降级：当 `conversations`、项目私有知识目录，或项目绑定的全局知识目录读取失败时，Overview 会以 warning 提示 partial-load，并把对应指标 fail-closed 到 `unavailable` 展示（例如 `—` / `unavailable` label），避免静默渲染出误导性的 0。
