@@ -28,14 +28,19 @@ import {
 import { tp } from './project.i18n';
 
 const AI_BUBBLE_STYLE: CSSProperties = {
-  padding: 18,
-  borderRadius: 4,
+  padding: '14px 16px',
+  borderRadius: 16,
+  background: 'rgba(242, 253, 251, 0.88)',
+  border: `1px solid ${KNOWJECT_BRAND.primaryBorder}`,
+  boxShadow: '0 2px 12px rgba(15, 42, 38, 0.04)',
 };
 
 const USER_BUBBLE_STYLE: CSSProperties = {
-  padding: '10px 12px',
-  borderRadius: 4,
-  background: KNOWJECT_BRAND.primarySurface,
+  padding: '12px 14px',
+  borderRadius: 16,
+  background: KNOWJECT_BRAND.primarySurfaceStrong,
+  border: `1px solid ${KNOWJECT_BRAND.primaryBorder}`,
+  boxShadow: '0 2px 10px rgba(15, 42, 38, 0.05)',
 };
 
 interface ProjectConversationLabelProps {
@@ -72,11 +77,11 @@ const ProjectConversationLabel = ({
     : undefined;
   const railClassName = [
     'absolute bottom-4 left-0 top-4 w-1 rounded-full transition-colors duration-200',
-    active ? '' : 'bg-slate-200/70 group-hover:bg-slate-300/80',
+    active ? '' : 'bg-[#C2EDE6] group-hover:bg-[#28B8A0]/60',
   ].join(' ');
   const dotClassName = [
     'h-2.5 w-2.5 rounded-full transition-colors duration-200',
-    active ? 'bg-emerald-400' : 'bg-slate-300 group-hover:bg-slate-400',
+    active ? 'bg-emerald-400' : 'bg-[#C2EDE6] group-hover:bg-[#28B8A0]/70',
   ].join(' ');
   const labelClassName = [
     'text-caption font-semibold uppercase tracking-[0.18em]',

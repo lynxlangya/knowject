@@ -252,14 +252,16 @@ export const AppSider = ({
           </div>
         </div>
 
+        {/* Brand accent line */}
         <div
-          className="mt-4 rounded-shell border p-2"
+          className="mx-1 mt-4 h-px"
           style={{
-            borderColor: "rgba(255,255,255,0.68)",
-            background: KNOWJECT_BRAND.shellSurface,
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4)",
+            background: `linear-gradient(90deg, transparent 0%, ${KNOWJECT_BRAND.primary}40 30%, ${KNOWJECT_BRAND.primary}60 50%, ${KNOWJECT_BRAND.primary}40 70%, transparent 100%)`,
           }}
-        >
+        />
+
+        {/* Nav — direct on Sider bg, no extra glass layer */}
+        <div className="mt-3">
           <Menu
             mode="inline"
             theme="light"
@@ -272,9 +274,12 @@ export const AppSider = ({
               paddingInline: 0,
             }}
             className={[
+              "app-sider-nav",
               "[&_.ant-menu-item]:mx-0",
               "[&_.ant-menu-item]:my-1",
+              "[&_.ant-menu-item]:rounded-[var(--radius-sidebar-item)]",
               "[&_.ant-menu-item]:px-3",
+              "[&_.ant-menu-item]:py-2",
               "[&_.ant-menu-item]:text-sm",
               "[&_.ant-menu-item]:font-medium",
               "[&_.ant-menu-item_.ant-menu-title-content]:tracking-[0.01em]",

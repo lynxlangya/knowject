@@ -2,16 +2,12 @@ import { CloudUploadOutlined, DeleteOutlined, EditOutlined } from '@ant-design/i
 import { Button, Popconfirm, Tag, Tooltip, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { KnowledgeDetailResponse } from '@api/knowledge';
-import type {
-  KnowledgeDetailOverviewStat,
-  KnowledgeSourceMeta,
-} from '../knowledgeDomain.shared';
+import type { KnowledgeDetailOverviewStat } from '../knowledgeDomain.shared';
 import { KNOWLEDGE_INDEX_STATUS_META } from '../knowledgeDomain.shared';
 import { KNOWLEDGE_UPLOAD_TOOLTIP } from '../knowledgeUpload.shared';
 
 interface KnowledgeDetailHeaderProps {
   activeKnowledge: KnowledgeDetailResponse;
-  activeSourceMeta: KnowledgeSourceMeta | null;
   activeOverviewStats: KnowledgeDetailOverviewStat[];
   uploading: boolean;
   deletingKnowledgeId: string | null;
@@ -22,7 +18,6 @@ interface KnowledgeDetailHeaderProps {
 
 export const KnowledgeDetailHeader = ({
   activeKnowledge,
-  activeSourceMeta,
   activeOverviewStats,
   uploading,
   deletingKnowledgeId,
@@ -40,7 +35,6 @@ export const KnowledgeDetailHeader = ({
             <Typography.Title level={4} className="mb-0! text-slate-800!">
               {activeKnowledge.name}
             </Typography.Title>
-            {activeSourceMeta ? <Tag color={activeSourceMeta.color}>{activeSourceMeta.label}</Tag> : null}
             <Tag color={KNOWLEDGE_INDEX_STATUS_META[activeKnowledge.indexStatus].color}>
               {KNOWLEDGE_INDEX_STATUS_META[activeKnowledge.indexStatus].label}
             </Tag>

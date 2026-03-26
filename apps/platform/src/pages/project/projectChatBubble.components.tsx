@@ -428,7 +428,14 @@ export const ProjectChatAssistantFooter = ({
   return (
     <div className="mt-2.5 flex flex-wrap items-center gap-2">
       {extraInfo.status ? (
-        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-caption font-medium text-emerald-700">
+        <span
+          className="rounded-full border px-2.5 py-1 text-caption font-medium"
+          style={{
+            borderColor: 'rgba(40,184,160,0.3)',
+            backgroundColor: 'rgba(40,184,160,0.08)',
+            color: '#1A8A77',
+          }}
+        >
           {getProjectChatBubbleStatusLabel(extraInfo.status)}
         </span>
       ) : null}

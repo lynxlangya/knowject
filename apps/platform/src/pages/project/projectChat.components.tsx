@@ -45,7 +45,7 @@ export const ProjectConversationLabel = ({
       <span
         className={[
           'absolute bottom-4 left-0 top-4 w-1 rounded-full transition-colors duration-200',
-          active ? '' : 'bg-slate-200/70 group-hover:bg-slate-300/80',
+          active ? '' : 'bg-[#C2EDE6] group-hover:bg-[#28B8A0]/60',
         ].join(' ')}
         style={active ? { backgroundColor: KNOWJECT_BRAND.primary } : undefined}
         aria-hidden="true"
@@ -58,9 +58,7 @@ export const ProjectConversationLabel = ({
               <span
                 className={[
                   'h-2.5 w-2.5 rounded-full transition-colors duration-200',
-                  active
-                    ? 'bg-emerald-400'
-                    : 'bg-slate-300 group-hover:bg-slate-400',
+                  active ? 'bg-emerald-400' : 'bg-[#C2EDE6] group-hover:bg-[#28B8A0]/70',
                 ].join(' ')}
                 aria-hidden="true"
               />

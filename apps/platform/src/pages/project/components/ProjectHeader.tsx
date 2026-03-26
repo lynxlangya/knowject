@@ -42,9 +42,9 @@ export const ProjectHeader = ({
           <div
             className="flex h-16 w-16 items-center justify-center rounded-card border text-2xl font-semibold text-white"
             style={{
-              borderColor: KNOWJECT_BRAND.primaryBorder,
-              backgroundImage: KNOWJECT_BRAND.heroGradient,
-              boxShadow: `0 12px 24px ${KNOWJECT_BRAND.primaryGlow}`,
+              borderColor: 'rgba(255,255,255,0.6)',
+              backgroundImage: KNOWJECT_BRAND.iconGradient,
+              boxShadow: '0 10px 24px rgba(40,184,160,0.18), inset 0 1px 0 rgba(255,255,255,0.55)',
             }}
           >
             {projectInitial}
@@ -76,7 +76,12 @@ export const ProjectHeader = ({
 	                    {member.avatarUrl ? (
 	                      <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
 	                    ) : (
-	                      <span className="flex h-full w-full items-center justify-center bg-slate-200 text-[9px] font-semibold text-slate-600">
+	                      <span
+	                        className="flex h-full w-full items-center justify-center text-[9px] font-semibold text-white"
+	                        style={{
+	                          backgroundImage: KNOWJECT_BRAND.iconGradient,
+	                        }}
+	                      >
 	                        {(member.name.trim().charAt(0) || 'M').toUpperCase()}
 	                      </span>
 	                    )}

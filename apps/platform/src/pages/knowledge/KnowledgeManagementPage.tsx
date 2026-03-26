@@ -44,7 +44,6 @@ import {
 import {
   buildKnowledgeDetailOverviewStats,
   buildKnowledgeRebuildBlockedReason,
-  KNOWLEDGE_SOURCE_TYPE_META,
   patchKnowledgeDetailDocument,
   queueKnowledgeDocumentForPending,
   queueKnowledgeForPending,
@@ -156,9 +155,6 @@ export const KnowledgeManagementPage = () => {
     clearActiveKnowledge: () => setActiveKnowledge(null),
   });
 
-  const activeSourceMeta = activeKnowledge
-    ? KNOWLEDGE_SOURCE_TYPE_META[activeKnowledge.sourceType]
-    : null;
   const activeOverviewStats = activeKnowledge
     ? buildKnowledgeDetailOverviewStats(activeKnowledge)
     : [];
@@ -459,7 +455,6 @@ export const KnowledgeManagementPage = () => {
           <div className="space-y-4">
             <KnowledgeDetailHeader
               activeKnowledge={activeKnowledge}
-              activeSourceMeta={activeSourceMeta}
               activeOverviewStats={activeOverviewStats}
               uploading={uploading}
               deletingKnowledgeId={deletingKnowledgeId}

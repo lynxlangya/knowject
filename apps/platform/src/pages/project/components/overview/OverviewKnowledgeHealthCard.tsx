@@ -54,7 +54,7 @@ export const OverviewKnowledgeHealthCard = ({
 
   return (
     <Card
-      className="rounded-3xl! border-slate-200! shadow-surface!"
+      className="rounded-3xl! border-slate-200! shadow-[0_8px_32px_rgba(15,42,38,0.06)]!"
       styles={{ body: { padding: '20px' } }}
     >
       <div className="mb-4">
@@ -98,10 +98,14 @@ export const OverviewKnowledgeHealthCard = ({
           </Typography.Text>
         </div>
         {safePercent !== null ? (
-          <div className="h-2 rounded-full bg-[#E3F8F4]">
+          <div className="relative h-2 rounded-full bg-[#E3F8F4]">
             <div
-              className="h-full rounded-full bg-[#28B8A0]"
-              style={{ width: `${safePercent}%` }}
+              className="absolute inset-y-0 left-0 rounded-full"
+              style={{
+                width: `${safePercent}%`,
+                background: 'linear-gradient(90deg, #28B8A0 0%, #5DDDCF 100%)',
+                boxShadow: '0 0 8px rgba(40,184,160,0.35)',
+              }}
               aria-hidden="true"
             />
           </div>

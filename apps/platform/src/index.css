@@ -25,6 +25,14 @@
   --shadow-float: 0 12px 30px rgba(15, 23, 42, 0.04);
   --shadow-shell: 0 10px 26px rgba(15, 23, 42, 0.035);
   --shadow-hero: 0 8px 22px rgba(15, 23, 42, 0.04);
+
+  /* Brand typography */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif;
+
+  /* Sidebar-specific radius */
+  --radius-sidebar-item: 1rem;
+  --radius-sidebar-panel: 1.375rem;
 }
 
 @layer base {
@@ -214,6 +222,18 @@
   }
 }
 
+@keyframes metricFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flow-anim {
     animation: none !important;
@@ -227,4 +247,32 @@
     transform: none !important;
     filter: none !important;
   }
+}
+
+/* Sidebar nav menu — brand-selected state */
+.app-sider-nav .ant-menu-item-selected {
+  background: linear-gradient(135deg, rgba(40, 184, 160, 0.12) 0%, rgba(40, 184, 160, 0.06) 100%) !important;
+  border-left: 2px solid #28B8A0 !important;
+  color: #1A8A77 !important;
+  font-weight: 600 !important;
+}
+
+.app-sider-nav .ant-menu-item-selected .anticon {
+  color: #28B8A0 !important;
+}
+
+.app-sider-nav .ant-menu-item:not(.ant-menu-item-selected):hover {
+  background: rgba(40, 184, 160, 0.06) !important;
+  color: #1C2B2A !important;
+}
+
+/* Project item hover — shadow instead of translate */
+.project-item-btn:hover {
+  transform: none !important;
+  box-shadow: 0 4px 16px rgba(15, 42, 38, 0.08) !important;
+  border-color: rgba(40, 184, 160, 0.3) !important;
+}
+
+.project-item-btn {
+  transition: box-shadow 200ms ease, border-color 200ms ease, background 200ms ease !important;
 }

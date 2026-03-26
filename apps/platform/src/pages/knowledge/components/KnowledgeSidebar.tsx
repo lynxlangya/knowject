@@ -11,8 +11,6 @@ import {
   getKnowledgeInitials,
   KNOWLEDGE_INDEX_STATUS_CLASS,
   KNOWLEDGE_INDEX_STATUS_META,
-  KNOWLEDGE_SOURCE_CLASS,
-  KNOWLEDGE_SOURCE_TYPE_META,
 } from '../knowledgeDomain.shared';
 
 interface KnowledgeSidebarProps {
@@ -54,8 +52,6 @@ export const KnowledgeSidebar = ({
           {items.map((knowledge) => {
             const indexStatusMeta =
               KNOWLEDGE_INDEX_STATUS_META[knowledge.indexStatus];
-            const sourceTypeMeta =
-              KNOWLEDGE_SOURCE_TYPE_META[knowledge.sourceType];
             const isActive = knowledge.id === activeKnowledgeId;
             const compactMeta = t('knowledge.list.compactMeta', {
               count: knowledge.documentCount,
@@ -82,11 +78,6 @@ export const KnowledgeSidebar = ({
                       >
                         {knowledge.name}
                       </Typography.Text>
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${KNOWLEDGE_SOURCE_CLASS[knowledge.sourceType]}`}
-                      >
-                        {sourceTypeMeta.label}
-                      </span>
                       <span
                         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${KNOWLEDGE_INDEX_STATUS_CLASS[knowledge.indexStatus]}`}
                       >

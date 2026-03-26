@@ -97,9 +97,8 @@ export const AppSiderProjectPanel = ({
 
   return (
     <div
-      className="mt-4 mb-3.5 flex min-h-0 flex-1 flex-col rounded-shell border p-3"
+      className="mt-4 mb-3.5 flex min-h-0 flex-1 flex-col rounded-[var(--radius-sidebar-panel)] p-3"
       style={{
-        borderColor: 'rgba(255,255,255,0.68)',
         background: KNOWJECT_BRAND.shellSurface,
       }}
     >
@@ -110,7 +109,7 @@ export const AppSiderProjectPanel = ({
         <button
           type="button"
           aria-label={t('projects.addProject')}
-          className="flex h-9 w-9 items-center justify-center rounded-[14px] border text-slate-600 transition-all duration-200 hover:-translate-y-px hover:text-slate-900"
+          className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-sidebar-item)] border text-slate-600 transition-all duration-200 hover:-translate-y-px hover:text-slate-900"
           style={{
             borderColor: 'rgba(255,255,255,0.72)',
             background: KNOWJECT_BRAND.shellSurfaceStrong,
@@ -141,7 +140,7 @@ export const AppSiderProjectPanel = ({
           </div>
         ) : projects.length === 0 ? (
           <div
-            className="rounded-card border px-3 py-4"
+            className="rounded-[var(--radius-sidebar-panel)] border px-3 py-4"
             style={{
               borderColor: 'rgba(226,232,240,0.96)',
               background: 'rgba(255,255,255,0.88)',
@@ -189,10 +188,11 @@ export const AppSiderProjectPanel = ({
                   <button
                     type="button"
                     className={[
-                      'flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 pr-14 text-left text-label transition-all duration-200',
+                      'project-item-btn flex w-full items-center gap-3 border px-3 py-2.5 pr-14 text-left text-label',
+                      'rounded-[var(--radius-sidebar-item)]',
                       active
                         ? 'text-slate-900'
-                        : 'text-slate-600 hover:-translate-y-px hover:text-slate-900',
+                        : 'text-slate-600 hover:text-slate-900',
                     ].join(' ')}
                     style={
                       active
@@ -217,8 +217,9 @@ export const AppSiderProjectPanel = ({
                       style={
                         active || project.isPinned
                           ? {
-                              borderColor: KNOWJECT_BRAND.primaryBorder,
-                              backgroundImage: KNOWJECT_BRAND.heroGradient,
+                              borderColor: 'rgba(255,255,255,0.6)',
+                              backgroundImage: KNOWJECT_BRAND.iconGradient,
+                              boxShadow: '0 4px 12px rgba(40,184,160,0.20), inset 0 1px 0 rgba(255,255,255,0.6)',
                             }
                           : undefined
                       }
@@ -249,11 +250,11 @@ export const AppSiderProjectPanel = ({
                         name: project.name,
                       })}
                       className={[
-                        'absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl border text-slate-500 transition-all duration-200',
-                        'opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto',
-                        'group-focus-within:opacity-100 group-focus-within:scale-100 group-focus-within:pointer-events-auto',
+                        'absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-[var(--radius-sidebar-item)] border text-slate-500 transition-opacity duration-150',
+                        'opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto',
+                        'group-focus-within:opacity-100 group-focus-within:pointer-events-auto',
                         actionMenuOpen
-                          ? 'opacity-100 scale-100 pointer-events-auto'
+                          ? 'opacity-100 pointer-events-auto'
                           : '',
                       ].join(' ')}
                       style={{

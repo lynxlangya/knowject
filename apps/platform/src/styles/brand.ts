@@ -28,6 +28,9 @@ export const KNOWJECT_BRAND = {
   // Gradient 用蓝→蓝绿→薄荷，自然桥接 Logo 蓝色
   heroGradient: 'linear-gradient(145deg, #1E3580 0%, #1A7A8A 55%, #28B8A0 100%)',
   navGradient:  'linear-gradient(135deg, #1E3580 0%, #28B8A0 100%)',
+  // 小图标徽章专用：左上光源 → 薄荷绿，比 heroGradient 透亮
+  iconGradient:
+    'linear-gradient(145deg, rgba(255,255,255,0.92) 0%, #5DDDCF 30%, #28B8A0 100%)',
 
   // 内容区卡片/面板背景渐变（标准 slate→white 换 brand mint 白）
   cardSurfaceGradient:

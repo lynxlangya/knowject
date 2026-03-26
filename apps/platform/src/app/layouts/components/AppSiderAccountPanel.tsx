@@ -93,8 +93,8 @@ export const AppSiderAccountPanel = ({
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] text-sm font-semibold text-white"
           style={{
-            backgroundImage: KNOWJECT_BRAND.heroGradient,
-            boxShadow: `0 8px 14px ${KNOWJECT_BRAND.primaryGlow}`,
+            backgroundImage: KNOWJECT_BRAND.iconGradient,
+            boxShadow: `0 6px 18px rgba(40,184,160,0.22), inset 0 1px 0 rgba(255,255,255,0.55)`,
           }}
         >
           {accountAvatar}
@@ -165,36 +165,39 @@ export const AppSiderAccountPanel = ({
   );
 
   return (
-    <Popover
-      open={accountPanelOpen}
-      onOpenChange={setAccountPanelOpen}
-      placement="top"
-      trigger="click"
-      content={accountPanelContent}
-      arrow={false}
-      styles={{
-        container: {
-          padding: 0,
-          borderRadius: 20,
-          background: KNOWJECT_BRAND.shellSurfaceStrong,
-          border: '1px solid rgba(255,255,255,0.72)',
-          boxShadow: '0 18px 36px rgba(15,42,38,0.08)',
-          backdropFilter: 'blur(18px)',
-        },
-      }}
-    >
-      <button
-        type="button"
-        className="flex h-10 w-full items-center gap-2 rounded-2xl border px-3 text-left text-slate-700 transition-all duration-200 hover:-translate-y-px hover:border-slate-200 hover:bg-white/92 hover:text-slate-900 hover:shadow-[0_12px_24px_rgba(15,42,38,0.06)] active:translate-y-0 active:bg-white"
-        style={{
-          borderColor: 'rgba(255,255,255,0.72)',
-          background: KNOWJECT_BRAND.shellSurfaceStrong,
-          boxShadow: '0 10px 24px rgba(15,42,38,0.03)',
+    <div className="mb-2">
+      <Popover
+        open={accountPanelOpen}
+        onOpenChange={setAccountPanelOpen}
+        placement="top"
+        trigger="click"
+        content={accountPanelContent}
+        arrow={false}
+        styles={{
+          container: {
+            padding: 0,
+            borderRadius: 20,
+            background: KNOWJECT_BRAND.shellSurfaceStrong,
+            border: '1px solid rgba(255,255,255,0.72)',
+            boxShadow: '0 18px 36px rgba(15,42,38,0.08)',
+            backdropFilter: 'blur(18px)',
+          },
         }}
       >
-        <SettingOutlined className="shrink-0 text-base text-slate-500" />
-        <span className="text-label font-semibold">{t('account.settings')}</span>
-      </button>
-    </Popover>
+        <button
+          type="button"
+          className="flex h-10 w-full items-center gap-2 border px-3 text-left text-slate-700 transition-all duration-200 hover:border-slate-200 hover:bg-white/92 hover:text-slate-900 hover:shadow-[0_12px_24px_rgba(15,42,38,0.06)] active:bg-white"
+          style={{
+            borderColor: 'rgba(255,255,255,0.72)',
+            background: KNOWJECT_BRAND.shellSurfaceStrong,
+            boxShadow: '0 10px 24px rgba(15,42,38,0.03)',
+            borderRadius: 'var(--radius-sidebar-item)',
+          }}
+        >
+          <SettingOutlined className="shrink-0 text-base text-slate-500" />
+          <span className="text-label font-semibold">{t('account.settings')}</span>
+        </button>
+      </Popover>
+    </div>
   );
 };

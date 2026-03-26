@@ -63,7 +63,7 @@ export const OverviewActivityChart = ({
 
   return (
     <Card
-      className="rounded-3xl! border-slate-200! shadow-surface!"
+      className="rounded-3xl! border-slate-200! shadow-[0_8px_32px_rgba(15,42,38,0.06)]!"
       styles={{ body: { padding: '20px' } }}
     >
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -84,7 +84,7 @@ export const OverviewActivityChart = ({
       </div>
 
       {hasPoints ? (
-        <div className="overflow-hidden rounded-panel border border-[#D2E8E4] bg-[#F2FDFB] px-3 py-3">
+        <div className="overflow-hidden rounded-panel border border-[#C2EDE6] bg-[#F2FDFB] px-3 py-3 shadow-[inset_0_2px_8px_rgba(40,184,160,0.06)]">
           <svg
             className="h-48 w-full"
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
@@ -118,7 +118,16 @@ export const OverviewActivityChart = ({
               const coordinate = coordinates[index];
               return (
                 <g key={point.id}>
-                  <circle cx={coordinate.x} cy={coordinate.y} r={3.5} fill="#1FA08A" />
+                  {/* Glow ring */}
+                  <circle
+                    cx={coordinate.x}
+                    cy={coordinate.y}
+                    r={8}
+                    fill="rgba(40,184,160,0.15)"
+                  />
+                  {/* Core dot */}
+                  <circle cx={coordinate.x} cy={coordinate.y} r={3.5} fill="#28B8A0" />
+                  <circle cx={coordinate.x} cy={coordinate.y} r={1.5} fill="white" />
                   <text
                     x={coordinate.x}
                     y={baselineY + 20}
@@ -137,7 +146,7 @@ export const OverviewActivityChart = ({
           </svg>
         </div>
       ) : (
-        <div className="rounded-panel border border-dashed border-slate-200 bg-slate-50/60 py-10">
+        <div className="rounded-panel border border-dashed border-[#C2EDE6] bg-[#F2FDFB] py-10 shadow-[inset_0_2px_8px_rgba(40,184,160,0.04)]">
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyLabel} />
         </div>
       )}
