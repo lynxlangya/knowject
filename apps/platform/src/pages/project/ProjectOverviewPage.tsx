@@ -178,7 +178,7 @@ export const ProjectOverviewPage = () => {
         ]}
       />
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3 mb-4">
         <OverviewActivityChart
           title={t('overview.activity.title')}
           description={t('overview.activity.description')}
