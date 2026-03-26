@@ -105,6 +105,42 @@ test('conversation source drawer uses a custom shell instead of default drawer c
   );
 });
 
+test('project chat message rail drawer uses the refined editorial shell on mobile', () => {
+  const projectChatPageSource = readFileSync(
+    new URL('../src/pages/project/ProjectChatPage.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    projectChatPageSource,
+    /<Button[\s\S]*?icon=\{<PushpinOutlined\s*\/>\}[\s\S]*?sourceDrawer\.closeDrawer\(\);[\s\S]*?setMobileRailOpen\(true\);[\s\S]*?tp\('conversation\.railTitle'\)/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /className="[^"]*rounded-full![^"]*bg-\[#f8fcfb\]![^"]*text-\[#305f56\]![^"]*shadow-\[0_10px_24px_rgba\(15,23,42,0\.05\)\]![^"]*"/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /rgba\(248,252,251,0\.98\)/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /padding:\s*0,/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /backdropFilter:\s*'blur\(4px\)'/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /background:\s*'rgba\(15,\s*23,\s*42,\s*0\.16\)'/,
+  );
+  assert.match(
+    projectChatPageSource,
+    /<Drawer[\s\S]*?open=\{mobileRailOpen\}[\s\S]*?size=\{360\}[\s\S]*?title=\{tp\('conversation\.railTitle'\)\}[\s\S]*?placement="right"[\s\S]*?classNames=\{\w+\}[\s\S]*?styles=\{\w+\}[\s\S]*?onClose=\{\(\)\s*=>\s*setMobileRailOpen\(false\)\}/,
+  );
+});
+
 test('project knowledge draft flow source no longer keeps legacy create-then-upload copy or partial failure state', () => {
   const projectChatPageSource = readFileSync(
     new URL('../src/pages/project/ProjectChatPage.tsx', import.meta.url),

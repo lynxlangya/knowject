@@ -234,6 +234,7 @@ const RailContent = ({
       ? messages.filter((message) => message.starred)
       : messages;
   const activeModeMeta = MODE_META[mode];
+  const hasVisibleRows = visibleMessages.length > 0;
   const countLabel =
     mode === 'selection'
       ? tp('conversation.selectedCount', { count: selectedMessageIds.length })
@@ -261,7 +262,10 @@ const RailContent = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b border-slate-200 px-4 py-4">
+      <div
+        data-project-chat-message-rail-header="true"
+        className="border-b border-[#e1ebe7] bg-[linear-gradient(180deg,rgba(248,252,251,0.98),rgba(243,247,245,0.96))] px-4 py-4"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Typography.Text className="text-caption font-semibold uppercase tracking-[0.18em] text-slate-400">
@@ -293,72 +297,84 @@ const RailContent = ({
           </div>
         </div>
 
-        {mode === 'selection' ? (
-          <div className="mt-4 flex items-center justify-between gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5">
-            <div className="min-w-0">
-              <Typography.Text className="block text-xs font-medium text-emerald-700">
-                {tp('conversation.railSelectionTitle')}
-              </Typography.Text>
-              {/* <Typography.Text className="block text-[11px] text-emerald-700/80">
-                点击条目勾选消息，底部操作保持原有导出与知识草稿流程。
-              </Typography.Text> */}
-            </div>
-            <Button
-              size="small"
-              onClick={() => onModeChange('browse')}
-              className="rounded-full! border-emerald-200! bg-white! px-3! text-xs! font-medium! text-emerald-700! shadow-none!"
-            >
-              {tp('conversation.railBack')}
-            </Button>
-          </div>
-        ) : null}
-
-        {mode !== 'selection' ? (
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <div className="flex rounded-full border border-slate-200 bg-slate-100 p-0.5">
-              <RailModeButton
-                active={mode === 'browse'}
-                icon={MODE_META.browse.icon}
-                label={tp('conversation.railAll')}
+        <div
+          data-project-chat-message-rail-toolbar="true"
+          className="mt-4 flex items-center justify-between gap-3 rounded-[18px] border border-[#dbe7e2] bg-white/72 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]"
+        >
+          {mode === 'selection' ? (
+            <div className="flex w-full items-center justify-between gap-2 rounded-[14px] border border-emerald-100 bg-emerald-50/60 px-3 py-2.5">
+              <div className="min-w-0">
+                <Typography.Text className="block text-xs font-medium text-emerald-700">
+                  {tp('conversation.railSelectionTitle')}
+                </Typography.Text>
+                {/* <Typography.Text className="block text-[11px] text-emerald-700/80">
+                  点击条目勾选消息，底部操作保持原有导出与知识草稿流程。
+                </Typography.Text> */}
+              </div>
+              <Button
+                size="small"
                 onClick={() => onModeChange('browse')}
-              />
-              <RailModeButton
-                active={mode === 'starred'}
-                icon={MODE_META.starred.icon}
-                activeIcon={
-                  <StarFilled
-                    className={PROJECT_CHAT_STAR_CLASS_NAMES.iconActive}
-                  />
-                }
-                label={tp('conversation.railStarred')}
-                onClick={() => onModeChange('starred')}
-                activeClassName={
-                  PROJECT_CHAT_STAR_CLASS_NAMES.buttonActiveAntd
-                }
-                inactiveClassName={[
-                  'text-slate-500!',
-                  PROJECT_CHAT_STAR_CLASS_NAMES.buttonHoverAntd,
-                ].join(' ')}
-              />
+                className="rounded-full! border-emerald-200! bg-white! px-3! text-xs! font-medium! text-emerald-700! shadow-none!"
+              >
+                {tp('conversation.railBack')}
+              </Button>
             </div>
+          ) : (
+            <>
+              <div className="flex rounded-[14px] bg-transparent p-0.5">
+                <RailModeButton
+                  active={mode === 'browse'}
+                  icon={MODE_META.browse.icon}
+                  label={tp('conversation.railAll')}
+                  onClick={() => onModeChange('browse')}
+                />
+                <RailModeButton
+                  active={mode === 'starred'}
+                  icon={MODE_META.starred.icon}
+                  activeIcon={
+                    <StarFilled
+                      className={PROJECT_CHAT_STAR_CLASS_NAMES.iconActive}
+                    />
+                  }
+                  label={tp('conversation.railStarred')}
+                  onClick={() => onModeChange('starred')}
+                  activeClassName={
+                    PROJECT_CHAT_STAR_CLASS_NAMES.buttonActiveAntd
+                  }
+                  inactiveClassName={[
+                    'text-slate-500!',
+                    PROJECT_CHAT_STAR_CLASS_NAMES.buttonHoverAntd,
+                  ].join(' ')}
+                />
+              </div>
 
-            <Button
-              size="small"
-              icon={<CheckSquareOutlined />}
-              onClick={() => onModeChange('selection')}
-              className="h-9! rounded-full! border-slate-200! bg-white! px-3.5! text-xs! font-medium! text-slate-700! shadow-none! hover:border-slate-300! hover:bg-slate-50/80! hover:text-slate-800!"
-            >
-              {tp('conversation.railSelect')}
-            </Button>
-          </div>
-        ) : null}
+              <Button
+                size="small"
+                icon={<CheckSquareOutlined />}
+                onClick={() => onModeChange('selection')}
+                className="h-9! rounded-full! border-slate-200! bg-white! px-3.5! text-xs! font-medium! text-slate-700! shadow-none! hover:border-slate-300! hover:bg-slate-50/80! hover:text-slate-800!"
+              >
+                {tp('conversation.railSelect')}
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <div
-        className="project-chat-rail-scroll min-h-0 flex-1 overflow-y-auto px-2.5 pr-1 sm:pr-2"
-        style={{ paddingBlock: '8px 24px' }}
+        data-project-chat-message-rail-list="true"
+        className="project-chat-rail-scroll relative min-h-0 flex-1 overflow-y-auto px-3 pb-6 pt-4"
       >
-        {visibleMessages.length <= 0 ? (
+        {hasVisibleRows ? (
+          <div
+            data-project-chat-message-rail-spine="true"
+            className="pointer-events-none absolute inset-y-0 left-0 flex w-6 justify-center"
+          >
+            <div className="h-full w-px bg-[linear-gradient(180deg,rgba(46,139,118,0.16),rgba(148,163,184,0.12))]" />
+          </div>
+        ) : null}
+
+        {!hasVisibleRows ? (
           <div className="grid h-full place-items-center">
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -375,27 +391,33 @@ const RailContent = ({
             />
           </div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="relative space-y-1.5">
             {visibleMessages.map((message) => {
               const selectable = selectableMessageIdSet.has(message.id);
               const selected = selectedMessageIdSet.has(message.id);
               const showSelectionAffordance = mode === 'selection';
               const disableSelectionAffordance =
                 showSelectionAffordance && !selectable;
+              const rowState =
+                selected ? 'selected' : disableSelectionAffordance ? 'disabled' : 'default';
 
               return (
                 <article
                   key={message.id}
+                  data-project-chat-message-rail-row="true"
+                  data-rail-row-state={rowState}
                   tabIndex={0}
                   className={[
-                    'group relative rounded-card px-3 py-2.5 transition-[background-color,box-shadow,transform]',
-                    'outline-none focus:bg-white focus:shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08),0_10px_24px_rgba(15,23,42,0.06)]',
-                    selected
-                      ? 'bg-emerald-50/85 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.24)]'
-                      : 'bg-transparent',
-                    disableSelectionAffordance
-                      ? 'cursor-not-allowed opacity-70'
-                      : 'cursor-pointer',
+                    'group relative ml-2 rounded-[18px] py-3 pl-2.5 transition-[background-color,border-color,box-shadow,color,opacity] outline-none',
+                    'before:absolute before:-left-2 before:top-[20px] before:h-px before:w-2 before:bg-[#d7e5e0] before:content-[""]',
+                    'focus-visible:ring-2 focus-visible:ring-[#8ab4a5]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f4f8f6] focus-visible:shadow-[0_10px_26px_rgba(93,142,128,0.14)]',
+                    mode !== 'selection' ? 'pr-0' : 'pr-2.5',
+                    rowState === 'selected'
+                      ? 'bg-emerald-50/72 ring-1 ring-inset ring-emerald-200/80'
+                      : rowState === 'disabled'
+                        ? 'bg-slate-50/55 text-slate-500 opacity-72 focus-visible:bg-white/88 focus-visible:opacity-100'
+                        : 'bg-transparent hover:bg-white/88 focus-visible:bg-white/92',
+                    disableSelectionAffordance ? 'cursor-not-allowed' : 'cursor-pointer',
                   ].join(' ')}
                   onClick={(event) => {
                     event.currentTarget.focus();
@@ -416,38 +438,43 @@ const RailContent = ({
                     });
                   }}
                 >
-                  <span
-                    aria-hidden
-                    className={[
-                      'absolute inset-y-2 left-0 w-0.75 rounded-full transition-opacity duration-150',
-                      selected
-                        ? 'bg-emerald-500 opacity-100'
+                    <span
+                      data-project-chat-message-rail-node="true"
+                      aria-hidden
+                      className={[
+                      'absolute -left-[11px] top-[16px] h-2.5 w-2.5 rounded-full border border-white shadow-[0_0_0_4px_rgba(244,248,246,0.96)] transition-colors',
+                      rowState === 'selected'
+                        ? 'bg-emerald-500'
                         : mode === 'starred'
-                          ? 'bg-amber-400 opacity-55 group-focus:opacity-85'
-                          : 'bg-slate-300 opacity-0 group-focus:opacity-90',
+                          ? 'bg-amber-400'
+                          : 'bg-[#c7d6d1] group-hover:bg-[#7aa496] group-focus-visible:bg-[#5d8e80]',
                     ].join(' ')}
                   />
 
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-1.5">
                     {showSelectionAffordance ? (
-                      <Checkbox
-                        checked={selected}
-                        disabled={!selectable}
-                        className="mt-0.5"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                        }}
-                        onChange={() => onToggleSelectedMessageId(message.id)}
-                      />
-                    ) : null}
+                      <div className="mt-0.5 flex w-3.5 shrink-0 justify-center">
+                        <Checkbox
+                          checked={selected}
+                          disabled={!selectable}
+                          className="mt-0.5"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                          }}
+                          onChange={() => onToggleSelectedMessageId(message.id)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-1 shrink-0" aria-hidden />
+                    )}
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-start gap-2">
+                      <div className="flex items-start gap-0">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span
                               className={[
-                                'rounded-full px-2 py-0.5 text-[11px] font-medium',
+                                'rounded-full px-2 py-0.5 text-[11px] font-medium tracking-[0.02em]',
                                 message.role === 'assistant'
                                   ? 'bg-emerald-50 text-emerald-700'
                                   : 'bg-slate-100 text-slate-600',
@@ -476,7 +503,7 @@ const RailContent = ({
                           </div>
 
                           <Typography.Paragraph
-                            className="mb-0! mt-1.5 text-[13px]! leading-5! text-slate-600!"
+                            className="mb-0! mt-1.5 text-[13px]! leading-[1.55]! text-slate-600!"
                             style={MESSAGE_PREVIEW_STYLE}
                           >
                             {buildMessagePreview(message.content)}
@@ -490,7 +517,7 @@ const RailContent = ({
                             loading={starringMessageId === message.id}
                             aria-label={message.starred ? tp('conversation.unstar') : tp('conversation.star')}
                             className={[
-                              '-mt-0.5 h-8! w-8! rounded-full! border-0! shadow-none!',
+                              'absolute right-0 h-8! w-8! rounded-full! border-0! shadow-none!',
                               message.starred
                                 ? PROJECT_CHAT_STAR_CLASS_NAMES.buttonActiveAntd
                                 : PROJECT_CHAT_STAR_CLASS_NAMES.buttonInactiveAntd,
@@ -521,7 +548,10 @@ const RailContent = ({
       </div>
 
       {mode === 'selection' ? (
-        <div className="border-t border-slate-200 bg-slate-50/70 px-4 py-4">
+        <div
+          data-project-chat-message-rail-selection-footer="true"
+          className="border-t border-[#e1ebe7] bg-[linear-gradient(180deg,rgba(247,250,249,0.98),rgba(241,246,244,0.98))] px-4 py-4"
+        >
           <div className="mb-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <Typography.Text className="block text-xs font-medium text-slate-700">
