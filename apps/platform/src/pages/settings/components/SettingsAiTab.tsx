@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { ApiOutlined, WarningOutlined } from '@ant-design/icons';
-import { Alert, Button, Col, Flex, Input, Row, Select, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Col, Flex, Input, Row, Select, Space, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type {
   SettingsEmbeddingProvider,
@@ -21,7 +21,7 @@ import {
   type SettingsConnectionFeedbackState,
   type TestSection,
 } from '../constants';
-import { SectionBlock, SettingField } from './SettingsPageParts';
+import { KeyStatusTag, SectionBlock, SettingField, SourceTag } from './SettingsPageParts';
 
 const { Password } = Input;
 const { Text } = Typography;
@@ -115,12 +115,15 @@ export const SettingsAiTab = ({
         description={t('settings.alerts.embeddingRebuild')}
         extra={
           <Space size={8} wrap>
-            <Tag color={settings.embedding.source === 'database' ? 'blue' : 'gold'}>
-              {settings.embedding.source === 'database'
+            <SourceTag
+              source={settings.embedding.source}
+              label={settings.embedding.source === 'database'
                 ? t('settings.sources.database')
                 : t('settings.sources.environment')}
-            </Tag>
-            <Tag color={embeddingKeyTag.color}>{embeddingKeyTag.label}</Tag>
+            />
+            <KeyStatusTag color={embeddingKeyTag.color}>
+              {embeddingKeyTag.label}
+            </KeyStatusTag>
           </Space>
         }
       >
@@ -274,12 +277,15 @@ export const SettingsAiTab = ({
         description={t('settings.alerts.llmRuntimeDescription')}
         extra={
           <Space size={8} wrap>
-            <Tag color={settings.llm.source === 'database' ? 'blue' : 'gold'}>
-              {settings.llm.source === 'database'
+            <SourceTag
+              source={settings.llm.source}
+              label={settings.llm.source === 'database'
                 ? t('settings.sources.database')
                 : t('settings.sources.environment')}
-            </Tag>
-            <Tag color={llmKeyTag.color}>{llmKeyTag.label}</Tag>
+            />
+            <KeyStatusTag color={llmKeyTag.color}>
+              {llmKeyTag.label}
+            </KeyStatusTag>
           </Space>
         }
       >

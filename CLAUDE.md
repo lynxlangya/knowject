@@ -64,3 +64,5 @@ pnpm --filter api check-types && pnpm --filter api build            # 后端验�
 - `apps/platform/src/pages/project/ProjectChatPage.tsx`
 - `apps/platform/src/app/layouts/components/AppSider.tsx`
 - `apps/api/src/modules/knowledge/knowledge.repository.ts`
+
+这三个文件的详细说明见 [.claude/rules/frontend.md](.claude/rules/frontend.md) 和 [.claude/rules/backend.md](.claude/rules/backend.md)。

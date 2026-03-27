@@ -1,3 +1,9 @@
+---
+paths:
+  - "apps/api/**/*.ts"
+  - "apps/indexer-py/**/*.py"
+---
+
 # Backend Rules
 
 ## 模块职责
@@ -38,3 +44,7 @@
 pnpm --filter api check-types
 pnpm --filter api build
 ```
+
+## 结构治理 Hotspot
+
+完整列表见 [CLAUDE.md](../CLAUDE.md) 中的"结构治理 Hotspot"段落。

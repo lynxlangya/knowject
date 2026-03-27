@@ -1,3 +1,11 @@
+---
+paths:
+  - "apps/platform/**/*.ts"
+  - "apps/platform/**/*.tsx"
+  - "packages/ui/**/*"
+  - "packages/request/**/*"
+---
+
 # Frontend Rules
 
 ## 组件分层约定
@@ -18,11 +26,7 @@ SearchPanel 字段渲染与显示策略沉淀到 `packages/ui/src/components/Sea
 
 ## 结构治理 Hotspot
 
-每次改动前重新对齐职责：
-- `apps/platform/src/pages/project/ProjectChatPage.tsx`
-- `apps/platform/src/app/layouts/components/AppSider.tsx`
-
-文件行数接近或超过 550 行且存在多重职责时，须触发结构治理判断。
+完整列表见 [CLAUDE.md](../CLAUDE.md) 中的"结构治理 Hotspot"段落。
 
 ## i18n 约束
 

@@ -106,7 +106,7 @@ export const SettingsPage = () => {
         }
       />
 
-      <Card style={{ borderRadius: 28, boxShadow: '0 18px 40px rgba(15, 23, 42, 0.06)' }}>
+      <Card style={{ borderRadius: 28, border: '1px solid #C2EDE6', boxShadow: '0 18px 40px rgba(15, 23, 42, 0.06)' }}>
         <Tabs
           activeKey={activeTab}
           onChange={(key) => setActiveTab(key as typeof activeTab)}
@@ -201,9 +201,8 @@ export const SettingsPage = () => {
                   style={{
                     borderRadius: 20,
                     minHeight: 360,
-                    background:
-                      'linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98))',
-                    borderColor: 'rgba(203, 213, 225, 0.72)',
+                    border: '1px solid #C2EDE6',
+                    background: '#F2FDFB',
                   }}
                 >
                   <div
@@ -212,8 +211,8 @@ export const SettingsPage = () => {
                       placeItems: 'center',
                       minHeight: 300,
                       borderRadius: 18,
-                      border: '1px dashed rgba(148, 163, 184, 0.78)',
-                      background: 'rgba(248, 250, 252, 0.76)',
+                      border: '1px dashed #C2EDE6',
+                      background: 'rgba(255,255,255,0.8)',
                     }}
                   >
                     <Space orientation="vertical" size={16} align="center">

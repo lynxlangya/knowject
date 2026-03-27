@@ -59,10 +59,11 @@ export const SettingsWorkspaceTab = ({
 
         <Card
           size="small"
+          className="transition-shadow duration-200 hover:shadow-[0_6px_20px_rgba(15,42,38,0.08)]"
           style={{
             borderRadius: 18,
-            borderStyle: 'dashed',
-            background: 'rgba(248, 250, 252, 0.82)',
+            border: '1px dashed #C2EDE6',
+            background: '#F2FDFB',
           }}
         >
           <Flex justify="space-between" align="center" gap={16} wrap>

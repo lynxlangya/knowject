@@ -234,6 +234,11 @@
   }
 }
 
+/* Summary card entrance animation — timing is in the keyframe, delay is per-item via inline style */
+.animate-metric-fade-in {
+  animation: metricFadeIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flow-anim {
     animation: none !important;

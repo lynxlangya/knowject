@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { ApiOutlined, WarningOutlined } from '@ant-design/icons';
-import { Alert, Button, Checkbox, Flex, InputNumber, Slider, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Checkbox, Flex, InputNumber, Slider, Space, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { SettingsResponse } from '@api/settings';
 import type {
@@ -9,7 +9,7 @@ import type {
   SettingsConnectionFeedbackState,
   TestSection,
 } from '../constants';
-import { SectionBlock, SettingField } from './SettingsPageParts';
+import { SectionBlock, SettingField, SourceTag } from './SettingsPageParts';
 
 const { Paragraph, Text } = Typography;
 
@@ -49,11 +49,12 @@ export const SettingsIndexingTab = ({
       title={t('settings.tabs.indexing')}
       description={t('settings.alerts.indexerTimeoutHint')}
       extra={
-        <Tag color={settings.indexing.source === 'database' ? 'blue' : 'gold'}>
-          {settings.indexing.source === 'database'
+        <SourceTag
+          source={settings.indexing.source}
+          label={settings.indexing.source === 'database'
             ? t('settings.sources.database')
             : t('settings.sources.environment')}
-        </Tag>
+        />
       }
     >
       <Space orientation="vertical" size={20} style={{ width: '100%' }}>
