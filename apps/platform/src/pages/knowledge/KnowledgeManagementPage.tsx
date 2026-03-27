@@ -22,7 +22,6 @@ import { extractApiErrorMessage } from '@api/error';
 import {
   uploadKnowledgeDocument,
   type KnowledgeDocumentResponse,
-  type KnowledgeDiagnosticsDocumentResponse,
   type KnowledgeSummaryResponse,
 } from '@api/knowledge';
 import {
@@ -160,10 +159,6 @@ export const KnowledgeManagementPage = () => {
     : [];
   const knowledgeRebuildBlockedReason =
     buildKnowledgeRebuildBlockedReason(activeKnowledge);
-  const activeDiagnosticsDocumentMap = new Map<
-    string,
-    KnowledgeDiagnosticsDocumentResponse
-  >((activeDiagnostics?.documents ?? []).map((document) => [document.id, document]));
 
   const triggerDocumentUpload = () => {
     fileInputRef.current?.click();
@@ -350,7 +345,6 @@ export const KnowledgeManagementPage = () => {
   const { activeTabResetKey, tabItems } = useKnowledgeTabOrchestration({
     activeKnowledgeId,
     activeKnowledge,
-    activeDiagnosticsDocumentMap,
     shouldPoll,
     pollingStopped,
     uploading,

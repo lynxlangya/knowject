@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { Avatar, Empty, Tabs, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { MemberAssetSummary, MemberViewModel } from '../members.types';
 import {
   getCollaborationRoleLabels,
+  getInitials,
   getMemberStatusMeta,
   getProjectAccessRoleLabels,
   formatDisplayDate,
@@ -14,15 +16,6 @@ import { SubtleScrollArea } from './SubtleScrollArea';
 interface MemberDetailPanelProps {
   member: MemberViewModel | null;
 }
-
-const getInitials = (name: string): string => {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((item) => item[0]?.toUpperCase() ?? '')
-    .join('');
-};
 
 const renderAssetGroups = (
   assets: MemberAssetSummary,
@@ -38,7 +31,7 @@ const renderAssetGroups = (
         return (
           <div
             key={groupKey}
-            className="rounded-card border border-slate-200 bg-slate-50/70 p-4"
+            className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-4"
           >
             <div className="flex items-center justify-between gap-3">
               <Typography.Title level={5} className="mb-0! text-slate-800!">
@@ -96,9 +89,36 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
     );
   }
 
+  const METRIC_STAGGER = 60;
   const statusMeta = memberStatusMeta[member.primaryStatus];
-  const adminProjects = member.projects.filter(
-    (project) => project.projectRole === 'admin',
+
+  const adminProjects = useMemo(
+    () => member.projects.filter((project) => project.projectRole === 'admin'),
+    [member.projects],
+  );
+
+  const summaryStats = useMemo(
+    () => [
+      {
+        label: t('members.detail.firstCollaboration'),
+        value: formatDisplayDate(member.firstCollaborationAt, i18n.language, t),
+      },
+      {
+        label: t('members.detail.latestCollaboration'),
+        value:
+          member.recentActivity?.displayTime ??
+          formatDisplayDateTime(member.lastProjectActivityAt, i18n.language, t),
+      },
+      {
+        label: t('members.detail.assetsSummary'),
+        value: `${member.assets.knowledge.length} / ${member.assets.skills.length} / ${member.assets.agents.length}`,
+      },
+      {
+        label: t('members.detail.projectStatusBreakdown'),
+        value: `${member.activeProjectCount}/${member.syncingProjectCount}/${member.blockedProjectCount}/${member.idleProjectCount}`,
+      },
+    ],
+    [member, t, i18n.language],
   );
 
   return (
@@ -157,29 +177,11 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
         </div>
 
         <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-105">
-          {[
-            {
-              label: t('members.detail.firstCollaboration'),
-              value: formatDisplayDate(member.firstCollaborationAt, i18n.language, t),
-            },
-            {
-              label: t('members.detail.latestCollaboration'),
-              value:
-                member.recentActivity?.displayTime ??
-                formatDisplayDateTime(member.lastProjectActivityAt, i18n.language, t),
-            },
-            {
-              label: t('members.detail.assetsSummary'),
-              value: `${member.assets.knowledge.length} / ${member.assets.skills.length} / ${member.assets.agents.length}`,
-            },
-            {
-              label: t('members.detail.projectStatusBreakdown'),
-              value: `${member.activeProjectCount}/${member.syncingProjectCount}/${member.blockedProjectCount}/${member.idleProjectCount}`,
-            },
-          ].map((item) => (
+          {summaryStats.map((item, index) => (
             <div
               key={item.label}
-              className="rounded-card border border-slate-200 bg-slate-50/70 px-4 py-4"
+              className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] px-4 py-4 animate-metric-fade-in"
+              style={{ animationDelay: `${index * METRIC_STAGGER}ms` }}
             >
               <Typography.Text className="text-xs uppercase tracking-[0.14em] text-slate-400">
                 {item.label}
@@ -201,7 +203,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                 label: t('members.detail.overview'),
                 children: (
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-                    <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in" style={{ animationDelay: '0ms' }}>
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
                         {t('members.detail.currentFocus')}
                       </Typography.Title>
@@ -227,7 +229,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                       </div>
                     </div>
 
-                    <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in" style={{ animationDelay: '60ms' }}>
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
                         {t('members.detail.recentActivity')}
                       </Typography.Title>
@@ -257,10 +259,11 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                 label: t('members.detail.projectsTab'),
                 children: (
                   <div className="flex flex-col gap-3">
-                    {member.projects.map((project) => (
+                    {member.projects.map((project, index) => (
                       <article
                         key={project.id}
-                        className="rounded-card border border-slate-200 bg-slate-50/70 p-5"
+                        className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in"
+                        style={{ animationDelay: `${index * 60}ms` }}
                       >
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                           <div className="min-w-0 flex-1">
@@ -352,7 +355,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                 label: t('members.detail.permissionsTab'),
                 children: (
                   <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-                    <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in" style={{ animationDelay: '0ms' }}>
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
                         {t('members.detail.permissionSummary')}
                       </Typography.Title>
@@ -379,7 +382,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                       </div>
                     </div>
 
-                    <div className="rounded-card border border-slate-200 bg-slate-50/70 p-5">
+                    <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in" style={{ animationDelay: '60ms' }}>
                       <Typography.Title level={5} className="mb-0! text-slate-800!">
                         {t('members.detail.accessScope')}
                       </Typography.Title>

@@ -1,6 +1,5 @@
 import type {
   KnowledgeDetailResponse,
-  KnowledgeDiagnosticsDocumentResponse,
   KnowledgeDiagnosticsResponse,
   KnowledgeDocumentResponse,
 } from '@api/knowledge';
@@ -13,10 +12,6 @@ import { KnowledgeSearchTab } from '../components/KnowledgeSearchTab';
 interface UseKnowledgeTabOrchestrationOptions {
   activeKnowledgeId: string | null;
   activeKnowledge: KnowledgeDetailResponse | null;
-  activeDiagnosticsDocumentMap: ReadonlyMap<
-    string,
-    KnowledgeDiagnosticsDocumentResponse
-  >;
   shouldPoll: boolean;
   pollingStopped: boolean;
   uploading: boolean;
@@ -40,7 +35,6 @@ interface UseKnowledgeTabOrchestrationOptions {
 export const useKnowledgeTabOrchestration = ({
   activeKnowledgeId,
   activeKnowledge,
-  activeDiagnosticsDocumentMap,
   shouldPoll,
   pollingStopped,
   uploading,
@@ -66,7 +60,6 @@ export const useKnowledgeTabOrchestration = ({
           children: (
             <KnowledgeDocumentsTab
               activeKnowledge={activeKnowledge}
-              activeDiagnosticsDocumentMap={activeDiagnosticsDocumentMap}
               shouldPoll={shouldPoll}
               pollingStopped={pollingStopped}
               uploading={uploading}

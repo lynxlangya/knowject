@@ -64,11 +64,11 @@ export const KNOWLEDGE_INDEX_STATUS_CLASS: Record<
   KnowledgeIndexStatus,
   string
 > = {
-  idle: 'border-slate-200 bg-slate-100 text-slate-600',
-  pending: 'border-amber-200 bg-amber-50 text-amber-700',
-  processing: 'border-sky-200 bg-sky-50 text-sky-700',
-  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  failed: 'border-rose-200 bg-rose-50 text-rose-700',
+  idle: 'border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]',
+  pending: 'border-[#D4A017] bg-[rgba(212,160,23,0.08)] text-[#B45309]',
+  processing: 'border-[#B8D4E8] bg-[#EDF9FD] text-[#1E6A8A]',
+  completed: 'border-[#C2EDE6] bg-[#F2FDFB] text-[#1A8A77]',
+  failed: 'border-[#FECDD3] bg-[#FFF1F2] text-[#9F1239]',
 };
 
 export const KNOWLEDGE_DOCUMENT_STATUS_META: Record<
@@ -108,8 +108,8 @@ export const KNOWLEDGE_SOURCE_TYPE_META: Record<
 };
 
 export const KNOWLEDGE_SOURCE_CLASS: Record<KnowledgeSourceType, string> = {
-  global_docs: 'border-slate-200 bg-white text-slate-500',
-  global_code: 'border-violet-200 bg-violet-50 text-violet-700',
+  global_docs: 'border-[#e2e8f0] bg-white text-[#64748b]',
+  global_code: 'border-[#B8D4E8] bg-[#EDF9FD] text-[#1E6A8A]',
 };
 
 export const KNOWLEDGE_REBUILD_TOOLTIP =

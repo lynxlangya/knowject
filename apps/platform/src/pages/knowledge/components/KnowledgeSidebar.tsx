@@ -1,16 +1,15 @@
+import type { CSSProperties } from 'react';
 import { Avatar, Button, Empty, Typography } from 'antd';
 import { useTranslation } from 'react-i18next';
 import type { KnowledgeSummaryResponse } from '@api/knowledge';
+import type { KnowledgeIndexStatus } from '@api/knowledge';
 import {
   GlobalAssetSidebar,
-  GlobalAssetSidebarItem,
   GlobalAssetSidebarSection,
 } from '@pages/assets/components/GlobalAssetLayout';
 import {
   formatKnowledgeCompactDate,
   getKnowledgeInitials,
-  KNOWLEDGE_INDEX_STATUS_CLASS,
-  KNOWLEDGE_INDEX_STATUS_META,
 } from '../knowledgeDomain.shared';
 
 interface KnowledgeSidebarProps {
@@ -19,6 +18,14 @@ interface KnowledgeSidebarProps {
   onSelectKnowledge: (knowledgeId: string) => void;
   onCreateKnowledge: () => void;
 }
+
+const STATUS_ACCENT: Record<KnowledgeIndexStatus, string> = {
+  idle:      '#CBD5E1',
+  pending:   '#D4A017',
+  processing:'#5EC8E8',
+  completed: '#28B8A0',
+  failed:    '#F87171',
+};
 
 export const KnowledgeSidebar = ({
   items,
@@ -49,48 +56,63 @@ export const KnowledgeSidebar = ({
         </Empty>
       ) : (
         <GlobalAssetSidebarSection>
-          {items.map((knowledge) => {
-            const indexStatusMeta =
-              KNOWLEDGE_INDEX_STATUS_META[knowledge.indexStatus];
+          {items.map((knowledge, index) => {
             const isActive = knowledge.id === activeKnowledgeId;
+            const accentColor = STATUS_ACCENT[knowledge.indexStatus] ?? STATUS_ACCENT.idle;
             const compactMeta = t('knowledge.list.compactMeta', {
               count: knowledge.documentCount,
               updatedAt: formatKnowledgeCompactDate(knowledge.updatedAt),
             });
 
             return (
-              <GlobalAssetSidebarItem
+              <button
                 key={knowledge.id}
-                active={isActive}
+                type="button"
                 onClick={() => onSelectKnowledge(knowledge.id)}
+                aria-pressed={isActive}
+                className={`knowledge-sidebar-card knowledge-sidebar-card--enter ${isActive ? 'knowledge-sidebar-card--active' : ''}`}
+                style={{
+                  animationDelay: `${index * 35}ms`,
+                  '--accent': accentColor,
+                } as CSSProperties}
               >
-                <div className="flex items-center gap-3">
-                  <Avatar size={36} className="shrink-0 bg-slate-200 text-slate-600">
-                    {getKnowledgeInitials(knowledge.name)}
-                  </Avatar>
+                {/* Left accent bar */}
+                <span
+                  className="knowledge-sidebar-card__accent"
+                  aria-hidden="true"
+                />
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Typography.Text
-                        className={`truncate text-label font-semibold ${
-                          isActive ? 'text-slate-900!' : 'text-slate-800!'
-                        }`}
-                      >
-                        {knowledge.name}
-                      </Typography.Text>
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${KNOWLEDGE_INDEX_STATUS_CLASS[knowledge.indexStatus]}`}
-                      >
-                        {indexStatusMeta.label}
-                      </span>
-                    </div>
+                {/* Avatar */}
+                <Avatar
+                  size={36}
+                  className={`shrink-0 ${isActive ? 'knowledge-sidebar-card__avatar--active' : 'knowledge-sidebar-card__avatar'}`}
+                >
+                  {getKnowledgeInitials(knowledge.name)}
+                </Avatar>
 
-                    <Typography.Text className="mt-1 block truncate text-caption text-slate-500">
-                      {compactMeta}
+                {/* Info */}
+                <div className="min-w-0 flex-1 pr-5">
+                  <div className="flex items-center gap-2">
+                    <Typography.Text
+                      className={`truncate text-label font-semibold ${
+                        isActive ? 'text-[#1C2B2A]!' : 'text-slate-800!'
+                      }`}
+                    >
+                      {knowledge.name}
                     </Typography.Text>
                   </div>
+
+                  <Typography.Text className="mt-1 block truncate text-caption text-slate-400">
+                    {compactMeta}
+                  </Typography.Text>
                 </div>
-              </GlobalAssetSidebarItem>
+
+                {/* Status dot */}
+                <span
+                  className="knowledge-sidebar-card__dot"
+                  aria-hidden="true"
+                />
+              </button>
             );
           })}
         </GlobalAssetSidebarSection>

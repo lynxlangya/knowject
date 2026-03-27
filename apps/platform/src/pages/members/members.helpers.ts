@@ -31,19 +31,19 @@ export const getMemberStatusMeta = (
 > => ({
   active: {
     label: t('members.status.active'),
-    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    className: 'border-[#C2EDE6] bg-[#F2FDFB] text-[#1A8A77]',
   },
   syncing: {
     label: t('members.status.syncing'),
-    className: 'border-sky-200 bg-sky-50 text-sky-700',
+    className: 'border-[#B8D4E8] bg-[#EDF9FD] text-[#1E6A8A]',
   },
   blocked: {
     label: t('members.status.blocked'),
-    className: 'border-rose-200 bg-rose-50 text-rose-700',
+    className: 'border-[#FECDD3] bg-[#FFF1F2] text-[#9F1239]',
   },
   idle: {
     label: t('members.status.idle'),
-    className: 'border-slate-200 bg-slate-100 text-slate-600',
+    className: 'border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]',
   },
 });
 
@@ -451,6 +451,17 @@ export const filterMemberViewModels = (
 
     return left.name.localeCompare(right.name, 'zh-CN');
   });
+};
+
+// ── Shared helpers ──────────────────────────────────────────────────────────────
+
+export const getInitials = (name: string): string => {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((item) => item[0]?.toUpperCase() ?? '')
+    .join('');
 };
 
 export const formatDisplayDate = (

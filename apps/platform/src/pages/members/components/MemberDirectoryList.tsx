@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import type { MemberViewModel } from '../members.types';
 import {
   getCollaborationRoleLabels,
-  getMemberStatusMeta,
+  getInitials,
 } from '../members.helpers';
+import type { ProjectMemberStatus } from '@app/project/project.types';
 
 interface MemberDirectoryListProps {
   members: MemberViewModel[];
@@ -12,13 +13,18 @@ interface MemberDirectoryListProps {
   onSelect: (memberId: string) => void;
 }
 
-const getInitials = (name: string): string => {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((item) => item[0]?.toUpperCase() ?? '')
-    .join('');
+const STATUS_MODIFIER: Record<ProjectMemberStatus, string> = {
+  active:  'member-card--active',
+  syncing: 'member-card--syncing',
+  blocked: 'member-card--blocked',
+  idle:    '',
+};
+
+const STATUS_DOT_MODIFIER: Record<ProjectMemberStatus, string> = {
+  active:  'member-card__status-dot--active',
+  syncing: 'member-card__status-dot--syncing',
+  blocked: 'member-card__status-dot--blocked',
+  idle:    'member-card__status-dot--idle',
 };
 
 export const MemberDirectoryList = ({
@@ -28,7 +34,6 @@ export const MemberDirectoryList = ({
 }: MemberDirectoryListProps) => {
   const { t } = useTranslation('pages');
   const collaborationRoleLabels = getCollaborationRoleLabels(t);
-  const memberStatusMeta = getMemberStatusMeta(t);
 
   if (members.length === 0) {
     return (
@@ -40,58 +45,61 @@ export const MemberDirectoryList = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {members.map((member) => {
+      {members.map((member, index) => {
         const isActive = member.id === activeMemberId;
-        const statusMeta = memberStatusMeta[member.primaryStatus];
-        const compactMeta = `${t('members.directory.projectsCount', {
-          count: member.visibleProjectCount,
-        })}${
+        const cardModifier = STATUS_MODIFIER[member.primaryStatus];
+        const dotModifier = STATUS_DOT_MODIFIER[member.primaryStatus];
+        const compactMeta = [
+          t('members.directory.projectsCount', {
+            count: member.visibleProjectCount,
+          }),
           member.primaryRole
-            ? ` · ${collaborationRoleLabels[member.primaryRole]}`
-            : ''
-        }`;
+            ? collaborationRoleLabels[member.primaryRole]
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ');
 
         return (
           <button
             key={member.id}
             type="button"
             onClick={() => onSelect(member.id)}
-            className={`w-full rounded-2xl border px-3 py-2.5 text-left transition ${
-              isActive
-                ? 'border-emerald-200 bg-emerald-50/70'
-                : 'border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white'
-            }`}
+            className={`member-card member-card-enter ${cardModifier}`}
+            style={{ animationDelay: `${index * 40}ms` }}
+            aria-pressed={isActive}
           >
-            <div className="flex items-center gap-3">
-              <Avatar
-                size={36}
-                src={member.avatarUrl}
-                className="shrink-0 bg-slate-200 text-slate-600"
-              >
-                {getInitials(member.name)}
-              </Avatar>
+            {/* Status dot — top right */}
+            <span
+              className={`member-card__status-dot ${dotModifier}`}
+              aria-hidden="true"
+            />
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Typography.Text className="truncate text-label font-semibold text-slate-800">
-                    {member.name}
-                  </Typography.Text>
-                  {member.isCurrentUser ? (
-                    <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                      {t('members.directory.me')}
-                    </span>
-                  ) : null}
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusMeta.className}`}
-                  >
-                    {statusMeta.label}
-                  </span>
-                </div>
+            {/* Avatar */}
+            <Avatar
+              size={32}
+              src={member.avatarUrl}
+              className="member-card__avatar"
+            >
+              {getInitials(member.name)}
+            </Avatar>
 
-                <Typography.Text className="mt-1 block truncate text-caption text-slate-500">
-                  @{member.username} · {compactMeta}
+            {/* Info */}
+            <div className="min-w-0 flex-1 pr-4">
+              <div className="flex items-center gap-2">
+                <Typography.Text className="truncate text-label font-semibold text-[#1C2B2A]">
+                  {member.name}
                 </Typography.Text>
+                {member.isCurrentUser ? (
+                  <span className="member-card__me-badge">
+                    {t('members.directory.me')}
+                  </span>
+                ) : null}
               </div>
+
+              <Typography.Text className="mt-0.5 block truncate text-caption text-[#8AA8A4]">
+                {compactMeta}
+              </Typography.Text>
             </div>
           </button>
         );

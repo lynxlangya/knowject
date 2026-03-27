@@ -234,6 +234,482 @@
   }
 }
 
+/* Member card — crystalline minimal */
+@keyframes memberCardLift {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.3);
+  }
+}
+
+.member-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: none;
+  box-shadow: 0 1px 4px rgba(15, 42, 38, 0.04), 0 1px 2px rgba(15, 42, 38, 0.02);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 220ms ease;
+  overflow: hidden;
+}
+
+/* Left status accent bar */
+.member-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: #CBD5E1;
+  transition: background 220ms ease, height 220ms ease;
+}
+
+.member-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 42, 38, 0.10), 0 2px 6px rgba(15, 42, 38, 0.05);
+  transform: translateY(-1px);
+}
+
+.member-card:hover::before {
+  background: #28B8A0;
+  height: 70%;
+}
+
+.member-card--active {
+  background: #F2FDFB;
+}
+
+.member-card--active::before {
+  background: #28B8A0;
+}
+
+.member-card--syncing::before {
+  background: #5EC8E8;
+}
+
+.member-card--blocked::before {
+  background: #F87171;
+}
+
+/* Avatar ring — sized for 32px avatar */
+.member-card--active .member-card__avatar {
+  box-shadow: 0 0 0 1.5px #ffffff, 0 0 0 3.5px #28B8A0;
+}
+
+/* Status dot — top right */
+.member-card__status-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #CBD5E1;
+  transition: background 220ms ease;
+}
+
+.member-card__status-dot--active  { background: #28B8A0; }
+.member-card__status-dot--syncing {
+  background: #5EC8E8;
+  animation: statusPulse 2s ease-in-out infinite;
+}
+.member-card__status-dot--blocked { background: #F87171; }
+.member-card__status-dot--idle    { background: #CBD5E1; }
+
+/* Avatar */
+.member-card__avatar {
+  flex-shrink: 0;
+  background: #F2FDFB !important;
+  color: #1A8A77 !important;
+  font-size: 12px;
+  font-weight: 600;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms ease;
+}
+
+.member-card:hover .member-card__avatar {
+  transform: scale(1.06);
+}
+
+/* Me badge */
+.member-card__me-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0px 6px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 500;
+  background: rgba(40, 184, 160, 0.10);
+  color: #1A8A77;
+  letter-spacing: 0.02em;
+}
+
+/* ── Knowledge Sidebar Card — Document Luxe ──────────────────────────── */
+
+@keyframes knowledgeCardLift {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.knowledge-sidebar-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    background 220ms ease;
+  overflow: hidden;
+}
+
+.knowledge-sidebar-card--enter {
+  animation: knowledgeCardLift 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.knowledge-sidebar-card:hover {
+  box-shadow: 0 6px 20px rgba(15, 42, 38, 0.09);
+  transform: translateY(-1px);
+  border-color: var(--accent, #28B8A0);
+}
+
+.knowledge-sidebar-card--active {
+  background: #F2FDFB;
+  border-color: var(--accent, #28B8A0);
+}
+
+/* Left accent bar */
+.knowledge-sidebar-card__accent {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent, #CBD5E1);
+  transition: height 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.knowledge-sidebar-card:hover .knowledge-sidebar-card__accent,
+.knowledge-sidebar-card--active .knowledge-sidebar-card__accent {
+  height: 65%;
+}
+
+/* Avatar */
+.knowledge-sidebar-card__avatar {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 220ms ease, color 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  flex-shrink: 0;
+}
+
+.knowledge-sidebar-card__avatar--active {
+  background: #F2FDFB !important;
+  color: #1A8A77 !important;
+  box-shadow: 0 0 0 1.5px #ffffff, 0 0 0 3.5px var(--accent, #28B8A0);
+}
+
+.knowledge-sidebar-card:hover .knowledge-sidebar-card__avatar {
+  transform: scale(1.05);
+}
+
+/* Status dot — top right */
+.knowledge-sidebar-card__dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #CBD5E1);
+  transition: background 220ms ease;
+}
+
+/* ── Knowledge Document Card — Document Luxe ─────────────────────────── */
+
+@keyframes docCardLift {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.knowledge-doc-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  padding-left: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(15, 42, 38, 0.04), 0 1px 2px rgba(15, 42, 38, 0.02);
+}
+
+.knowledge-doc-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 42, 38, 0.10), 0 2px 6px rgba(15, 42, 38, 0.04);
+  transform: translateY(-1px);
+  border-color: var(--doc-accent, #C2EDE6);
+}
+
+.knowledge-doc-card--enter {
+  animation: docCardLift 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Left accent bar */
+.knowledge-doc-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 0;
+  border-radius: 0 3px 3px 0;
+  background: var(--doc-accent, #C2EDE6);
+  transition: height 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.knowledge-doc-card:hover::before,
+.knowledge-doc-card--active::before {
+  height: 65%;
+}
+
+/* Status dot */
+.knowledge-doc-card__dot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--doc-accent, #C2EDE6);
+  flex-shrink: 0;
+}
+
+.knowledge-doc-card__dot--processing {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* File icon area */
+.knowledge-doc-card__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--doc-accent, rgba(40, 184, 160, 0.08));
+  color: var(--doc-accent-color, #1A8A77);
+  font-size: 16px;
+  transition: background 220ms ease, color 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.knowledge-doc-card:hover .knowledge-doc-card__icon {
+  transform: scale(1.08);
+}
+
+/* ── Document Tile — Masonry Grid ─────────────────────────────────────── */
+
+@keyframes tileFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Fixed 3-column grid — right-side gutter on any viewport */
+.doc-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.doc-tile {
+  position: relative;
+  break-inside: avoid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 18px 14px 14px;
+  background: var(--tile-accent-bg, rgba(40, 184, 160, 0.06));
+  border-radius: 14px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  animation: tileFadeIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    background 220ms ease;
+}
+
+.doc-tile:hover {
+  box-shadow: 0 8px 24px rgba(15, 42, 38, 0.12);
+  transform: translateY(-2px);
+  border-color: var(--tile-accent, #C2EDE6);
+  background: #ffffff;
+}
+
+/* Status dot */
+.doc-tile__dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Menu button */
+.doc-tile__menu {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: #94A3B8;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 180ms ease, color 180ms ease, background 180ms ease;
+  font-size: 12px;
+}
+
+.doc-tile:hover .doc-tile__menu {
+  opacity: 1;
+}
+
+.doc-tile__menu:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #475569;
+}
+
+/* File icon */
+.doc-tile__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--tile-accent-bg, rgba(40, 184, 160, 0.08));
+  color: var(--tile-accent, #1A8A77);
+  font-size: 22px;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background 220ms ease;
+}
+
+.doc-tile:hover .doc-tile__icon {
+  transform: scale(1.1);
+  background: var(--tile-accent, #1A8A77);
+  color: #ffffff;
+}
+
+/* File name */
+.doc-tile__name {
+  margin: 0;
+  padding: 0 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  text-align: center;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  max-width: 100%;
+  transition: color 180ms ease;
+}
+
+.doc-tile:hover .doc-tile__name {
+  color: #1C2B2A;
+}
+
+/* Error inside tile */
+.doc-tile__error {
+  width: 100%;
+  margin-top: 4px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+/* Entrance animation */
+.member-card-enter {
+  animation: memberCardLift 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* Summary card entrance animation — timing is in the keyframe, delay is per-item via inline style */
 .animate-metric-fade-in {
   animation: metricFadeIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
