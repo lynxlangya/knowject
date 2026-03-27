@@ -37,10 +37,8 @@ import { useProjectChatActions } from './useProjectChatActions';
 import { useProjectChatUserMessageActions } from './useProjectChatUserMessageActions';
 import { useProjectChatSettings } from './useProjectChatSettings';
 import { useProjectKnowledgeDraftFlow } from './useProjectKnowledgeDraftFlow';
-import {
-  buildProjectConversationMessageBulkActionState,
-  useProjectConversationMessageActions,
-} from './useProjectConversationMessageActions';
+import { buildProjectConversationMessageBulkActionState } from './useProjectConversationMessageActions.helpers';
+import { useProjectConversationMessageActions } from './useProjectConversationMessageActions';
 import {
   type ProjectConversationTargetRefValue,
   useProjectConversationDetail,

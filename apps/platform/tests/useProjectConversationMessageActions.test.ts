@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   applyOptimisticProjectConversationMessageStar,
@@ -6,7 +7,7 @@ import {
   buildProjectConversationMessageBulkActionState,
   findProjectConversationAssistantRetryTarget,
   restoreProjectConversationMessage,
-} from '../src/pages/project/useProjectConversationMessageActions';
+} from '../src/pages/project/useProjectConversationMessageActions.helpers';
 
 test('applyOptimisticProjectConversationMessageStar can roll back to the previous message snapshot', () => {
   const conversation = {
@@ -174,4 +175,28 @@ test('findProjectConversationAssistantRetryTarget returns null when no previous 
   });
 
   assert.equal(retryTarget, null);
+});
+
+test('useProjectConversationMessageActions uses static api imports for message and knowledge mutations', () => {
+  const source = readFileSync(
+    new URL('../src/pages/project/useProjectConversationMessageActions.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    source,
+    /import\s*\{[\s\S]*updateProjectConversationMessageMetadata[\s\S]*\}\s*from ['"]\.\.\/\.\.\/api\/projects['"]/,
+  );
+  assert.match(
+    source,
+    /import\s*\{[\s\S]*uploadProjectKnowledgeDocument[\s\S]*\}\s*from ['"]\.\.\/\.\.\/api\/knowledge['"]/,
+  );
+  assert.doesNotMatch(
+    source,
+    /await import\(\s*['"]\.\.\/\.\.\/api\/projects['"]\s*\)/,
+  );
+  assert.doesNotMatch(
+    source,
+    /await import\(\s*['"]\.\.\/\.\.\/api\/knowledge['"]\s*\)/,
+  );
 });
