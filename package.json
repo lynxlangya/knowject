@@ -48,6 +48,7 @@
     "test:indexer": "pnpm --filter indexer-py test",
     "verify:global-assets-foundation": "pnpm --filter api test && pnpm --filter indexer-py test && pnpm --filter platform check-types",
     "verify:index-ops-project-consumption": "bash ./scripts/verify-index-ops-project-consumption.sh",
+    "verify:core-loop-readiness": "bash ./scripts/verify-core-loop-readiness.sh",
     "check-types": "turbo run check-types",
     "typecheck": "turbo run check-types"
   },

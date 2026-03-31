@@ -8,11 +8,33 @@ from pathlib import Path
 
 ENV_FILE_SUFFIX = "_FILE"
 WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
-BASE_ENV_KEYS = set(os.environ.keys())
+DEFAULT_ENV_CANDIDATES = (
+    WORKSPACE_ROOT / ".env",
+    WORKSPACE_ROOT / ".env.local",
+)
+_ENV_FILES_LOADED = False
+_LOADED_ENV_KEYS: set[str] = set()
 
 
-def load_environment_files() -> None:
-    for candidate in (WORKSPACE_ROOT / ".env", WORKSPACE_ROOT / ".env.local"):
+def load_environment_files(
+    *,
+    candidates: tuple[Path, ...] = DEFAULT_ENV_CANDIDATES,
+    force: bool = False,
+) -> None:
+    global _ENV_FILES_LOADED, _LOADED_ENV_KEYS
+
+    if _ENV_FILES_LOADED and not force:
+        return
+
+    if force and _LOADED_ENV_KEYS:
+        for name in tuple(_LOADED_ENV_KEYS):
+            os.environ.pop(name, None)
+        _LOADED_ENV_KEYS = set()
+
+    base_env_keys = set(os.environ.keys())
+    loaded_env_keys: set[str] = set()
+
+    for candidate in candidates:
         if not candidate.exists():
             continue
 
@@ -20,9 +42,17 @@ def load_environment_files() -> None:
         validate_parsed_environment(candidate, parsed)
 
         for name, value in parsed.items():
-            if name in BASE_ENV_KEYS:
+            sibling_name = get_sibling_env_name(name)
+            if name in base_env_keys or sibling_name in base_env_keys:
                 continue
+            if sibling_name in loaded_env_keys:
+                os.environ.pop(sibling_name, None)
+                loaded_env_keys.discard(sibling_name)
             os.environ[name] = value
+            loaded_env_keys.add(name)
+
+    _LOADED_ENV_KEYS = loaded_env_keys
+    _ENV_FILES_LOADED = True
 
 
 def parse_env_file(path: Path) -> dict[str, str]:
@@ -103,6 +133,3 @@ def read_optional_positive_integer(name: str, fallback: int) -> int:
         raise RuntimeError(f"Environment variable {name} must be a positive integer")
 
     return parsed
-
-
-load_environment_files()

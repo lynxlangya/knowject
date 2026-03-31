@@ -70,7 +70,10 @@
   - `POST /internal/v1/index/knowledge/{knowledgeId}/delete`
   - `GET /internal/v1/index/diagnostics`
 - 为避免开发态 API / indexer 重启顺序导致上传 404，当前仍兼容旧路径 `POST /internal/index-documents`。
-- Node 当前对 `/internal/*` 统一使用 `Authorization: Bearer <token>`；development 允许不配置 token，但只要配置了 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN(_FILE)` 就会严格校验。
+- Node 当前对 `/internal/*` 统一使用 `Authorization: Bearer <token>`；
+  - `development` 下为方便本地调试，未配置 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN[_FILE]` 时允许无 token 访问；
+  - 一旦配置了 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN` 或 `KNOWLEDGE_INDEXER_INTERNAL_TOKEN_FILE`，internal routes 立即切换到严格的 bearer 校验。
+- 小范围内测前建议在仓库根目录运行 `pnpm verify:core-loop-readiness`，确认知识 -> 项目对话 -> 引用回路的 API/indexer/platform 回归。
 - MongoDB 中的知识库 / 文档状态只能由 Node 回写。
 - Python 当前只返回处理结果；Node 负责把状态推进为 `processing / completed / failed`。
 - Python 负责写删侧 Chroma 索引；Node 负责读侧统一知识检索 service。
