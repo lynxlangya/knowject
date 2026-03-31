@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 
 from app.domain.indexing.parser import resolve_knowledge_storage_root
 from app.domain.indexing.pipeline import IndexerError
-from app.main import app, create_app
 from app.schemas.indexing import (
     DeleteDocumentChunksSuccessResponse,
     DeleteKnowledgeChunksSuccessResponse,
@@ -15,9 +14,6 @@ from app.schemas.indexing import (
     IndexerDiagnosticsResponse,
 )
 from app.services.indexing_service import IndexingService, get_indexing_service
-
-
-client = TestClient(app, raise_server_exceptions=False)
 
 
 def build_storage_path(file_name: str) -> str:
@@ -67,6 +63,7 @@ class StubIndexingService(IndexingService):
 
 
 def override_indexing_service(
+    test_client: TestClient,
     *,
     index_behavior=None,
     rebuild_behavior=None,
@@ -74,7 +71,7 @@ def override_indexing_service(
     delete_knowledge_behavior=None,
     diagnostics_behavior=None,
 ):
-    app.dependency_overrides[get_indexing_service] = lambda: StubIndexingService(
+    test_client.app.dependency_overrides[get_indexing_service] = lambda: StubIndexingService(
         index_behavior=index_behavior,
         rebuild_behavior=rebuild_behavior,
         delete_document_behavior=delete_document_behavior,
@@ -83,12 +80,18 @@ def override_indexing_service(
     )
 
 
-def clear_overrides():
-    app.dependency_overrides.clear()
+@pytest.fixture
+def indexer_client(create_indexer_test_client):
+    client = create_indexer_test_client()
+
+    try:
+        yield client
+    finally:
+        client.app.dependency_overrides.clear()
 
 
-def test_health_returns_current_service_metadata():
-    response = client.get("/health")
+def test_health_returns_current_service_metadata(indexer_client: TestClient):
+    response = indexer_client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {
@@ -100,25 +103,43 @@ def test_health_returns_current_service_metadata():
     }
 
 
-def test_docs_endpoints_are_available():
-    assert client.get("/docs").status_code == 200
-    assert client.get("/redoc").status_code == 200
-    assert client.get("/openapi.json").status_code == 200
+def test_docs_endpoints_are_available(indexer_client: TestClient):
+    assert indexer_client.get("/docs").status_code == 200
+    assert indexer_client.get("/redoc").status_code == 200
+    assert indexer_client.get("/openapi.json").status_code == 200
 
 
-def test_create_app_requires_internal_token_outside_development(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("NODE_ENV", "production")
-    monkeypatch.delenv("KNOWLEDGE_INDEXER_INTERNAL_TOKEN", raising=False)
-
+def test_create_app_requires_internal_token_outside_development(create_indexer_test_client):
     with pytest.raises(
         RuntimeError,
         match="KNOWLEDGE_INDEXER_INTERNAL_TOKEN is required when NODE_ENV is not development",
     ):
-        create_app()
+        create_indexer_test_client(node_env="production")
 
 
-def test_index_documents_success_response_keeps_existing_shape():
+def test_development_internal_diagnostics_allows_access(indexer_client: TestClient):
     override_indexing_service(
+        indexer_client,
+        diagnostics_behavior=lambda: IndexerDiagnosticsResponse(
+            status="ok",
+            service="knowject-indexer-py",
+            chunk_size=1000,
+            chunk_overlap=200,
+            supported_formats=["md", "txt", "pdf", "docx", "xlsx"],
+            embedding_provider="openai",
+            chroma_reachable=True,
+            error_message=None,
+        )
+    )
+
+    response = indexer_client.get("/internal/v1/index/diagnostics")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+
+
+def test_index_documents_success_response_keeps_existing_shape(indexer_client: TestClient):
+    override_indexing_service(
+        indexer_client,
         index_behavior=lambda _payload: IndexDocumentSuccessResponse(
             status="completed",
             knowledge_id="knowledge-1",
@@ -130,22 +151,18 @@ def test_index_documents_success_response_keeps_existing_shape():
         )
     )
 
-    try:
-        response = client.post(
-            "/internal/v1/index/documents",
-            json={
-                "knowledgeId": "knowledge-1",
-                "documentId": "document-1",
-                "sourceType": "global_docs",
-                "fileName": "demo.md",
-                "mimeType": "text/markdown",
-                "storagePath": build_storage_path("demo.md"),
-                "documentVersionHash": "hash-1",
-            },
-        )
-    finally:
-        clear_overrides()
-
+    response = indexer_client.post(
+        "/internal/v1/index/documents",
+        json={
+            "knowledgeId": "knowledge-1",
+            "documentId": "document-1",
+            "sourceType": "global_docs",
+            "fileName": "demo.md",
+            "mimeType": "text/markdown",
+            "storagePath": build_storage_path("demo.md"),
+            "documentVersionHash": "hash-1",
+        },
+    )
     assert response.status_code == 200
     assert response.json() == {
         "status": "completed",
@@ -158,8 +175,11 @@ def test_index_documents_success_response_keeps_existing_shape():
     }
 
 
-def test_legacy_index_documents_route_still_works_for_backward_compatibility():
+def test_legacy_index_documents_route_still_works_for_backward_compatibility(
+    indexer_client: TestClient,
+):
     override_indexing_service(
+        indexer_client,
         index_behavior=lambda _payload: IndexDocumentSuccessResponse(
             status="completed",
             knowledge_id="knowledge-1",
@@ -171,22 +191,18 @@ def test_legacy_index_documents_route_still_works_for_backward_compatibility():
         )
     )
 
-    try:
-        response = client.post(
-            "/internal/index-documents",
-            json={
-                "knowledgeId": "knowledge-1",
-                "documentId": "document-1",
-                "sourceType": "global_docs",
-                "fileName": "demo.txt",
-                "mimeType": "text/plain",
-                "storagePath": build_storage_path("demo.txt"),
-                "documentVersionHash": "hash-1",
-            },
-        )
-    finally:
-        clear_overrides()
-
+    response = indexer_client.post(
+        "/internal/index-documents",
+        json={
+            "knowledgeId": "knowledge-1",
+            "documentId": "document-1",
+            "sourceType": "global_docs",
+            "fileName": "demo.txt",
+            "mimeType": "text/plain",
+            "storagePath": build_storage_path("demo.txt"),
+            "documentVersionHash": "hash-1",
+        },
+    )
     assert response.status_code == 200
     assert response.json() == {
         "status": "completed",
@@ -199,12 +215,10 @@ def test_legacy_index_documents_route_still_works_for_backward_compatibility():
     }
 
 
-def test_internal_routes_require_bearer_token_when_configured(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    monkeypatch.setenv("NODE_ENV", "development")
-    monkeypatch.setenv("KNOWLEDGE_INDEXER_INTERNAL_TOKEN", "internal-secret")
+def test_internal_routes_require_bearer_token_when_configured(create_indexer_test_client):
+    client = create_indexer_test_client(internal_token="internal-secret")
     override_indexing_service(
+        client,
         diagnostics_behavior=lambda: IndexerDiagnosticsResponse(
             status="ok",
             service="knowject-indexer-py",
@@ -224,7 +238,7 @@ def test_internal_routes_require_bearer_token_when_configured(
             headers={"authorization": "Bearer internal-secret"},
         )
     finally:
-        clear_overrides()
+        client.app.dependency_overrides.clear()
 
     assert unauthorized.status_code == 401
     assert unauthorized.json() == {
@@ -244,8 +258,8 @@ def test_internal_routes_require_bearer_token_when_configured(
     }
 
 
-def test_index_documents_returns_unified_failure_for_invalid_json():
-    response = client.post(
+def test_index_documents_returns_unified_failure_for_invalid_json(indexer_client: TestClient):
+    response = indexer_client.post(
         "/internal/v1/index/documents",
         content="{",
         headers={"content-type": "application/json"},
@@ -258,8 +272,8 @@ def test_index_documents_returns_unified_failure_for_invalid_json():
     }
 
 
-def test_index_documents_returns_unified_failure_for_non_object_body():
-    response = client.post(
+def test_index_documents_returns_unified_failure_for_non_object_body(indexer_client: TestClient):
+    response = indexer_client.post(
         "/internal/v1/index/documents",
         json=["not", "an", "object"],
     )
@@ -271,8 +285,8 @@ def test_index_documents_returns_unified_failure_for_non_object_body():
     }
 
 
-def test_index_documents_returns_unified_failure_for_missing_field():
-    response = client.post(
+def test_index_documents_returns_unified_failure_for_missing_field(indexer_client: TestClient):
+    response = indexer_client.post(
         "/internal/v1/index/documents",
         json={
             "documentId": "document-1",
@@ -291,27 +305,24 @@ def test_index_documents_returns_unified_failure_for_missing_field():
     }
 
 
-def test_index_documents_maps_indexer_error_to_failed_response():
+def test_index_documents_maps_indexer_error_to_failed_response(indexer_client: TestClient):
     override_indexing_service(
+        indexer_client,
         index_behavior=lambda _payload: (_ for _ in ()).throw(IndexerError("boom"))
     )
 
-    try:
-        response = client.post(
-            "/internal/v1/index/documents",
-            json={
-                "knowledgeId": "knowledge-1",
-                "documentId": "document-1",
-                "sourceType": "global_docs",
-                "fileName": "demo.md",
-                "mimeType": "text/markdown",
-                "storagePath": build_storage_path("demo.md"),
-                "documentVersionHash": "hash-1",
-            },
-        )
-    finally:
-        clear_overrides()
-
+    response = indexer_client.post(
+        "/internal/v1/index/documents",
+        json={
+            "knowledgeId": "knowledge-1",
+            "documentId": "document-1",
+            "sourceType": "global_docs",
+            "fileName": "demo.md",
+            "mimeType": "text/markdown",
+            "storagePath": build_storage_path("demo.md"),
+            "documentVersionHash": "hash-1",
+        },
+    )
     assert response.status_code == 422
     assert response.json() == {
         "status": "failed",
@@ -319,27 +330,24 @@ def test_index_documents_maps_indexer_error_to_failed_response():
     }
 
 
-def test_index_documents_maps_unexpected_error_to_failed_response():
+def test_index_documents_maps_unexpected_error_to_failed_response(indexer_client: TestClient):
     override_indexing_service(
+        indexer_client,
         index_behavior=lambda _payload: (_ for _ in ()).throw(RuntimeError("boom"))
     )
 
-    try:
-        response = client.post(
-            "/internal/v1/index/documents",
-            json={
-                "knowledgeId": "knowledge-1",
-                "documentId": "document-1",
-                "sourceType": "global_docs",
-                "fileName": "demo.md",
-                "mimeType": "text/markdown",
-                "storagePath": build_storage_path("demo.md"),
-                "documentVersionHash": "hash-1",
-            },
-        )
-    finally:
-        clear_overrides()
-
+    response = indexer_client.post(
+        "/internal/v1/index/documents",
+        json={
+            "knowledgeId": "knowledge-1",
+            "documentId": "document-1",
+            "sourceType": "global_docs",
+            "fileName": "demo.md",
+            "mimeType": "text/markdown",
+            "storagePath": build_storage_path("demo.md"),
+            "documentVersionHash": "hash-1",
+        },
+    )
     assert response.status_code == 500
     assert response.json() == {
         "status": "failed",
@@ -347,7 +355,7 @@ def test_index_documents_maps_unexpected_error_to_failed_response():
     }
 
 
-def test_index_documents_accepts_override_payload_fields():
+def test_index_documents_accepts_override_payload_fields(indexer_client: TestClient):
     captured: dict[str, object] = {}
 
     def index_behavior(payload):
@@ -374,36 +382,32 @@ def test_index_documents_accepts_override_payload_fields():
             collection_name=payload.collection_name or "global_docs",
         )
 
-    override_indexing_service(index_behavior=index_behavior)
+    override_indexing_service(indexer_client, index_behavior=index_behavior)
 
-    try:
-        response = client.post(
-            "/internal/v1/index/documents",
-            json={
-                "knowledgeId": "knowledge-1",
-                "documentId": "document-1",
-                "sourceType": "global_docs",
-                "fileName": "demo.md",
-                "mimeType": "text/markdown",
-                "storagePath": build_storage_path("demo.md"),
-                "documentVersionHash": "hash-1",
-                "embeddingConfig": {
-                    "provider": "custom",
-                    "apiKey": "db-key",
-                    "baseUrl": "https://embedding.example.com/v1",
-                    "model": "text-embedding-custom",
-                },
-                "indexingConfig": {
-                    "chunkSize": 860,
-                    "chunkOverlap": 120,
-                    "supportedTypes": ["md"],
-                    "indexerTimeoutMs": 45000,
-                },
+    response = indexer_client.post(
+        "/internal/v1/index/documents",
+        json={
+            "knowledgeId": "knowledge-1",
+            "documentId": "document-1",
+            "sourceType": "global_docs",
+            "fileName": "demo.md",
+            "mimeType": "text/markdown",
+            "storagePath": build_storage_path("demo.md"),
+            "documentVersionHash": "hash-1",
+            "embeddingConfig": {
+                "provider": "custom",
+                "apiKey": "db-key",
+                "baseUrl": "https://embedding.example.com/v1",
+                "model": "text-embedding-custom",
             },
-        )
-    finally:
-        clear_overrides()
-
+            "indexingConfig": {
+                "chunkSize": 860,
+                "chunkOverlap": 120,
+                "supportedTypes": ["md"],
+                "indexerTimeoutMs": 45000,
+            },
+        },
+    )
     assert response.status_code == 200
     assert captured == {
         "embedding_provider": "custom",
@@ -413,8 +417,9 @@ def test_index_documents_accepts_override_payload_fields():
     }
 
 
-def test_rebuild_document_uses_document_scoped_internal_route():
+def test_rebuild_document_uses_document_scoped_internal_route(indexer_client: TestClient):
     override_indexing_service(
+        indexer_client,
         rebuild_behavior=lambda document_id, payload: IndexDocumentSuccessResponse(
             status="completed",
             knowledge_id=payload.knowledge_id,
@@ -426,22 +431,18 @@ def test_rebuild_document_uses_document_scoped_internal_route():
         )
     )
 
-    try:
-        response = client.post(
-            "/internal/v1/index/documents/document-1/rebuild",
-            json={
-                "knowledgeId": "knowledge-1",
-                "documentId": "document-1",
-                "sourceType": "global_docs",
-                "fileName": "demo.md",
-                "mimeType": "text/markdown",
-                "storagePath": build_storage_path("demo.md"),
-                "documentVersionHash": "hash-1",
-            },
-        )
-    finally:
-        clear_overrides()
-
+    response = indexer_client.post(
+        "/internal/v1/index/documents/document-1/rebuild",
+        json={
+            "knowledgeId": "knowledge-1",
+            "documentId": "document-1",
+            "sourceType": "global_docs",
+            "fileName": "demo.md",
+            "mimeType": "text/markdown",
+            "storagePath": build_storage_path("demo.md"),
+            "documentVersionHash": "hash-1",
+        },
+    )
     assert response.status_code == 200
     assert response.json() == {
         "status": "completed",
@@ -454,8 +455,11 @@ def test_rebuild_document_uses_document_scoped_internal_route():
     }
 
 
-def test_delete_document_chunks_uses_document_scoped_internal_route():
+def test_delete_document_chunks_uses_document_scoped_internal_route(
+    indexer_client: TestClient,
+):
     override_indexing_service(
+        indexer_client,
         delete_document_behavior=lambda document_id, payload: DeleteDocumentChunksSuccessResponse(
             status="completed",
             document_id=document_id,
@@ -463,16 +467,12 @@ def test_delete_document_chunks_uses_document_scoped_internal_route():
         )
     )
 
-    try:
-        response = client.post(
-            "/internal/v1/index/documents/document-1/delete",
-            json={
-                "collectionName": "global_docs",
-            },
-        )
-    finally:
-        clear_overrides()
-
+    response = indexer_client.post(
+        "/internal/v1/index/documents/document-1/delete",
+        json={
+            "collectionName": "global_docs",
+        },
+    )
     assert response.status_code == 200
     assert response.json() == {
         "status": "completed",
@@ -481,8 +481,11 @@ def test_delete_document_chunks_uses_document_scoped_internal_route():
     }
 
 
-def test_delete_knowledge_chunks_uses_knowledge_scoped_internal_route():
+def test_delete_knowledge_chunks_uses_knowledge_scoped_internal_route(
+    indexer_client: TestClient,
+):
     override_indexing_service(
+        indexer_client,
         delete_knowledge_behavior=lambda knowledge_id, payload: DeleteKnowledgeChunksSuccessResponse(
             status="completed",
             knowledge_id=knowledge_id,
@@ -490,16 +493,12 @@ def test_delete_knowledge_chunks_uses_knowledge_scoped_internal_route():
         )
     )
 
-    try:
-        response = client.post(
-            "/internal/v1/index/knowledge/knowledge-1/delete",
-            json={
-                "collectionName": "proj_project-1_docs",
-            },
-        )
-    finally:
-        clear_overrides()
-
+    response = indexer_client.post(
+        "/internal/v1/index/knowledge/knowledge-1/delete",
+        json={
+            "collectionName": "proj_project-1_docs",
+        },
+    )
     assert response.status_code == 200
     assert response.json() == {
         "status": "completed",
@@ -508,8 +507,9 @@ def test_delete_knowledge_chunks_uses_knowledge_scoped_internal_route():
     }
 
 
-def test_index_diagnostics_returns_current_runtime_state():
+def test_index_diagnostics_returns_current_runtime_state(indexer_client: TestClient):
     override_indexing_service(
+        indexer_client,
         diagnostics_behavior=lambda: IndexerDiagnosticsResponse(
             status="degraded",
             service="knowject-indexer-py",
@@ -522,11 +522,7 @@ def test_index_diagnostics_returns_current_runtime_state():
         )
     )
 
-    try:
-        response = client.get("/internal/v1/index/diagnostics")
-    finally:
-        clear_overrides()
-
+    response = indexer_client.get("/internal/v1/index/diagnostics")
     assert response.status_code == 200
     assert response.json() == {
         "status": "degraded",

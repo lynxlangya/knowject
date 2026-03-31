@@ -8,11 +8,27 @@ from pathlib import Path
 
 ENV_FILE_SUFFIX = "_FILE"
 WORKSPACE_ROOT = Path(__file__).resolve().parents[4]
+DEFAULT_ENV_CANDIDATES = (
+    WORKSPACE_ROOT / ".env",
+    WORKSPACE_ROOT / ".env.local",
+)
 BASE_ENV_KEYS = set(os.environ.keys())
+_ENV_FILES_LOADED = False
 
 
-def load_environment_files() -> None:
-    for candidate in (WORKSPACE_ROOT / ".env", WORKSPACE_ROOT / ".env.local"):
+def load_environment_files(
+    *,
+    candidates: tuple[Path, ...] | None = None,
+    force: bool = False,
+) -> None:
+    global _ENV_FILES_LOADED
+
+    if _ENV_FILES_LOADED and not force:
+        return
+
+    resolved_candidates = DEFAULT_ENV_CANDIDATES if candidates is None else candidates
+
+    for candidate in resolved_candidates:
         if not candidate.exists():
             continue
 
@@ -22,7 +38,9 @@ def load_environment_files() -> None:
         for name, value in parsed.items():
             if name in BASE_ENV_KEYS:
                 continue
-            os.environ[name] = value
+            os.environ.setdefault(name, value)
+
+    _ENV_FILES_LOADED = True
 
 
 def parse_env_file(path: Path) -> dict[str, str]:
@@ -103,6 +121,3 @@ def read_optional_positive_integer(name: str, fallback: int) -> int:
         raise RuntimeError(f"Environment variable {name} must be a positive integer")
 
     return parsed
-
-
-load_environment_files()

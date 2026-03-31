@@ -45,7 +45,7 @@ docker/       Compose files, image builds, reverse proxy, init scripts
 scripts/      Reusable command entrypoints and shell helpers
 docs/         Current documentation root (source of truth)
 .agents/      Live project skill root (`.agents/skills/*`)
-.codex/       Codex configuration + compatibility notes only (includes compatibility stubs)
+.codex/       Project-local Codex configuration and optional compatibility notes
 ```
 
 ## Product Surface
@@ -135,15 +135,15 @@ pnpm knowject:help
 
 ## Documentation
 
-`docs/` is the project documentation root. `docs/exports/` is the derived export root, and `docs/exports/chatgpt-projects/*` is the live ChatGPT Projects export package path. Project skills live under `.agents/skills/`, while `.codex/` keeps compatibility stubs only.
+`docs/` is the project documentation root. `docs/exports/` is the derived export root, and `docs/exports/chatgpt-projects/*` is the live ChatGPT Projects export package path. Project skills live under `.agents/skills/`, while `.codex/config.toml` is reserved for project-local Codex configuration.
 
 - [Project Rules](./AGENTS.md)
-- [Codex Workspace](./.codex/README.md)
-- [Migration Guide](./.codex/MIGRATION.md)
+- [Codex Project Prompt Template](./docs/templates/CODEX_PROJECT_PROMPT_TEMPLATE.md)
 - [Documentation Index](./docs/README.md)
 - [Current Architecture Facts](./docs/current/architecture.md)
 - [Auth and Environment Contract](./docs/contracts/README.md)
 - [Handoff Notes](./docs/handoff/README.md)
+- [Historical Codex Migration Notes](./docs/handoff/history/codex-workspace-migration.md)
 - [Roadmap Notes](./docs/roadmap/README.md)
 - [Exports Index](./docs/exports/README.md)
 - [Platform README](./apps/platform/README.md)

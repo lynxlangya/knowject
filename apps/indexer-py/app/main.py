@@ -13,7 +13,7 @@ from app.api.routes.indexing import (
     validate_internal_auth_configuration,
 )
 from app.core.config import get_app_config
-from app.core.runtime_env import read_optional_string
+from app.core.runtime_env import load_environment_files, read_optional_string
 from app.domain.indexing.pipeline import IndexerError
 from app.schemas.indexing import IndexerFailureResponse, IndexerNotFoundResponse
 
@@ -53,7 +53,10 @@ def is_development_environment() -> bool:
     return (read_optional_string("NODE_ENV") or "development").strip() == "development"
 
 
-def create_app() -> FastAPI:
+def create_app(*, load_env_files: bool = True) -> FastAPI:
+    if load_env_files:
+        load_environment_files()
+
     config = get_app_config()
     validate_internal_auth_configuration()
     docs_url = "/docs" if is_development_environment() else None
