@@ -87,6 +87,8 @@
 - `/members` 主要消费 `GET /api/members`；`/project/:projectId/members` 主要消费 `GET /api/auth/users` 与 `/api/projects/:projectId/members*`。
 - `/settings` 主要消费 `GET /api/settings`、`PATCH /api/settings/embedding`、`PATCH /api/settings/llm`、`PATCH /api/settings/indexing`、`PATCH /api/settings/workspace`、`POST /api/settings/embedding/test`、`POST /api/settings/llm/test` 与 `POST /api/settings/indexing/test`；页面会根据 `source=database|environment` 区分当前是否仍在使用环境变量回退，并把保存的 LLM 设置直接作为项目对话页的运行时配置来源；当前仅保留已验证的 `chat/completions` provider 预设，不再展示 `anthropic`。
 
+Project chat 现在把 retrieval / stream 失败作为分层 issue 处理，retrieval 相关 error 会提示“项目检索链路当前不可用”，stream 级中断则提示“项目对话流式过程意外中断”，避免所有非 LLM 的 failure 统一归类为 generic 发送错误。
+
 ## 核心目录
 
 - `src/app/auth`：鉴权 token 管理。
@@ -107,4 +109,5 @@ pnpm --filter platform build
 # 仓库根最小验证入口
 pnpm verify:global-assets-foundation
 pnpm verify:index-ops-project-consumption
+pnpm verify:core-loop-readiness
 ```

@@ -12,23 +12,29 @@ DEFAULT_ENV_CANDIDATES = (
     WORKSPACE_ROOT / ".env",
     WORKSPACE_ROOT / ".env.local",
 )
-BASE_ENV_KEYS = set(os.environ.keys())
 _ENV_FILES_LOADED = False
+_LOADED_ENV_KEYS: set[str] = set()
 
 
 def load_environment_files(
     *,
-    candidates: tuple[Path, ...] | None = None,
+    candidates: tuple[Path, ...] = DEFAULT_ENV_CANDIDATES,
     force: bool = False,
 ) -> None:
-    global _ENV_FILES_LOADED
+    global _ENV_FILES_LOADED, _LOADED_ENV_KEYS
 
     if _ENV_FILES_LOADED and not force:
         return
 
-    resolved_candidates = DEFAULT_ENV_CANDIDATES if candidates is None else candidates
+    if force and _LOADED_ENV_KEYS:
+        for name in tuple(_LOADED_ENV_KEYS):
+            os.environ.pop(name, None)
+        _LOADED_ENV_KEYS = set()
 
-    for candidate in resolved_candidates:
+    base_env_keys = set(os.environ.keys())
+    loaded_env_keys: set[str] = set()
+
+    for candidate in candidates:
         if not candidate.exists():
             continue
 
@@ -36,10 +42,16 @@ def load_environment_files(
         validate_parsed_environment(candidate, parsed)
 
         for name, value in parsed.items():
-            if name in BASE_ENV_KEYS:
+            sibling_name = get_sibling_env_name(name)
+            if name in base_env_keys or sibling_name in base_env_keys:
                 continue
-            os.environ.setdefault(name, value)
+            if sibling_name in loaded_env_keys:
+                os.environ.pop(sibling_name, None)
+                loaded_env_keys.discard(sibling_name)
+            os.environ[name] = value
+            loaded_env_keys.add(name)
 
+    _LOADED_ENV_KEYS = loaded_env_keys
     _ENV_FILES_LOADED = True
 
 

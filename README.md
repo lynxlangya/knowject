@@ -101,6 +101,8 @@ In `development`, if `OPENAI_API_KEY` is missing but `CHROMA_URL` is available, 
 
 To verify the GA-06 indexing/retrieval path locally, make sure `.env.local` also provides `CHROMA_URL` and OpenAI-compatible embedding settings.
 
+Before a small-team trial, run `pnpm verify:core-loop-readiness` to check the knowledge -> project chat -> citation path across API, indexer, and platform regressions.
+
 If you want the recommended local workflow with Docker-managed dependencies:
 
 ```bash
@@ -119,6 +121,7 @@ pnpm --filter indexer-py dev
 pnpm test
 pnpm verify:global-assets-foundation
 pnpm verify:index-ops-project-consumption
+pnpm verify:core-loop-readiness
 pnpm check-types
 pnpm build
 pnpm host:up

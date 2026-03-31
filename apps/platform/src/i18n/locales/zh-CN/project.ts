@@ -198,6 +198,8 @@ export const projectMessages = {
     providerUnsupportedTitle: '当前 LLM Provider 暂不支持项目对话',
     streamUnsupportedTitle: '当前 LLM Provider 暂不支持流式项目对话',
     upstreamErrorTitle: '项目对话模型调用失败',
+    retrievalUnavailableTitle: '项目检索链路当前不可用',
+    streamInterruptedTitle: '项目对话流式过程意外中断',
     loadFailed: '读取对话配置失败，请稍后重试',
   },
   conversation: {

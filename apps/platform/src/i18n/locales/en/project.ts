@@ -219,6 +219,8 @@ export const projectMessages = {
     streamUnsupportedTitle:
       'The current LLM provider does not support streaming project chat',
     upstreamErrorTitle: 'Project chat model request failed',
+    retrievalUnavailableTitle: 'Project retrieval is currently unavailable',
+    streamInterruptedTitle: 'Project chat stream ended unexpectedly',
     loadFailed: 'Failed to read chat configuration. Please try again later.',
   },
   conversation: {
