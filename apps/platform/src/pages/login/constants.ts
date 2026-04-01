@@ -16,42 +16,48 @@ export interface LoginLocaleOption {
 
 export const REMEMBERED_USERNAME_KEY = 'knowject_remembered_username';
 
-/* ── Particle Network Config ─────────────────────────── */
+/* ── Flow Mesh Config ────────────────────────────────── */
 
-export interface ParticleNetworkConfig {
-  particleCount: number;
-  particleRadiusMin: number;
-  particleRadiusMax: number;
+export interface FlowMeshConfig {
+  nodeCount: number;
+  nodeRadiusMin: number;
+  nodeRadiusMax: number;
   speedMin: number;
   speedMax: number;
   connectionDistance: number;
   connectionOpacityMax: number;
   interactionRadius: number;
-  interactionConnectionScale: number;
   interactionBrightnessBoost: number;
+  pulseIntervalMin: number;  // ms，最小脉冲间隔
+  pulseIntervalMax: number;  // ms，最大脉冲间隔
+  flowFieldScale: number;   // 流场空间尺度，如 0.01
+  flowFieldSpeed: number;   // 流场时间偏移速度，如 0.002
   colors: {
-    particleRGB: string;
+    nodeRGB: string;
     connectionRGB: string;
-    connectionActiveRGB: string;
+    pulseRGB: string;
     glowRGB: string;
   };
 }
 
-export const PARTICLE_NETWORK_CONFIG: ParticleNetworkConfig = {
-  particleCount: 65,
-  particleRadiusMin: 1.2,
-  particleRadiusMax: 2.8,
-  speedMin: 0.15,
-  speedMax: 0.45,
-  connectionDistance: 150,
-  connectionOpacityMax: 0.18,
-  interactionRadius: 180,
-  interactionConnectionScale: 1.6,
+export const FLOW_MESH_CONFIG: FlowMeshConfig = {
+  nodeCount: 55,
+  nodeRadiusMin: 1.5,
+  nodeRadiusMax: 3.0,
+  speedMin: 0.08,
+  speedMax: 0.2,
+  connectionDistance: 120,
+  connectionOpacityMax: 0.12,
+  interactionRadius: 200,
   interactionBrightnessBoost: 0.55,
+  pulseIntervalMin: 1500,
+  pulseIntervalMax: 3000,
+  flowFieldScale: 0.01,
+  flowFieldSpeed: 0.002,
   colors: {
-    particleRGB: '40,184,160',
+    nodeRGB: '40,184,160',
     connectionRGB: '40,184,160',
-    connectionActiveRGB: '134,227,208',
+    pulseRGB: '134,227,208',
     glowRGB: '134,227,208',
   },
 };

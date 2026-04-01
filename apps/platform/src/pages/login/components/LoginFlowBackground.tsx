@@ -1,8 +1,8 @@
-import { FLOW_MASK_IMAGE, PARTICLE_NETWORK_CONFIG } from '@pages/login/constants';
-import { useParticleNetwork } from '@pages/login/useParticleNetwork';
+import { FLOW_MASK_IMAGE, FLOW_MESH_CONFIG } from '@pages/login/constants';
+import { useFlowMesh } from '@pages/login/useFlowMesh';
 
 export const LoginFlowBackground = () => {
-  const { canvasRef } = useParticleNetwork(PARTICLE_NETWORK_CONFIG);
+  const { canvasRef } = useFlowMesh(FLOW_MESH_CONFIG);
 
   return (
     <div
