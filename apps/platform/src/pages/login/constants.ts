@@ -31,7 +31,6 @@ export interface ParticleNetworkConfig {
   interactionBrightnessBoost: number;
   colors: {
     particleRGB: string;
-    particleActiveRGB: string;
     connectionRGB: string;
     connectionActiveRGB: string;
     glowRGB: string;
@@ -51,7 +50,6 @@ export const PARTICLE_NETWORK_CONFIG: ParticleNetworkConfig = {
   interactionBrightnessBoost: 0.55,
   colors: {
     particleRGB: '40,184,160',
-    particleActiveRGB: '40,184,160',
     connectionRGB: '40,184,160',
     connectionActiveRGB: '134,227,208',
     glowRGB: '134,227,208',

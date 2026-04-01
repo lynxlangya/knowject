@@ -44,23 +44,25 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
   const animFrameRef = useRef(0);
   const mouseRef = useRef({ x: 0, y: 0, active: false });
   const sizeRef = useRef({ w: 0, h: 0 });
+  const canvasRectRef = useRef<DOMRect | null>(null);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const _canvas = canvasRef.current;
+    if (!_canvas) return;
+    const _ctx = _canvas.getContext('2d');
+    if (!_ctx) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    // Rebind after guard so closures capture non-nullable types
+    const canvas = _canvas;
+    const ctx = _ctx;
 
-    /* ── Reduced motion ──────────────────────────── */
     const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
     let reducedMotion = mql.matches;
 
-    /* ── Resize / DPR ────────────────────────────── */
     const MAX_DPR = 3;
 
     function resize() {
-      const parent = canvas!.parentElement;
+      const parent = canvas.parentElement;
       if (!parent) return;
 
       const rect = parent.getBoundingClientRect();
@@ -68,32 +70,34 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
       const w = rect.width;
       const h = rect.height;
 
-      canvas!.width = w * dpr;
-      canvas!.height = h * dpr;
-      canvas!.style.width = `${w}px`;
-      canvas!.style.height = `${h}px`;
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       sizeRef.current = { w, h };
+      canvasRectRef.current = canvas.getBoundingClientRect();
       particlesRef.current = createParticles(config.particleCount, w, h, config);
     }
 
     resize();
 
-    /* ── Draw logic ──────────────────────────────── */
     const { colors } = config;
     const connDistSq = config.connectionDistance ** 2;
+    const connDist = config.connectionDistance;
     const interRadiusSq = config.interactionRadius ** 2;
     const connDistActiveSq =
       (config.connectionDistance * config.interactionConnectionScale) ** 2;
+    const connDistActive =
+      config.connectionDistance * config.interactionConnectionScale;
 
     function draw() {
       const { w, h } = sizeRef.current;
       const particles = particlesRef.current;
       const mouse = mouseRef.current;
-      ctx!.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, w, h);
 
-      // Update positions (skip if reduced motion — static frame)
       if (!reducedMotion) {
         for (const p of particles) {
           p.x += p.vx;
@@ -105,7 +109,6 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
         }
       }
 
-      // Connections (O(n^2), n=65 ≈ 2080 checks — trivial)
       for (let i = 0; i < particles.length; i++) {
         const a = particles[i];
         for (let j = i + 1; j < particles.length; j++) {
@@ -114,9 +117,9 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
           const dy = a.y - b.y;
           const distSq = dx * dx + dy * dy;
 
-          // Check if either particle is near cursor
           let nearMouse = false;
           let maxDistSq = connDistSq;
+          let maxDist = connDist;
 
           if (mouse.active) {
             const aDist =
@@ -126,28 +129,27 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
             if (aDist < interRadiusSq || bDist < interRadiusSq) {
               nearMouse = true;
               maxDistSq = connDistActiveSq;
+              maxDist = connDistActive;
             }
           }
 
           if (distSq > maxDistSq) continue;
 
           const dist = Math.sqrt(distSq);
-          const maxDist = Math.sqrt(maxDistSq);
           const opacity = config.connectionOpacityMax * (1 - dist / maxDist);
           const rgb = nearMouse
             ? colors.connectionActiveRGB
             : colors.connectionRGB;
 
-          ctx!.beginPath();
-          ctx!.moveTo(a.x, a.y);
-          ctx!.lineTo(b.x, b.y);
-          ctx!.strokeStyle = `rgba(${rgb},${opacity})`;
-          ctx!.lineWidth = nearMouse ? 1.2 : 0.8;
-          ctx!.stroke();
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(${rgb},${opacity})`;
+          ctx.lineWidth = nearMouse ? 1.2 : 0.8;
+          ctx.stroke();
         }
       }
 
-      // Draw particles
       for (const p of particles) {
         let opacity = p.baseOpacity;
         let isActive = false;
@@ -166,24 +168,20 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
           }
         }
 
-        // Glow for active particles
         if (isActive) {
-          ctx!.beginPath();
-          ctx!.arc(p.x, p.y, p.radius * 4, 0, Math.PI * 2);
-          ctx!.fillStyle = `rgba(${colors.glowRGB},${opacity * 0.15})`;
-          ctx!.fill();
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * 4, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${colors.glowRGB},${opacity * 0.15})`;
+          ctx.fill();
         }
 
-        // Particle dot
-        ctx!.beginPath();
-        ctx!.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        const rgb = isActive ? colors.particleActiveRGB : colors.particleRGB;
-        ctx!.fillStyle = `rgba(${rgb},${opacity})`;
-        ctx!.fill();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${colors.particleRGB},${opacity})`;
+        ctx.fill();
       }
     }
 
-    /* ── Animation loop ──────────────────────────── */
     let running = false;
 
     function loop() {
@@ -203,39 +201,33 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
       cancelAnimationFrame(animFrameRef.current);
     }
 
-    // Initial draw (static frame for reduced-motion, or start loop)
     draw();
     if (!reducedMotion) {
       start();
     }
 
-    /* ── Event listeners ─────────────────────────── */
-    function onMouseMove(e: MouseEvent) {
-      const rect = canvas!.getBoundingClientRect();
+    function updatePointer(clientX: number, clientY: number) {
+      const rect = canvasRectRef.current;
+      if (!rect) return;
       mouseRef.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: clientX - rect.left,
+        y: clientY - rect.top,
         active: true,
       };
     }
 
-    function onMouseLeave() {
-      mouseRef.current = { ...mouseRef.current, active: false };
+    function deactivatePointer() {
+      mouseRef.current.active = false;
+    }
+
+    function onMouseMove(e: MouseEvent) {
+      updatePointer(e.clientX, e.clientY);
     }
 
     function onTouchMove(e: TouchEvent) {
       const touch = e.touches[0];
       if (!touch) return;
-      const rect = canvas!.getBoundingClientRect();
-      mouseRef.current = {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top,
-        active: true,
-      };
-    }
-
-    function onTouchEnd() {
-      mouseRef.current = { ...mouseRef.current, active: false };
+      updatePointer(touch.clientX, touch.clientY);
     }
 
     function onVisibilityChange() {
@@ -250,7 +242,7 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
       reducedMotion = e.matches;
       if (reducedMotion) {
         stop();
-        draw(); // freeze to static
+        draw();
       } else if (!document.hidden) {
         start();
       }
@@ -258,9 +250,9 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
 
     // Use window for mouse tracking (canvas has pointer-events-none)
     window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseleave', onMouseLeave);
+    window.addEventListener('mouseleave', deactivatePointer);
     window.addEventListener('touchmove', onTouchMove, { passive: true });
-    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchend', deactivatePointer);
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', onVisibilityChange);
     mql.addEventListener('change', onMotionChange);
@@ -268,9 +260,9 @@ export function useParticleNetwork(config: ParticleNetworkConfig) {
     return () => {
       stop();
       window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseleave', onMouseLeave);
+      window.removeEventListener('mouseleave', deactivatePointer);
       window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchend', deactivatePointer);
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       mql.removeEventListener('change', onMotionChange);
