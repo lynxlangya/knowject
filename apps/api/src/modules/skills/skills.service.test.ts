@@ -271,6 +271,34 @@ const createTestSkillsService = ({
   });
 };
 
+const assertDecisionRoundOptions = (options: unknown): void => {
+  assert.ok(Array.isArray(options));
+  assert.ok(options.length > 0);
+
+  let recommendedCount = 0;
+  for (const option of options) {
+    assert.equal(typeof option, 'object');
+    assert.notEqual(option, null);
+    assert.equal(typeof (option as { id?: unknown }).id, 'string');
+    assert.ok(((option as { id?: string }).id ?? '').trim().length > 0);
+    assert.equal(typeof (option as { label?: unknown }).label, 'string');
+    assert.ok(((option as { label?: string }).label ?? '').trim().length > 0);
+    assert.equal(typeof (option as { rationale?: unknown }).rationale, 'string');
+    assert.ok(
+      ((option as { rationale?: string }).rationale ?? '').trim().length > 0,
+    );
+    assert.equal(
+      typeof (option as { recommended?: unknown }).recommended,
+      'boolean',
+    );
+    if ((option as { recommended: boolean }).recommended) {
+      recommendedCount += 1;
+    }
+  }
+
+  assert.ok(recommendedCount > 0);
+};
+
 test('listSkills returns preset and team method assets', async () => {
   const env = await createEnv();
   const presetSkill = {
@@ -775,7 +803,7 @@ test('createSkill rejects invalid structured payloads and duplicate slugs', asyn
   }
 });
 
-test('runAuthoringTurn returns interviewing question payload before the fifth turn', async () => {
+test('runAuthoringTurn returns decision-round interviewing payload for scope/scenario alignment', async () => {
   const env = await createEnv();
   const service = createTestSkillsService({
     env,
@@ -809,10 +837,52 @@ test('runAuthoringTurn returns interviewing question payload before the fifth tu
     assert.notEqual(result.stage, 'synthesizing');
     assert.ok(result.assistantMessage.trim().length > 0);
     assert.match(result.nextQuestion, /范围|场景/u);
-    assert.ok(Array.isArray(result.options));
+    assertDecisionRoundOptions(result.options);
     assert.equal(result.questionCount, 2);
     assert.ok(result.currentSummary.trim().length > 0);
     assert.equal(result.structuredDraft, null);
+    assert.equal(result.readyForConfirmation, false);
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('runAuthoringTurn exposes synthesizing as an independent stage contract (red)', async () => {
+  const env = await createEnv();
+  const service = createTestSkillsService({
+    env,
+    repository: createRepositoryStub(),
+  });
+  const messages = Array.from({ length: 8 }, (_, index) => {
+    const round = index + 1;
+    return [
+      {
+        role: 'assistant' as const,
+        content: `第 ${round} 轮：请继续补充约束。`,
+      },
+      {
+        role: 'user' as const,
+        content: `第 ${round} 轮回答：补充约束。`,
+      },
+    ];
+  }).flat();
+
+  try {
+    const result = await service.runAuthoringTurn(
+      { actor: ACTOR },
+      {
+        scope: {
+          scenario: 'engineering_execution',
+          targets: ['apps/platform/src/pages/skills'],
+        },
+        messages,
+        questionCount: 4,
+        currentSummary: '目标和边界已经收敛，进入草案整合前的汇总阶段。',
+      },
+    );
+
+    assert.equal(result.stage, 'synthesizing');
+    assert.ok(result.assistantMessage.trim().length > 0);
     assert.equal(result.readyForConfirmation, false);
   } finally {
     await rm(env.skills.storageRoot, { recursive: true, force: true });
