@@ -3,11 +3,9 @@ import type { RequestHandler } from 'express';
 import { asyncHandler } from '@lib/async-handler.js';
 import { sendCreated, sendSuccess } from '@lib/api-response.js';
 import { getRequiredAuthUser } from '@lib/request-auth.js';
-import { validateSkillImportInput } from './skills.import.js';
 import type { SkillsService } from './skills.service.js';
 import type {
   CreateSkillInput,
-  ImportSkillInput,
   ListSkillsInput,
   UpdateSkillInput,
 } from './skills.types.js';
@@ -64,24 +62,6 @@ export const createSkillsRouter = (
       );
 
       sendCreated(res, result);
-    }),
-  );
-
-  skillsRouter.post(
-    '/import',
-    asyncHandler(async (req, res) => {
-      validateSkillImportInput(req.body as ImportSkillInput);
-
-      const result = await skillsService.importSkill(
-        {
-          actor: getRequiredAuthUser(req),
-        },
-        req.body as ImportSkillInput,
-      );
-
-      sendSuccess(res, result, {
-        statusCode: 'skill' in result ? 201 : 200,
-      });
     }),
   );
 

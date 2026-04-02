@@ -36,11 +36,11 @@ const createSkillBindingValidatorStub = (
 const createManagedSkill = ({
   id = new ObjectId(),
   name,
-  lifecycleStatus,
+  status,
 }: {
   id?: ObjectId;
   name: string;
-  lifecycleStatus: 'draft' | 'published';
+  status: 'draft' | 'active' | 'deprecated' | 'archived';
 }): SkillDocument & { _id: NonNullable<SkillDocument['_id']> } => {
   const markdown = `---
 name: ${name}
@@ -56,12 +56,13 @@ description: ${name} description
     slug: name.toLowerCase().replace(/\s+/g, '-'),
     description: `${name} description`,
     type: 'markdown_bundle',
-    source: 'custom',
+    source: 'team' as unknown as SkillDocument['source'],
     origin: 'manual',
     handler: null,
     parametersSchema: null,
     runtimeStatus: 'contract_only',
-    lifecycleStatus,
+    lifecycleStatus: 'draft',
+    status,
     skillMarkdown: markdown,
     markdownExcerpt: `${name} description`,
     storagePath: id.toHexString(),
@@ -73,7 +74,7 @@ description: ${name} description
     ],
     importProvenance: null,
     createdBy: 'user-1',
-    publishedAt: lifecycleStatus === 'published' ? new Date('2026-03-14T00:00:00.000Z') : null,
+    publishedAt: null,
     createdAt: new Date('2026-03-14T00:00:00.000Z'),
     updatedAt: new Date('2026-03-14T00:00:00.000Z'),
   };
@@ -110,7 +111,7 @@ test('createAgent persists validated bindings with server-fixed model defaults',
       name: '代码审查助手',
       description: '聚焦代码回归风险与测试缺口。',
       systemPrompt: '你是一个严格但务实的代码审查员。',
-      boundSkillIds: ['search_documents', 'search_documents'],
+      boundSkillIds: ['doc-gap-interrogation', 'doc-gap-interrogation'],
       boundKnowledgeIds: ['kb-1', 'kb-2', 'kb-1'],
     },
   );
@@ -122,12 +123,12 @@ test('createAgent persists validated bindings with server-fixed model defaults',
 
   const persistedAgent: Omit<AgentDocument, '_id'> = createdAgent;
 
-  assert.deepEqual(persistedAgent.boundSkillIds, ['search_documents']);
+  assert.deepEqual(persistedAgent.boundSkillIds, ['doc-gap-interrogation']);
   assert.deepEqual(persistedAgent.boundKnowledgeIds, ['kb-1', 'kb-2']);
   assert.equal(persistedAgent.model, DEFAULT_AGENT_MODEL);
   assert.equal(persistedAgent.status, 'active');
   assert.equal(result.agent.model, DEFAULT_AGENT_MODEL);
-  assert.deepEqual(result.agent.boundSkillIds, ['search_documents']);
+  assert.deepEqual(result.agent.boundSkillIds, ['doc-gap-interrogation']);
   assert.deepEqual(result.agent.boundKnowledgeIds, ['kb-1', 'kb-2']);
 });
 
@@ -163,16 +164,16 @@ test('createAgent rejects unknown builtin skill ids', async () => {
   );
 });
 
-test('createAgent accepts published managed skill ids and rejects draft skill ids', async () => {
-  const publishedSkill = createManagedSkill({
+test('createAgent accepts active managed skill ids and rejects draft skill ids', async () => {
+  const activeSkill = createManagedSkill({
     id: new ObjectId('507f1f77bcf86cd799439061'),
-    name: 'Published Skill',
-    lifecycleStatus: 'published',
+    name: '方案补全',
+    status: 'active',
   });
   const draftSkill = createManagedSkill({
     id: new ObjectId('507f1f77bcf86cd799439062'),
-    name: 'Draft Skill',
-    lifecycleStatus: 'draft',
+    name: '实现前检查',
+    status: 'draft',
   });
   const service = createAgentsService({
     repository: {
@@ -182,10 +183,10 @@ test('createAgent accepts published managed skill ids and rejects draft skill id
       }),
     } as unknown as AgentsRepository,
     knowledgeRepository: createKnowledgeRepositoryStub(['kb-1']),
-    skillBindingValidator: createSkillBindingValidatorStub([publishedSkill, draftSkill]),
+    skillBindingValidator: createSkillBindingValidatorStub([activeSkill, draftSkill]),
   });
 
-  const publishedResult = await service.createAgent(
+  const activeResult = await service.createAgent(
     {
       actor: {
         id: 'user-1',
@@ -193,14 +194,14 @@ test('createAgent accepts published managed skill ids and rejects draft skill id
       },
     },
     {
-      name: '已发布 Skill 绑定',
-      systemPrompt: '测试 published managed skill',
-      boundSkillIds: [publishedSkill._id.toHexString()],
+      name: 'Active managed skill binding',
+      systemPrompt: '测试 active managed skill',
+      boundSkillIds: [activeSkill._id.toHexString()],
       boundKnowledgeIds: ['kb-1'],
     },
   );
 
-  assert.deepEqual(publishedResult.agent.boundSkillIds, [publishedSkill._id.toHexString()]);
+  assert.deepEqual(activeResult.agent.boundSkillIds, [activeSkill._id.toHexString()]);
 
   await assert.rejects(
     () =>
@@ -212,7 +213,7 @@ test('createAgent accepts published managed skill ids and rejects draft skill id
           },
         },
         {
-          name: '草稿 Skill 绑定',
+          name: 'Draft managed skill binding',
           systemPrompt: '测试 draft managed skill',
           boundSkillIds: [draftSkill._id.toHexString()],
           boundKnowledgeIds: ['kb-1'],
@@ -262,7 +263,7 @@ test('updateAgent accepts binding-only patches and status changes', async () => 
     name: '需求分析助手',
     description: '帮助沉淀需求与验收标准。',
     systemPrompt: '你是一个关注边界和验收标准的需求分析助手。',
-    boundSkillIds: ['search_documents'],
+    boundSkillIds: ['doc-gap-interrogation'],
     boundKnowledgeIds: ['kb-keep'],
     model: DEFAULT_AGENT_MODEL,
     status: 'active',
@@ -297,13 +298,13 @@ test('updateAgent accepts binding-only patches and status changes', async () => 
     },
     existingAgent._id.toHexString(),
     {
-      boundSkillIds: ['search_codebase'],
+      boundSkillIds: ['implementation-readiness-check'],
       boundKnowledgeIds: ['kb-real-1'],
       status: 'disabled',
     },
   );
 
-  assert.deepEqual(result.agent.boundSkillIds, ['search_codebase']);
+  assert.deepEqual(result.agent.boundSkillIds, ['implementation-readiness-check']);
   assert.deepEqual(result.agent.boundKnowledgeIds, ['kb-real-1']);
   assert.equal(result.agent.status, 'disabled');
   assert.equal(result.agent.model, DEFAULT_AGENT_MODEL);
@@ -319,7 +320,7 @@ test('updateAgent allows non-binding edits when existing knowledge bindings are 
     name: '存量绑定智能体',
     description: '历史上绑定过一个已经被删除的知识库。',
     systemPrompt: '你负责补全知识绑定后的审查动作。',
-    boundSkillIds: ['search_documents'],
+    boundSkillIds: ['doc-gap-interrogation'],
     boundKnowledgeIds: ['kb-deleted'],
     model: DEFAULT_AGENT_MODEL,
     status: 'active',

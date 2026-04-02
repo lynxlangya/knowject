@@ -30,7 +30,7 @@ test('tag copy follows runtime locale changes after module initialization', asyn
   const { AGENT_STATUS_META } = await import(
     '../src/pages/agents/constants/agentsManagement.constants'
   );
-  const { LIFECYCLE_STATUS_META, RUNTIME_STATUS_META, SOURCE_META } = await import(
+  const { SOURCE_META, STATUS_META } = await import(
     '../src/pages/skills/constants/skillsManagement.constants'
   );
 
@@ -40,9 +40,8 @@ test('tag copy follows runtime locale changes after module initialization', asyn
   const englishKnowledgeIndex = KNOWLEDGE_INDEX_STATUS_META.completed.label;
   const englishKnowledgeDocument = KNOWLEDGE_DOCUMENT_STATUS_META.completed.label;
   const englishAgentStatus = AGENT_STATUS_META.active.label;
-  const englishSkillSource = SOURCE_META.system.label;
-  const englishSkillLifecycle = LIFECYCLE_STATUS_META.draft.label;
-  const englishSkillRuntime = RUNTIME_STATUS_META.contract_only.label;
+  const englishSkillSource = SOURCE_META.preset.label;
+  const englishSkillStatus = STATUS_META.draft.label;
 
   await i18n.changeLanguage('zh-CN');
 
@@ -106,21 +105,10 @@ test('tag copy follows runtime locale changes after module initialization', asyn
   assert.equal(AGENT_STATUS_META.active.label, agentsTp('status.active'));
   assert.notEqual(AGENT_STATUS_META.active.label, englishAgentStatus);
 
-  assert.equal(SOURCE_META.system.label, skillsTp('source.system'));
-  assert.equal(
-    LIFECYCLE_STATUS_META.draft.label,
-    skillsTp('lifecycle.draftBadge'),
-  );
-  assert.equal(
-    RUNTIME_STATUS_META.contract_only.label,
-    skillsTp('runtime.contractOnly'),
-  );
-  assert.notEqual(SOURCE_META.system.label, englishSkillSource);
-  assert.notEqual(LIFECYCLE_STATUS_META.draft.label, englishSkillLifecycle);
-  assert.notEqual(
-    RUNTIME_STATUS_META.contract_only.label,
-    englishSkillRuntime,
-  );
+  assert.equal(SOURCE_META.preset.label, skillsTp('source.preset'));
+  assert.equal(STATUS_META.draft.label, skillsTp('status.draftBadge'));
+  assert.notEqual(SOURCE_META.preset.label, englishSkillSource);
+  assert.notEqual(STATUS_META.draft.label, englishSkillStatus);
 
   await i18n.changeLanguage('en');
 });

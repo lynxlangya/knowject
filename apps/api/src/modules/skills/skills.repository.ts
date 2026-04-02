@@ -83,9 +83,15 @@ export class SkillsRepository {
     patch: Partial<
       Pick<
         SkillDocument,
+        | "source"
         | "name"
         | "slug"
         | "description"
+        | "category"
+        | "status"
+        | "owner"
+        | "definition"
+        | "statusChangedAt"
         | "lifecycleStatus"
         | "skillMarkdown"
         | "markdownExcerpt"

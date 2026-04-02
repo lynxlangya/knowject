@@ -1,5 +1,10 @@
 import type { ObjectId } from 'mongodb';
 import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
+import type {
+  SkillCategory,
+  SkillDefinitionFields,
+  SkillStatus,
+} from './skills.definition.js';
 
 export interface SkillsCommandContext {
   actor: AuthenticatedRequestUser;
@@ -13,8 +18,13 @@ export const SKILL_TYPES = [
 ] as const;
 export type SkillType = (typeof SKILL_TYPES)[number];
 
-export const SKILL_SOURCES = ['system', 'custom', 'imported'] as const;
-export type SkillSource = (typeof SKILL_SOURCES)[number];
+export const SKILL_SOURCES = ['preset', 'team'] as const;
+export type MethodAssetSkillSource = (typeof SKILL_SOURCES)[number];
+export const LEGACY_SKILL_SOURCES = ['system', 'custom', 'imported'] as const;
+export type LegacySkillSource = (typeof LEGACY_SKILL_SOURCES)[number];
+export type SkillSource = MethodAssetSkillSource | LegacySkillSource;
+export type PersistedSkillSource = SkillSource;
+export type ReadSkillSource = MethodAssetSkillSource;
 
 export const SKILL_ORIGINS = ['manual', 'github', 'url'] as const;
 export type SkillOrigin = (typeof SKILL_ORIGINS)[number];
@@ -73,12 +83,17 @@ export interface SkillDocument {
   slug: string;
   description: string;
   type: SkillType;
-  source: SkillSource;
+  source: PersistedSkillSource;
   origin: SkillOrigin;
   handler: SkillHandler | null;
   parametersSchema: SkillParametersSchema | null;
   runtimeStatus: SkillRuntimeStatus;
-  lifecycleStatus: SkillLifecycleStatus;
+  category?: SkillCategory | string;
+  status?: SkillStatus;
+  owner?: string;
+  definition?: SkillDefinitionFields;
+  statusChangedAt?: Date | null;
+  lifecycleStatus?: SkillLifecycleStatus;
   skillMarkdown: string;
   markdownExcerpt: string;
   storagePath: string;
@@ -90,6 +105,17 @@ export interface SkillDocument {
   updatedAt: Date;
 }
 
+export interface NormalizedSkillReadModel {
+  source: ReadSkillSource;
+  lifecycleStatus: SkillLifecycleStatus;
+  category?: SkillCategory;
+  status: SkillStatus;
+  owner: string;
+  definition: SkillDefinitionFields;
+  statusChangedAt: Date;
+  bindable: boolean;
+}
+
 export interface ListSkillsInput {
   source?: unknown;
   lifecycleStatus?: unknown;
@@ -97,7 +123,7 @@ export interface ListSkillsInput {
 }
 
 export interface ListSkillsFilters {
-  source?: SkillSource;
+  source?: PersistedSkillSource;
   lifecycleStatus?: SkillLifecycleStatus;
   bindable?: boolean;
 }
@@ -105,24 +131,18 @@ export interface ListSkillsFilters {
 export interface CreateSkillInput {
   name?: unknown;
   description?: unknown;
-  skillMarkdown?: unknown;
+  category?: unknown;
+  owner?: unknown;
+  definition?: unknown;
 }
 
 export interface UpdateSkillInput {
   name?: unknown;
   description?: unknown;
-  skillMarkdown?: unknown;
-  lifecycleStatus?: unknown;
-}
-
-export interface ImportSkillInput {
-  mode?: unknown;
-  dryRun?: unknown;
-  githubUrl?: unknown;
-  repository?: unknown;
-  path?: unknown;
-  ref?: unknown;
-  url?: unknown;
+  category?: unknown;
+  owner?: unknown;
+  definition?: unknown;
+  status?: unknown;
 }
 
 export interface SkillSummaryResponse {
@@ -131,12 +151,17 @@ export interface SkillSummaryResponse {
   name: string;
   description: string;
   type: SkillType;
-  source: SkillSource;
+  source: ReadSkillSource;
   origin: SkillOrigin | null;
   handler: SkillHandler | null;
   parametersSchema: SkillParametersSchema | null;
   runtimeStatus: SkillRuntimeStatus;
   lifecycleStatus: SkillLifecycleStatus;
+  category?: SkillCategory;
+  status?: SkillStatus;
+  owner?: string;
+  definition?: SkillDefinitionFields;
+  statusChangedAt?: string | null;
   bindable: boolean;
   markdownExcerpt: string;
   bundleFileCount: number;
@@ -158,15 +183,17 @@ export interface SkillsListResponse {
   meta: {
     module: 'skills';
     stage: 'GA-09';
-    registry: 'hybrid';
+    registry: 'preset+team';
     builtinOnly: false;
     boundaries: {
       businessRuntime: 'node-express';
       registryStore: 'mongodb+fs';
       knowledgeAccess: 'service-layer-only';
       execution: 'service-linked-or-contract-only';
-      import: 'github-or-raw-url';
-      authoring: 'skill-markdown';
+      authoring: 'structured-method-asset';
+      source: 'team-created-only';
+      binding: 'project-first';
+      runtime: 'manual-or-recommended-in-conversation';
     };
   };
 }
@@ -177,24 +204,4 @@ export interface SkillMutationResponse {
 
 export interface SkillDetailEnvelope {
   skill: SkillDetailResponse;
-}
-
-export interface SkillImportPreview {
-  source: 'imported';
-  origin: 'github' | 'url';
-  type: 'markdown_bundle';
-  name: string;
-  description: string;
-  runtimeStatus: SkillRuntimeStatus;
-  lifecycleStatus: 'draft';
-  bindable: false;
-  markdownExcerpt: string;
-  skillMarkdown: string;
-  bundleFiles: SkillBundleFileRecord[];
-  bundleFileCount: number;
-  importProvenance: SkillImportProvenance;
-}
-
-export interface SkillImportPreviewResponse {
-  preview: SkillImportPreview;
 }

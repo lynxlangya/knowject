@@ -27,8 +27,6 @@ const API_RUNTIME_MESSAGE_FILES = [
   'apps/api/src/modules/settings/settings.service.sections.ts',
   'apps/api/src/modules/settings/settings.service.validation.ts',
   'apps/api/src/modules/skills/skills.binding.ts',
-  'apps/api/src/modules/skills/skills.import.ts',
-  'apps/api/src/modules/skills/skills.markdown.ts',
   'apps/api/src/modules/skills/skills.shared.ts',
   'apps/api/src/modules/skills/validators/skills.validator.ts',
   'apps/api/src/routes/memory.ts',
@@ -77,25 +75,6 @@ const stripComments = (source: string): string => {
 };
 
 const REMAINING_SWEEP_CHECKLIST: Record<string, string[]> = {
-  'apps/api/src/modules/skills/skills.import.ts': [
-    'GitHub 元数据',
-    '无法识别 raw.githubusercontent.com URL',
-    '仅支持 github.com 或 raw.githubusercontent.com URL',
-    '无法识别 owner/repo',
-    '仅支持 GitHub tree/blob URL',
-    'GitHub URL 必须包含 ref',
-    'Skill bundle 文件',
-    'Skill Markdown',
-  ],
-  'apps/api/src/modules/skills/skills.markdown.ts': [
-    '无法解析 frontmatter 行',
-    'frontmatter 多行字段',
-    'frontmatter 字段',
-    'SKILL.md 顶部必须以 --- frontmatter 开头',
-    '请补齐 frontmatter 结束分隔线 ---',
-    'frontmatter 必须包含非空 name',
-    'frontmatter 必须包含非空 description',
-  ],
   'apps/api/src/modules/projects/projects.shared.ts': [
     '未知成员',
     '项目对话入口',
@@ -117,7 +96,7 @@ const REMAINING_SWEEP_CHECKLIST: Record<string, string[]> = {
     '个项目',
     '个智能体',
     '删除',
-    '回退为草稿',
+    '标记为废弃',
     'Skill 已被',
     '非法文件路径：',
   ],

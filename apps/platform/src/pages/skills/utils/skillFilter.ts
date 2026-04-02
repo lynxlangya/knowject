@@ -9,24 +9,28 @@ export const filterSkills = (
   items: SkillSummaryResponse[],
   filter: SkillSidebarFilter,
 ): SkillSummaryResponse[] => {
-  if (filter === 'published') {
-    return items.filter((item) => item.lifecycleStatus === 'published');
-  }
-
   if (filter === 'draft') {
-    return items.filter((item) => item.lifecycleStatus === 'draft');
+    return items.filter((item) => item.status === 'draft');
   }
 
-  if (filter === 'system') {
-    return items.filter((item) => item.source === 'system');
+  if (filter === 'active') {
+    return items.filter((item) => item.status === 'active');
   }
 
-  if (filter === 'custom') {
-    return items.filter((item) => item.source === 'custom');
+  if (filter === 'deprecated') {
+    return items.filter((item) => item.status === 'deprecated');
   }
 
-  if (filter === 'imported') {
-    return items.filter((item) => item.source === 'imported');
+  if (filter === 'archived') {
+    return items.filter((item) => item.status === 'archived');
+  }
+
+  if (filter === 'preset') {
+    return items.filter((item) => item.source === 'preset');
+  }
+
+  if (filter === 'team') {
+    return items.filter((item) => item.source === 'team');
   }
 
   return items;
@@ -42,9 +46,9 @@ export const buildSkillFilterGroups = (
       count: items.length,
     },
     {
-      key: 'published',
-      label: tp('filters.published'),
-      count: filterSkills(items, 'published').length,
+      key: 'active',
+      label: tp('filters.active'),
+      count: filterSkills(items, 'active').length,
     },
     {
       key: 'draft',
@@ -52,19 +56,24 @@ export const buildSkillFilterGroups = (
       count: filterSkills(items, 'draft').length,
     },
     {
-      key: 'system',
-      label: tp('filters.system'),
-      count: filterSkills(items, 'system').length,
+      key: 'deprecated',
+      label: tp('filters.deprecated'),
+      count: filterSkills(items, 'deprecated').length,
     },
     {
-      key: 'custom',
-      label: tp('filters.custom'),
-      count: filterSkills(items, 'custom').length,
+      key: 'archived',
+      label: tp('filters.archived'),
+      count: filterSkills(items, 'archived').length,
     },
     {
-      key: 'imported',
-      label: tp('filters.imported'),
-      count: filterSkills(items, 'imported').length,
+      key: 'preset',
+      label: tp('filters.preset'),
+      count: filterSkills(items, 'preset').length,
+    },
+    {
+      key: 'team',
+      label: tp('filters.team'),
+      count: filterSkills(items, 'team').length,
     },
   ];
 };

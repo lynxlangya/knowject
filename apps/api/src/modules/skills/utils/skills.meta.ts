@@ -2,7 +2,7 @@ import type { SkillsListResponse } from "../skills.types.js";
 
 export const sortSkillItems = <
   T extends {
-    source: "system" | "custom" | "imported";
+    source: "preset" | "team";
     updatedAt: string;
     createdAt: string;
   },
@@ -27,15 +27,17 @@ export const buildSkillListMeta = (): SkillsListResponse["meta"] => {
   return {
     module: "skills",
     stage: "GA-09",
-    registry: "hybrid",
+    registry: "preset+team",
     builtinOnly: false,
     boundaries: {
       businessRuntime: "node-express",
       registryStore: "mongodb+fs",
       knowledgeAccess: "service-layer-only",
       execution: "service-linked-or-contract-only",
-      import: "github-or-raw-url",
-      authoring: "skill-markdown",
+      authoring: "structured-method-asset",
+      source: "team-created-only",
+      binding: "project-first",
+      runtime: "manual-or-recommended-in-conversation",
     },
   };
 };

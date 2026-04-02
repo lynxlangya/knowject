@@ -5,15 +5,18 @@ import {
   getSkillDetail,
   updateSkill,
   type SkillDetailResponse,
-  type SkillLifecycleStatus,
   type SkillSummaryResponse,
 } from '@api/skills';
 import type { EditorMode } from '../types/skillsManagement.types';
 import { tp } from '../skills.i18n';
 import {
-  buildSkillMarkdownTemplate,
-  parseSkillMarkdownPreview,
-} from '../skillsMarkdown';
+  buildSkillMarkdownPreview,
+  createEmptySkillEditorDraft,
+  createSkillEditorDraftFromDetail,
+  normalizeSkillDefinition,
+  type SkillEditorDraft,
+  validateSkillEditorDraft,
+} from '../skillDefinition';
 
 interface SkillEditorMessageApi {
   success: (content: string) => void;
@@ -34,22 +37,29 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   const [editingSkill, setEditingSkill] = useState<SkillDetailResponse | null>(
     null,
   );
-  const [editorMarkdown, setEditorMarkdown] = useState('');
-  const [editorLifecycleStatus, setEditorLifecycleStatus] =
-    useState<SkillLifecycleStatus>('draft');
+  const [editorDraft, setEditorDraft] = useState<SkillEditorDraft>(
+    createEmptySkillEditorDraft(),
+  );
   const [editorLoading, setEditorLoading] = useState(false);
   const [editorSubmitting, setEditorSubmitting] = useState(false);
 
   const editorValidation = useMemo(() => {
-    return parseSkillMarkdownPreview(editorMarkdown);
-  }, [editorMarkdown]);
+    return validateSkillEditorDraft(editorDraft);
+  }, [editorDraft]);
+
+  const editorMarkdownPreview = useMemo(() => {
+    return buildSkillMarkdownPreview({
+      name: editorDraft.name,
+      description: editorDraft.description,
+      definition: editorDraft.definition,
+    });
+  }, [editorDraft]);
 
   const resetEditorState = () => {
     setEditorMode(null);
     setEditorTabKey('editor');
     setEditingSkill(null);
-    setEditorMarkdown('');
-    setEditorLifecycleStatus('draft');
+    setEditorDraft(createEmptySkillEditorDraft());
     setEditorLoading(false);
     setEditorSubmitting(false);
   };
@@ -58,8 +68,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     setEditorMode('create');
     setEditorTabKey('editor');
     setEditingSkill(null);
-    setEditorMarkdown(buildSkillMarkdownTemplate());
-    setEditorLifecycleStatus('draft');
+    setEditorDraft(createEmptySkillEditorDraft());
   };
 
   const handleOpenEditModal = async (skill: SkillSummaryResponse) => {
@@ -70,8 +79,16 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     try {
       const result = await getSkillDetail(skill.id);
       setEditingSkill(result.skill);
-      setEditorMarkdown(result.skill.skillMarkdown);
-      setEditorLifecycleStatus(result.skill.lifecycleStatus);
+      setEditorDraft(
+        createSkillEditorDraftFromDetail({
+          name: result.skill.name,
+          description: result.skill.description,
+          category: result.skill.category,
+          owner: result.skill.owner,
+          status: result.skill.status,
+          definition: result.skill.definition,
+        }),
+      );
     } catch (currentError) {
       console.error('[SkillsManagementPage] 加载 Skill 详情失败:', currentError);
       message.error(
@@ -85,7 +102,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
   const handleSubmitEditor = async () => {
     if (!editorValidation.valid) {
-      message.warning(tp('feedback.frontmatterInvalid'));
+      message.warning(tp('feedback.definitionInvalid'));
       setEditorTabKey('editor');
       return;
     }
@@ -93,17 +110,23 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     setEditorSubmitting(true);
 
     try {
+      const payload = {
+        name: editorDraft.name.trim(),
+        description: editorDraft.description.trim(),
+        category: editorDraft.category,
+        owner: editorDraft.owner.trim(),
+        definition: normalizeSkillDefinition(editorDraft.definition),
+      };
+
       if (editorMode === 'create') {
-        await createSkill({
-          skillMarkdown: editorMarkdown,
-        });
+        await createSkill(payload);
         message.success(tp('feedback.createdDraft'));
       }
 
       if (editorMode === 'edit' && editingSkill) {
         await updateSkill(editingSkill.id, {
-          skillMarkdown: editorMarkdown,
-          lifecycleStatus: editorLifecycleStatus,
+          ...payload,
+          status: editorDraft.status,
         });
         message.success(tp('feedback.saved'));
       }
@@ -125,13 +148,12 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     editorTabKey,
     setEditorTabKey,
     editingSkill,
-    editorMarkdown,
-    setEditorMarkdown,
-    editorLifecycleStatus,
-    setEditorLifecycleStatus,
+    editorDraft,
+    setEditorDraft,
     editorLoading,
     editorSubmitting,
     editorValidation,
+    editorMarkdownPreview,
     resetEditorState,
     handleOpenCreateModal,
     handleOpenEditModal,

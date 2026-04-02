@@ -93,6 +93,16 @@ test('overview locale dashboard contract exposes required sections', () => {
   }
 });
 
+test('project resource locale exposes preset and team skill ownership copy', () => {
+  const enItems = projectMessagesEn.resources.item as Record<string, unknown>;
+  const zhItems = projectMessagesZhCN.resources.item as Record<string, unknown>;
+
+  assert.equal(enItems.presetSkill, 'Preset method asset');
+  assert.equal(zhItems.presetSkill, '预置方法资产');
+  assert.equal(enItems.teamSkill, 'Team method asset');
+  assert.equal(zhItems.teamSkill, '团队方法资产');
+});
+
 test('ProjectOverviewPage no longer depends on legacy overview copy or recent resources helper', () => {
   const source = readFileSync(new URL('../src/pages/project/ProjectOverviewPage.tsx', import.meta.url), 'utf8');
 

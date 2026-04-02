@@ -11,12 +11,12 @@ The repository is currently in an active foundation stage: the product shell, au
 ## Current Status
 
 - `apps/platform` already provides the authenticated shell, project routes, member management UI, formal global knowledge/skill/agent management pages, and the `/settings` workspace settings center.
-- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, global knowledge CRUD/upload/search endpoints, project-scoped knowledge `list/create/detail/upload` routes, formal skill asset CRUD/import/publish/binding-validation APIs, formal `agents` CRUD/binding APIs, and demo `memory` endpoints.
+- `apps/api` already provides a production-style baseline with `health`, `auth`, `members`, `projects`, `memberships`, global knowledge CRUD/upload/search endpoints, project-scoped knowledge `list/create/detail/upload` routes, structured skill method-asset CRUD/binding-validation APIs, formal `agents` CRUD/binding APIs, and demo `memory` endpoints.
 - Project lists, project basics, member rosters, project resource bindings, project conversation summaries/details, and the global members overview already use `/api/projects*` and `/api/members`.
 - `knowject_project_resource_bindings` now remains only as a one-time migration source for historical local data; runtime resource bindings are persisted on project documents.
 - Project resource binding writes now use partial `PATCH /api/projects/:projectId` payloads for `knowledgeBaseIds / agentIds / skillIds`; the frontend no longer reconstructs a full project update from the current snapshot when only resource bindings change.
 - Project overview (`/project/:projectId/overview`) is now a judgment/dashboard page. Its main body aggregates the formal Project page context (`useProjectPageContext`) through the pure domain helper chain (`projectOverview.adapter` + `projectOverview.insights`), while `projectWorkspaceSnapshot.mock.ts` remains limited to header-level member/meta supplements. Partial-load failures now fail closed to "unavailable" states instead of silently rendering misleading zeroes.
-- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; `/skills` already supports native `SKILL.md` authoring, GitHub/raw URL import, preview, and draft/publish lifecycle management, while the backend import boundary now requires HTTPS, trusted GitHub/raw hosts, and import size/file-count budgets. Project-side resource cards consume the same formal catalogs, and project create/edit forms now also load Agent options from `/api/agents` instead of local mock-only choices.
+- `/knowledge`, `/skills`, and `/agents` are now wired to the formal backend asset APIs; `/skills` now centers on structured method-asset authoring (`preset|team`, `status`, `category`, `owner`, `definition`) and generated markdown preview instead of GitHub/raw import or publish-first lifecycle copy. Project-side resource cards consume the same formal catalogs, and project create/edit forms now also load Agent options from `/api/agents` instead of local mock-only choices.
 - `/settings` is now wired to formal backend settings APIs for embedding, LLM, indexing, and workspace metadata. API keys are encrypted server-side, the verified chat-completions provider presets cover `openai / gemini / aliyun / deepseek / moonshot / zhipu / custom`, OpenAI `gpt-5*` connection tests now use `max_completion_tokens` while other compatible providers continue to use `max_tokens`, and saved LLM config now directly drives the project chat MVP.
 - The locale foundation is now active across the stack: the frontend uses a shared `LocaleProvider + i18next + Ant Design locale` bridge, guest language preference is stored in `knowject_locale_guest`, signed-in preference is persisted through `PATCH /api/auth/me/preferences`, and API requests now forward `Accept-Language` so backend envelope messages follow the active UI language.
 - The locale migration now covers login, the sidebar account language entry, global pages, `/knowledge`, `/skills`, `/agents`, `/settings`, and the full main `/project/:projectId/*` shell (`layout / overview / chat / resources / members`), including project-side user-visible fallback/toast copy.
@@ -144,7 +144,9 @@ pnpm knowject:help
 - [Codex Project Prompt Template](./docs/templates/CODEX_PROJECT_PROMPT_TEMPLATE.md)
 - [Documentation Index](./docs/README.md)
 - [Current Architecture Facts](./docs/current/architecture.md)
-- [Auth and Environment Contract](./docs/contracts/README.md)
+- [Current Skills Governance](./docs/current/skills-governance.md)
+- [Contracts Index](./docs/contracts/README.md)
+- [Skills Contract](./docs/contracts/skills-contract.md)
 - [Handoff Notes](./docs/handoff/README.md)
 - [Historical Codex Migration Notes](./docs/handoff/history/codex-workspace-migration.md)
 - [Roadmap Notes](./docs/roadmap/README.md)

@@ -2,7 +2,10 @@ import { AppError } from '@lib/app-error.js';
 import { getFallbackMessage } from '@lib/locale.messages.js';
 import { createValidationErrorShape } from '@lib/validation.js';
 import { findRegisteredSkillById } from './skills.registry.js';
-import { buildSkillBindableFlag } from './skills.shared.js';
+import {
+  buildSkillBindableFlag,
+  normalizeStoredSkillForRead,
+} from './skills.shared.js';
 import type { SkillsRepository } from './skills.repository.js';
 
 export interface SkillBindingValidator {
@@ -27,8 +30,12 @@ export const createSkillBindingValidator = ({
         return;
       }
 
-      const builtinSkillIds = normalizedIds.filter((skillId) => findRegisteredSkillById(skillId));
-      const storedSkillIds = normalizedIds.filter((skillId) => !builtinSkillIds.includes(skillId));
+      const presetSkillIds = normalizedIds.filter((skillId) =>
+        findRegisteredSkillById(skillId),
+      );
+      const storedSkillIds = normalizedIds.filter(
+        (skillId) => !presetSkillIds.includes(skillId),
+      );
       const storedSkills =
         storedSkillIds.length > 0 ? await repository.findSkillsByIds(storedSkillIds) : [];
       const storedSkillMap = new Map(
@@ -36,10 +43,10 @@ export const createSkillBindingValidator = ({
       );
 
       const missingSkillIds: string[] = [];
-      const unpublishedSkillLabels: string[] = [];
+      const inactiveSkillLabels: string[] = [];
 
       normalizedIds.forEach((skillId) => {
-        if (builtinSkillIds.includes(skillId)) {
+        if (presetSkillIds.includes(skillId)) {
           return;
         }
 
@@ -50,12 +57,14 @@ export const createSkillBindingValidator = ({
           return;
         }
 
-        if (!buildSkillBindableFlag(skill.source, skill.lifecycleStatus)) {
-          unpublishedSkillLabels.push(`${skill.name}（${skillId}）`);
+        const normalizedSkill = normalizeStoredSkillForRead(skill);
+
+        if (!buildSkillBindableFlag(normalizedSkill.status)) {
+          inactiveSkillLabels.push(`${skill.name}（${skillId}）`);
         }
       });
 
-      if (missingSkillIds.length === 0 && unpublishedSkillLabels.length === 0) {
+      if (missingSkillIds.length === 0 && inactiveSkillLabels.length === 0) {
         return;
       }
 
@@ -72,7 +81,7 @@ export const createSkillBindingValidator = ({
             [fieldName]: getFallbackMessage('validation.skills.binding.invalid'),
           },
           missingSkillIds,
-          unpublishedSkillLabels,
+          inactiveSkillLabels,
         },
       });
     },

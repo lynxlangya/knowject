@@ -2,6 +2,7 @@ import { extractApiErrorMessage } from '@api/error';
 import {
   deleteSkill,
   updateSkill,
+  type SkillStatus,
   type SkillSummaryResponse,
 } from '@api/skills';
 import { tp } from '../skills.i18n';
@@ -16,7 +17,7 @@ interface SkillActionModalApi {
     title: string;
     content: string;
     okText: string;
-    okButtonProps: { danger: boolean };
+    okButtonProps?: { danger?: boolean };
     cancelText: string;
     onOk: () => Promise<void>;
   }) => void;
@@ -26,26 +27,41 @@ interface UseSkillCatalogActionsOptions {
   message: SkillActionMessageApi;
   modal: SkillActionModalApi;
   onReload: () => void;
+  onOpenView: (skill: SkillSummaryResponse) => Promise<void>;
   onOpenEdit: (skill: SkillSummaryResponse) => Promise<void>;
 }
+
+const updateSkillStatus = async (
+  skill: SkillSummaryResponse,
+  status: SkillStatus,
+) => {
+  await updateSkill(skill.id, { status });
+};
 
 export const useSkillCatalogActions = ({
   message,
   modal,
   onReload,
+  onOpenView,
   onOpenEdit,
 }: UseSkillCatalogActionsOptions) => {
-  const handlePublishSkill = async (skill: SkillSummaryResponse) => {
+  const handleStatusChange = async (
+    skill: SkillSummaryResponse,
+    status: SkillStatus,
+  ) => {
     try {
-      await updateSkill(skill.id, {
-        lifecycleStatus: 'published',
-      });
-      message.success(tp('feedback.published', { name: skill.name }));
+      await updateSkillStatus(skill, status);
+      message.success(
+        tp('feedback.statusUpdated', {
+          name: skill.name,
+          status: tp(`status.option.${status}`),
+        }),
+      );
       onReload();
     } catch (currentError) {
-      console.error('[SkillsManagementPage] 发布 Skill 失败:', currentError);
+      console.error('[SkillsManagementPage] 更新 Skill 状态失败:', currentError);
       message.error(
-        extractApiErrorMessage(currentError, tp('feedback.publishFailed')),
+        extractApiErrorMessage(currentError, tp('feedback.statusUpdateFailed')),
       );
     }
   };
@@ -71,13 +87,33 @@ export const useSkillCatalogActions = ({
     skill: SkillSummaryResponse,
     actionKey: string,
   ) => {
+    if (actionKey === 'view') {
+      void onOpenView(skill);
+      return;
+    }
+
     if (actionKey === 'edit') {
       void onOpenEdit(skill);
       return;
     }
 
-    if (actionKey === 'publish') {
-      void handlePublishSkill(skill);
+    if (actionKey === 'activate') {
+      void handleStatusChange(skill, 'active');
+      return;
+    }
+
+    if (actionKey === 'deprecate') {
+      void handleStatusChange(skill, 'deprecated');
+      return;
+    }
+
+    if (actionKey === 'archive') {
+      void handleStatusChange(skill, 'archived');
+      return;
+    }
+
+    if (actionKey === 'draft') {
+      void handleStatusChange(skill, 'draft');
       return;
     }
 

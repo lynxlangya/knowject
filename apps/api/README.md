@@ -1,7 +1,7 @@
 # Knowject API (`apps/api`)
 
 `apps/api` 当前是基础框架阶段已经收口的本地开发 API 基线，使用 Express + TypeScript 实现。
-截至 2026-03-26，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话同步/流式写链路、消息级 star metadata PATCH、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；当前知识上传链路已支持 `md / markdown / txt / pdf / docx / xlsx`，其中 `pdf` 仅支持可提取数字文本的文档（OCR/扫描件不支持），`docx / xlsx` 由 Python indexer 做结构感知抽取并产出 chunk anchor 元数据。Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 已升级为“系统内置 + 自建 + GitHub/URL 导入”的正式资产模块，支持 CRUD、导入预览、草稿/发布、引用保护与绑定校验，`agents` 已完成正式模型、CRUD 和绑定校验。项目对话后端现已抽出统一 `ConversationTurnService`、provider capability gate，并新增 `PATCH /api/projects/:projectId/conversations/:conversationId/messages/:messageId` 与 `POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 两条消息级路由；assistant `sources[]` 现已包含稳定的 message-local `id`，并只在结构化 grounding 成功且通过严格校验时返回可选 `citationContent`，否则安全降级为 legacy `content + sources[]`。流式事件类型当前为 `ack / sources_seed / delta / done / citation_patch / error`：`done` 在 assistant message 持久化后立即发出，citation grounding 改为后台异步补丁。语言设置第一阶段当前还补齐了 request locale 协商、`messageKey + locale dictionary` 本地化，以及账号级 locale 持久化。
+截至 2026-04-01，服务端已经落下 `config / db / lib / modules / middleware` 的服务骨架，并接入 MongoDB、用户模型、`argon2id`、JWT、登录 / 注册接口、全局成员概览、最小项目 CRUD、项目资源绑定字段、项目对话读链路、项目对话同步/流式写链路、消息级 star metadata PATCH、成员管理接口，以及成员添加用的已有用户搜索接口；项目列表、项目基础信息、资源绑定、对话读链路、成员 roster 与全局成员页已切到后端。Week 3-4 的 `knowledge / skills / agents` 也已建立正式模块边界，其中 `knowledge` 已完成 Mongo 元数据模型、知识库 CRUD、文档上传入口、Node -> Python 的解析 / 分块 / 状态回写、文档级 / 知识库级 rebuild、diagnostics，以及 `global_docs` 的 Chroma 写入与统一检索闭环；当前知识上传链路已支持 `md / markdown / txt / pdf / docx / xlsx`，其中 `pdf` 仅支持可提取数字文本的文档（OCR/扫描件不支持），`docx / xlsx` 由 Python indexer 做结构感知抽取并产出 chunk anchor 元数据。Week 5 当前已进一步补齐 `knowledge.scope=global|project` 与 `projectId` 元数据、全局列表过滤、项目成员可见性校验，并正式开放项目级 knowledge `list / create / detail / upload` 路由。当前知识索引已经从“固定写入单一 collection”升级为“namespace key 固定、物理 collection 版本化切换”：例如项目私有 docs 的 namespace key 仍是 `proj_{projectId}_docs`，但实际 Chroma collection 会带 embedding 指纹后缀；`settings` 模块提供的 effective embedding / indexing config 也已正式进入读写链路，namespace 级全量重建无论 fingerprint 是否变化都会先写入 staged/versioned collection，成功后才切换 active collection。`skills` 当前已升级为“预置 + 团队自建”的结构化方法资产模块，支持 `status/category/owner/definition` 契约、引用保护与绑定校验；`agents` 已完成正式模型、CRUD 和绑定校验。项目对话后端现已抽出统一 `ConversationTurnService`、provider capability gate，并新增 `PATCH /api/projects/:projectId/conversations/:conversationId/messages/:messageId` 与 `POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 两条消息级路由；assistant `sources[]` 现已包含稳定的 message-local `id`，并只在结构化 grounding 成功且通过严格校验时返回可选 `citationContent`，否则安全降级为 legacy `content + sources[]`。流式事件类型当前为 `ack / sources_seed / delta / done / citation_patch / error`：`done` 在 assistant message 持久化后立即发出，citation grounding 改为后台异步补丁。语言设置第一阶段当前还补齐了 request locale 协商、`messageKey + locale dictionary` 本地化，以及账号级 locale 持久化。
 
 ## Locale / message localization
 
@@ -50,7 +50,7 @@
 - `POST /api/projects`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `name`、`description`、可选 `knowledgeBaseIds / agentIds / skillIds`，创建者自动成为项目 `admin`。
-  - 其中 `skillIds` 只允许绑定系统内置或已发布的正式 Skill。
+  - 其中 `skillIds` 只允许绑定 `status=active` 的正式 Skill（读侧可来自 `preset` 或 `team`）。
   - 创建时会为项目补一条默认对话，供项目对话读链路返回最小可用上下文。
 - `GET /api/projects/:projectId/conversations`
   - 需要 `Authorization: Bearer <token>`。
@@ -90,7 +90,7 @@
 - `PATCH /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 更新项目基础信息与 `knowledgeBaseIds / agentIds / skillIds` 资源绑定字段。
-  - 若 `skillIds` 中包含草稿或不存在的 Skill，会返回显式绑定校验错误。
+  - 若 `skillIds` 中包含非 `active` 或不存在的 Skill，会返回显式绑定校验错误。
 - `DELETE /api/projects/:projectId`
   - 需要 `Authorization: Bearer <token>`。
   - 只允许项目级 `admin` 删除项目。
@@ -189,24 +189,18 @@
   - `global_code` 当前只有 collection 预留，没有真实数据导入；若切到 `global_code`，通常返回空结果。
 - `GET /api/skills`
   - 需要 `Authorization: Bearer <token>`。
-  - 返回系统内置与用户管理 Skill 的统一列表，支持 `source / lifecycleStatus / bindable` 过滤。
-  - 当前对外稳定字段为 `id / slug / name / description / type / source / origin / handler / parametersSchema / runtimeStatus / lifecycleStatus / bindable / importProvenance / createdAt / updatedAt / publishedAt`。
+  - 返回 `preset + team` 的统一 Skill 列表，支持 `source / lifecycleStatus / bindable` 过滤。
+  - 当前对外稳定字段除 legacy `runtimeStatus / lifecycleStatus` 外，还包含 `category / status / owner / definition / statusChangedAt`。
 - `GET /api/skills/:skillId`
   - 需要 `Authorization: Bearer <token>`。
-  - 返回单个 Skill 的完整详情，包括 `skillMarkdown` 与 bundle 文件清单。
+  - 返回单个 Skill 的完整详情，包括结构化定义生成的 `skillMarkdown` 与 bundle 文件清单。
 - `POST /api/skills`
   - 需要 `Authorization: Bearer <token>`。
-  - 接收原生 `SKILL.md` 创建自建 Skill；服务端会校验 frontmatter，并默认创建为 `draft`。
-- `POST /api/skills/import`
-  - 需要 `Authorization: Bearer <token>`。
-  - 支持 `github` 与原始 Markdown `url` 两种导入模式。
-  - 当前导入边界要求 HTTPS：`github` 模式只接受 `github.com` / `raw.githubusercontent.com`，`url` 模式只接受受信任 raw host；URL 不允许携带认证信息。
-  - 导入还会执行单文件 / 总字节 / 总文件数预算限制；超限时返回 `413 SKILL_IMPORT_LIMIT_EXCEEDED`。
-  - 传 `dryRun=true` 时只返回解析预览，不落库；正式导入后会保留来源 provenance，但导入结果视为当前系统自有资产。
+  - 接收 `name / description / category / owner / definition` 创建团队自建 Skill；服务端默认写入 `status=draft`，并根据结构化字段生成 `skillMarkdown`。
 - `PATCH /api/skills/:skillId`
   - 需要 `Authorization: Bearer <token>`。
-  - 支持更新 `skillMarkdown`、frontmatter 元数据和 `lifecycleStatus`；系统内置 Skill 不可编辑。
-  - 若已发布 Skill 仍被项目或 Agent 引用，则不允许回退到 `draft`。
+  - 支持更新 `name / description / category / owner / definition / status`；`preset` Skill 不可编辑。
+  - 若 Skill 仍被项目或 Agent 引用，则不允许把可绑定状态降到不可绑定。
 - `DELETE /api/skills/:skillId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除非系统内置 Skill，并清理对应 bundle 存储目录。
@@ -220,12 +214,12 @@
 - `POST /api/agents`
   - 需要 `Authorization: Bearer <token>`。
   - 接收 `name`、可选 `description`、`systemPrompt`、可选 `boundSkillIds / boundKnowledgeIds / status`。
-  - `boundSkillIds` 只允许绑定系统内置或已发布的正式 Skill。
+  - `boundSkillIds` 只允许绑定 `status=active` 的正式 Skill。
   - 当前 `model` 固定由服务端写入 `server-default`，不开放请求侧覆盖。
 - `PATCH /api/agents/:agentId`
   - 需要 `Authorization: Bearer <token>`。
   - 支持更新 `name / description / systemPrompt / boundSkillIds / boundKnowledgeIds / status`。
-  - 更新绑定时同样会校验 Skill 是否存在且可绑定。
+  - 更新绑定时同样会校验 Skill 是否存在且 `bindable=true`。
 - `DELETE /api/agents/:agentId`
   - 需要 `Authorization: Bearer <token>`。
   - 删除成功后返回 `HTTP 200`，`data` 为 `null`。

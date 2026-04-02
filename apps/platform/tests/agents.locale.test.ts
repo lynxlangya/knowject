@@ -27,6 +27,30 @@ test('pages locale resources expose mirrored agents section', () => {
   assert.deepEqual(Object.keys(enAgents), Object.keys(zhAgents));
 });
 
+test('agents locale resources reflect preset vs team skill binding copy', () => {
+  const enFeedback = (pagesMessagesEn.agents.feedback ?? {}) as Record<string, unknown>;
+  const zhFeedback = (pagesMessagesZhCN.agents.feedback ?? {}) as Record<string, unknown>;
+
+  assert.equal(
+    enFeedback.optionalPresetSkill,
+    '{{name}} · Preset method asset',
+  );
+  assert.equal(
+    zhFeedback.optionalPresetSkill,
+    '{{name}} · 预置方法资产',
+  );
+  assert.equal(
+    enFeedback.optionalTeamSkill,
+    '{{name}} · Team method asset',
+  );
+  assert.equal(
+    zhFeedback.optionalTeamSkill,
+    '{{name}} · 团队方法资产',
+  );
+  assert.ok(!('optionalRuntimeReady' in enFeedback));
+  assert.ok(!('optionalContractOnly' in enFeedback));
+});
+
 for (const file of files) {
   test(`${file} resolves user-facing copy from agents i18n`, () => {
     const source = readFileSync(new URL(file, import.meta.url), 'utf8');

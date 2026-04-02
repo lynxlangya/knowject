@@ -1,37 +1,28 @@
 import type { AppEnv } from "@config/env.js";
-import { readMutationInput } from "@lib/mutation-input.js";
-import { resolveImportedSkillBundle } from "./skills.import.js";
-import { parseSkillMarkdown } from "./skills.markdown.js";
 import {
   findRegisteredSkillById,
   listRegisteredSkills,
 } from "./skills.registry.js";
 import type { SkillsRepository } from "./skills.repository.js";
 import {
-  buildSkillMarkdownExcerpt,
   createReadonlySystemSkillError,
   createSkillNotFoundError,
   matchesSkillFilters,
   normalizeSkillsListFilters,
+  normalizeStoredSkillForRead,
   toSkillDetailResponse,
   toSkillSummaryResponse,
 } from "./skills.shared.js";
 import type {
   CreateSkillInput,
-  ImportSkillInput,
   ListSkillsInput,
   SkillDetailEnvelope,
-  SkillImportPreviewResponse,
   SkillMutationResponse,
   SkillsCommandContext,
   SkillsListResponse,
   UpdateSkillInput,
 } from "./skills.types.js";
-import {
-  buildManualBundleFiles,
-  mapBundleFiles,
-  toBundleContentFiles,
-} from "./adapters/skills-bundle-storage.js";
+import { buildManualBundleFiles } from "./adapters/skills-bundle-storage.js";
 import { createManagedSkill } from "./services/skills-create.service.js";
 import { deleteManagedSkill } from "./services/skills-delete.service.js";
 import { EMPTY_SKILL_REFERENCE_COUNTS } from "./services/skills-reference.service.js";
@@ -57,10 +48,6 @@ export interface SkillsService {
     context: SkillsCommandContext,
     input: CreateSkillInput,
   ): Promise<SkillMutationResponse>;
-  importSkill(
-    context: SkillsCommandContext,
-    input: ImportSkillInput,
-  ): Promise<SkillMutationResponse | SkillImportPreviewResponse>;
   updateSkill(
     context: SkillsCommandContext,
     skillId: string,
@@ -84,14 +71,13 @@ export const createSkillsService = ({
     listSkills: async (_context, input = {}) => {
       const filters = normalizeSkillsListFilters(input);
       const builtinSkills =
-        !filters.source || filters.source === "system"
+        !filters.source || filters.source === "preset"
           ? listRegisteredSkills()
           : [];
       const storedSkills =
-        filters.source === "system"
+        filters.source === "preset"
           ? []
           : await repository.listSkills({
-              ...(filters.source ? { source: filters.source } : {}),
               ...(filters.lifecycleStatus
                 ? { lifecycleStatus: filters.lifecycleStatus }
                 : {}),
@@ -132,63 +118,14 @@ export const createSkillsService = ({
     },
 
     createSkill: async ({ actor }, input) => {
-      const parsedSkill = validateCreateSkillInput(input);
-      const bundleFiles = buildManualBundleFiles(parsedSkill.skillMarkdown);
+      const normalizedSkill = validateCreateSkillInput(input);
+      const bundleFiles = buildManualBundleFiles(normalizedSkill.skillMarkdown);
       const persistedSkill = await createManagedSkill({
         env,
         repository,
         actorId: actor.id,
-        source: "custom",
-        origin: "manual",
-        parsedSkill,
+        normalizedSkill,
         bundleFiles,
-        importProvenance: null,
-      });
-
-      return {
-        skill: toSkillDetailResponse(persistedSkill),
-      };
-    },
-
-    importSkill: async ({ actor }, input) => {
-      const normalizedInput = readMutationInput(input);
-      const { bundle, dryRun } =
-        await resolveImportedSkillBundle(normalizedInput);
-      const parsedSkill = parseSkillMarkdown(bundle.skillMarkdown);
-      const bundleFiles = toBundleContentFiles(bundle.bundleFiles);
-
-      if (dryRun) {
-        return {
-          preview: {
-            source: "imported",
-            origin: bundle.origin,
-            type: "markdown_bundle",
-            name: parsedSkill.name,
-            description: parsedSkill.description,
-            runtimeStatus: "contract_only",
-            lifecycleStatus: "draft",
-            bindable: false,
-            markdownExcerpt: buildSkillMarkdownExcerpt(
-              parsedSkill.skillMarkdown,
-              parsedSkill.description,
-            ),
-            skillMarkdown: parsedSkill.skillMarkdown,
-            bundleFiles: mapBundleFiles(bundleFiles),
-            bundleFileCount: bundleFiles.length,
-            importProvenance: bundle.importProvenance!,
-          },
-        };
-      }
-
-      const persistedSkill = await createManagedSkill({
-        env,
-        repository,
-        actorId: actor.id,
-        source: "imported",
-        origin: bundle.origin,
-        parsedSkill,
-        bundleFiles,
-        importProvenance: bundle.importProvenance,
       });
 
       return {
@@ -210,18 +147,26 @@ export const createSkillsService = ({
         throw createSkillNotFoundError();
       }
 
-      const { lifecycleStatus, parsedSkill } = validateUpdateSkillInput(
-        input,
-        currentSkill.skillMarkdown,
-      );
+      const currentReadModel = normalizeStoredSkillForRead(currentSkill);
+      const normalizedUpdate = validateUpdateSkillInput(input, {
+        name: currentSkill.name,
+        description: currentSkill.description,
+        category: currentReadModel.category ?? "documentation_architecture",
+        hasStoredCategory: currentReadModel.category !== undefined,
+        owner: currentReadModel.owner,
+        hasStoredOwner: Boolean(currentSkill.owner?.trim()),
+        definition: currentReadModel.definition,
+        hasStoredDefinition: currentSkill.definition !== undefined,
+        status: currentReadModel.status,
+        skillMarkdown: currentSkill.skillMarkdown,
+      });
       const updatedSkill = await updateManagedSkill({
         env,
         repository,
         usageLookup,
         skillId: normalizedSkillId,
         currentSkill,
-        parsedSkill,
-        lifecycleStatus,
+        normalizedUpdate,
       });
 
       return {

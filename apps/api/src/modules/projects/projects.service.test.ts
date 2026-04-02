@@ -7167,13 +7167,20 @@ test('updateProject accepts resource-binding-only patches', async () => {
   assert.deepEqual(result.skillIds, ['skill-keep']);
 });
 
-test('createProject rejects unbindable managed skill ids', async () => {
+test('createProject rejects non-active managed skill ids', async () => {
   const service = createProjectsService({
     repository: {} as ProjectsRepository,
     authRepository: createAuthRepositoryStub(),
-    skillBindingValidator: createSkillBindingValidatorStub(async (skillIds) => {
+    skillBindingValidator: createSkillBindingValidatorStub(async (skillIds, options) => {
+      assert.equal(options.fieldName, 'skillIds');
+
       if (skillIds.includes('draft-skill')) {
-        throw new Error('draft skill');
+        throw new AppError({
+          statusCode: 400,
+          code: 'VALIDATION_ERROR',
+          message: 'draft skill binding is invalid',
+          messageKey: 'validation.skills.binding.invalid',
+        });
       }
     }),
   });
@@ -7192,7 +7199,11 @@ test('createProject rejects unbindable managed skill ids', async () => {
           skillIds: ['draft-skill'],
         },
       ),
-    /draft skill/,
+    (error: unknown) => {
+      assert.ok(error instanceof AppError);
+      assert.equal(error.messageKey, 'validation.skills.binding.invalid');
+      return true;
+    },
   );
 });
 

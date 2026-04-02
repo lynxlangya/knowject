@@ -1,6 +1,5 @@
 import { ObjectId, type WithId } from "mongodb";
 import type { AppEnv } from "@config/env.js";
-import type { ParsedSkillMarkdown } from "../skills.markdown.js";
 import type { SkillsRepository } from "../skills.repository.js";
 import {
   buildSkillMarkdownExcerpt,
@@ -14,43 +13,56 @@ import {
   writeSkillBundleFiles,
 } from "../adapters/skills-bundle-storage.js";
 import { ensureUniqueSkillSlug } from "./skills-reference.service.js";
-import type { BuildPersistedSkillDocumentInput } from "../types/skills.service.types.js";
+import type {
+  BuildPersistedSkillDocumentInput,
+  NormalizedSkillMutationInput,
+} from "../types/skills.service.types.js";
+
+const toLifecycleStatus = (
+  status: NormalizedSkillMutationInput["status"],
+): SkillDocument["lifecycleStatus"] => {
+  return status === "active" ? "published" : "draft";
+};
 
 const buildPersistedSkillDocument = ({
   skillId,
   actorId,
-  source,
-  origin,
-  parsedSkill,
+  normalizedSkill,
   bundleFiles,
-  importProvenance,
 }: BuildPersistedSkillDocumentInput): SkillDocument & {
   _id: NonNullable<SkillDocument["_id"]>;
 } => {
   const now = new Date();
+  const lifecycleStatus = toLifecycleStatus(normalizedSkill.status);
+  const publishedAt = normalizedSkill.status === "active" ? now : null;
 
   return {
     _id: skillId,
-    name: parsedSkill.name,
-    slug: buildSkillSlug(parsedSkill.name),
-    description: parsedSkill.description,
+    name: normalizedSkill.name,
+    slug: buildSkillSlug(normalizedSkill.name),
+    description: normalizedSkill.description,
     type: "markdown_bundle",
-    source,
-    origin,
+    source: "team",
+    origin: "manual",
     handler: null,
     parametersSchema: null,
     runtimeStatus: "contract_only",
-    lifecycleStatus: "draft",
-    skillMarkdown: parsedSkill.skillMarkdown,
+    category: normalizedSkill.category,
+    status: normalizedSkill.status,
+    owner: normalizedSkill.owner,
+    definition: normalizedSkill.definition,
+    statusChangedAt: now,
+    lifecycleStatus,
+    skillMarkdown: normalizedSkill.skillMarkdown,
     markdownExcerpt: buildSkillMarkdownExcerpt(
-      parsedSkill.skillMarkdown,
-      parsedSkill.description,
+      normalizedSkill.skillMarkdown,
+      normalizedSkill.description,
     ),
     storagePath: skillId.toHexString(),
     bundleFiles: mapBundleFiles(bundleFiles),
-    importProvenance,
+    importProvenance: null,
     createdBy: actorId,
-    publishedAt: null,
+    publishedAt,
     createdAt: now,
     updatedAt: now,
   };
@@ -60,34 +72,25 @@ export const createManagedSkill = async ({
   env,
   repository,
   actorId,
-  source,
-  origin,
-  parsedSkill,
+  normalizedSkill,
   bundleFiles,
-  importProvenance,
 }: {
   env: AppEnv;
   repository: SkillsRepository;
   actorId: string;
-  source: "custom" | "imported";
-  origin: "manual" | "github" | "url";
-  parsedSkill: ParsedSkillMarkdown;
+  normalizedSkill: NormalizedSkillMutationInput;
   bundleFiles: {
     path: string;
     content: Buffer;
     size: number;
   }[];
-  importProvenance: SkillDocument["importProvenance"];
 }): Promise<WithId<SkillDocument>> => {
   const skillId = new ObjectId();
   const document = buildPersistedSkillDocument({
     skillId,
     actorId,
-    source,
-    origin,
-    parsedSkill,
+    normalizedSkill,
     bundleFiles,
-    importProvenance,
   });
 
   await ensureUniqueSkillSlug(repository, document.slug);

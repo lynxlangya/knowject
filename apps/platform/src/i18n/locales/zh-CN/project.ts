@@ -419,8 +419,10 @@ export const projectMessages = {
       notRecorded: '未记录',
       unassigned: '未指定',
       systemBuiltin: '系统内置',
+      presetSkill: '预置方法资产',
       importedPublic: '公网导入',
       currentTeam: '当前团队',
+      teamSkill: '团队方法资产',
     },
     documentActions: {
       retryError: '重试项目知识文档失败，请稍后重试',

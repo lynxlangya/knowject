@@ -69,6 +69,10 @@ export const messages = {
       'topK must be an integer between 1 and 10',
     'validation.skills.lifecycleStatus.invalid':
       'lifecycleStatus is invalid',
+    'validation.skills.status.invalid': 'status is invalid',
+    'validation.skills.category.invalid': 'category is invalid',
+    'validation.skills.followupQuestionsStrategy.invalid':
+      'followupQuestionsStrategy is invalid',
     'validation.skillMarkdown.string':
       'skillMarkdown must be a string',
     'validation.skillMarkdown.frontmatter.parse':
@@ -221,7 +225,8 @@ export const messages = {
     'skills.inUse.projectBindingUnit': '{count} project(s)',
     'skills.inUse.agentBindingUnit': '{count} agent(s)',
     'skills.inUse.action.delete': 'delete',
-    'skills.inUse.action.unpublish': 'revert to draft',
+    'skills.inUse.action.deprecate': 'mark as deprecated',
+    'skills.inUse.action.archive': 'archive',
     'skills.inUse.message':
       'Skill is bound by {usage} and cannot be {action} right now',
     'skills.import.fetch.invalidUrl': 'Remote URL is invalid',
@@ -309,6 +314,10 @@ export const messages = {
     'validation.topK.range': 'topK 必须是 1 到 10 之间的整数',
     'validation.skills.lifecycleStatus.invalid':
       'lifecycleStatus 不合法',
+    'validation.skills.status.invalid': 'status 不合法',
+    'validation.skills.category.invalid': 'category 不合法',
+    'validation.skills.followupQuestionsStrategy.invalid':
+      'followupQuestionsStrategy 不合法',
     'validation.skillMarkdown.string': 'skillMarkdown 必须为字符串',
     'validation.skillMarkdown.frontmatter.parse':
       'SKILL.md frontmatter 解析失败',
@@ -430,7 +439,8 @@ export const messages = {
     'skills.inUse.projectBindingUnit': '{count} 个项目',
     'skills.inUse.agentBindingUnit': '{count} 个智能体',
     'skills.inUse.action.delete': '删除',
-    'skills.inUse.action.unpublish': '回退为草稿',
+    'skills.inUse.action.deprecate': '标记为废弃',
+    'skills.inUse.action.archive': '归档',
     'skills.inUse.message': 'Skill 已被{usage}绑定，暂不可{action}',
     'skills.import.fetch.invalidUrl': '远程 URL 不合法',
     'skills.import.fetch.httpsOnly': '远程资源仅支持 HTTPS',
@@ -501,12 +511,16 @@ const resolveSkillInUseParams = (
   const actionKey =
     action === 'delete'
       ? 'skills.inUse.action.delete'
-      : 'skills.inUse.action.unpublish';
+      : action === 'deprecate'
+        ? 'skills.inUse.action.deprecate'
+        : action === 'archive'
+          ? 'skills.inUse.action.archive'
+          : undefined;
 
   return {
     ...params,
     usage: usage.join(locale === 'zh-CN' ? '、' : ', '),
-    action: messages[locale][actionKey],
+    action: actionKey ? messages[locale][actionKey] : action,
   };
 };
 

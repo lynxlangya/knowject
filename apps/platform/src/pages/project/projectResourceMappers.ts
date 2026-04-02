@@ -187,11 +187,9 @@ const mapProjectResources = (
           description: skill.description,
           updatedAt: formatCompactDate(skill.updatedAt),
           owner:
-            skill.source === 'system'
-              ? tp('resources.item.systemBuiltin')
-              : skill.source === 'imported'
-                ? tp('resources.item.importedPublic')
-                : tp('resources.item.currentTeam'),
+            skill.source === 'preset'
+              ? tp('resources.item.presetSkill')
+              : tp('resources.item.teamSkill'),
           usageCount: 0,
           source: 'global' as const,
         };

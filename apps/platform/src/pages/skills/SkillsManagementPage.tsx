@@ -1,5 +1,4 @@
 import {
-  CloudDownloadOutlined,
   PlusOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
@@ -11,12 +10,12 @@ import {
 } from '@pages/assets/components/GlobalAssetLayout';
 import { SkillDetailPane } from './components/SkillDetailPane';
 import { SkillEditorModal } from './components/SkillEditorModal';
-import { SkillImportModal } from './components/SkillImportModal';
+import { SkillViewerDrawer } from './components/SkillViewerDrawer';
 import { SkillsSidebar } from './components/SkillsSidebar';
-import { SKILLS_PAGE_SUBTITLE } from './constants/skillsManagement.constants';
+import { getSkillsPageSubtitle } from './constants/skillsManagement.constants';
 import { useSkillCatalogActions } from './hooks/useSkillCatalogActions';
 import { useSkillEditor } from './hooks/useSkillEditor';
-import { useSkillImportFlow } from './hooks/useSkillImportFlow';
+import { useSkillViewer } from './hooks/useSkillViewer';
 import { useSkillsListState } from './hooks/useSkillsListState';
 
 export const SkillsManagementPage = () => {
@@ -27,14 +26,12 @@ export const SkillsManagementPage = () => {
     message,
     onSaved: skillsListState.handleReload,
   });
-  const skillImportFlow = useSkillImportFlow({
-    message,
-    onImported: skillsListState.handleReload,
-  });
+  const skillViewer = useSkillViewer({ message });
   const skillCatalogActions = useSkillCatalogActions({
     message,
     modal,
     onReload: skillsListState.handleReload,
+    onOpenView: skillViewer.handleOpenViewModal,
     onOpenEdit: skillEditor.handleOpenEditModal,
   });
 
@@ -52,7 +49,7 @@ export const SkillsManagementPage = () => {
         header={
           <GlobalAssetPageHeader
             title={t('skills.title')}
-            subtitle={SKILLS_PAGE_SUBTITLE}
+            subtitle={getSkillsPageSubtitle()}
             summaryItems={skillsListState.summaryItems}
             actions={
               <div className="flex flex-wrap items-center gap-3">
@@ -62,12 +59,6 @@ export const SkillsManagementPage = () => {
                   onClick={skillEditor.handleOpenCreateModal}
                 >
                   {t('skills.create')}
-                </Button>
-                <Button
-                  icon={<CloudDownloadOutlined />}
-                  onClick={skillImportFlow.openImportModal}
-                >
-                  {t('skills.import')}
                 </Button>
                 <Tooltip title={t('skills.reload')}>
                   <Button
@@ -116,43 +107,22 @@ export const SkillsManagementPage = () => {
         editorTabKey={skillEditor.editorTabKey}
         onEditorTabKeyChange={skillEditor.setEditorTabKey}
         editingSkill={skillEditor.editingSkill}
-        editorMarkdown={skillEditor.editorMarkdown}
-        onEditorMarkdownChange={skillEditor.setEditorMarkdown}
-        editorLifecycleStatus={skillEditor.editorLifecycleStatus}
-        onEditorLifecycleStatusChange={skillEditor.setEditorLifecycleStatus}
+        editorDraft={skillEditor.editorDraft}
+        onEditorDraftChange={skillEditor.setEditorDraft}
         editorLoading={skillEditor.editorLoading}
         editorSubmitting={skillEditor.editorSubmitting}
-        editorValidation={skillEditor.editorValidation}
+        editorMarkdownPreview={skillEditor.editorMarkdownPreview}
         onCancel={skillEditor.resetEditorState}
         onSubmit={() => {
           void skillEditor.handleSubmitEditor();
         }}
       />
 
-      <SkillImportModal
-        importModalOpen={skillImportFlow.importModalOpen}
-        importMode={skillImportFlow.importMode}
-        importGitHubUrl={skillImportFlow.importGitHubUrl}
-        importRepository={skillImportFlow.importRepository}
-        importPath={skillImportFlow.importPath}
-        importRef={skillImportFlow.importRef}
-        importUrl={skillImportFlow.importUrl}
-        importPreview={skillImportFlow.importPreview}
-        importSubmitting={skillImportFlow.importSubmitting}
-        importPreviewLoading={skillImportFlow.importPreviewLoading}
-        onCancel={skillImportFlow.closeImportModal}
-        onSubmit={() => {
-          void skillImportFlow.handleImportSkill();
-        }}
-        onPreview={() => {
-          void skillImportFlow.handlePreviewImport();
-        }}
-        onImportModeChange={skillImportFlow.setImportModeValue}
-        onImportGitHubUrlChange={skillImportFlow.setImportGitHubUrlValue}
-        onImportRepositoryChange={skillImportFlow.setImportRepositoryValue}
-        onImportPathChange={skillImportFlow.setImportPathValue}
-        onImportRefChange={skillImportFlow.setImportRefValue}
-        onImportUrlChange={skillImportFlow.setImportUrlValue}
+      <SkillViewerDrawer
+        viewerOpen={skillViewer.viewerOpen}
+        viewerLoading={skillViewer.viewerLoading}
+        viewingSkill={skillViewer.viewingSkill}
+        onClose={skillViewer.resetViewerState}
       />
     </>
   );

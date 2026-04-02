@@ -195,11 +195,9 @@ const resolveSkillAsset = (
     description: skill.description,
     updatedAt: formatDisplayDateTime(skill.updatedAt, locale, t),
     owner:
-      skill.source === 'system'
+      skill.source === 'preset'
         ? t('members.assets.system')
-        : skill.source === 'imported'
-          ? t('members.assets.imported')
-          : t('members.assets.team'),
+        : t('members.assets.team'),
     usageCount: 0,
   };
 };

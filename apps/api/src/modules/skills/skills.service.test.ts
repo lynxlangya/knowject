@@ -7,6 +7,9 @@ import test from 'node:test';
 import { ObjectId } from 'mongodb';
 import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
+import { buildSkillMarkdownFromDefinition } from './skills.definition.js';
+import type { SkillDefinitionFields } from './skills.definition.js';
+import type { SkillDetailResponse } from './skills.types.js';
 import type { SkillDocument } from './skills.types.js';
 import type { SkillsRepository } from './skills.repository.js';
 import { createSkillsService } from './skills.service.js';
@@ -16,38 +19,53 @@ const ACTOR = {
   username: 'langya',
 };
 
-const buildSkillMarkdown = (
-  name: string,
-  description: string,
-  body = '# Overview\n\n- First step\n- Second step\n',
-): string => {
-  return `---
-name: ${name}
-description: ${description}
----
-
-${body}`;
+const buildSkillDefinition = (
+  overrides: Partial<SkillDetailResponse['definition']> = {},
+) : SkillDefinitionFields => {
+  return {
+    goal: '把方案补成可执行设计',
+    triggerScenarios: ['文档只有目标没有步骤'],
+    requiredContext: ['目标说明', '现有架构事实'],
+    workflow: ['阅读上下文', '拆出模块边界', '补齐验证方式'],
+    outputContract: ['完整方案草案', '模块拆分', '验证方式'],
+    guardrails: ['不臆造新的基础设施'],
+    artifacts: ['设计草案'],
+    projectBindingNotes: ['优先复用当前目录结构'],
+    followupQuestionsStrategy: 'optional',
+    ...overrides,
+  };
 };
 
 const createStoredSkillDocument = ({
   id = new ObjectId(),
   name,
   description,
-  source = 'custom',
+  source = 'team',
   origin = 'manual',
-  lifecycleStatus = 'draft',
+  status = 'draft',
+  category = 'documentation_architecture',
   createdBy = ACTOR.id,
+  owner = ACTOR.username,
+  definition = buildSkillDefinition(),
 }: {
   id?: ObjectId;
   name: string;
   description: string;
   source?: SkillDocument['source'];
   origin?: SkillDocument['origin'];
-  lifecycleStatus?: SkillDocument['lifecycleStatus'];
+  status?: NonNullable<SkillDocument['status']>;
+  category?: string;
   createdBy?: string;
+  owner?: string;
+  definition?: ReturnType<typeof buildSkillDefinition>;
 }): SkillDocument & { _id: NonNullable<SkillDocument['_id']> } => {
-  const skillMarkdown = buildSkillMarkdown(name, description);
+  const skillMarkdown = buildSkillMarkdownFromDefinition({
+    name,
+    description,
+    definition,
+  });
   const now = new Date('2026-03-14T08:00:00.000Z');
+  const lifecycleStatus = status === 'active' ? 'published' : 'draft';
 
   return {
     _id: id,
@@ -60,9 +78,14 @@ const createStoredSkillDocument = ({
     handler: null,
     parametersSchema: null,
     runtimeStatus: 'contract_only',
+    category,
+    status,
+    owner,
+    definition,
+    statusChangedAt: now,
     lifecycleStatus,
     skillMarkdown,
-    markdownExcerpt: 'Overview First step Second step',
+    markdownExcerpt: 'Goal 把方案补成可执行设计 Trigger Scenarios 文档只有目标没有步骤',
     storagePath: id.toHexString(),
     bundleFiles: [
       {
@@ -70,22 +93,10 @@ const createStoredSkillDocument = ({
         size: Buffer.byteLength(skillMarkdown),
       },
     ],
-    importProvenance:
-      source === 'imported'
-        ? {
-            repository: origin === 'github' ? 'openai/example-skills' : null,
-            path: origin === 'github' ? 'skills/test-skill' : null,
-            ref: origin === 'github' ? 'main' : null,
-            sourceUrl: origin === 'url' ? 'https://example.com/test-skill/SKILL.md' : null,
-            githubUrl:
-              origin === 'github'
-                ? 'https://github.com/openai/example-skills/tree/main/skills/test-skill'
-                : null,
-          }
-        : null,
+    importProvenance: null,
     createdBy,
     publishedAt:
-      lifecycleStatus === 'published'
+      status === 'active'
         ? new Date('2026-03-14T09:00:00.000Z')
         : null,
     createdAt: now,
@@ -244,20 +255,6 @@ const createEnv = async (): Promise<AppEnv & { skillsRoot: string }> => {
   };
 };
 
-const withMockFetch = async (
-  implementation: typeof globalThis.fetch,
-  run: () => Promise<void>,
-): Promise<void> => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = implementation;
-
-  try {
-    await run();
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-};
-
 const createTestSkillsService = ({
   env,
   repository,
@@ -274,59 +271,108 @@ const createTestSkillsService = ({
   });
 };
 
-test('listSkills merges builtin skills with managed skills and supports filters', async () => {
+test('listSkills returns preset and team method assets', async () => {
   const env = await createEnv();
-  const publishedCustom = createStoredSkillDocument({
-    name: 'Custom Review Flow',
-    description: 'Published custom flow',
-    lifecycleStatus: 'published',
-  });
-  const draftImported = createStoredSkillDocument({
-    name: 'Imported Draft Flow',
-    description: 'Draft imported flow',
-    source: 'imported',
-    origin: 'github',
-    lifecycleStatus: 'draft',
-  });
-  const repository = createRepositoryStub([publishedCustom, draftImported]);
+  const presetSkill = {
+    ...createStoredSkillDocument({
+      name: 'Preset Review Flow',
+      description: 'Preset method asset',
+      status: 'active',
+    }),
+    source: 'preset' as unknown as SkillDocument['source'],
+    status: 'active' as const,
+    definition: buildSkillDefinition(),
+  } as SkillDocument & {
+    _id: NonNullable<SkillDocument['_id']>;
+    status: 'draft' | 'active' | 'deprecated' | 'archived';
+    definition: ReturnType<typeof buildSkillDefinition>;
+  };
+  const teamSkill = {
+    ...createStoredSkillDocument({
+      name: 'Team Review Flow',
+      description: 'Team method asset',
+    }),
+    source: 'team' as unknown as SkillDocument['source'],
+    status: 'draft' as const,
+    definition: buildSkillDefinition(),
+    owner: ACTOR.username,
+    category: 'team-method',
+  } as SkillDocument & {
+    _id: NonNullable<SkillDocument['_id']>;
+    status: 'draft' | 'active' | 'deprecated' | 'archived';
+    definition: ReturnType<typeof buildSkillDefinition>;
+    owner: string;
+    category: string;
+  };
+  const repository = createRepositoryStub([presetSkill, teamSkill]);
   const service = createTestSkillsService({ env, repository });
 
   try {
-    const allSkills = await service.listSkills({ actor: ACTOR });
-    const bindableSkills = await service.listSkills(
-      { actor: ACTOR },
-      { bindable: 'true' },
-    );
-    const draftSkills = await service.listSkills(
-      { actor: ACTOR },
-      { lifecycleStatus: 'draft' },
-    );
+    const list = await service.listSkills({ actor: ACTOR });
+    const items = list.items as Array<{
+      source?: string;
+      status?: string;
+      definition?: { goal?: string };
+    }>;
+    const presetItem = items.find((item) => item.source === 'preset');
+    const teamItem = items.find((item) => item.source === 'team');
 
-    assert.equal(allSkills.total, 5);
+    const boundaries = list.meta.boundaries as Record<string, string>;
+
+    assert.equal(list.meta.registry, 'preset+team');
+    assert.equal(boundaries.authoring, 'structured-method-asset');
+    assert.equal(boundaries.source, 'team-created-only');
+    assert.equal(boundaries.binding, 'project-first');
+    assert.equal(
+      boundaries.runtime,
+      'manual-or-recommended-in-conversation',
+    );
+    assert.ok(presetItem);
+    assert.ok(teamItem);
+    assert.equal(presetItem?.source, 'preset');
+    assert.equal(presetItem?.status, 'active');
+    assert.ok(presetItem?.definition?.goal);
+    assert.equal(teamItem?.source, 'team');
+    assert.equal(teamItem?.status, 'draft');
+    assert.ok(teamItem?.definition?.goal);
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('listSkills includes legacy managed sources under the normalized team read model', async () => {
+  const env = await createEnv();
+  const legacyCustomSkill = createStoredSkillDocument({
+    name: 'Legacy Custom Skill',
+    description: 'Legacy custom managed skill',
+    source: 'custom',
+  });
+  const legacyImportedSkill = createStoredSkillDocument({
+    name: 'Legacy Imported Skill',
+    description: 'Legacy imported managed skill',
+    source: 'imported',
+  });
+  const repository = createRepositoryStub([legacyCustomSkill, legacyImportedSkill]);
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const list = await service.listSkills(
+      { actor: ACTOR },
+      { source: 'team' },
+    );
+    const itemNames = list.items.map((item) => item.name);
+
+    assert.deepEqual(itemNames, ['Legacy Custom Skill', 'Legacy Imported Skill']);
     assert.deepEqual(
-      allSkills.items.slice(0, 2).map((item) => item.name),
-      ['Custom Review Flow', 'Imported Draft Flow'],
-    );
-    assert.equal(allSkills.meta.registry, 'hybrid');
-    assert.equal(bindableSkills.items.some((item) => item.id === draftImported._id.toHexString()), false);
-    assert.equal(
-      bindableSkills.items.some((item) => item.id === publishedCustom._id.toHexString()),
-      true,
-    );
-    assert.equal(
-      draftSkills.items.some((item) => item.id === draftImported._id.toHexString()),
-      true,
-    );
-    assert.equal(
-      draftSkills.items.some((item) => item.id === 'search_documents'),
-      false,
+      list.items.map((item) => item.source),
+      ['team', 'team'],
     );
   } finally {
     await rm(env.skills.storageRoot, { recursive: true, force: true });
   }
 });
 
-test('createSkill stores canonical SKILL.md as a draft managed asset', async () => {
+test('createSkill persists a draft team method asset and derives markdown', async () => {
   const env = await createEnv();
   const repository = createRepositoryStub();
   const service = createTestSkillsService({ env, repository });
@@ -335,11 +381,11 @@ test('createSkill stores canonical SKILL.md as a draft managed asset', async () 
     const result = await service.createSkill(
       { actor: ACTOR },
       {
-        skillMarkdown: buildSkillMarkdown(
-          '团队复盘模板',
-          '帮助团队沉淀复盘结论与行动项。',
-          '# 团队复盘模板\n\n- 总结目标\n- 记录行动项\n',
-        ),
+        name: '架构评审模板',
+        description: '用于补齐边界、约束和验收标准。',
+        category: 'documentation_architecture',
+        owner: '架构组',
+        definition: buildSkillDefinition(),
       },
     );
 
@@ -348,256 +394,29 @@ test('createSkill stores canonical SKILL.md as a draft managed asset', async () 
       result.skill.id,
       'SKILL.md',
     );
+    const skill = result.skill as {
+      source?: string;
+      status?: string;
+      owner?: string;
+      category?: string;
+      skillMarkdown?: string;
+    };
 
-    assert.equal(result.skill.source, 'custom');
-    assert.equal(result.skill.origin, 'manual');
-    assert.equal(result.skill.lifecycleStatus, 'draft');
+    assert.equal(skill.source, 'team');
+    assert.equal(skill.status, 'draft');
+    assert.equal(skill.owner, '架构组');
+    assert.equal(skill.category, 'documentation_architecture');
+    assert.match(skill.skillMarkdown ?? '', /## Goal/);
     assert.equal(result.skill.bindable, false);
     assert.equal(result.skill.bundleFiles.length, 1);
     assert.equal(existsSync(savedFilePath), true);
-    assert.match(readFileSync(savedFilePath, 'utf8'), /name: 团队复盘模板/);
+    assert.match(readFileSync(savedFilePath, 'utf8'), /## Goal/);
   } finally {
     await rm(env.skills.storageRoot, { recursive: true, force: true });
   }
 });
 
-test('importSkill supports raw markdown URL preview without persisting data', async () => {
-  const env = await createEnv();
-  const repository = createRepositoryStub();
-  const service = createTestSkillsService({ env, repository });
-
-  try {
-    await withMockFetch(
-      async (input) => {
-        assert.equal(
-          String(input),
-          'https://raw.githubusercontent.com/openai/example-skills/main/skills/review/SKILL.md',
-        );
-
-        return new Response(
-          buildSkillMarkdown(
-            'Review Remote Skill',
-            'Imported from a raw markdown URL.',
-          ),
-          {
-            status: 200,
-            headers: {
-              'content-type': 'text/plain; charset=utf-8',
-            },
-          },
-        );
-      },
-      async () => {
-        const result = await service.importSkill(
-          { actor: ACTOR },
-          {
-            mode: 'url',
-            url: 'https://raw.githubusercontent.com/openai/example-skills/main/skills/review/SKILL.md',
-            dryRun: true,
-          },
-        );
-
-        assert.ok('preview' in result);
-        if (!('preview' in result)) {
-          throw new Error('expected import preview response');
-        }
-
-        assert.equal(result.preview.origin, 'url');
-        assert.equal(result.preview.bindable, false);
-        assert.equal(result.preview.bundleFiles[0]?.path, 'SKILL.md');
-      },
-    );
-  } finally {
-    await rm(env.skills.storageRoot, { recursive: true, force: true });
-  }
-});
-
-test('importSkill imports GitHub bundles and preserves provenance', async () => {
-  const env = await createEnv();
-  const repository = createRepositoryStub();
-  const service = createTestSkillsService({ env, repository });
-
-  try {
-    await withMockFetch(
-      async (input) => {
-        const url = String(input);
-
-        if (url === 'https://api.github.com/repos/openai/example-skills/contents/skills/review?ref=main') {
-          return Response.json([
-            {
-              type: 'file',
-              path: 'skills/review/SKILL.md',
-              url,
-              download_url:
-                'https://raw.githubusercontent.com/openai/example-skills/main/skills/review/SKILL.md',
-            },
-            {
-              type: 'file',
-              path: 'skills/review/README.md',
-              url,
-              download_url:
-                'https://raw.githubusercontent.com/openai/example-skills/main/skills/review/README.md',
-            },
-          ]);
-        }
-
-        if (
-          url ===
-          'https://raw.githubusercontent.com/openai/example-skills/main/skills/review/SKILL.md'
-        ) {
-          return new Response(
-            buildSkillMarkdown(
-              'GitHub Imported Skill',
-              'Imported from a GitHub skill directory.',
-            ),
-            {
-              status: 200,
-              headers: {
-                'content-type': 'text/plain; charset=utf-8',
-              },
-            },
-          );
-        }
-
-        if (
-          url ===
-          'https://raw.githubusercontent.com/openai/example-skills/main/skills/review/README.md'
-        ) {
-          return new Response('# Notes\n', {
-            status: 200,
-            headers: {
-              'content-type': 'text/plain; charset=utf-8',
-            },
-          });
-        }
-
-        throw new Error(`unexpected fetch url: ${url}`);
-      },
-      async () => {
-        const result = await service.importSkill(
-          { actor: ACTOR },
-          {
-            mode: 'github',
-            repository: 'openai/example-skills',
-            path: 'skills/review',
-            ref: 'main',
-          },
-        );
-
-        assert.ok('skill' in result);
-        if (!('skill' in result)) {
-          throw new Error('expected persisted skill response');
-        }
-
-        assert.equal(result.skill.source, 'imported');
-        assert.equal(result.skill.origin, 'github');
-        assert.equal(result.skill.importProvenance?.repository, 'openai/example-skills');
-        assert.deepEqual(
-          result.skill.bundleFiles.map((item) => item.path),
-          ['README.md', 'SKILL.md'],
-        );
-        assert.equal(
-          existsSync(join(env.skills.storageRoot, result.skill.id, 'README.md')),
-          true,
-        );
-      },
-    );
-  } finally {
-    await rm(env.skills.storageRoot, { recursive: true, force: true });
-  }
-});
-
-test('importSkill accepts repo-root GitHub SKILL.md URLs', async () => {
-  const env = await createEnv();
-  const rootContentsUrl =
-    'https://api.github.com/repos/openai/example-skills/contents?ref=main';
-
-  try {
-    await withMockFetch(
-      async (input) => {
-        const url = String(input);
-
-        if (url === rootContentsUrl) {
-          return Response.json([
-            {
-              type: 'file',
-              path: 'SKILL.md',
-              url,
-              download_url:
-                'https://raw.githubusercontent.com/openai/example-skills/main/SKILL.md',
-            },
-            {
-              type: 'file',
-              path: 'README.md',
-              url,
-              download_url:
-                'https://raw.githubusercontent.com/openai/example-skills/main/README.md',
-            },
-          ]);
-        }
-
-        if (
-          url === 'https://raw.githubusercontent.com/openai/example-skills/main/SKILL.md'
-        ) {
-          return new Response(
-            buildSkillMarkdown(
-              'Root GitHub Skill',
-              'Imported from repository root.',
-            ),
-            {
-              status: 200,
-              headers: {
-                'content-type': 'text/plain; charset=utf-8',
-              },
-            },
-          );
-        }
-
-        if (
-          url === 'https://raw.githubusercontent.com/openai/example-skills/main/README.md'
-        ) {
-          return new Response('# Root notes\n', {
-            status: 200,
-            headers: {
-              'content-type': 'text/plain; charset=utf-8',
-            },
-          });
-        }
-
-        throw new Error(`unexpected fetch url: ${url}`);
-      },
-      async () => {
-        for (const githubUrl of [
-          'https://github.com/openai/example-skills/blob/main/SKILL.md',
-          'https://raw.githubusercontent.com/openai/example-skills/main/SKILL.md',
-        ]) {
-          const service = createTestSkillsService({
-            env,
-            repository: createRepositoryStub(),
-          });
-          const result = await service.importSkill(
-            { actor: ACTOR },
-            {
-              mode: 'github',
-              githubUrl,
-            },
-          );
-
-          assert.ok('skill' in result);
-          if (!('skill' in result)) {
-            throw new Error('expected persisted skill response');
-          }
-
-          assert.equal(result.skill.bundleFiles.some((item) => item.path === 'SKILL.md'), true);
-        }
-      },
-    );
-  } finally {
-    await rm(env.skills.storageRoot, { recursive: true, force: true });
-  }
-});
-
-test('updateSkill can rewrite metadata and publish a managed skill', async () => {
+test('updateSkill can rewrite metadata and activate a managed skill', async () => {
   const env = await createEnv();
   const existingSkill = createStoredSkillDocument({
     name: '需求梳理草稿',
@@ -618,27 +437,43 @@ test('updateSkill can rewrite metadata and publish a managed skill', async () =>
       {
         name: '需求梳理模板',
         description: '聚焦目标、边界和验收标准。',
-        lifecycleStatus: 'published',
+        status: 'active',
+        owner: '产品架构组',
+        category: 'engineering_execution',
+        definition: buildSkillDefinition({
+          goal: '先把约束和验收标准补齐再进入编码',
+        }),
       },
     );
 
     assert.equal(result.skill.name, '需求梳理模板');
     assert.equal(result.skill.description, '聚焦目标、边界和验收标准。');
+    assert.equal(result.skill.status, 'active');
     assert.equal(result.skill.lifecycleStatus, 'published');
+    assert.equal(result.skill.owner, '产品架构组');
+    assert.equal(result.skill.category, 'engineering_execution');
+    assert.ok(result.skill.definition);
+    assert.equal(
+      result.skill.definition?.goal,
+      '先把约束和验收标准补齐再进入编码',
+    );
     assert.equal(result.skill.bindable, true);
     assert.equal(result.skill.publishedAt !== null, true);
-    assert.match(result.skill.skillMarkdown, /description: 聚焦目标、边界和验收标准。/);
+    assert.match(
+      result.skill.skillMarkdown,
+      /description: 聚焦目标、边界和验收标准。/,
+    );
   } finally {
     await rm(env.skills.storageRoot, { recursive: true, force: true });
   }
 });
 
-test('updateSkill rejects downgrading an in-use published skill back to draft', async () => {
+test('updateSkill rejects deprecating an in-use active skill', async () => {
   const env = await createEnv();
   const existingSkill = createStoredSkillDocument({
     name: '已发布技能',
     description: '被项目和智能体引用',
-    lifecycleStatus: 'published',
+    status: 'active',
   });
   const repository = createRepositoryStub([existingSkill]);
   const service = createTestSkillsService({
@@ -659,19 +494,167 @@ test('updateSkill rejects downgrading an in-use published skill back to draft', 
           { actor: ACTOR },
           existingSkill._id.toHexString(),
           {
-            lifecycleStatus: 'draft',
+            status: 'deprecated',
           },
         ),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.code, 'SKILL_IN_USE');
-        assert.match(error.message, /回退为草稿/);
+        assert.match(error.message, /废弃/);
         return true;
       },
     );
 
     const persistedSkill = await repository.findSkillById(existingSkill._id.toHexString());
-    assert.equal(persistedSkill?.lifecycleStatus, 'published');
+    assert.equal(persistedSkill?.status, 'active');
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('updateSkill rejects empty provided metadata fields', async () => {
+  const env = await createEnv();
+  const existingSkill = createStoredSkillDocument({
+    name: '元数据校验',
+    description: '用于校验 patch 字段',
+  });
+  const repository = createRepositoryStub([existingSkill]);
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    for (const [fieldName, patch] of [
+      ['name', { name: '   ' }],
+      ['description', { description: '   ' }],
+      ['owner', { owner: '   ' }],
+    ] as const) {
+      await assert.rejects(
+        () =>
+          service.updateSkill(
+            { actor: ACTOR },
+            existingSkill._id.toHexString(),
+            patch,
+          ),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.code, 'VALIDATION_ERROR');
+          assert.equal(error.messageKey, 'validation.required.field');
+          const fields = (error.details as { fields?: Record<string, string> } | null)
+            ?.fields;
+          assert.equal(fields?.[fieldName], `${fieldName} 为必填项`);
+          return true;
+        },
+      );
+    }
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('updateSkill keeps legacy active statusChangedAt stable on ordinary updates', async () => {
+  const env = await createEnv();
+  const publishedAt = new Date('2026-03-15T09:30:00.000Z');
+  const existingSkill = {
+    ...createStoredSkillDocument({
+      name: 'Legacy Published Skill',
+      description: 'legacy active skill',
+      source: 'custom',
+      status: undefined as unknown as NonNullable<SkillDocument['status']>,
+    }),
+    source: 'custom' as SkillDocument['source'],
+    status: undefined,
+    statusChangedAt: null,
+    lifecycleStatus: 'published' as const,
+    publishedAt,
+    updatedAt: new Date('2026-03-20T08:00:00.000Z'),
+  } as SkillDocument & { _id: NonNullable<SkillDocument['_id']> };
+  const repository = createRepositoryStub([existingSkill]);
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const result = await service.updateSkill(
+      { actor: ACTOR },
+      existingSkill._id.toHexString(),
+      {
+        description: 'legacy active skill updated',
+      },
+    );
+
+    assert.equal(result.skill.status, 'active');
+    assert.equal(result.skill.source, 'team');
+    assert.equal(result.skill.statusChangedAt, publishedAt.toISOString());
+
+    const persistedSkill = await repository.findSkillById(existingSkill._id.toHexString());
+    assert.equal(persistedSkill?.source, 'team');
+    assert.equal(persistedSkill?.statusChangedAt?.toISOString(), publishedAt.toISOString());
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('updateSkill preserves legacy markdown body when definition is not stored', async () => {
+  const env = await createEnv();
+  const legacySkillMarkdown = `---
+name: Legacy Imported Skill
+description: Legacy imported managed skill
+---
+
+# Legacy Imported Skill
+
+## Existing Workflow
+
+- Keep this legacy body
+- Do not rewrite it into generated sections
+`;
+  const existingSkill = {
+    ...createStoredSkillDocument({
+      name: 'Legacy Imported Skill',
+      description: 'Legacy imported managed skill',
+      source: 'imported',
+      status: undefined as unknown as NonNullable<SkillDocument['status']>,
+    }),
+    source: 'imported' as SkillDocument['source'],
+    status: undefined,
+    category: undefined,
+    owner: undefined,
+    definition: undefined,
+    skillMarkdown: legacySkillMarkdown,
+    markdownExcerpt: 'Legacy imported managed skill',
+    bundleFiles: [
+      {
+        path: 'SKILL.md',
+        size: Buffer.byteLength(legacySkillMarkdown),
+      },
+    ],
+  } as SkillDocument & { _id: NonNullable<SkillDocument['_id']> };
+  const repository = createRepositoryStub([existingSkill]);
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const result = await service.updateSkill(
+      { actor: ACTOR },
+      existingSkill._id.toHexString(),
+      {
+        description: 'Updated legacy imported managed skill',
+        status: 'active',
+      },
+    );
+
+    assert.match(
+      result.skill.skillMarkdown,
+      /## Existing Workflow[\s\S]*Keep this legacy body/u,
+    );
+    assert.match(
+      result.skill.skillMarkdown,
+      /description: Updated legacy imported managed skill/u,
+    );
+    assert.doesNotMatch(result.skill.skillMarkdown, /## Goal/u);
+
+    const persistedSkill = await repository.findSkillById(existingSkill._id.toHexString());
+    assert.equal(persistedSkill?.definition, undefined);
+    assert.match(
+      persistedSkill?.skillMarkdown ?? '',
+      /## Existing Workflow[\s\S]*Do not rewrite it into generated sections/u,
+    );
   } finally {
     await rm(env.skills.storageRoot, { recursive: true, force: true });
   }
@@ -702,7 +685,7 @@ test('deleteSkill rejects removing a managed skill that is still bound', async (
   const existingSkill = createStoredSkillDocument({
     name: '绑定中的技能',
     description: '仍被项目使用',
-    lifecycleStatus: 'published',
+    status: 'active',
   });
   const repository = createRepositoryStub([existingSkill]);
   const service = createTestSkillsService({
@@ -737,13 +720,13 @@ test('deleteSkill rejects removing a managed skill that is still bound', async (
   }
 });
 
-test('createSkill rejects invalid frontmatter and duplicate slugs', async () => {
+test('createSkill rejects invalid structured payloads and duplicate slugs', async () => {
   const env = await createEnv();
   const repository = createRepositoryStub([
     createStoredSkillDocument({
       name: 'Existing Skill',
       description: 'Existing skill description',
-      lifecycleStatus: 'published',
+      status: 'active',
     }),
   ]);
   const service = createTestSkillsService({ env, repository });
@@ -754,7 +737,12 @@ test('createSkill rejects invalid frontmatter and duplicate slugs', async () => 
         service.createSkill(
           { actor: ACTOR },
           {
-            skillMarkdown: '# missing frontmatter',
+            category: 'documentation_architecture',
+            owner: '架构组',
+            definition: {
+              ...buildSkillDefinition(),
+              workflow: [],
+            },
           },
         ),
       (error: unknown) => {
@@ -769,10 +757,11 @@ test('createSkill rejects invalid frontmatter and duplicate slugs', async () => 
         service.createSkill(
           { actor: ACTOR },
           {
-            skillMarkdown: buildSkillMarkdown(
-              'Existing Skill',
-              'Trying to reuse the same slug',
-            ),
+            name: 'Existing Skill',
+            description: 'Trying to reuse the same slug',
+            category: 'documentation_architecture',
+            owner: '架构组',
+            definition: buildSkillDefinition(),
           },
         ),
       (error: unknown) => {
@@ -786,19 +775,24 @@ test('createSkill rejects invalid frontmatter and duplicate slugs', async () => 
   }
 });
 
-test('system skills remain readable but immutable', async () => {
+test('preset skills remain readable but immutable', async () => {
   const env = await createEnv();
   const repository = createRepositoryStub();
   const service = createTestSkillsService({ env, repository });
 
   try {
-    const detail = await service.getSkillDetail({ actor: ACTOR }, 'search_documents');
-    assert.equal(detail.skill.source, 'system');
+    const detail = await service.getSkillDetail(
+      { actor: ACTOR },
+      'doc-gap-interrogation',
+    );
+    assert.equal(detail.skill.source, 'preset');
+    assert.equal(detail.skill.status, 'active');
+    assert.equal(detail.skill.owner, 'Knowject Core');
 
     await assert.rejects(
       () =>
-        service.updateSkill({ actor: ACTOR }, 'search_documents', {
-          lifecycleStatus: 'draft',
+        service.updateSkill({ actor: ACTOR }, 'doc-gap-interrogation', {
+          status: 'archived',
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
@@ -808,100 +802,11 @@ test('system skills remain readable but immutable', async () => {
     );
 
     await assert.rejects(
-      () => service.deleteSkill({ actor: ACTOR }, 'search_documents'),
+      () => service.deleteSkill({ actor: ACTOR }, 'doc-gap-interrogation'),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.code, 'SYSTEM_SKILL_READONLY');
         return true;
-      },
-    );
-  } finally {
-    await rm(env.skills.storageRoot, { recursive: true, force: true });
-  }
-});
-
-test('importSkill rejects HTML pages and missing GitHub SKILL.md bundles', async () => {
-  const env = await createEnv();
-  const repository = createRepositoryStub();
-  const service = createTestSkillsService({ env, repository });
-
-  try {
-    await withMockFetch(
-      async (input) => {
-        const url = String(input);
-
-        if (
-          url ===
-          'https://raw.githubusercontent.com/openai/example-skills/main/skills/not-raw/SKILL.md'
-        ) {
-          return new Response('<html><body>not markdown</body></html>', {
-            status: 200,
-            headers: {
-              'content-type': 'text/html; charset=utf-8',
-            },
-          });
-        }
-
-        if (url === 'https://api.github.com/repos/openai/example-skills/contents/skills/empty?ref=main') {
-          return Response.json([
-            {
-              type: 'file',
-              path: 'skills/empty/README.md',
-              url,
-              download_url:
-                'https://raw.githubusercontent.com/openai/example-skills/main/skills/empty/README.md',
-            },
-          ]);
-        }
-
-        if (
-          url ===
-          'https://raw.githubusercontent.com/openai/example-skills/main/skills/empty/README.md'
-        ) {
-          return new Response('# only readme', {
-            status: 200,
-            headers: {
-              'content-type': 'text/plain; charset=utf-8',
-            },
-          });
-        }
-
-        throw new Error(`unexpected fetch url: ${url}`);
-      },
-      async () => {
-        await assert.rejects(
-          () =>
-            service.importSkill(
-              { actor: ACTOR },
-              {
-                mode: 'url',
-                url: 'https://raw.githubusercontent.com/openai/example-skills/main/skills/not-raw/SKILL.md',
-              },
-            ),
-          (error: unknown) => {
-            assert.ok(error instanceof AppError);
-            assert.equal(error.code, 'SKILL_IMPORT_FETCH_FAILED');
-            return true;
-          },
-        );
-
-        await assert.rejects(
-          () =>
-            service.importSkill(
-              { actor: ACTOR },
-              {
-                mode: 'github',
-                repository: 'openai/example-skills',
-                path: 'skills/empty',
-                ref: 'main',
-              },
-            ),
-          (error: unknown) => {
-            assert.ok(error instanceof AppError);
-            assert.equal(error.code, 'SKILL_IMPORT_FETCH_FAILED');
-            return true;
-          },
-        );
       },
     );
   } finally {

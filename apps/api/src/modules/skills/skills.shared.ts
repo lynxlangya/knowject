@@ -2,13 +2,20 @@ import { AppError } from '@lib/app-error.js';
 import { getFallbackMessage } from '@lib/locale.messages.js';
 import { createValidationAppError } from '@lib/validation.js';
 import type { WithId } from 'mongodb';
+import {
+  buildLegacySkillDefinition,
+  SKILL_CATEGORIES,
+  type SkillCategory,
+  type SkillStatus,
+} from './skills.definition.js';
 import type {
   ListSkillsFilters,
   ListSkillsInput,
+  NormalizedSkillReadModel,
   SkillDetailResponse,
   SkillDocument,
   SkillLifecycleStatus,
-  SkillSource,
+  PersistedSkillSource,
   SkillSummaryResponse,
 } from './skills.types.js';
 
@@ -50,7 +57,7 @@ export const createSkillInUseError = ({
   projectCount,
   agentCount,
 }: {
-  action: 'delete' | 'unpublish';
+  action: 'delete' | 'deprecate' | 'archive';
   projectCount: number;
   agentCount: number;
 }): AppError => {
@@ -79,10 +86,9 @@ export const createSkillInUseError = ({
 };
 
 export const buildSkillBindableFlag = (
-  source: SkillSource,
-  lifecycleStatus: SkillLifecycleStatus,
+  status?: SkillStatus,
 ): boolean => {
-  return source === 'system' || lifecycleStatus === 'published';
+  return status === 'active';
 };
 
 export const buildSkillSlug = (name: string): string => {
@@ -146,19 +152,26 @@ export const assertSafeBundleRelativePath = (relativePath: string): string => {
 export const toSkillSummaryResponse = (
   skill: WithId<SkillDocument>,
 ): SkillSummaryResponse => {
+  const normalizedSkill = normalizeStoredSkillForRead(skill);
+
   return {
     id: skill._id.toHexString(),
     slug: skill.slug,
     name: skill.name,
     description: skill.description,
     type: skill.type,
-    source: skill.source,
+    source: normalizedSkill.source,
     origin: skill.origin,
     handler: skill.handler,
     parametersSchema: skill.parametersSchema,
     runtimeStatus: skill.runtimeStatus,
-    lifecycleStatus: skill.lifecycleStatus,
-    bindable: buildSkillBindableFlag(skill.source, skill.lifecycleStatus),
+    lifecycleStatus: normalizedSkill.lifecycleStatus,
+    category: normalizedSkill.category,
+    status: normalizedSkill.status,
+    owner: normalizedSkill.owner,
+    definition: normalizedSkill.definition,
+    statusChangedAt: normalizedSkill.statusChangedAt?.toISOString() ?? null,
+    bindable: normalizedSkill.bindable,
     markdownExcerpt: skill.markdownExcerpt,
     bundleFileCount: skill.bundleFiles.length,
     importProvenance: skill.importProvenance,
@@ -179,13 +192,23 @@ export const toSkillDetailResponse = (
   };
 };
 
-const readOptionalSourceFilter = (value: unknown): SkillSource | undefined => {
+const readOptionalSourceFilter = (
+  value: unknown,
+): PersistedSkillSource | undefined => {
   if (value === undefined) {
     return undefined;
   }
 
-  if (value === 'system' || value === 'custom' || value === 'imported') {
-    return value;
+  if (value === 'preset' || value === 'system') {
+    return 'preset';
+  }
+
+  if (value === 'team' || value === 'custom') {
+    return 'team';
+  }
+
+  if (value === 'imported') {
+    return 'team';
   }
 
   throw createValidationAppError(
@@ -274,4 +297,120 @@ export const matchesSkillFilters = (
   }
 
   return true;
+};
+
+const normalizeSkillSourceForRead = (
+  source: PersistedSkillSource,
+): SkillSummaryResponse['source'] => {
+  if (source === 'system') {
+    return 'preset';
+  }
+
+  if (source === 'custom' || source === 'imported') {
+    return 'team';
+  }
+
+  return source;
+};
+
+const buildLifecycleStatusFromStatus = (
+  status?: SkillStatus,
+  fallback?: SkillLifecycleStatus,
+): SkillLifecycleStatus => {
+  if (status) {
+    return status === 'active' ? 'published' : 'draft';
+  }
+
+  return fallback ?? 'draft';
+};
+
+const buildStatusFromLegacyFields = ({
+  status,
+  lifecycleStatus,
+}: {
+  status?: SkillStatus;
+  lifecycleStatus?: SkillLifecycleStatus;
+}): SkillStatus => {
+  if (status) {
+    return status;
+  }
+
+  return lifecycleStatus === 'published' ? 'active' : 'draft';
+};
+
+const buildOwnerForRead = (skill: WithId<SkillDocument>): string => {
+  if (skill.owner?.trim()) {
+    return skill.owner.trim();
+  }
+
+  if (skill.source === 'system' || skill.source === 'preset') {
+    return 'Knowject Core';
+  }
+
+  return skill.createdBy;
+};
+
+const normalizeSkillCategoryForRead = (
+  category: SkillDocument['category'],
+): SkillSummaryResponse['category'] => {
+  return typeof category === 'string' &&
+    (SKILL_CATEGORIES as readonly string[]).includes(category)
+    ? (category as SkillCategory)
+    : undefined;
+};
+
+const buildStatusChangedAtForRead = (
+  skill: WithId<SkillDocument>,
+  status: SkillStatus,
+): Date => {
+  if (skill.statusChangedAt instanceof Date) {
+    return skill.statusChangedAt;
+  }
+
+  if (status === 'active' && skill.publishedAt instanceof Date) {
+    return skill.publishedAt;
+  }
+
+  return skill.updatedAt;
+};
+
+const buildDefinitionForRead = (
+  skill: WithId<SkillDocument>,
+  owner: string,
+) => {
+  if (skill.definition) {
+    return skill.definition;
+  }
+
+  return buildLegacySkillDefinition({
+    name: skill.name,
+    description: skill.description,
+    skillMarkdown: skill.skillMarkdown,
+    owner,
+  });
+};
+
+export const normalizeStoredSkillForRead = (
+  skill: WithId<SkillDocument>,
+): NormalizedSkillReadModel => {
+  const status = buildStatusFromLegacyFields({
+    status: skill.status,
+    lifecycleStatus: skill.lifecycleStatus,
+  });
+  const lifecycleStatus = buildLifecycleStatusFromStatus(
+    status,
+    skill.lifecycleStatus,
+  );
+  const owner = buildOwnerForRead(skill);
+
+  return {
+    source: normalizeSkillSourceForRead(skill.source),
+    lifecycleStatus,
+    category: normalizeSkillCategoryForRead(skill.category),
+    status,
+    owner,
+    definition: buildDefinitionForRead(skill, owner),
+    statusChangedAt: buildStatusChangedAtForRead(skill, status),
+    bindable: buildSkillBindableFlag(status),
+  };
 };

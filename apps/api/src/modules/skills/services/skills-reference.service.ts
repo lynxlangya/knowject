@@ -1,13 +1,13 @@
 import {
   createSkillInUseError,
   createSkillSlugConflictError,
-} from "../skills.shared.js";
-import { findRegisteredSkillById } from "../skills.registry.js";
-import type { SkillsRepository } from "../skills.repository.js";
+} from '../skills.shared.js';
+import { findRegisteredSkillById } from '../skills.registry.js';
+import type { SkillsRepository } from '../skills.repository.js';
 import type {
   SkillReferenceCounts,
   SkillUsageLookup,
-} from "../types/skills.service.types.js";
+} from '../types/skills.service.types.js';
 
 export const EMPTY_SKILL_REFERENCE_COUNTS: SkillReferenceCounts = {
   projectCount: 0,
@@ -24,7 +24,7 @@ export const assertSkillNotInUse = async ({
   usageLookup,
 }: {
   skillId: string;
-  action: "delete" | "unpublish";
+  action: 'delete' | 'deprecate' | 'archive';
   usageLookup: SkillUsageLookup;
 }): Promise<void> => {
   const counts = await usageLookup.countManagedSkillReferences(skillId);

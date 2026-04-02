@@ -463,8 +463,10 @@ export const projectMessages = {
       notRecorded: 'Not recorded',
       unassigned: 'Unassigned',
       systemBuiltin: 'Built-in',
+      presetSkill: 'Preset method asset',
       importedPublic: 'Imported from public web',
       currentTeam: 'Current team',
+      teamSkill: 'Team method asset',
     },
     documentActions: {
       retryError:

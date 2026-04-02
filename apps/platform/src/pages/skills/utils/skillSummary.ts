@@ -6,15 +6,12 @@ import { tp } from '../skills.i18n';
 export const buildSkillSummaryItems = (
   items: SkillSummaryResponse[],
 ): GlobalAssetSummaryItem[] => {
-  const publishedCount = items.filter(
-    (item) => item.lifecycleStatus === 'published',
+  const activeCount = items.filter(
+    (item) => item.status === 'active',
   ).length;
-  const draftCount = items.length - publishedCount;
-  const availableCount = items.filter(
-    (item) => item.runtimeStatus === 'available',
-  ).length;
-  const contractOnlyCount = items.length - availableCount;
-  const importedCount = items.filter((item) => item.source === 'imported').length;
+  const draftCount = items.filter((item) => item.status === 'draft').length;
+  const presetCount = items.filter((item) => item.source === 'preset').length;
+  const teamCount = items.filter((item) => item.source === 'team').length;
 
   return [
     createGlobalAssetSummaryItem(
@@ -23,23 +20,21 @@ export const buildSkillSummaryItems = (
       tp('summary.totalHint'),
     ),
     createGlobalAssetSummaryItem(
-      tp('summary.published'),
-      tp('summary.publishedValue', { count: publishedCount }),
+      tp('summary.active'),
+      tp('summary.activeValue', { count: activeCount }),
       draftCount === 0
-        ? tp('summary.publishedHintNone')
-        : tp('summary.publishedHintDrafts', { count: draftCount }),
+        ? tp('summary.activeHintNone')
+        : tp('summary.activeHintDrafts', { count: draftCount }),
     ),
     createGlobalAssetSummaryItem(
-      tp('summary.available'),
-      tp('summary.availableValue', { count: availableCount }),
-      contractOnlyCount === 0
-        ? tp('summary.availableHintAll')
-        : tp('summary.availableHintPending', { count: contractOnlyCount }),
+      tp('summary.preset'),
+      tp('summary.presetValue', { count: presetCount }),
+      tp('summary.presetHint'),
     ),
     createGlobalAssetSummaryItem(
-      tp('summary.imported'),
-      tp('summary.importedValue', { count: importedCount }),
-      tp('summary.importedHint'),
+      tp('summary.team'),
+      tp('summary.teamValue', { count: teamCount }),
+      tp('summary.teamHint'),
     ),
   ];
 };

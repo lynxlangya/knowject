@@ -10,7 +10,7 @@ export type SkillType =
   | 'knowledge_search'
   | 'markdown_bundle';
 
-export type SkillSource = 'system' | 'custom' | 'imported';
+export type SkillSource = 'preset' | 'team';
 export type SkillOrigin = 'manual' | 'github' | 'url';
 export type SkillHandler =
   | 'repository.search_codebase'
@@ -18,6 +18,25 @@ export type SkillHandler =
   | 'knowledge.search_documents';
 export type SkillRuntimeStatus = 'available' | 'contract_only';
 export type SkillLifecycleStatus = 'draft' | 'published';
+export type SkillCategory =
+  | 'documentation_architecture'
+  | 'engineering_execution'
+  | 'governance_capture';
+export type SkillStatus = 'draft' | 'active' | 'deprecated' | 'archived';
+export type SkillFollowupStrategy = 'none' | 'optional' | 'required';
+
+export interface SkillDefinitionFields {
+  goal: string;
+  triggerScenarios: string[];
+  requiredContext: string[];
+  workflow: string[];
+  outputContract: string[];
+  guardrails: string[];
+  artifacts: string[];
+  projectBindingNotes: string[];
+  followupQuestionsStrategy: SkillFollowupStrategy;
+}
+
 export type SkillParameterType = 'string' | 'integer' | 'boolean';
 
 export interface SkillParameterSchemaProperty {
@@ -62,6 +81,11 @@ export interface SkillSummaryResponse {
   parametersSchema: SkillParametersSchema | null;
   runtimeStatus: SkillRuntimeStatus;
   lifecycleStatus: SkillLifecycleStatus;
+  category?: SkillCategory;
+  status?: SkillStatus;
+  owner?: string;
+  definition?: SkillDefinitionFields;
+  statusChangedAt?: string | null;
   bindable: boolean;
   markdownExcerpt: string;
   bundleFileCount: number;
@@ -83,15 +107,17 @@ export interface SkillListResponse {
   meta: {
     module: 'skills';
     stage: 'GA-09';
-    registry: 'hybrid';
-    builtinOnly: boolean;
+    registry: 'preset+team';
+    builtinOnly: false;
     boundaries: {
       businessRuntime: 'node-express';
       registryStore: 'mongodb+fs';
       knowledgeAccess: 'service-layer-only';
       execution: 'service-linked-or-contract-only';
-      import: 'github-or-raw-url';
-      authoring: 'skill-markdown';
+      authoring: 'structured-method-asset';
+      source: 'team-created-only';
+      binding: 'project-first';
+      runtime: 'manual-or-recommended-in-conversation';
     };
   };
 }
@@ -104,26 +130,6 @@ export interface SkillMutationResponse {
   skill: SkillDetailResponse;
 }
 
-export interface SkillImportPreview {
-  source: 'imported';
-  origin: 'github' | 'url';
-  type: 'markdown_bundle';
-  name: string;
-  description: string;
-  runtimeStatus: SkillRuntimeStatus;
-  lifecycleStatus: 'draft';
-  bindable: false;
-  markdownExcerpt: string;
-  skillMarkdown: string;
-  bundleFiles: SkillBundleFileRecord[];
-  bundleFileCount: number;
-  importProvenance: SkillImportProvenance;
-}
-
-export interface SkillImportPreviewResponse {
-  preview: SkillImportPreview;
-}
-
 export interface ListSkillsParams {
   source?: SkillSource;
   lifecycleStatus?: SkillLifecycleStatus;
@@ -131,26 +137,20 @@ export interface ListSkillsParams {
 }
 
 export interface CreateSkillRequest {
-  skillMarkdown: string;
-  name?: string;
-  description?: string;
+  name: string;
+  description: string;
+  category: SkillCategory;
+  owner: string;
+  definition: SkillDefinitionFields;
 }
 
 export interface UpdateSkillRequest {
-  skillMarkdown?: string;
   name?: string;
   description?: string;
-  lifecycleStatus?: SkillLifecycleStatus;
-}
-
-export interface ImportSkillRequest {
-  mode: 'github' | 'url';
-  dryRun?: boolean;
-  githubUrl?: string;
-  repository?: string;
-  path?: string;
-  ref?: string;
-  url?: string;
+  category?: SkillCategory;
+  owner?: string;
+  definition?: SkillDefinitionFields;
+  status?: SkillStatus;
 }
 
 export const listSkills = async (
@@ -179,16 +179,6 @@ export const createSkill = async (
     '/skills',
     payload,
   );
-
-  return unwrapApiData(response.data);
-};
-
-export const importSkill = async (
-  payload: ImportSkillRequest,
-): Promise<SkillMutationResponse | SkillImportPreviewResponse> => {
-  const response = await client.post<
-    ApiEnvelope<SkillMutationResponse | SkillImportPreviewResponse>
-  >('/skills/import', payload);
 
   return unwrapApiData(response.data);
 };

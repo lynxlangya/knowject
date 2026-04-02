@@ -187,7 +187,6 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
         '/api/knowledge/:knowledgeId/documents',
         '/api/skills',
         '/api/skills/:skillId',
-        '/api/skills/import',
         '/api/agents',
         '/api/agents/:agentId',
         '/api/settings',

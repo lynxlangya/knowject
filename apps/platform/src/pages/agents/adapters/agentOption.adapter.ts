@@ -44,9 +44,9 @@ export const createSkillOptions = (
   const baseOptions = skillItems.map((item) => ({
     value: item.id,
     label:
-      item.runtimeStatus === 'available'
-        ? tp('feedback.optionalRuntimeReady', { name: item.name })
-        : tp('feedback.optionalContractOnly', { name: item.name }),
+      item.source === 'preset'
+        ? tp('feedback.optionalPresetSkill', { name: item.name })
+        : tp('feedback.optionalTeamSkill', { name: item.name }),
   }));
 
   return resolveSelectableOptions(selectedSkillIds, baseOptions);

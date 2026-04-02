@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { listAgents } from "@api/agents";
 import { listKnowledge } from "@api/knowledge";
-import { listSkills } from "@api/skills";
+import { listSkills, type SkillSummaryResponse } from "@api/skills";
 import {
   GLOBAL_KNOWLEDGE_OPTIONS,
 } from "./project.catalog";
@@ -10,6 +10,7 @@ import {
   resolveSelectedResourceOptions,
   type ProjectResourceOption,
 } from "./projectResourceOptions.shared";
+import { tp } from "../../pages/project/project.i18n";
 
 interface UseProjectResourceOptionsOptions {
   open: boolean;
@@ -17,6 +18,14 @@ interface UseProjectResourceOptionsOptions {
   selectedAgentIds: string[];
   selectedSkillIds: string[];
 }
+
+export const buildProjectSkillOptionLabel = (
+  item: Pick<SkillSummaryResponse, 'name' | 'source'>,
+): string => {
+  return item.source === 'preset'
+    ? `${item.name} · ${tp('resources.item.presetSkill')}`
+    : `${item.name} · ${tp('resources.item.teamSkill')}`;
+};
 
 export const useProjectResourceOptions = ({
   open,
@@ -72,10 +81,7 @@ export const useProjectResourceOptions = ({
           setSkillOptions(
             skillResult.value.items.map((item) => ({
               value: item.id,
-              label:
-                item.runtimeStatus === "available"
-                  ? `${item.name} · 已接服务`
-                  : `${item.name} · 契约预留`,
+              label: buildProjectSkillOptionLabel(item),
             })),
           );
         } else {

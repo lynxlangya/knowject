@@ -1,9 +1,20 @@
-import { Alert, Input, Modal, Select, Spin, Tabs, Typography } from 'antd';
-import type { SkillDetailResponse, SkillLifecycleStatus } from '@api/skills';
+import { Alert, Button, Drawer, Input, Select, Space, Spin, Tabs, Typography } from 'antd';
+import type { SkillDetailResponse } from '@api/skills';
+import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
-import { editorTabs, lifecycleOptions } from '../constants/skillsManagement.constants';
+import {
+  getCategoryOptions,
+  getEditorTabs,
+  getStatusOptions,
+} from '../constants/skillsManagement.constants';
+import {
+  getSkillDefinitionGoalSection,
+  getSkillDefinitionListSections,
+  getSkillFollowupStrategyOptions,
+  type SkillEditorDraft,
+} from '../skillDefinition';
 import type { EditorMode } from '../types/skillsManagement.types';
-import type { ParsedSkillMarkdownPreview } from '../skillsMarkdown';
+import { SkillDefinitionListField } from './SkillDefinitionListField';
 import { SkillMarkdownPreview } from './SkillMarkdownPreview';
 
 interface SkillEditorModalProps {
@@ -11,13 +22,11 @@ interface SkillEditorModalProps {
   editorTabKey: 'editor' | 'preview';
   onEditorTabKeyChange: (key: 'editor' | 'preview') => void;
   editingSkill: SkillDetailResponse | null;
-  editorMarkdown: string;
-  onEditorMarkdownChange: (value: string) => void;
-  editorLifecycleStatus: SkillLifecycleStatus;
-  onEditorLifecycleStatusChange: (status: SkillLifecycleStatus) => void;
+  editorDraft: SkillEditorDraft;
+  onEditorDraftChange: Dispatch<SetStateAction<SkillEditorDraft>>;
+  editorMarkdownPreview: string;
   editorLoading: boolean;
   editorSubmitting: boolean;
-  editorValidation: ParsedSkillMarkdownPreview;
   onCancel: () => void;
   onSubmit: () => void;
 }
@@ -27,37 +36,48 @@ export const SkillEditorModal = ({
   editorTabKey,
   onEditorTabKeyChange,
   editingSkill,
-  editorMarkdown,
-  onEditorMarkdownChange,
-  editorLifecycleStatus,
-  onEditorLifecycleStatusChange,
+  editorDraft,
+  onEditorDraftChange,
+  editorMarkdownPreview,
   editorLoading,
   editorSubmitting,
-  editorValidation,
   onCancel,
   onSubmit,
 }: SkillEditorModalProps) => {
   const { t } = useTranslation('pages');
+  const editorTabs = getEditorTabs();
+  const categoryOptions = getCategoryOptions();
+  const statusOptions = getStatusOptions();
+  const skillDefinitionGoalSection = getSkillDefinitionGoalSection();
+  const skillDefinitionListSections = getSkillDefinitionListSections();
+  const skillFollowupStrategyOptions = getSkillFollowupStrategyOptions();
 
   return (
-    <Modal
+    <Drawer
       title={
         editorMode === 'create'
           ? t('skills.editor.createTitle')
           : t('skills.editor.editTitle')
       }
       open={editorMode !== null}
-      onCancel={onCancel}
-      onOk={onSubmit}
-      confirmLoading={editorSubmitting}
+      placement="right"
+      size={720}
+      onClose={onCancel}
       destroyOnHidden
-      width={880}
-      okText={
-        editorMode === 'create'
-          ? t('skills.editor.createDraft')
-          : t('skills.editor.save')
+      footer={
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Space wrap>
+            <Button onClick={onCancel} disabled={editorSubmitting}>
+              {t('skills.editor.cancel')}
+            </Button>
+            <Button type="primary" loading={editorSubmitting} onClick={onSubmit}>
+              {editorMode === 'create'
+                ? t('skills.editor.createDraft')
+                : t('skills.editor.save')}
+            </Button>
+          </Space>
+        </div>
       }
-      cancelText={t('skills.editor.cancel')}
     >
       {editorLoading ? (
         <div className="flex min-h-80 items-center justify-center">
@@ -65,25 +85,7 @@ export const SkillEditorModal = ({
         </div>
       ) : (
         <div className="space-y-4">
-          <Alert
-            type="info"
-            showIcon
-            message={t('skills.editor.intro')}
-          />
-
-          {editorMode === 'edit' && editingSkill?.source !== 'system' ? (
-            <div className="flex items-center gap-3">
-              <Typography.Text className="text-sm text-slate-500">
-                {t('skills.lifecycle.title')}
-              </Typography.Text>
-              <Select
-                value={editorLifecycleStatus}
-                className="w-52"
-                options={lifecycleOptions}
-                onChange={(value) => onEditorLifecycleStatusChange(value)}
-              />
-            </div>
-          ) : null}
+          <Alert type="info" showIcon message={t('skills.editor.intro')} />
 
           <Tabs
             activeKey={editorTabKey}
@@ -95,44 +97,161 @@ export const SkillEditorModal = ({
               label: tab.label,
               children:
                 tab.key === 'editor' ? (
-                  <div className="space-y-3">
-                    {editorValidation.errors.length > 0 ? (
-                      <Alert
-                        type="warning"
-                        showIcon
-                        message={t('skills.editor.invalid')}
-                        description={
-                          <div className="space-y-1">
-                            {editorValidation.errors.map((currentError) => (
-                              <div key={currentError}>{currentError}</div>
-                            ))}
-                          </div>
-                        }
+                  <div className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Typography.Text className="text-sm font-medium text-slate-700">
+                          {t('skills.editor.fields.name')}
+                        </Typography.Text>
+                        <Input
+                          value={editorDraft.name}
+                          placeholder={t('skills.editor.placeholders.name')}
+                          onChange={(event) => {
+                            onEditorDraftChange((current) => ({
+                              ...current,
+                              name: event.target.value,
+                            }));
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Typography.Text className="text-sm font-medium text-slate-700">
+                          {t('skills.editor.fields.owner')}
+                        </Typography.Text>
+                        <Input
+                          value={editorDraft.owner}
+                          placeholder={t('skills.editor.placeholders.owner')}
+                          onChange={(event) => {
+                            onEditorDraftChange((current) => ({
+                              ...current,
+                              owner: event.target.value,
+                            }));
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Typography.Text className="text-sm font-medium text-slate-700">
+                        {t('skills.editor.fields.description')}
+                      </Typography.Text>
+                      <Input.TextArea
+                        value={editorDraft.description}
+                        autoSize={{ minRows: 3, maxRows: 5 }}
+                        placeholder={t('skills.editor.placeholders.description')}
+                        onChange={(event) => {
+                          onEditorDraftChange((current) => ({
+                            ...current,
+                            description: event.target.value,
+                          }));
+                        }}
                       />
-                    ) : (
-                      <Alert
-                        type="success"
-                        showIcon
-                        message={t('skills.editor.valid')}
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Typography.Text className="text-sm font-medium text-slate-700">
+                          {t('skills.editor.fields.category')}
+                        </Typography.Text>
+                        <Select
+                          value={editorDraft.category}
+                          options={categoryOptions}
+                          onChange={(value) => {
+                            onEditorDraftChange((current) => ({
+                              ...current,
+                              category: value,
+                            }));
+                          }}
+                        />
+                      </div>
+
+                      {editorMode === 'edit' && editingSkill?.source === 'team' ? (
+                        <div className="space-y-2">
+                          <Typography.Text className="text-sm font-medium text-slate-700">
+                            {t('skills.status.title')}
+                          </Typography.Text>
+                          <Select
+                            value={editorDraft.status}
+                            options={statusOptions}
+                            onChange={(value) => {
+                              onEditorDraftChange((current) => ({
+                                ...current,
+                                status: value,
+                              }));
+                            }}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Typography.Text className="text-sm font-medium text-slate-700">
+                        {skillDefinitionGoalSection.label}
+                      </Typography.Text>
+                      <Input.TextArea
+                        value={editorDraft.definition.goal}
+                        autoSize={{ minRows: 3, maxRows: 5 }}
+                        placeholder={skillDefinitionGoalSection.placeholder}
+                        onChange={(event) => {
+                          onEditorDraftChange((current) => ({
+                            ...current,
+                            definition: {
+                              ...current.definition,
+                              goal: event.target.value,
+                            },
+                          }));
+                        }}
                       />
-                    )}
-                    <Input.TextArea
-                      value={editorMarkdown}
-                      autoSize={{ minRows: 18, maxRows: 22 }}
-                      className="font-mono"
-                      placeholder={t('skills.editor.placeholder')}
-                      onChange={(event) => {
-                        onEditorMarkdownChange(event.target.value);
-                      }}
-                    />
+                    </div>
+
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      {skillDefinitionListSections.map((section) => (
+                        <SkillDefinitionListField
+                          key={section.key}
+                          label={section.label}
+                          addLabel={section.addLabel}
+                          placeholder={section.placeholder}
+                          value={editorDraft.definition[section.key]}
+                          onChange={(value) => {
+                            onEditorDraftChange((current) => ({
+                              ...current,
+                              definition: {
+                                ...current.definition,
+                                [section.key]: value,
+                              },
+                            }));
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Typography.Text className="text-sm font-medium text-slate-700">
+                        {t('skills.definition.followupQuestionsStrategy.label')}
+                      </Typography.Text>
+                      <Select
+                        value={editorDraft.definition.followupQuestionsStrategy}
+                        options={skillFollowupStrategyOptions}
+                        onChange={(value) => {
+                          onEditorDraftChange((current) => ({
+                            ...current,
+                            definition: {
+                              ...current.definition,
+                              followupQuestionsStrategy: value,
+                            },
+                          }));
+                        }}
+                      />
+                    </div>
                   </div>
                 ) : (
-                  <SkillMarkdownPreview markdown={editorMarkdown} />
+                  <SkillMarkdownPreview markdown={editorMarkdownPreview} />
                 ),
             }))}
           />
         </div>
       )}
-    </Modal>
+    </Drawer>
   );
 };
