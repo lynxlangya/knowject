@@ -67,6 +67,11 @@ test('falls back to a fresh session when localStorage is corrupted', () => {
 
   assert.match(hookSource, /try\s*\{/);
   assert.match(hookSource, /localStorage\.removeItem\(STORAGE_KEY\)/);
+  assert.match(hookSource, /const isValidScope/);
+  assert.match(hookSource, /Array\.isArray\(scope\.targets\)/);
+  assert.match(hookSource, /const isValidMessages/);
+  assert.match(hookSource, /if\s*\(record\.scope && !isValidScope\(record\.scope\)\)/);
+  assert.match(hookSource, /if\s*\(record\.messages && !isValidMessages\(record\.messages\)\)/);
 });
 
 test('resumes an existing hydrated draft instead of silently resetting it', () => {

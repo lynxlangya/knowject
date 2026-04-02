@@ -42,6 +42,30 @@ const isValidStage = (value: unknown): value is SkillAuthoringSessionState['stag
   value === 'awaiting_confirmation' ||
   value === 'hydrated';
 
+const isValidScope = (value: unknown): value is SkillAuthoringCreateScopeState => {
+  if (!value || typeof value !== 'object') return false;
+
+  const scope = value as Partial<SkillAuthoringCreateScopeState>;
+  const hasValidScenario =
+    scope.scenario === null ||
+    scope.scenario === undefined ||
+    typeof scope.scenario === 'string';
+
+  return hasValidScenario && Array.isArray(scope.targets);
+};
+
+const isValidMessages = (value: unknown): value is SkillAuthoringSessionMessage[] => {
+  if (!Array.isArray(value)) return false;
+
+  return value.every(
+    (message) =>
+      message &&
+      typeof message === 'object' &&
+      (message.role === 'assistant' || message.role === 'user') &&
+      typeof message.content === 'string',
+  );
+};
+
 const readSessionFromLocalStorage = (): SkillAuthoringSessionState => {
   if (!isBrowser()) return createEmptySessionState();
 
@@ -57,6 +81,12 @@ const readSessionFromLocalStorage = (): SkillAuthoringSessionState => {
     const record = parsed as Partial<SkillAuthoringSessionState>;
     if (!isValidStage(record.stage)) {
       throw new Error('invalid session stage');
+    }
+    if (record.scope && !isValidScope(record.scope)) {
+      throw new Error('invalid session scope');
+    }
+    if (record.messages && !isValidMessages(record.messages)) {
+      throw new Error('invalid session messages');
     }
 
     return {
