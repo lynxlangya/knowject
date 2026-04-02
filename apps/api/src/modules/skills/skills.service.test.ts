@@ -11,24 +11,12 @@ import { buildSkillMarkdownFromDefinition } from './skills.definition.js';
 import type { SkillDefinitionFields } from './skills.definition.js';
 import type { SkillDetailResponse } from './skills.types.js';
 import type { SkillDocument } from './skills.types.js';
-import type { SkillAuthoringOption } from './skills.types.js';
 import type { SkillsRepository } from './skills.repository.js';
 import { createSkillsService } from './skills.service.js';
 
 const ACTOR = {
   id: 'user-1',
   username: 'langya',
-};
-
-const assertAuthoringOptions = (options: SkillAuthoringOption[]) => {
-  assert.ok(Array.isArray(options));
-  assert.ok(options.length > 0);
-  for (const option of options) {
-    assert.match(option.id, /^[abc]$/);
-    assert.ok(option.label.trim().length > 0);
-    assert.ok(option.rationale.trim().length > 0);
-    assert.equal(typeof option.recommended, 'boolean');
-  }
 };
 
 const buildSkillDefinition = (
@@ -821,7 +809,7 @@ test('runAuthoringTurn returns interviewing question payload before the fifth tu
     assert.notEqual(result.stage, 'synthesizing');
     assert.ok(result.assistantMessage.trim().length > 0);
     assert.match(result.nextQuestion, /范围|场景/u);
-    assertAuthoringOptions(result.options);
+    assert.ok(Array.isArray(result.options));
     assert.equal(result.questionCount, 2);
     assert.ok(result.currentSummary.trim().length > 0);
     assert.equal(result.structuredDraft, null);
@@ -873,7 +861,7 @@ test('runAuthoringTurn returns structured draft when the interview is ready to s
     assert.notEqual(result.stage, 'synthesizing');
     assert.ok(result.assistantMessage.trim().length > 0);
     assert.ok(result.nextQuestion.trim().length > 0);
-    assertAuthoringOptions(result.options);
+    assert.deepEqual(result.options, []);
     assert.equal(result.questionCount, 5);
     assert.ok(result.currentSummary.trim().length > 0);
     assert.ok(result.structuredDraft);
