@@ -3,7 +3,6 @@ import type {
   SkillDefinitionFields,
   SkillSource,
   SkillStatus,
-  SkillAuthoringScopeInput,
   SkillAuthoringStructuredDraft,
 } from '@api/skills';
 
@@ -18,6 +17,11 @@ export type SkillAuthoringSessionStage =
   | 'awaiting_confirmation'
   | 'hydrated';
 
+export interface SkillAuthoringCreateScopeState {
+  scenario: SkillCategory | null;
+  targets: string[];
+}
+
 export interface SkillAuthoringSessionMessage {
   id?: string;
   role: 'assistant' | 'user';
@@ -26,13 +30,13 @@ export interface SkillAuthoringSessionMessage {
 
 export interface SkillAuthoringSessionState {
   stage: SkillAuthoringSessionStage;
-  scope: SkillAuthoringScopeInput | null;
+  scope: SkillAuthoringCreateScopeState;
   messages: SkillAuthoringSessionMessage[];
   questionCount: number;
   currentSummary: string;
   structuredDraft: SkillAuthoringStructuredDraft | null;
   readyForConfirmation: boolean;
-  pendingAnswer: string | null;
+  pendingAnswer: string;
 }
 
 export interface SkillEditorDraft {

@@ -13,6 +13,16 @@ test('restore saved create-session state from localStorage', () => {
     /localStorage\.getItem\('knowject:skills:create-authoring-session'\)/,
   );
   assert.match(hookSource, /stage:\s*'scope_selecting'/);
+  assert.match(hookSource, /const EMPTY_SCOPE/);
+  assert.match(hookSource, /scenario:\s*null/);
+  assert.match(hookSource, /targets:\s*\[\]/);
+  assert.match(hookSource, /scope:\s*EMPTY_SCOPE/);
+  assert.match(hookSource, /pendingAnswer:\s*''/);
+  assert.match(hookSource, /id:\s*'assistant-scope-intro'/);
+  assert.match(
+    hookSource,
+    /content:\s*'先从目标场景和涉及范围开始，我会基于这两个边界继续追问。'/,
+  );
 });
 
 test('stores a full recoverable authoring session state (not just stage + draft)', () => {
@@ -45,6 +55,8 @@ test('exposes applyStructuredDraft to hydrate editor state', () => {
 
   assert.match(hookSource, /applyStructuredDraft/);
   assert.match(hookSource, /readyForConfirmation/);
+  assert.match(hookSource, /stage:\s*'hydrated'/);
+  assert.match(hookSource, /readyForConfirmation:\s*true/);
 });
 
 test('falls back to a fresh session when localStorage is corrupted', () => {

@@ -4,21 +4,33 @@ import {
   type SkillAuthoringStructuredDraft,
 } from '@api/skills';
 import type {
+  SkillAuthoringCreateScopeState,
   SkillAuthoringSessionMessage,
   SkillAuthoringSessionState,
 } from '../types/skillsManagement.types';
 
 const STORAGE_KEY = 'knowject:skills:create-authoring-session';
 
+const EMPTY_SCOPE: SkillAuthoringCreateScopeState = {
+  scenario: null,
+  targets: [],
+};
+
+const SCOPE_INTRO_MESSAGE: SkillAuthoringSessionMessage = {
+  id: 'assistant-scope-intro',
+  role: 'assistant',
+  content: '先从目标场景和涉及范围开始，我会基于这两个边界继续追问。',
+};
+
 const createEmptySessionState = (): SkillAuthoringSessionState => ({
   stage: 'scope_selecting',
-  scope: null,
-  messages: [],
+  scope: EMPTY_SCOPE,
+  messages: [SCOPE_INTRO_MESSAGE],
   questionCount: 0,
   currentSummary: '',
   structuredDraft: null,
   readyForConfirmation: false,
-  pendingAnswer: null,
+  pendingAnswer: '',
 });
 
 const isBrowser = () => typeof window !== 'undefined';
@@ -50,13 +62,13 @@ const readSessionFromLocalStorage = (): SkillAuthoringSessionState => {
     return {
       ...createEmptySessionState(),
       stage: record.stage,
-      scope: record.scope ?? null,
-      messages: record.messages ?? [],
+      scope: record.scope ?? EMPTY_SCOPE,
+      messages: record.messages ?? [SCOPE_INTRO_MESSAGE],
       questionCount: record.questionCount ?? 0,
       currentSummary: record.currentSummary ?? '',
       structuredDraft: record.structuredDraft ?? null,
       readyForConfirmation: record.readyForConfirmation ?? false,
-      pendingAnswer: record.pendingAnswer ?? null,
+      pendingAnswer: record.pendingAnswer ?? '',
     };
   } catch (error) {
     console.warn('[useSkillAuthoringSession] localStorage 恢复失败，将回退为新会话:', error);
@@ -85,15 +97,12 @@ export const useSkillAuthoringSession = () => {
     }
   }, [session]);
 
-  const applyStructuredDraft = (
-    structuredDraft: SkillAuthoringStructuredDraft | null,
-    readyForConfirmation: boolean,
-  ) => {
+  const applyStructuredDraft = (draft: SkillAuthoringStructuredDraft) => {
     setSession((current) => ({
       ...current,
-      structuredDraft,
-      readyForConfirmation,
-      stage: readyForConfirmation ? 'awaiting_confirmation' : 'hydrated',
+      stage: 'hydrated',
+      structuredDraft: draft,
+      readyForConfirmation: true,
     }));
   };
 
@@ -148,7 +157,7 @@ export const useSkillAuthoringSession = () => {
   };
 
   const submitAnswer = async (answer: string) => {
-    if (!session.scope) {
+    if (!session.scope.scenario) {
       throw new Error('authoring scope is not selected');
     }
 
@@ -169,7 +178,10 @@ export const useSkillAuthoringSession = () => {
     }));
 
     const result = await runSkillAuthoringTurn({
-      scope: session.scope,
+      scope: {
+        scenario: session.scope.scenario,
+        targets: session.scope.targets,
+      },
       messages: nextMessages.map((message) => ({
         role: message.role,
         content: message.content,
@@ -186,7 +198,7 @@ export const useSkillAuthoringSession = () => {
       currentSummary: result.currentSummary,
       structuredDraft: result.structuredDraft,
       readyForConfirmation: result.readyForConfirmation,
-      pendingAnswer: null,
+      pendingAnswer: '',
       messages: [
         ...current.messages,
         {
