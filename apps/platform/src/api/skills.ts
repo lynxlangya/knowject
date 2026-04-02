@@ -202,3 +202,33 @@ export const deleteSkill = async (skillId: string): Promise<void> => {
 
   unwrapApiData(response.data);
 };
+
+export interface SkillAuthoringTurnDraft {
+  name?: string;
+  description?: string;
+  category?: SkillCategory;
+  owner?: string;
+  definition?: Partial<SkillDefinitionFields>;
+}
+
+export interface SkillAuthoringTurnRequest {
+  answer: string;
+  draft: SkillAuthoringTurnDraft | null;
+}
+
+export interface SkillAuthoringTurnResponse {
+  draft: SkillAuthoringTurnDraft;
+  readyForConfirmation?: boolean;
+  nextPrompt?: string | null;
+}
+
+export const runSkillAuthoringTurn = async (
+  payload: SkillAuthoringTurnRequest,
+): Promise<SkillAuthoringTurnResponse> => {
+  const response = await client.post<ApiEnvelope<SkillAuthoringTurnResponse>>(
+    '/skills/authoring/turns',
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};

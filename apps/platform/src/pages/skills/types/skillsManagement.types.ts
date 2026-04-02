@@ -3,11 +3,23 @@ import type {
   SkillDefinitionFields,
   SkillSource,
   SkillStatus,
+  SkillAuthoringTurnDraft,
 } from '@api/skills';
 
 export type SkillSidebarFilter = 'all' | SkillStatus | SkillSource;
 
 export type EditorMode = 'create' | 'edit' | null;
+
+export type SkillAuthoringSessionStage =
+  | 'scope_selecting'
+  | 'drafting'
+  | 'confirming'
+  | 'synthesizing';
+
+export interface SkillAuthoringSessionState {
+  stage: SkillAuthoringSessionStage;
+  draft: SkillAuthoringTurnDraft | null;
+}
 
 export interface SkillEditorDraft {
   name: string;
