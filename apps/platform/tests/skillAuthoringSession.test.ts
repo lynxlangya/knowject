@@ -3,54 +3,107 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 test('restore saved create-session state from localStorage', () => {
-  const source = readFileSync(
+  const hookSource = readFileSync(
     new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
     'utf8',
   );
 
   assert.match(
-    source,
+    hookSource,
     /localStorage\.getItem\('knowject:skills:create-authoring-session'\)/,
   );
-  assert.match(source, /stage:\s*'scope_selecting'/);
+  assert.match(hookSource, /stage:\s*'scope_selecting'/);
+});
+
+test('stores a full recoverable authoring session state (not just stage + draft)', () => {
+  const typesSource = readFileSync(
+    new URL('../src/pages/skills/types/skillsManagement.types.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(typesSource, /export type SkillAuthoringSessionStage/);
+  assert.match(typesSource, /'scope_selecting'/);
+  assert.match(typesSource, /'interviewing'/);
+  assert.match(typesSource, /'synthesizing'/);
+  assert.match(typesSource, /'awaiting_confirmation'/);
+  assert.match(typesSource, /'hydrated'/);
+
+  assert.match(typesSource, /scope/);
+  assert.match(typesSource, /messages/);
+  assert.match(typesSource, /questionCount/);
+  assert.match(typesSource, /currentSummary/);
+  assert.match(typesSource, /structuredDraft/);
+  assert.match(typesSource, /readyForConfirmation/);
+  assert.match(typesSource, /pendingAnswer/);
 });
 
 test('exposes applyStructuredDraft to hydrate editor state', () => {
-  const source = readFileSync(
+  const hookSource = readFileSync(
     new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
     'utf8',
   );
 
-  assert.match(source, /applyStructuredDraft/);
-  assert.match(source, /readyForConfirmation/);
+  assert.match(hookSource, /applyStructuredDraft/);
+  assert.match(hookSource, /readyForConfirmation/);
 });
 
 test('falls back to a fresh session when localStorage is corrupted', () => {
-  const source = readFileSync(
+  const hookSource = readFileSync(
     new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
     'utf8',
   );
 
-  assert.match(source, /try\s*\{/);
-  assert.match(source, /localStorage\.removeItem\(STORAGE_KEY\)/);
+  assert.match(hookSource, /try\s*\{/);
+  assert.match(hookSource, /localStorage\.removeItem\(STORAGE_KEY\)/);
 });
 
 test('resumes an existing hydrated draft instead of silently resetting it', () => {
-  const source = readFileSync(
+  const hookSource = readFileSync(
     new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
     'utf8',
   );
 
-  assert.match(source, /hasRecoverableSession/);
-  assert.match(source, /resumeExistingSession/);
+  assert.match(hookSource, /hasRecoverableSession/);
+  assert.match(hookSource, /resumeExistingSession/);
+});
+
+test('aligns authoring turns client to live backend contract', () => {
+  const apiSource = readFileSync(
+    new URL('../src/api/skills.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(apiSource, /scope/);
+  assert.match(apiSource, /messages/);
+  assert.match(apiSource, /questionCount/);
+  assert.match(apiSource, /currentSummary/);
+  assert.match(apiSource, /currentStructuredDraft/);
+
+  assert.match(apiSource, /stage/);
+  assert.match(apiSource, /assistantMessage/);
+  assert.match(apiSource, /nextQuestion/);
+  assert.match(apiSource, /options/);
+  assert.match(apiSource, /structuredDraft/);
+  assert.match(apiSource, /readyForConfirmation/);
 });
 
 test('enters synthesizing while waiting for the authoring response', () => {
-  const source = readFileSync(
+  const hookSource = readFileSync(
     new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
     'utf8',
   );
 
-  assert.match(source, /stage:\s*'synthesizing'/);
-  assert.match(source, /await runSkillAuthoringTurn/);
+  assert.match(hookSource, /stage:\s*'synthesizing'/);
+  assert.match(hookSource, /await runSkillAuthoringTurn/);
+});
+
+test('strips local message fields back to { role, content } for the backend request', () => {
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(hookSource, /messages:\s*.*\.map\(/);
+  assert.match(hookSource, /role:\s*message\.role/);
+  assert.match(hookSource, /content:\s*message\.content/);
 });

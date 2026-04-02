@@ -1,24 +1,34 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   runSkillAuthoringTurn,
-  type SkillAuthoringTurnDraft,
+  type SkillAuthoringStructuredDraft,
 } from '@api/skills';
-import type { SkillAuthoringSessionState } from '../types/skillsManagement.types';
+import type {
+  SkillAuthoringSessionMessage,
+  SkillAuthoringSessionState,
+} from '../types/skillsManagement.types';
 
 const STORAGE_KEY = 'knowject:skills:create-authoring-session';
 
 const createEmptySessionState = (): SkillAuthoringSessionState => ({
   stage: 'scope_selecting',
-  draft: null,
+  scope: null,
+  messages: [],
+  questionCount: 0,
+  currentSummary: '',
+  structuredDraft: null,
+  readyForConfirmation: false,
+  pendingAnswer: null,
 });
 
 const isBrowser = () => typeof window !== 'undefined';
 
 const isValidStage = (value: unknown): value is SkillAuthoringSessionState['stage'] =>
   value === 'scope_selecting' ||
-  value === 'drafting' ||
-  value === 'confirming' ||
-  value === 'synthesizing';
+  value === 'interviewing' ||
+  value === 'synthesizing' ||
+  value === 'awaiting_confirmation' ||
+  value === 'hydrated';
 
 const readSessionFromLocalStorage = (): SkillAuthoringSessionState => {
   if (!isBrowser()) return createEmptySessionState();
@@ -40,7 +50,13 @@ const readSessionFromLocalStorage = (): SkillAuthoringSessionState => {
     return {
       ...createEmptySessionState(),
       stage: record.stage,
-      draft: record.draft ?? null,
+      scope: record.scope ?? null,
+      messages: record.messages ?? [],
+      questionCount: record.questionCount ?? 0,
+      currentSummary: record.currentSummary ?? '',
+      structuredDraft: record.structuredDraft ?? null,
+      readyForConfirmation: record.readyForConfirmation ?? false,
+      pendingAnswer: record.pendingAnswer ?? null,
     };
   } catch (error) {
     console.warn('[useSkillAuthoringSession] localStorage 恢复失败，将回退为新会话:', error);
@@ -49,19 +65,15 @@ const readSessionFromLocalStorage = (): SkillAuthoringSessionState => {
   }
 };
 
+const createMessageId = (): string => {
+  if (!isBrowser()) return `${Date.now()}`;
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 export const useSkillAuthoringSession = () => {
   const [session, setSession] = useState<SkillAuthoringSessionState>(() =>
     readSessionFromLocalStorage(),
   );
-
-  const readyForConfirmation = useMemo(() => {
-    return Boolean(
-      session.draft?.name &&
-        session.draft?.description &&
-        session.draft?.category &&
-        session.draft?.owner,
-    );
-  }, [session.draft]);
 
   useEffect(() => {
     if (!isBrowser()) return;
@@ -73,20 +85,25 @@ export const useSkillAuthoringSession = () => {
     }
   }, [session]);
 
-  const applyStructuredDraft = (draft: SkillAuthoringTurnDraft) => {
-    const nextReadyForConfirmation = Boolean(
-      draft?.name && draft?.description && draft?.category && draft?.owner,
-    );
-
+  const applyStructuredDraft = (
+    structuredDraft: SkillAuthoringStructuredDraft | null,
+    readyForConfirmation: boolean,
+  ) => {
     setSession((current) => ({
       ...current,
-      draft,
-      stage: nextReadyForConfirmation ? 'confirming' : 'drafting',
+      structuredDraft,
+      readyForConfirmation,
+      stage: readyForConfirmation ? 'awaiting_confirmation' : 'hydrated',
     }));
   };
 
   const hasRecoverableSession = () => {
-    return session.stage !== 'scope_selecting' || Boolean(session.draft);
+    return (
+      session.stage !== 'scope_selecting' ||
+      Boolean(session.scope) ||
+      session.messages.length > 0 ||
+      Boolean(session.structuredDraft)
+    );
   };
 
   const resumeExistingSession = () => {
@@ -94,7 +111,14 @@ export const useSkillAuthoringSession = () => {
 
     setSession((current) => ({
       ...current,
-      stage: current.draft ? 'confirming' : current.stage,
+      stage:
+        current.stage !== 'scope_selecting'
+          ? current.stage
+          : current.scope
+            ? current.structuredDraft
+              ? 'hydrated'
+              : 'interviewing'
+            : current.stage,
     }));
   };
 
@@ -110,31 +134,85 @@ export const useSkillAuthoringSession = () => {
     startFreshSession();
   };
 
+  const appendMessage = (message: Omit<SkillAuthoringSessionMessage, 'id'>) => {
+    setSession((current) => ({
+      ...current,
+      messages: [
+        ...current.messages,
+        {
+          ...message,
+          id: createMessageId(),
+        },
+      ],
+    }));
+  };
+
   const submitAnswer = async (answer: string) => {
-    const draftSnapshot = session.draft;
+    if (!session.scope) {
+      throw new Error('authoring scope is not selected');
+    }
+
+    const nextMessages: SkillAuthoringSessionMessage[] = [
+      ...session.messages,
+      {
+        id: createMessageId(),
+        role: 'user',
+        content: answer,
+      },
+    ];
 
     setSession((current) => ({
       ...current,
       stage: 'synthesizing',
+      pendingAnswer: answer,
+      messages: nextMessages,
     }));
 
     const result = await runSkillAuthoringTurn({
-      answer,
-      draft: draftSnapshot,
+      scope: session.scope,
+      messages: nextMessages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+      questionCount: session.questionCount,
+      currentSummary: session.currentSummary,
+      currentStructuredDraft: session.structuredDraft,
     });
 
-    applyStructuredDraft(result.draft);
+    setSession((current) => ({
+      ...current,
+      stage: result.stage,
+      questionCount: result.questionCount,
+      currentSummary: result.currentSummary,
+      structuredDraft: result.structuredDraft,
+      readyForConfirmation: result.readyForConfirmation,
+      pendingAnswer: null,
+      messages: [
+        ...current.messages,
+        {
+          id: createMessageId(),
+          role: 'assistant',
+          content: result.assistantMessage,
+        },
+        {
+          id: createMessageId(),
+          role: 'assistant',
+          content: result.nextQuestion,
+        },
+      ],
+    }));
   };
 
   return {
     session,
     setSession,
-    readyForConfirmation,
+    readyForConfirmation: session.readyForConfirmation,
     applyStructuredDraft,
     hasRecoverableSession,
     resumeExistingSession,
     startFreshSession,
     resetSession,
+    appendMessage,
     submitAnswer,
   };
 };

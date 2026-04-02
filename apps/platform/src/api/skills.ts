@@ -203,23 +203,55 @@ export const deleteSkill = async (skillId: string): Promise<void> => {
   unwrapApiData(response.data);
 };
 
-export interface SkillAuthoringTurnDraft {
-  name?: string;
-  description?: string;
-  category?: SkillCategory;
-  owner?: string;
-  definition?: Partial<SkillDefinitionFields>;
+export type SkillAuthoringStage =
+  | 'scope_selecting'
+  | 'interviewing'
+  | 'synthesizing'
+  | 'awaiting_confirmation'
+  | 'hydrated';
+
+export interface SkillAuthoringScopeInput {
+  scenario: SkillCategory;
+  targets: string[];
+}
+
+export interface SkillAuthoringMessage {
+  role: 'assistant' | 'user';
+  content: string;
+}
+
+export interface SkillAuthoringOption {
+  id: 'a' | 'b' | 'c';
+  label: string;
+  rationale: string;
+  recommended: boolean;
+}
+
+export interface SkillAuthoringStructuredDraft {
+  name: string;
+  description: string;
+  category: SkillCategory;
+  owner: string;
+  definition: SkillDefinitionFields;
 }
 
 export interface SkillAuthoringTurnRequest {
-  answer: string;
-  draft: SkillAuthoringTurnDraft | null;
+  scope: SkillAuthoringScopeInput;
+  messages: SkillAuthoringMessage[];
+  questionCount: number;
+  currentSummary: string;
+  currentStructuredDraft?: SkillAuthoringStructuredDraft | null;
 }
 
 export interface SkillAuthoringTurnResponse {
-  draft: SkillAuthoringTurnDraft;
-  readyForConfirmation?: boolean;
-  nextPrompt?: string | null;
+  stage: SkillAuthoringStage;
+  assistantMessage: string;
+  nextQuestion: string;
+  options: SkillAuthoringOption[];
+  questionCount: number;
+  currentSummary: string;
+  structuredDraft: SkillAuthoringStructuredDraft | null;
+  readyForConfirmation: boolean;
 }
 
 export const runSkillAuthoringTurn = async (
