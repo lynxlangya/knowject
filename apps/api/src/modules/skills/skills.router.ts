@@ -7,6 +7,7 @@ import type { SkillsService } from './skills.service.js';
 import type {
   CreateSkillInput,
   ListSkillsInput,
+  SkillAuthoringTurnInput,
   UpdateSkillInput,
 } from './skills.types.js';
 
@@ -64,6 +65,17 @@ export const createSkillsRouter = (
       sendCreated(res, result);
     }),
   );
+
+  skillsRouter.post('/authoring/turns', asyncHandler(async (req, res) => {
+    const result = await skillsService.runAuthoringTurn(
+      {
+        actor: getRequiredAuthUser(req),
+      },
+      req.body as SkillAuthoringTurnInput,
+    );
+
+    sendSuccess(res, result);
+  }));
 
   skillsRouter.patch(
     '/:skillId',

@@ -73,6 +73,10 @@ export const messages = {
     'validation.skills.category.invalid': 'category is invalid',
     'validation.skills.followupQuestionsStrategy.invalid':
       'followupQuestionsStrategy is invalid',
+    'validation.skills.authoring.scopeTarget.invalid':
+      'scope.targets must contain repo-relative paths only',
+    'validation.skills.authoring.messageRole.invalid':
+      'authoring message role must be assistant or user',
     'validation.skillMarkdown.string':
       'skillMarkdown must be a string',
     'validation.skillMarkdown.frontmatter.parse':
@@ -318,6 +322,10 @@ export const messages = {
     'validation.skills.category.invalid': 'category 不合法',
     'validation.skills.followupQuestionsStrategy.invalid':
       'followupQuestionsStrategy 不合法',
+    'validation.skills.authoring.scopeTarget.invalid':
+      'scope.targets 只能包含仓库相对路径',
+    'validation.skills.authoring.messageRole.invalid':
+      'authoring message role 只能为 assistant 或 user',
     'validation.skillMarkdown.string': 'skillMarkdown 必须为字符串',
     'validation.skillMarkdown.frontmatter.parse':
       'SKILL.md frontmatter 解析失败',

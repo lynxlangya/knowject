@@ -9,6 +9,11 @@ import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
 import { buildSkillMarkdownFromDefinition } from './skills.definition.js';
 import type { SkillDefinitionFields } from './skills.definition.js';
+import {
+  createNormalizedAuthoringTurnInput,
+  runSkillAuthoringTurn,
+  type SkillAuthoringLlmService,
+} from './services/skills-authoring.service.js';
 import type { SkillDetailResponse } from './skills.types.js';
 import type { SkillDocument } from './skills.types.js';
 import type { SkillsRepository } from './skills.repository.js';
@@ -258,17 +263,80 @@ const createEnv = async (): Promise<AppEnv & { skillsRoot: string }> => {
 const createTestSkillsService = ({
   env,
   repository,
+  authoringLlm = createAuthoringLlmStub(),
   usageLookup = createUsageLookupStub(),
 }: {
   env: AppEnv;
   repository: SkillsRepository;
+  authoringLlm?: SkillAuthoringLlmService;
   usageLookup?: ReturnType<typeof createUsageLookupStub>;
 }) => {
   return createSkillsService({
     env,
     repository,
+    authoringLlm,
     usageLookup,
   });
+};
+
+const createAuthoringLlmStub = (): SkillAuthoringLlmService => {
+  return {
+    generateTurn: async ({ session }) => {
+      if (session.questionCount >= 5 && session.messages.length >= 10) {
+        return {
+          assistantMessage: '信息已经足够，我先整理成结构化草稿供你确认。',
+          nextQuestion: '请确认是否直接填充当前 Skill 草稿。',
+          options: [
+            {
+              id: 'a',
+              label: '确认草稿',
+              rationale: '当前约束已经基本稳定',
+              recommended: true,
+            },
+          ],
+          structuredDraft: {
+            name: 'Execution Alignment Skill',
+            description: '把对话中收敛出的执行约束整理成 Skill 草稿。',
+            definition: {
+              ...buildSkillDefinition(),
+              followupQuestionsStrategy: 'required',
+              workflow: ['梳理目标', '确认边界', '输出结构化草稿'],
+            },
+          },
+        };
+      }
+
+      if (session.questionCount >= 5) {
+        return {
+          assistantMessage: '我先整理当前信息，马上进入结构化草稿阶段。',
+          nextQuestion: '请稍候确认归纳结果。',
+          options: [
+            {
+              id: 'a',
+              label: '继续补充',
+              rationale: '该轮仅用于验证非决策轮会剥离选项',
+              recommended: true,
+            },
+          ],
+          structuredDraft: null,
+        };
+      }
+
+      return {
+        assistantMessage: '我先继续确认这个 Skill 的适用范围和场景。',
+        nextQuestion: '请在范围或场景上再收敛一步。',
+        options: [
+          {
+            id: 'a',
+            label: '聚焦当前模块',
+            rationale: '先把范围收窄到当前变更热点',
+            recommended: true,
+          },
+        ],
+        structuredDraft: null,
+      };
+    },
+  };
 };
 
 const assertDecisionRoundOptions = (options: unknown): void => {
@@ -847,6 +915,59 @@ test('runAuthoringTurn returns decision-round interviewing payload for scope/sce
   }
 });
 
+test('runAuthoringTurn rejects an empty scope target list', async () => {
+  const env = await createEnv();
+  const service = createTestSkillsService({
+    env,
+    repository: createRepositoryStub(),
+  });
+
+  try {
+    await assert.rejects(
+      () =>
+        service.runAuthoringTurn(
+          { actor: ACTOR },
+          {
+            scope: {
+              scenario: 'engineering_execution',
+              targets: [],
+            },
+            messages: [],
+            questionCount: 0,
+            currentSummary: '',
+          },
+        ),
+      /scope\.targets/,
+    );
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('runAuthoringTurn strips options for non-decision turns even if the model returns them', async () => {
+  const result = await runSkillAuthoringTurn({
+    actor: ACTOR,
+    input: createNormalizedAuthoringTurnInput({ questionCount: 2 }),
+    llm: {
+      generateTurn: async () => ({
+        assistantMessage: '我先总结已知约束，再进入下一轮。',
+        nextQuestion: '请确认是否还有遗漏约束。',
+        options: [
+          {
+            id: 'a',
+            label: '保留现状',
+            rationale: '这只是模型误带的选项',
+            recommended: true,
+          },
+        ],
+        structuredDraft: null,
+      }),
+    },
+  });
+
+  assert.deepEqual(result.options, []);
+});
+
 test('runAuthoringTurn exposes synthesizing as an independent stage contract (red)', async () => {
   const env = await createEnv();
   const service = createTestSkillsService({
@@ -948,6 +1069,16 @@ test('runAuthoringTurn returns structured draft when the interview is ready to s
   } finally {
     await rm(env.skills.storageRoot, { recursive: true, force: true });
   }
+});
+
+test('skills router wires authoring turns endpoint to the service', async () => {
+  const routerSource = readFileSync(
+    new URL('./skills.router.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(routerSource, /skillsRouter\.post\('\/authoring\/turns'/u);
+  assert.match(routerSource, /skillsService\.runAuthoringTurn/u);
 });
 
 test('preset skills remain readable but immutable', async () => {

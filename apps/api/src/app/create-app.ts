@@ -35,6 +35,7 @@ import { createSettingsRouter } from '@modules/settings/settings.router.js';
 import { createSettingsService } from '@modules/settings/settings.service.js';
 import { createSkillsRepository } from '@modules/skills/skills.repository.js';
 import { createSkillsRouter } from '@modules/skills/skills.router.js';
+import { createSkillAuthoringLlmService } from '@modules/skills/services/skills-authoring-llm.service.js';
 import { createSkillsService } from '@modules/skills/skills.service.js';
 import { createSkillBindingValidator } from '@modules/skills/skills.binding.js';
 import { createHealthRouter } from '@routes/health.js';
@@ -98,9 +99,14 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
     }),
   });
   const agentsRepository = createAgentsRepository({ mongo });
+  const skillAuthoringLlm = createSkillAuthoringLlmService({
+    env,
+    settingsRepository,
+  });
   const skillsService = createSkillsService({
     env,
     repository: skillsRepository,
+    authoringLlm: skillAuthoringLlm,
     usageLookup: {
       countManagedSkillReferences: async (skillId) => {
         const [projectCount, agentCount] = await Promise.all([

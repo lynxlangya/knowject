@@ -27,10 +27,15 @@ import type {
 import { buildManualBundleFiles } from "./adapters/skills-bundle-storage.js";
 import { createManagedSkill } from "./services/skills-create.service.js";
 import { deleteManagedSkill } from "./services/skills-delete.service.js";
+import {
+  runSkillAuthoringTurn,
+  type SkillAuthoringLlmService,
+} from "./services/skills-authoring.service.js";
 import { EMPTY_SKILL_REFERENCE_COUNTS } from "./services/skills-reference.service.js";
 import { updateManagedSkill } from "./services/skills-update.service.js";
 import type { SkillUsageLookup } from "./types/skills.service.types.js";
 import { buildSkillListMeta, sortSkillItems } from "./utils/skills.meta.js";
+import { validateSkillAuthoringTurnInput } from "./validators/skills-authoring.validator.js";
 import {
   readRequiredSkillId,
   validateCreateSkillInput,
@@ -65,12 +70,14 @@ export interface SkillsService {
 export const createSkillsService = ({
   env,
   repository,
+  authoringLlm,
   usageLookup = {
     countManagedSkillReferences: async () => EMPTY_SKILL_REFERENCE_COUNTS,
   },
 }: {
   env: AppEnv;
   repository: SkillsRepository;
+  authoringLlm?: SkillAuthoringLlmService;
   usageLookup?: SkillUsageLookup;
 }): SkillsService => {
   return {
@@ -180,8 +187,18 @@ export const createSkillsService = ({
       };
     },
 
-    runAuthoringTurn: async (_context, _input) => {
-      throw new Error("runAuthoringTurn is not implemented yet");
+    runAuthoringTurn: async ({ actor }, input) => {
+      if (!authoringLlm) {
+        throw new Error("Skill authoring LLM service is not configured");
+      }
+
+      const normalizedInput = validateSkillAuthoringTurnInput(input);
+
+      return runSkillAuthoringTurn({
+        actor,
+        input: normalizedInput,
+        llm: authoringLlm,
+      });
     },
 
     deleteSkill: async (_context, skillId) => {
