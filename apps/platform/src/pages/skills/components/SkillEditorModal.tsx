@@ -1,5 +1,5 @@
 import { Alert, Button, Drawer, Input, Select, Space, Spin, Tabs, Typography } from 'antd';
-import type { SkillDetailResponse } from '@api/skills';
+import type { SkillCategory, SkillDetailResponse } from '@api/skills';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -13,23 +13,49 @@ import {
   getSkillFollowupStrategyOptions,
   type SkillEditorDraft,
 } from '../skillDefinition';
-import type { EditorMode } from '../types/skillsManagement.types';
+import type {
+  EditorMode,
+  SkillAuthoringSessionState,
+} from '../types/skillsManagement.types';
+import { SkillAuthoringConversationTab } from './SkillAuthoringConversationTab';
 import { SkillDefinitionListField } from './SkillDefinitionListField';
 import { SkillMarkdownPreview } from './SkillMarkdownPreview';
 
 interface SkillEditorModalProps {
   editorMode: EditorMode;
-  editorTabKey: 'editor' | 'preview';
-  onEditorTabKeyChange: (key: 'editor' | 'preview') => void;
+  editorTabKey: 'conversation' | 'editor' | 'preview';
+  onEditorTabKeyChange: (key: 'conversation' | 'editor' | 'preview') => void;
   editingSkill: SkillDetailResponse | null;
   editorDraft: SkillEditorDraft;
   onEditorDraftChange: Dispatch<SetStateAction<SkillEditorDraft>>;
   editorMarkdownPreview: string;
   editorLoading: boolean;
   editorSubmitting: boolean;
+  authoringSession?: SkillAuthoringSessionState;
+  authoringSubmitting?: boolean;
+  onAuthoringScenarioChange?: (value: SkillCategory) => void;
+  onAuthoringTargetsChange?: (value: string[]) => void;
+  onAuthoringConfirmScope?: () => void;
+  onAuthoringAnswerChange?: (value: string) => void;
+  onAuthoringSubmitAnswer?: () => void;
+  onAuthoringConfirmDraft?: () => void;
   onCancel: () => void;
   onSubmit: () => void;
 }
+
+const FALLBACK_AUTHORING_SESSION: SkillAuthoringSessionState = {
+  stage: 'scope_selecting',
+  scope: {
+    scenario: null,
+    targets: [],
+  },
+  messages: [],
+  questionCount: 0,
+  currentSummary: '',
+  structuredDraft: null,
+  readyForConfirmation: false,
+  pendingAnswer: '',
+};
 
 export const SkillEditorModal = ({
   editorMode,
@@ -41,11 +67,19 @@ export const SkillEditorModal = ({
   editorMarkdownPreview,
   editorLoading,
   editorSubmitting,
+  authoringSession = FALLBACK_AUTHORING_SESSION,
+  authoringSubmitting = false,
+  onAuthoringScenarioChange = () => undefined,
+  onAuthoringTargetsChange = () => undefined,
+  onAuthoringConfirmScope = () => undefined,
+  onAuthoringAnswerChange = () => undefined,
+  onAuthoringSubmitAnswer = () => undefined,
+  onAuthoringConfirmDraft = () => undefined,
   onCancel,
   onSubmit,
 }: SkillEditorModalProps) => {
   const { t } = useTranslation('pages');
-  const editorTabs = getEditorTabs();
+  const editorTabs = getEditorTabs(editorMode);
   const categoryOptions = getCategoryOptions();
   const statusOptions = getStatusOptions();
   const skillDefinitionGoalSection = getSkillDefinitionGoalSection();
@@ -90,13 +124,24 @@ export const SkillEditorModal = ({
           <Tabs
             activeKey={editorTabKey}
             onChange={(activeKey) => {
-              onEditorTabKeyChange(activeKey as 'editor' | 'preview');
+              onEditorTabKeyChange(activeKey as 'conversation' | 'editor' | 'preview');
             }}
             items={editorTabs.map((tab) => ({
               key: tab.key,
               label: tab.label,
               children:
-                tab.key === 'editor' ? (
+                tab.key === 'conversation' ? (
+                  <SkillAuthoringConversationTab
+                    session={authoringSession}
+                    authoringSubmitting={authoringSubmitting}
+                    onScenarioChange={onAuthoringScenarioChange}
+                    onTargetsChange={onAuthoringTargetsChange}
+                    onConfirmScope={onAuthoringConfirmScope}
+                    onAnswerChange={onAuthoringAnswerChange}
+                    onSubmitAnswer={onAuthoringSubmitAnswer}
+                    onConfirmDraft={onAuthoringConfirmDraft}
+                  />
+                ) : tab.key === 'editor' ? (
                   <div className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">

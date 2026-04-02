@@ -22,3 +22,28 @@ test('SkillEditorModal uses a right drawer shell instead of modal chrome', () =>
   assert.doesNotMatch(source, /confirmLoading=\{editorSubmitting\}/);
   assert.doesNotMatch(source, /width=\{960\}/);
 });
+
+test('Skill editor drawer wires create flow to conversation-first authoring tab', () => {
+  const modalSource = readFileSync(
+    new URL(
+      '../src/pages/skills/components/SkillEditorModal.tsx',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    modalSource,
+    /onEditorTabKeyChange\(activeKey as 'conversation' \| 'editor' \| 'preview'\)/,
+  );
+  assert.match(modalSource, /tab\.key === 'conversation'/);
+  assert.match(hookSource, /editorMode === 'create'/);
+  assert.match(hookSource, /setEditorTabKey\('conversation'\)/);
+  assert.match(hookSource, /hydrateEditorDraftFromAuthoring/);
+  assert.match(hookSource, /stage === 'synthesizing'/);
+  assert.match(hookSource, /startFreshSession\(\)/);
+});

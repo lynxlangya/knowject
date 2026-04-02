@@ -3,6 +3,7 @@ import { extractApiErrorMessage } from '@api/error';
 import {
   createSkill,
   getSkillDetail,
+  type SkillAuthoringStructuredDraft,
   updateSkill,
   type SkillDetailResponse,
   type SkillSummaryResponse,
@@ -17,6 +18,7 @@ import {
   type SkillEditorDraft,
   validateSkillEditorDraft,
 } from '../skillDefinition';
+import { useSkillAuthoringSession } from './useSkillAuthoringSession';
 
 interface SkillEditorMessageApi {
   success: (content: string) => void;
@@ -30,10 +32,11 @@ interface UseSkillEditorOptions {
 }
 
 export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
+  const authoringSession = useSkillAuthoringSession();
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
-  const [editorTabKey, setEditorTabKey] = useState<'editor' | 'preview'>(
-    'editor',
-  );
+  const [editorTabKey, setEditorTabKey] = useState<
+    'conversation' | 'editor' | 'preview'
+  >('conversation');
   const [editingSkill, setEditingSkill] = useState<SkillDetailResponse | null>(
     null,
   );
@@ -57,23 +60,47 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
   const resetEditorState = () => {
     setEditorMode(null);
-    setEditorTabKey('editor');
+    setEditorTabKey('conversation');
     setEditingSkill(null);
     setEditorDraft(createEmptySkillEditorDraft());
     setEditorLoading(false);
     setEditorSubmitting(false);
   };
 
+  const hydrateEditorDraftFromAuthoring = (
+    draft: SkillAuthoringStructuredDraft,
+  ) => {
+    setEditorDraft(
+      createSkillEditorDraftFromDetail({
+        name: draft.name,
+        description: draft.description,
+        category: draft.category,
+        owner: draft.owner,
+        status: 'draft',
+        definition: draft.definition,
+      }),
+    );
+    setEditorTabKey('editor');
+  };
+
   const handleOpenCreateModal = () => {
     setEditorMode('create');
-    setEditorTabKey('editor');
+    setEditorTabKey('conversation');
     setEditingSkill(null);
+    if (authoringSession.hasRecoverableSession()) {
+      authoringSession.resumeExistingSession();
+      if (authoringSession.session.structuredDraft) {
+        hydrateEditorDraftFromAuthoring(authoringSession.session.structuredDraft);
+      }
+      return;
+    }
     setEditorDraft(createEmptySkillEditorDraft());
   };
 
   const handleOpenEditModal = async (skill: SkillSummaryResponse) => {
     setEditorMode('edit');
     setEditorTabKey('editor');
+    authoringSession.startFreshSession();
     setEditorLoading(true);
 
     try {
@@ -143,6 +170,78 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     }
   };
 
+  const handleAuthoringScenarioChange = (scenario: SkillEditorDraft['category']) => {
+    authoringSession.setSession((current) => ({
+      ...current,
+      scope: {
+        ...current.scope,
+        scenario,
+      },
+    }));
+  };
+
+  const handleAuthoringTargetsChange = (targets: string[]) => {
+    authoringSession.setSession((current) => ({
+      ...current,
+      scope: {
+        ...current.scope,
+        targets,
+      },
+    }));
+  };
+
+  const handleConfirmAuthoringScope = () => {
+    authoringSession.setSession((current) => {
+      if (!current.scope.scenario || current.scope.targets.length === 0) {
+        return current;
+      }
+
+      if (current.stage !== 'scope_selecting') {
+        return current;
+      }
+
+      return {
+        ...current,
+        stage: 'interviewing',
+      };
+    });
+  };
+
+  const handleAuthoringAnswerChange = (answer: string) => {
+    authoringSession.setSession((current) => ({
+      ...current,
+      pendingAnswer: answer,
+    }));
+  };
+
+  const handleSubmitAuthoringAnswer = async () => {
+    const answer = authoringSession.session.pendingAnswer.trim();
+
+    if (!answer) {
+      return;
+    }
+
+    try {
+      await authoringSession.submitAnswer(answer);
+    } catch (currentError) {
+      console.error('[SkillsManagementPage] 提交 Skill 对话回答失败:', currentError);
+      message.error(
+        extractApiErrorMessage(currentError, tp('feedback.authoringTurnFailed')),
+      );
+    }
+  };
+
+  const handleConfirmAuthoringDraft = () => {
+    const draft = authoringSession.session.structuredDraft;
+
+    if (!draft) {
+      return;
+    }
+
+    authoringSession.applyStructuredDraft(draft);
+    hydrateEditorDraftFromAuthoring(draft);
+  };
+
   return {
     editorMode,
     editorTabKey,
@@ -158,5 +257,13 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     handleOpenCreateModal,
     handleOpenEditModal,
     handleSubmitEditor,
+    authoringSession: authoringSession.session,
+    authoringSubmitting: authoringSession.session.stage === 'synthesizing',
+    handleAuthoringScenarioChange,
+    handleAuthoringTargetsChange,
+    handleConfirmAuthoringScope,
+    handleAuthoringAnswerChange,
+    handleSubmitAuthoringAnswer,
+    handleConfirmAuthoringDraft,
   };
 };

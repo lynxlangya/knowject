@@ -569,6 +569,7 @@ export const pagesMessages = {
       delete: '删除',
     },
     tabs: {
+      conversation: '对话引导',
       editor: '编辑器',
       preview: '预览',
     },
@@ -648,9 +649,28 @@ export const pagesMessages = {
         required: '{{field}} 为必填项',
       },
     },
+    authoring: {
+      intro: '先通过对话把问题说清，再把整理结果填充为 Skill。',
+      synthesizing: '正在整理你的回答并生成 Skill 草稿…',
+      scope: {
+        title: '先选择这次 Skill 面向的场景和项目范围',
+        scenario: '目标场景',
+        targets: '涉及范围',
+        targetOptions: {
+          skillsPage: '技能页面实现范围（apps/platform/src/pages/skills）',
+          architecture: '当前系统架构事实（docs/current/architecture.md）',
+        },
+      },
+      actions: {
+        continue: '继续回答',
+        confirmDraft: '确认并填充 Skill',
+        confirmScope: '确认范围并继续',
+      },
+    },
     feedback: {
       loadFailed: '加载技能目录失败，请稍后重试',
       detailLoadFailed: '加载 Skill 详情失败，请稍后重试',
+      authoringTurnFailed: '提交对话回答失败，请稍后重试',
       definitionInvalid: '请先补齐结构化必填字段',
       createdDraft: 'Skill 已创建为草稿',
       saved: 'Skill 已保存',

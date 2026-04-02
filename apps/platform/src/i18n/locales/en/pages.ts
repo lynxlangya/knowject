@@ -649,6 +649,7 @@ export const pagesMessages = {
       delete: 'Delete',
     },
     tabs: {
+      conversation: 'Conversation',
       editor: 'Editor',
       preview: 'Preview',
     },
@@ -729,9 +730,28 @@ export const pagesMessages = {
         required: '{{field}} is required',
       },
     },
+    authoring: {
+      intro: 'Clarify the method through conversation first, then fill the structured Skill draft.',
+      synthesizing: 'Synthesizing your answers and generating a Skill draft...',
+      scope: {
+        title: 'Start by selecting the target scenario and project scope for this Skill',
+        scenario: 'Target scenario',
+        targets: 'Scope targets',
+        targetOptions: {
+          skillsPage: 'Skills page implementation scope (apps/platform/src/pages/skills)',
+          architecture: 'Current system architecture facts (docs/current/architecture.md)',
+        },
+      },
+      actions: {
+        continue: 'Continue',
+        confirmDraft: 'Confirm and fill Skill',
+        confirmScope: 'Confirm scope and continue',
+      },
+    },
     feedback: {
       loadFailed: 'Loading the skills catalog failed. Please try again later',
       detailLoadFailed: 'Loading the skill details failed. Please try again later',
+      authoringTurnFailed: 'Submitting the authoring answer failed. Please try again later',
       definitionInvalid: 'Complete the required structured fields first',
       createdDraft: 'Skill draft created',
       saved: 'Skill saved',

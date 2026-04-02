@@ -4,6 +4,7 @@ import type {
   SkillStatus,
 } from '@api/skills';
 import { tp } from '../skills.i18n';
+import type { EditorMode } from '../types/skillsManagement.types';
 
 export const getSkillsPageSubtitle = (): string => tp('subtitle');
 
@@ -17,11 +18,21 @@ const createSkillMeta = <TMeta extends Record<string, unknown>>(
   },
 });
 
-export const getEditorTabs = () =>
-  [
-    { key: 'editor', label: tp('tabs.editor') },
-    { key: 'preview', label: tp('tabs.preview') },
-  ] as const;
+export const getEditorTabs = (editorMode: EditorMode) => {
+  const tabs: Array<{
+    key: 'conversation' | 'editor' | 'preview';
+    label: string;
+  }> = [];
+
+  if (editorMode === 'create') {
+    tabs.push({ key: 'conversation' as const, label: tp('tabs.conversation') });
+  }
+
+  tabs.push({ key: 'editor' as const, label: tp('tabs.editor') });
+  tabs.push({ key: 'preview' as const, label: tp('tabs.preview') });
+
+  return tabs;
+};
 
 export const SOURCE_META: Record<
   SkillSource,
@@ -88,6 +99,17 @@ export const getStatusOptions = () =>
     value,
     label: tp(`status.option.${value}`),
   }));
+
+export const getAuthoringScopeTargetOptions = () => [
+  {
+    value: 'apps/platform/src/pages/skills',
+    label: tp('authoring.scope.targetOptions.skillsPage'),
+  },
+  {
+    value: 'docs/current/architecture.md',
+    label: tp('authoring.scope.targetOptions.architecture'),
+  },
+];
 
 export const definitionSectionOrder = [
   'goal',
