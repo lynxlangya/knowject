@@ -775,6 +775,95 @@ test('createSkill rejects invalid structured payloads and duplicate slugs', asyn
   }
 });
 
+test('runAuthoringTurn returns interviewing question payload before the fifth turn', async () => {
+  const env = await createEnv();
+  const service = createTestSkillsService({
+    env,
+    repository: createRepositoryStub(),
+  });
+
+  try {
+    const result = await service.runAuthoringTurn(
+      { actor: ACTOR },
+      {
+        scope: {
+          scenario: 'engineering_execution',
+          targets: ['apps/platform/src/pages/skills'],
+        },
+        messages: [
+          {
+            role: 'assistant',
+            content: '请先概述这个 Skill 想解决什么问题。',
+          },
+          {
+            role: 'user',
+            content: '帮助团队产出更贴合项目的 Skill。',
+          },
+        ],
+        questionCount: 1,
+        currentSummary: '目标是让 Skill 更贴合项目。',
+      },
+    );
+
+    assert.equal(result.stage, 'interviewing');
+    assert.equal(result.readyForConfirmation, false);
+    assert.match(result.nextQuestion, /范围|场景/u);
+    assert.equal(result.structuredDraft, null);
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('runAuthoringTurn returns structured draft when the interview is ready to synthesize', async () => {
+  const env = await createEnv();
+  const service = createTestSkillsService({
+    env,
+    repository: createRepositoryStub(),
+  });
+  const messages = Array.from({ length: 10 }, (_, index) => {
+    const round = index + 1;
+    return [
+      {
+        role: 'assistant' as const,
+        content: `第 ${round} 轮：请补充上下文。`,
+      },
+      {
+        role: 'user' as const,
+        content: `第 ${round} 轮回答：补充上下文。`,
+      },
+    ];
+  }).flat();
+
+  try {
+    const result = await service.runAuthoringTurn(
+      { actor: ACTOR },
+      {
+        scope: {
+          scenario: 'engineering_execution',
+          targets: [
+            'docs/current/architecture.md',
+            'apps/platform/src/pages/skills',
+          ],
+        },
+        messages,
+        questionCount: 5,
+        currentSummary:
+          'Skill 面向所有成员，但默认按不熟悉项目的人来引导。',
+      },
+    );
+
+    assert.equal(result.stage, 'awaiting_confirmation');
+    assert.equal(result.readyForConfirmation, true);
+    assert.equal(
+      result.structuredDraft?.definition.followupQuestionsStrategy,
+      'required',
+    );
+    assert.ok((result.structuredDraft?.definition.workflow.length ?? 0) > 0);
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
 test('preset skills remain readable but immutable', async () => {
   const env = await createEnv();
   const repository = createRepositoryStub();

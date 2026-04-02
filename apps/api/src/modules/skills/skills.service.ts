@@ -16,6 +16,8 @@ import {
 import type {
   CreateSkillInput,
   ListSkillsInput,
+  SkillAuthoringTurnInput,
+  SkillAuthoringTurnResponse,
   SkillDetailEnvelope,
   SkillMutationResponse,
   SkillsCommandContext,
@@ -53,6 +55,10 @@ export interface SkillsService {
     skillId: string,
     input: UpdateSkillInput,
   ): Promise<SkillMutationResponse>;
+  runAuthoringTurn(
+    context: SkillsCommandContext,
+    input: SkillAuthoringTurnInput,
+  ): Promise<SkillAuthoringTurnResponse>;
   deleteSkill(context: SkillsCommandContext, skillId: string): Promise<void>;
 }
 
@@ -172,6 +178,10 @@ export const createSkillsService = ({
       return {
         skill: toSkillDetailResponse(updatedSkill),
       };
+    },
+
+    runAuthoringTurn: async (_context, _input) => {
+      throw new Error("runAuthoringTurn is not implemented yet");
     },
 
     deleteSkill: async (_context, skillId) => {

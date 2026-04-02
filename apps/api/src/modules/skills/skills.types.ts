@@ -5,6 +5,15 @@ import type {
   SkillDefinitionFields,
   SkillStatus,
 } from './skills.definition.js';
+export type {
+  SkillAuthoringMessage,
+  SkillAuthoringOption,
+  SkillAuthoringScopeInput,
+  SkillAuthoringStage,
+  SkillAuthoringStructuredDraft,
+  SkillAuthoringTurnInput,
+  SkillAuthoringTurnResponse,
+} from './skills.authoring.js';
 
 export interface SkillsCommandContext {
   actor: AuthenticatedRequestUser;
