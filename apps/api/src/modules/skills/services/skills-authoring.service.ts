@@ -55,6 +55,16 @@ const readLastUserMessage = (
     ?.content.trim();
 };
 
+const isRefinementTurn = (
+  input: NormalizedSkillAuthoringTurnInput,
+): boolean => {
+  if (!input.currentStructuredDraft) {
+    return false;
+  }
+
+  return input.messages[input.messages.length - 1]?.role === 'user';
+};
+
 const buildAuthoringSummary = (
   input: NormalizedSkillAuthoringTurnInput,
 ): string => {
@@ -81,6 +91,10 @@ const resolveTurnKind = ({
   input: NormalizedSkillAuthoringTurnInput;
   nextQuestionCount: number;
 }): SkillAuthoringTurnKind => {
+  if (isRefinementTurn(input)) {
+    return 'freeform';
+  }
+
   if (
     input.questionCount >= MIN_SYNTHESIS_QUESTION_COUNT ||
     nextQuestionCount >= FORCED_SYNTHESIS_QUESTION_COUNT ||

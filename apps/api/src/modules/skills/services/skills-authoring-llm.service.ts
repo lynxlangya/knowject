@@ -100,10 +100,17 @@ const normalizeModelDraft = (value: unknown): SkillAuthoringModelDraft | null =>
   }
 
   const draft = value as Record<string, unknown>;
-  const definition =
-    draft.definition && typeof draft.definition === 'object'
-      ? validateSkillDefinitionInput(draft.definition)
-      : undefined;
+  let definition: SkillAuthoringModelDraft['definition'];
+
+  if (draft.definition && typeof draft.definition === 'object') {
+    try {
+      definition = validateSkillDefinitionInput(draft.definition);
+    } catch (error) {
+      if (!(error instanceof AppError)) {
+        throw error;
+      }
+    }
+  }
 
   return {
     ...(typeof draft.name === 'string' && draft.name.trim()

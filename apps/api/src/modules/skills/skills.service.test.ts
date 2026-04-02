@@ -9,6 +9,7 @@ import type { AppEnv } from '@config/env.js';
 import { AppError } from '@lib/app-error.js';
 import { buildSkillMarkdownFromDefinition } from './skills.definition.js';
 import type { SkillDefinitionFields } from './skills.definition.js';
+import { createSkillAuthoringLlmService } from './services/skills-authoring-llm.service.js';
 import {
   createNormalizedAuthoringTurnInput,
   runSkillAuthoringTurn,
@@ -995,6 +996,133 @@ test('runAuthoringTurn strips options for non-decision turns even if the model r
   });
 
   assert.deepEqual(result.options, []);
+});
+
+test('runAuthoringTurn returns from awaiting_confirmation to interviewing when the user keeps refining', async () => {
+  const result = await runSkillAuthoringTurn({
+    actor: ACTOR,
+    input: createNormalizedAuthoringTurnInput({
+      questionCount: 5,
+      currentSummary: '已经有一版草稿，但用户还想补充边界。',
+      currentStructuredDraft: {
+        name: 'Execution Alignment Skill',
+        description: '第一版草稿。',
+        category: 'engineering_execution',
+        owner: ACTOR.username,
+        definition: {
+          ...buildSkillDefinition(),
+          followupQuestionsStrategy: 'required',
+        },
+      },
+      messages: [
+        {
+          role: 'assistant',
+          content: '这是当前草稿，请确认是否直接填充。',
+        },
+        {
+          role: 'user',
+          content: '先不要填充，我还想补充跨模块约束。',
+        },
+      ],
+    }),
+    llm: {
+      generateTurn: async () => ({
+        assistantMessage: '收到，我继续追问跨模块约束。',
+        nextQuestion: '这些约束主要落在哪些现有目录或文档？',
+        options: [
+          {
+            id: 'a',
+            label: '这里不该保留选项',
+            rationale: 'refinement 回到 interviewing 后应剥离非决策轮选项',
+            recommended: true,
+          },
+        ],
+        structuredDraft: null,
+      }),
+    },
+  });
+
+  assert.equal(result.stage, 'interviewing');
+  assert.equal(result.readyForConfirmation, false);
+  assert.equal(result.structuredDraft, null);
+  assert.equal(result.questionCount, 6);
+  assert.deepEqual(result.options, []);
+});
+
+test('createSkillAuthoringLlmService degrades invalid model structured draft definitions instead of throwing validation errors', async () => {
+  const env = await createEnv();
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                assistantMessage: '我先整理一版草稿。',
+                nextQuestion: '请确认是否继续补充。',
+                options: [],
+                structuredDraft: {
+                  name: 'Execution Alignment Skill',
+                  description: '模型给出了一版不完整草稿。',
+                  definition: {
+                    workflow: ['只返回了 workflow'],
+                  },
+                },
+              }),
+            },
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    )) as typeof fetch;
+
+  const llm = createSkillAuthoringLlmService({
+    env: {
+      ...env,
+      openai: {
+        ...env.openai,
+        apiKey: 'test-api-key',
+      },
+    },
+    settingsRepository: {
+      getSettings: async () => null,
+    } as never,
+  });
+
+  try {
+    const result = await llm.generateTurn({
+      actor: ACTOR,
+      session: createNormalizedAuthoringTurnInput({
+        questionCount: 5,
+        messages: [
+          {
+            role: 'user',
+            content: '请整理成草稿。',
+          },
+        ],
+      }),
+    });
+
+    assert.equal(result.assistantMessage, '我先整理一版草稿。');
+    assert.equal(result.nextQuestion, '请确认是否继续补充。');
+    assert.deepEqual(result.options, []);
+    assert.ok(result.structuredDraft);
+    assert.equal(result.structuredDraft?.name, 'Execution Alignment Skill');
+    assert.equal(result.structuredDraft?.definition, undefined);
+  } catch (error: unknown) {
+    assert.notEqual(error instanceof AppError && error.statusCode === 400, true);
+    throw error;
+  } finally {
+    globalThis.fetch = originalFetch;
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
 });
 
 test('runAuthoringTurn exposes synthesizing as an independent stage contract (red)', async () => {
