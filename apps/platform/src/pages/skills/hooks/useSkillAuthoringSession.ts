@@ -82,6 +82,18 @@ const createMessageId = (): string => {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const hasRealProgress = (session: SkillAuthoringSessionState): boolean => {
+  return Boolean(
+    session.scope.scenario ||
+      session.scope.targets.length > 0 ||
+      session.messages.length > 1 ||
+      session.questionCount > 0 ||
+      session.currentSummary.trim() ||
+      session.structuredDraft ||
+      session.pendingAnswer.trim(),
+  );
+};
+
 export const useSkillAuthoringSession = () => {
   const [session, setSession] = useState<SkillAuthoringSessionState>(() =>
     readSessionFromLocalStorage(),
@@ -107,27 +119,31 @@ export const useSkillAuthoringSession = () => {
   };
 
   const hasRecoverableSession = () => {
-    return (
-      session.stage !== 'scope_selecting' ||
-      Boolean(session.scope) ||
-      session.messages.length > 0 ||
-      Boolean(session.structuredDraft)
-    );
+    return hasRealProgress(session);
   };
 
   const resumeExistingSession = () => {
-    if (!hasRecoverableSession()) return;
+    if (!hasRecoverableSession()) {
+      // Brand-new intro-only session stays in scope_selecting.
+      if (session.stage !== 'scope_selecting') {
+        setSession((current) => ({
+          ...current,
+          stage: 'scope_selecting',
+        }));
+      }
+      return;
+    }
 
     setSession((current) => ({
       ...current,
       stage:
         current.stage !== 'scope_selecting'
           ? current.stage
-          : current.scope
-            ? current.structuredDraft
+          : current.pendingAnswer.trim()
+            ? 'synthesizing'
+            : current.structuredDraft
               ? 'hydrated'
-              : 'interviewing'
-            : current.stage,
+              : 'interviewing',
     }));
   };
 

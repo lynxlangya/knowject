@@ -79,6 +79,26 @@ test('resumes an existing hydrated draft instead of silently resetting it', () =
   assert.match(hookSource, /resumeExistingSession/);
 });
 
+test('does not treat a brand-new intro-only session as recoverable progress', () => {
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
+    'utf8',
+  );
+
+  // Recoverability must depend on real progress, not seeded defaults.
+  assert.match(hookSource, /scope\.scenario/);
+  assert.match(hookSource, /scope\.targets\.length/);
+  assert.match(hookSource, /messages\.length\s*>\s*1/);
+  assert.match(hookSource, /questionCount\s*>\s*0/);
+  assert.match(hookSource, /currentSummary/);
+  assert.match(hookSource, /structuredDraft/);
+  assert.match(hookSource, /pendingAnswer/);
+
+  // Keep intro-only session in scope_selecting (no forced stage advance).
+  assert.doesNotMatch(hookSource, /Boolean\(session\.scope\)/);
+  assert.doesNotMatch(hookSource, /session\.messages\.length\s*>\s*0/);
+});
+
 test('aligns authoring turns client to live backend contract', () => {
   const apiSource = readFileSync(
     new URL('../src/api/skills.ts', import.meta.url),
