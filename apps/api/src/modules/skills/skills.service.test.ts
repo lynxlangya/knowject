@@ -944,6 +944,35 @@ test('runAuthoringTurn rejects an empty scope target list', async () => {
   }
 });
 
+test('runAuthoringTurn rejects arbitrary repo-relative paths outside the controlled target set', async () => {
+  const env = await createEnv();
+  const service = createTestSkillsService({
+    env,
+    repository: createRepositoryStub(),
+  });
+
+  try {
+    await assert.rejects(
+      () =>
+        service.runAuthoringTurn(
+          { actor: ACTOR },
+          {
+            scope: {
+              scenario: 'engineering_execution',
+              targets: ['foo/bar'],
+            },
+            messages: [],
+            questionCount: 0,
+            currentSummary: '',
+          },
+        ),
+      /scope\.targets/,
+    );
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
 test('runAuthoringTurn strips options for non-decision turns even if the model returns them', async () => {
   const result = await runSkillAuthoringTurn({
     actor: ACTOR,

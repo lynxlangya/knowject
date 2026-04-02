@@ -5,6 +5,11 @@ import type { SkillAuthoringMessage, SkillAuthoringStructuredDraft, SkillAuthori
 import { SKILL_CATEGORIES, validateSkillDefinitionInput, type SkillCategory } from '../skills.definition.js';
 import type { NormalizedSkillAuthoringTurnInput } from '../services/skills-authoring.service.js';
 
+const CONTROLLED_SCOPE_TARGETS = new Set<string>([
+  'apps/platform/src/pages/skills',
+  'docs/current/architecture.md',
+]);
+
 const isSkillCategory = (value: string): value is SkillCategory => {
   return (SKILL_CATEGORIES as readonly string[]).includes(value);
 };
@@ -62,6 +67,13 @@ const validateScopeTarget = (target: string): string => {
     !/^[A-Za-z0-9._/-]+$/u.test(target) ||
     !target.includes('/')
   ) {
+    return throwFieldValidationError({
+      field: 'scope.targets',
+      messageKey: 'validation.skills.authoring.scopeTarget.invalid',
+    });
+  }
+
+  if (!CONTROLLED_SCOPE_TARGETS.has(target)) {
     return throwFieldValidationError({
       field: 'scope.targets',
       messageKey: 'validation.skills.authoring.scopeTarget.invalid',
