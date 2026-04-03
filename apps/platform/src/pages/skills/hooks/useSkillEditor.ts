@@ -10,6 +10,7 @@ import {
 } from '@api/skills';
 import type { EditorMode } from '../types/skillsManagement.types';
 import { tp } from '../skills.i18n';
+import { AUTHORING_SCOPE_TARGET_ALLOWLIST } from '../constants/skillsManagement.constants';
 import {
   buildSkillMarkdownPreview,
   createEmptySkillEditorDraft,
@@ -30,6 +31,14 @@ interface UseSkillEditorOptions {
   message: SkillEditorMessageApi;
   onSaved: () => void;
 }
+
+const sanitizeAuthoringTargets = (targets: string[]): string[] => {
+  return Array.from(new Set(targets)).filter((target) =>
+    AUTHORING_SCOPE_TARGET_ALLOWLIST.includes(
+      target as (typeof AUTHORING_SCOPE_TARGET_ALLOWLIST)[number],
+    ),
+  );
+};
 
 export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   const authoringSession = useSkillAuthoringSession();
@@ -88,6 +97,18 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     setEditorTabKey('conversation');
     setEditingSkill(null);
     if (authoringSession.hasRecoverableSession()) {
+      const sanitizedTargets = sanitizeAuthoringTargets(
+        authoringSession.session.scope.targets,
+      );
+      if (sanitizedTargets.length !== authoringSession.session.scope.targets.length) {
+        authoringSession.setSession((current) => ({
+          ...current,
+          scope: {
+            ...current.scope,
+            targets: sanitizeAuthoringTargets(current.scope.targets),
+          },
+        }));
+      }
       authoringSession.resumeExistingSession();
       if (authoringSession.session.structuredDraft) {
         hydrateEditorDraftFromAuthoring(authoringSession.session.structuredDraft);
@@ -185,7 +206,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
       ...current,
       scope: {
         ...current.scope,
-        targets,
+        targets: sanitizeAuthoringTargets(targets),
       },
     }));
   };
@@ -216,8 +237,22 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
   const handleSubmitAuthoringAnswer = async () => {
     const answer = authoringSession.session.pendingAnswer.trim();
+    const sanitizedTargets = sanitizeAuthoringTargets(
+      authoringSession.session.scope.targets,
+    );
 
     if (!answer) {
+      return;
+    }
+
+    if (sanitizedTargets.length !== authoringSession.session.scope.targets.length) {
+      authoringSession.setSession((current) => ({
+        ...current,
+        scope: {
+          ...current.scope,
+          targets: sanitizeAuthoringTargets(current.scope.targets),
+        },
+      }));
       return;
     }
 

@@ -81,3 +81,31 @@ test('SkillsManagementPage passes authoring session props into SkillEditorModal'
     /onAuthoringConfirmDraft=\{skillEditor\.handleConfirmAuthoringDraft\}/,
   );
 });
+
+test('create-flow authoring targets are sanitized against controlled allowlist', () => {
+  const constantsSource = readFileSync(
+    new URL(
+      '../src/pages/skills/constants/skillsManagement.constants.ts',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(constantsSource, /AUTHORING_SCOPE_TARGET_ALLOWLIST/);
+  assert.match(
+    hookSource,
+    /sanitizeAuthoringTargets\([\s\S]*authoringSession\.session\.scope\.targets[\s\S]*\)/,
+  );
+  assert.match(
+    hookSource,
+    /targets:\s*sanitizeAuthoringTargets\(targets\)/,
+  );
+  assert.match(
+    hookSource,
+    /AUTHORING_SCOPE_TARGET_ALLOWLIST\.includes/,
+  );
+});

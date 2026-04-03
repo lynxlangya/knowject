@@ -100,13 +100,18 @@ export const getStatusOptions = () =>
     label: tp(`status.option.${value}`),
   }));
 
+export const AUTHORING_SCOPE_TARGET_ALLOWLIST = [
+  'apps/platform/src/pages/skills',
+  'docs/current/architecture.md',
+] as const;
+
 export const getAuthoringScopeTargetOptions = () => [
   {
-    value: 'apps/platform/src/pages/skills',
+    value: AUTHORING_SCOPE_TARGET_ALLOWLIST[0],
     label: tp('authoring.scope.targetOptions.skillsPage'),
   },
   {
-    value: 'docs/current/architecture.md',
+    value: AUTHORING_SCOPE_TARGET_ALLOWLIST[1],
     label: tp('authoring.scope.targetOptions.architecture'),
   },
 ];
