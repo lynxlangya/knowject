@@ -102,7 +102,7 @@ export const SkillAuthoringConversationTab = ({
 
           {session.stage === 'synthesizing' ? (
             <div className="flex justify-start">
-              <div className="flex max-w-[76%] items-center gap-3 rounded-[28px] rounded-tl-[10px] border border-slate-200/80 bg-white px-6 py-4 text-[15px] text-slate-600 shadow-[0_12px_28px_rgba(148,163,184,0.12)]">
+              <div className="flex max-w-[76%] items-center gap-3 rounded-hero rounded-tl-[10px] border border-slate-200/80 bg-white px-6 py-4 text-[15px] text-slate-600 shadow-[0_12px_28px_rgba(148,163,184,0.12)]">
                 <span className="relative flex h-3 w-9 items-center justify-between">
                   <span className="h-2 w-2 rounded-full bg-emerald-500/70 animate-pulse" />
                   <span className="h-2 w-2 rounded-full bg-emerald-500/55 animate-pulse [animation-delay:120ms]" />
@@ -116,7 +116,7 @@ export const SkillAuthoringConversationTab = ({
       </div>
 
       <section className="border-t border-slate-200/80 bg-white/92 px-8 py-6 backdrop-blur-sm">
-        <div className="mx-auto max-w-[880px]">
+        <div className="mx-auto max-w-220">
           <div className="relative">
             <div className="pointer-events-none absolute inset-3 rounded-shell bg-emerald-100/60 blur-3xl" />
             <div className="relative flex items-end gap-3 rounded-shell border border-slate-200/80 bg-white/95 p-2.5 shadow-[0_22px_42px_rgba(148,163,184,0.2)]">
