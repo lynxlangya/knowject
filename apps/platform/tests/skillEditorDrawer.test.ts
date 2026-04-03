@@ -144,3 +144,16 @@ test('scope must be confirmed before the authoring answer input can continue', (
     /if \(authoringSession\.session\.stage === 'scope_selecting'\) \{/,
   );
 });
+
+test('reopen path derives recoverability from sanitized targets in one consistent branch', () => {
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    hookSource,
+    /setSession\(\(current\) => \(\{[\s\S]*targets: sanitizeAuthoringTargets\(current\.scope\.targets\)/,
+  );
+  assert.doesNotMatch(hookSource, /authoringSession\.resumeExistingSession\(\)/);
+});

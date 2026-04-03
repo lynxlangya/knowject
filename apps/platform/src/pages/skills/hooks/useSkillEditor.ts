@@ -138,16 +138,35 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     });
 
     if (hasRecoverableSession) {
-      if (sanitizedTargets.length !== authoringSession.session.scope.targets.length) {
-        authoringSession.setSession((current) => ({
+      authoringSession.setSession((current) => {
+        const currentSanitizedTargets = sanitizeAuthoringTargets(current.scope.targets);
+        const currentHasRecoverableSession = hasRecoverableAuthoringProgress({
+          scenario: current.scope.scenario,
+          targets: currentSanitizedTargets,
+          messagesLength: current.messages.length,
+          questionCount: current.questionCount,
+          currentSummary: current.currentSummary,
+          structuredDraft: current.structuredDraft,
+          pendingAnswer: current.pendingAnswer,
+        });
+
+        return {
           ...current,
           scope: {
             ...current.scope,
-            targets: sanitizeAuthoringTargets(current.scope.targets),
+            targets: currentSanitizedTargets,
           },
-        }));
-      }
-      authoringSession.resumeExistingSession();
+          stage: !currentHasRecoverableSession
+            ? 'scope_selecting'
+            : current.stage !== 'scope_selecting'
+              ? current.stage
+              : current.pendingAnswer.trim()
+                ? 'synthesizing'
+                : current.structuredDraft
+                  ? 'hydrated'
+                  : 'interviewing',
+        };
+      });
       if (authoringSession.session.structuredDraft) {
         hydrateEditorDraftFromAuthoring(authoringSession.session.structuredDraft);
       }
