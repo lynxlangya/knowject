@@ -112,6 +112,16 @@ export const SkillsManagementPage = () => {
         editorLoading={skillEditor.editorLoading}
         editorSubmitting={skillEditor.editorSubmitting}
         editorMarkdownPreview={skillEditor.editorMarkdownPreview}
+        authoringSession={skillEditor.authoringSession}
+        authoringSubmitting={skillEditor.authoringSubmitting}
+        onAuthoringScenarioChange={skillEditor.handleAuthoringScenarioChange}
+        onAuthoringTargetsChange={skillEditor.handleAuthoringTargetsChange}
+        onAuthoringConfirmScope={skillEditor.handleConfirmAuthoringScope}
+        onAuthoringAnswerChange={skillEditor.handleAuthoringAnswerChange}
+        onAuthoringSubmitAnswer={() => {
+          void skillEditor.handleSubmitAuthoringAnswer();
+        }}
+        onAuthoringConfirmDraft={skillEditor.handleConfirmAuthoringDraft}
         onCancel={skillEditor.resetEditorState}
         onSubmit={() => {
           void skillEditor.handleSubmitEditor();

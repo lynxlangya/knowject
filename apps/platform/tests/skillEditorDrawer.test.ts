@@ -47,3 +47,37 @@ test('Skill editor drawer wires create flow to conversation-first authoring tab'
   assert.match(hookSource, /stage === 'synthesizing'/);
   assert.match(hookSource, /startFreshSession\(\)/);
 });
+
+test('SkillsManagementPage passes authoring session props into SkillEditorModal', () => {
+  const pageSource = readFileSync(
+    new URL('../src/pages/skills/SkillsManagementPage.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(pageSource, /authoringSession=\{skillEditor\.authoringSession\}/);
+  assert.match(pageSource, /authoringSubmitting=\{skillEditor\.authoringSubmitting\}/);
+  assert.match(
+    pageSource,
+    /onAuthoringScenarioChange=\{skillEditor\.handleAuthoringScenarioChange\}/,
+  );
+  assert.match(
+    pageSource,
+    /onAuthoringTargetsChange=\{skillEditor\.handleAuthoringTargetsChange\}/,
+  );
+  assert.match(
+    pageSource,
+    /onAuthoringConfirmScope=\{skillEditor\.handleConfirmAuthoringScope\}/,
+  );
+  assert.match(
+    pageSource,
+    /onAuthoringAnswerChange=\{skillEditor\.handleAuthoringAnswerChange\}/,
+  );
+  assert.match(
+    pageSource,
+    /onAuthoringSubmitAnswer=\{[\s\S]*handleSubmitAuthoringAnswer[\s\S]*\}/,
+  );
+  assert.match(
+    pageSource,
+    /onAuthoringConfirmDraft=\{skillEditor\.handleConfirmAuthoringDraft\}/,
+  );
+});
