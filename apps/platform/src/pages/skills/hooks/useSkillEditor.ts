@@ -40,6 +40,34 @@ const sanitizeAuthoringTargets = (targets: string[]): string[] => {
   );
 };
 
+const hasRecoverableAuthoringProgress = ({
+  scenario,
+  targets,
+  messagesLength,
+  questionCount,
+  currentSummary,
+  structuredDraft,
+  pendingAnswer,
+}: {
+  scenario: SkillEditorDraft['category'] | null;
+  targets: string[];
+  messagesLength: number;
+  questionCount: number;
+  currentSummary: string;
+  structuredDraft: SkillAuthoringStructuredDraft | null;
+  pendingAnswer: string;
+}) => {
+  return Boolean(
+    scenario ||
+      targets.length > 0 ||
+      messagesLength > 1 ||
+      questionCount > 0 ||
+      currentSummary.trim() ||
+      structuredDraft ||
+      pendingAnswer.trim(),
+  );
+};
+
 export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   const authoringSession = useSkillAuthoringSession();
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
@@ -96,10 +124,20 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     setEditorMode('create');
     setEditorTabKey('conversation');
     setEditingSkill(null);
-    if (authoringSession.hasRecoverableSession()) {
-      const sanitizedTargets = sanitizeAuthoringTargets(
-        authoringSession.session.scope.targets,
-      );
+    const sanitizedTargets = sanitizeAuthoringTargets(
+      authoringSession.session.scope.targets,
+    );
+    const hasRecoverableSession = hasRecoverableAuthoringProgress({
+      scenario: authoringSession.session.scope.scenario,
+      targets: sanitizedTargets,
+      messagesLength: authoringSession.session.messages.length,
+      questionCount: authoringSession.session.questionCount,
+      currentSummary: authoringSession.session.currentSummary,
+      structuredDraft: authoringSession.session.structuredDraft,
+      pendingAnswer: authoringSession.session.pendingAnswer,
+    });
+
+    if (hasRecoverableSession) {
       if (sanitizedTargets.length !== authoringSession.session.scope.targets.length) {
         authoringSession.setSession((current) => ({
           ...current,
@@ -168,6 +206,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
       if (editorMode === 'create') {
         await createSkill(payload);
+        authoringSession.startFreshSession();
         message.success(tp('feedback.createdDraft'));
       }
 
@@ -213,7 +252,9 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
   const handleConfirmAuthoringScope = () => {
     authoringSession.setSession((current) => {
-      if (!current.scope.scenario || current.scope.targets.length === 0) {
+      const sanitizedTargets = sanitizeAuthoringTargets(current.scope.targets);
+
+      if (!current.scope.scenario || sanitizedTargets.length === 0) {
         return current;
       }
 
@@ -223,6 +264,10 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
       return {
         ...current,
+        scope: {
+          ...current.scope,
+          targets: sanitizedTargets,
+        },
         stage: 'interviewing',
       };
     });
@@ -245,6 +290,10 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
       return;
     }
 
+    if (authoringSession.session.stage === 'scope_selecting') {
+      return;
+    }
+
     if (sanitizedTargets.length !== authoringSession.session.scope.targets.length) {
       authoringSession.setSession((current) => ({
         ...current,
@@ -253,6 +302,10 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
           targets: sanitizeAuthoringTargets(current.scope.targets),
         },
       }));
+      return;
+    }
+
+    if (sanitizedTargets.length === 0) {
       return;
     }
 

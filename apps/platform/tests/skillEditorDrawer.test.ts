@@ -109,3 +109,38 @@ test('create-flow authoring targets are sanitized against controlled allowlist',
     /AUTHORING_SCOPE_TARGET_ALLOWLIST\.includes/,
   );
 });
+
+test('successful create clears the recoverable authoring session before reopen', () => {
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(hookSource, /if \(editorMode === 'create'\) \{/);
+  assert.match(hookSource, /await createSkill\(payload\)/);
+  assert.match(hookSource, /authoringSession\.startFreshSession\(\)/);
+});
+
+test('scope must be confirmed before the authoring answer input can continue', () => {
+  const conversationSource = readFileSync(
+    new URL(
+      '../src/pages/skills/components/SkillAuthoringConversationTab.tsx',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(conversationSource, /session\.stage !== 'scope_selecting'/);
+  assert.match(
+    conversationSource,
+    /disabled=\{!hasConfirmedScope \|\| authoringSubmitting\}/,
+  );
+  assert.match(
+    hookSource,
+    /if \(authoringSession\.session\.stage === 'scope_selecting'\) \{/,
+  );
+});

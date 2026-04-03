@@ -29,7 +29,9 @@ export const SkillAuthoringConversationTab = ({
   const categoryOptions = getCategoryOptions();
   const scopeTargetOptions = getAuthoringScopeTargetOptions();
   const hasConfirmedScope = Boolean(
-    session.scope.scenario && session.scope.targets.length > 0,
+    session.stage !== 'scope_selecting' &&
+      session.scope.scenario &&
+      session.scope.targets.length > 0,
   );
   const canContinue = hasConfirmedScope && session.pendingAnswer.trim().length > 0;
 
