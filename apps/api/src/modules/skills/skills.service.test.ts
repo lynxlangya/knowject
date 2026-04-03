@@ -1490,7 +1490,6 @@ test('skills router wires authoring turns endpoint to the service', async () => 
   assert.match(routerSource, /skillsRouter\.post\('\/authoring\/turns'/u);
   assert.match(routerSource, /skillsService\.runAuthoringTurn/u);
   assert.match(routerSource, /skillsRouter\.post\(\s*'\/authoring\/turns\/stream'/u);
-  assert.match(routerSource, /validateSkillAuthoringTurnInput/u);
   assert.match(routerSource, /text\/event-stream/u);
   assert.match(routerSource, /req\.on\('close', handleClientDisconnect\)/u);
   assert.match(routerSource, /type:\s*'ack'/u);

@@ -265,9 +265,9 @@ export const streamSkillAuthoringTurn = async (
   } finally {
     try {
       await reader.cancel();
+      reader.releaseLock();
     } catch {
-      // Ignore stream cancellation errors during teardown.
+      // Ignore stream teardown errors during cleanup.
     }
-    reader.releaseLock();
   }
 };

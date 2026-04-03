@@ -52,8 +52,16 @@ test('Skill editor drawer wires create flow to conversation-first authoring tab'
   assert.match(hookSource, /editorMode === 'create'/);
   assert.match(hookSource, /setEditorTabKey\('conversation'\)/);
   assert.match(hookSource, /hydrateEditorDraftFromAuthoring/);
-  assert.match(hookSource, /stage === 'synthesizing'/);
   assert.match(hookSource, /startFreshSession\(\)/);
+
+  const conversationTabSource = readFileSync(
+    new URL(
+      '../src/pages/skills/components/SkillAuthoringConversationTab.tsx',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  assert.match(conversationTabSource, /session\.stage === 'synthesizing'/);
 });
 
 test('SkillsManagementPage passes authoring session props into SkillEditorModal', () => {
@@ -63,7 +71,6 @@ test('SkillsManagementPage passes authoring session props into SkillEditorModal'
   );
 
   assert.match(pageSource, /authoringSession=\{skillEditor\.authoringSession\}/);
-  assert.match(pageSource, /authoringSubmitting=\{skillEditor\.authoringSubmitting\}/);
   assert.match(
     pageSource,
     /onAuthoringScenarioChange=\{skillEditor\.handleAuthoringScenarioChange\}/,
@@ -71,10 +78,6 @@ test('SkillsManagementPage passes authoring session props into SkillEditorModal'
   assert.match(
     pageSource,
     /onAuthoringTargetsChange=\{skillEditor\.handleAuthoringTargetsChange\}/,
-  );
-  assert.match(
-    pageSource,
-    /onAuthoringConfirmScope=\{skillEditor\.handleConfirmAuthoringScope\}/,
   );
   assert.match(
     pageSource,

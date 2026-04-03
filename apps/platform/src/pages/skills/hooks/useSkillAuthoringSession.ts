@@ -112,7 +112,7 @@ const createMessageId = (): string => {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const hasRealProgress = (session: SkillAuthoringSessionState): boolean => {
+export const hasRealProgress = (session: SkillAuthoringSessionState): boolean => {
   return Boolean(
     session.scope.scenario ||
       session.scope.targets.length > 0 ||
@@ -122,6 +122,15 @@ const hasRealProgress = (session: SkillAuthoringSessionState): boolean => {
       session.structuredDraft ||
       session.pendingAnswer.trim(),
   );
+};
+
+export const resolveAuthoringResumeStage = (
+  current: SkillAuthoringSessionState,
+): SkillAuthoringSessionState['stage'] => {
+  if (current.stage !== 'scope_selecting') return current.stage;
+  if (current.pendingAnswer.trim()) return 'synthesizing';
+  if (current.structuredDraft) return 'hydrated';
+  return 'interviewing';
 };
 
 type SkillAuthoringAbortReason = 'cancel' | 'reset' | 'superseded' | 'unmount';
@@ -152,10 +161,13 @@ export const useSkillAuthoringSession = () => {
   );
   const activeTurnRef = useRef<ActiveSkillAuthoringTurn | null>(null);
   const nextTurnRequestIdRef = useRef(0);
+  const lastPersistedSessionRef = useRef<SkillAuthoringSessionState | null>(null);
 
   useEffect(() => {
     if (!isBrowser()) return;
+    if (session === lastPersistedSessionRef.current) return;
 
+    lastPersistedSessionRef.current = session;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
@@ -214,7 +226,6 @@ export const useSkillAuthoringSession = () => {
 
   const resumeExistingSession = () => {
     if (!hasRecoverableSession()) {
-      // Brand-new intro-only session stays in scope_selecting.
       if (session.stage !== 'scope_selecting') {
         setSession((current) => ({
           ...current,
@@ -226,14 +237,7 @@ export const useSkillAuthoringSession = () => {
 
     setSession((current) => ({
       ...current,
-      stage:
-        current.stage !== 'scope_selecting'
-          ? current.stage
-          : current.pendingAnswer.trim()
-            ? 'synthesizing'
-            : current.structuredDraft
-              ? 'hydrated'
-              : 'interviewing',
+      stage: resolveAuthoringResumeStage(current),
     }));
   };
 
@@ -244,10 +248,6 @@ export const useSkillAuthoringSession = () => {
     }
 
     setSession(createEmptySessionState());
-  };
-
-  const resetSession = () => {
-    startFreshSession();
   };
 
   const cancelActiveTurn = () => {
@@ -374,7 +374,6 @@ export const useSkillAuthoringSession = () => {
     hasRecoverableSession,
     resumeExistingSession,
     startFreshSession,
-    resetSession,
     cancelActiveTurn,
     appendMessage,
     submitAnswer,

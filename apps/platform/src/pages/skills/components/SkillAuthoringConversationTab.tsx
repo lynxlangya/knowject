@@ -6,10 +6,8 @@ import type { SkillAuthoringSessionState } from '../types/skillsManagement.types
 
 interface SkillAuthoringConversationTabProps {
   session: SkillAuthoringSessionState;
-  authoringSubmitting: boolean;
   onScenarioChange: (value: SkillCategory) => void;
   onTargetsChange: (value: string[]) => void;
-  onConfirmScope: () => void;
   onAnswerChange: (value: string) => void;
   onSubmitAnswer: () => void;
   onConfirmDraft: () => void;
@@ -17,10 +15,8 @@ interface SkillAuthoringConversationTabProps {
 
 export const SkillAuthoringConversationTab = ({
   session,
-  authoringSubmitting,
   onScenarioChange,
   onTargetsChange,
-  onConfirmScope: _onConfirmScope,
   onAnswerChange,
   onSubmitAnswer,
   onConfirmDraft,
@@ -28,6 +24,7 @@ export const SkillAuthoringConversationTab = ({
   const { t } = useTranslation('pages');
   const categoryOptions = getCategoryOptions();
   const scopeTargetOptions = getAuthoringScopeTargetOptions();
+  const authoringSubmitting = session.stage === 'synthesizing';
   const hasConfirmedScope = Boolean(
     session.stage !== 'scope_selecting' &&
     session.scope.scenario &&

@@ -120,6 +120,13 @@ const resolveTurnKind = ({
   return 'freeform';
 };
 
+const DECISION_TURNS = new Set<SkillAuthoringTurnKind>([
+  'scenario',
+  'scope',
+  'output',
+  'followup',
+]);
+
 const constrainOptionsToDecisionTurns = ({
   turnKind,
   options,
@@ -127,12 +134,13 @@ const constrainOptionsToDecisionTurns = ({
   turnKind: SkillAuthoringTurnKind;
   options: SkillAuthoringOption[];
 }): SkillAuthoringOption[] => {
-  return turnKind === 'scenario' ||
-    turnKind === 'scope' ||
-    turnKind === 'output' ||
-    turnKind === 'followup'
-    ? options
-    : [];
+  return DECISION_TURNS.has(turnKind) ? options : [];
+};
+
+// Keep in sync with SkillCategory — each scenario gets a human-readable draft name prefix.
+const SCENARIO_NAME_PREFIX: Record<string, string> = {
+  documentation_architecture: 'Architecture Alignment',
+  governance_capture: 'Governance Capture',
 };
 
 const inferDraftName = ({
@@ -142,12 +150,7 @@ const inferDraftName = ({
   summary: string;
   scenario: SkillAuthoringScopeInput['scenario'];
 }): string => {
-  const prefix =
-    scenario === 'documentation_architecture'
-      ? 'Architecture Alignment'
-      : scenario === 'governance_capture'
-        ? 'Governance Capture'
-        : 'Execution Alignment';
+  const prefix = SCENARIO_NAME_PREFIX[scenario] ?? 'Execution Alignment';
   const normalizedSummary = summary.replace(/\s+/g, ' ').trim();
   const suffix = normalizedSummary ? ` - ${normalizedSummary.slice(0, 24)}` : '';
 

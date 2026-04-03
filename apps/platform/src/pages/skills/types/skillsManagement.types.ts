@@ -3,6 +3,7 @@ import type {
   SkillDefinitionFields,
   SkillSource,
   SkillStatus,
+  SkillAuthoringStage,
   SkillAuthoringStructuredDraft,
 } from '@api/skills';
 
@@ -10,12 +11,7 @@ export type SkillSidebarFilter = 'all' | SkillStatus | SkillSource;
 
 export type EditorMode = 'create' | 'edit' | null;
 
-export type SkillAuthoringSessionStage =
-  | 'scope_selecting'
-  | 'interviewing'
-  | 'synthesizing'
-  | 'awaiting_confirmation'
-  | 'hydrated';
+export type SkillAuthoringSessionStage = SkillAuthoringStage;
 
 export interface SkillAuthoringCreateScopeState {
   scenario: SkillCategory | null;

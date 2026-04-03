@@ -50,10 +50,8 @@ interface SkillEditorModalProps {
   editorLoading: boolean;
   editorSubmitting: boolean;
   authoringSession?: SkillAuthoringSessionState;
-  authoringSubmitting?: boolean;
   onAuthoringScenarioChange?: (value: SkillCategory) => void;
   onAuthoringTargetsChange?: (value: string[]) => void;
-  onAuthoringConfirmScope?: () => void;
   onAuthoringAnswerChange?: (value: string) => void;
   onAuthoringSubmitAnswer?: () => void;
   onAuthoringConfirmDraft?: () => void;
@@ -87,10 +85,8 @@ export const SkillEditorModal = ({
   editorLoading,
   editorSubmitting,
   authoringSession = FALLBACK_AUTHORING_SESSION,
-  authoringSubmitting = false,
   onAuthoringScenarioChange = () => undefined,
   onAuthoringTargetsChange = () => undefined,
-  onAuthoringConfirmScope = () => undefined,
   onAuthoringAnswerChange = () => undefined,
   onAuthoringSubmitAnswer = () => undefined,
   onAuthoringConfirmDraft = () => undefined,
@@ -208,10 +204,8 @@ export const SkillEditorModal = ({
                 tab.key === 'conversation' ? (
                   <SkillAuthoringConversationTab
                     session={authoringSession}
-                    authoringSubmitting={authoringSubmitting}
                     onScenarioChange={onAuthoringScenarioChange}
                     onTargetsChange={onAuthoringTargetsChange}
-                    onConfirmScope={onAuthoringConfirmScope}
                     onAnswerChange={onAuthoringAnswerChange}
                     onSubmitAnswer={onAuthoringSubmitAnswer}
                     onConfirmDraft={onAuthoringConfirmDraft}

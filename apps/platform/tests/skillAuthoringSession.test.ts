@@ -30,13 +30,18 @@ test('stores a full recoverable authoring session state (not just stage + draft)
     new URL('../src/pages/skills/types/skillsManagement.types.ts', import.meta.url),
     'utf8',
   );
+  const apiSkillsSource = readFileSync(
+    new URL('../src/api/skills.ts', import.meta.url),
+    'utf8',
+  );
 
-  assert.match(typesSource, /export type SkillAuthoringSessionStage/);
-  assert.match(typesSource, /'scope_selecting'/);
-  assert.match(typesSource, /'interviewing'/);
-  assert.match(typesSource, /'synthesizing'/);
-  assert.match(typesSource, /'awaiting_confirmation'/);
-  assert.match(typesSource, /'hydrated'/);
+  assert.match(typesSource, /export type SkillAuthoringSessionStage = SkillAuthoringStage/);
+  assert.match(apiSkillsSource, /export type SkillAuthoringStage/);
+  assert.match(apiSkillsSource, /'scope_selecting'/);
+  assert.match(apiSkillsSource, /'interviewing'/);
+  assert.match(apiSkillsSource, /'synthesizing'/);
+  assert.match(apiSkillsSource, /'awaiting_confirmation'/);
+  assert.match(apiSkillsSource, /'hydrated'/);
 
   assert.match(typesSource, /scope/);
   assert.match(typesSource, /messages/);

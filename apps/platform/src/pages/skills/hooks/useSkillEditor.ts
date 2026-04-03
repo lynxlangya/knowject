@@ -22,7 +22,7 @@ import {
   type SkillEditorDraft,
   validateSkillEditorDraft,
 } from '../skillDefinition';
-import { useSkillAuthoringSession } from './useSkillAuthoringSession';
+import { useSkillAuthoringSession, hasRealProgress, resolveAuthoringResumeStage } from './useSkillAuthoringSession';
 
 interface SkillEditorMessageApi {
   success: (content: string) => void;
@@ -40,34 +40,6 @@ const sanitizeAuthoringTargets = (targets: string[]): string[] => {
     AUTHORING_SCOPE_TARGET_ALLOWLIST.includes(
       target as (typeof AUTHORING_SCOPE_TARGET_ALLOWLIST)[number],
     ),
-  );
-};
-
-const hasRecoverableAuthoringProgress = ({
-  scenario,
-  targets,
-  messagesLength,
-  questionCount,
-  currentSummary,
-  structuredDraft,
-  pendingAnswer,
-}: {
-  scenario: SkillEditorDraft['category'] | null;
-  targets: string[];
-  messagesLength: number;
-  questionCount: number;
-  currentSummary: string;
-  structuredDraft: SkillAuthoringStructuredDraft | null;
-  pendingAnswer: string;
-}) => {
-  return Boolean(
-    scenario ||
-      targets.length > 0 ||
-      messagesLength > 1 ||
-      questionCount > 0 ||
-      currentSummary.trim() ||
-      structuredDraft ||
-      pendingAnswer.trim(),
   );
 };
 
@@ -144,55 +116,25 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     setEditorMode('create');
     setEditorTabKey('conversation');
     setEditingSkill(null);
-    const sanitizedTargets = sanitizeAuthoringTargets(
-      authoringSession.session.scope.targets,
-    );
-    const hasRecoverableSession = hasRecoverableAuthoringProgress({
-      scenario: authoringSession.session.scope.scenario,
-      targets: sanitizedTargets,
-      messagesLength: authoringSession.session.messages.length,
-      questionCount: authoringSession.session.questionCount,
-      currentSummary: authoringSession.session.currentSummary,
-      structuredDraft: authoringSession.session.structuredDraft,
-      pendingAnswer: authoringSession.session.pendingAnswer,
-    });
 
-    if (hasRecoverableSession) {
-      authoringSession.setSession((current) => {
-        const currentSanitizedTargets = sanitizeAuthoringTargets(current.scope.targets);
-        const currentHasRecoverableSession = hasRecoverableAuthoringProgress({
-          scenario: current.scope.scenario,
-          targets: currentSanitizedTargets,
-          messagesLength: current.messages.length,
-          questionCount: current.questionCount,
-          currentSummary: current.currentSummary,
-          structuredDraft: current.structuredDraft,
-          pendingAnswer: current.pendingAnswer,
-        });
-
-        return {
-          ...current,
-          scope: {
-            ...current.scope,
-            targets: currentSanitizedTargets,
-          },
-          stage: !currentHasRecoverableSession
-            ? 'scope_selecting'
-            : current.stage !== 'scope_selecting'
-              ? current.stage
-              : current.pendingAnswer.trim()
-                ? 'synthesizing'
-                : current.structuredDraft
-                  ? 'hydrated'
-                  : 'interviewing',
-        };
-      });
-      if (authoringSession.session.structuredDraft) {
-        hydrateEditorDraftFromAuthoring(authoringSession.session.structuredDraft);
-      }
+    if (!hasRealProgress(authoringSession.session)) {
+      setEditorDraft(createEmptySkillEditorDraft());
       return;
     }
-    setEditorDraft(createEmptySkillEditorDraft());
+
+    const { structuredDraft } = authoringSession.session;
+    authoringSession.setSession((current) => ({
+      ...current,
+      scope: {
+        ...current.scope,
+        targets: sanitizeAuthoringTargets(current.scope.targets),
+      },
+      stage: resolveAuthoringResumeStage(current),
+    }));
+
+    if (structuredDraft) {
+      hydrateEditorDraftFromAuthoring(structuredDraft);
+    }
   };
 
   const handleOpenEditModal = async (skill: SkillSummaryResponse) => {
@@ -303,33 +245,6 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     });
   };
 
-  const handleConfirmAuthoringScope = () => {
-    authoringSession.setSession((current) => {
-      const sanitizedTargets = sanitizeAuthoringTargets(current.scope.targets);
-
-      if (!current.scope.scenario || sanitizedTargets.length === 0) {
-        return current;
-      }
-
-      if (current.stage !== 'scope_selecting') {
-        return current;
-      }
-
-      return {
-        ...current,
-        scope: {
-          ...current.scope,
-          targets: sanitizedTargets,
-        },
-        stage: getAuthoringStageAfterScopeChange({
-          currentStage: current.stage,
-          scenario: current.scope.scenario,
-          targets: sanitizedTargets,
-        }),
-      };
-    });
-  };
-
   const handleAuthoringAnswerChange = (answer: string) => {
     authoringSession.setSession((current) => ({
       ...current,
@@ -339,9 +254,6 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
   const handleSubmitAuthoringAnswer = async () => {
     const answer = authoringSession.session.pendingAnswer.trim();
-    const sanitizedTargets = sanitizeAuthoringTargets(
-      authoringSession.session.scope.targets,
-    );
 
     if (!answer) {
       return;
@@ -351,16 +263,9 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
       return;
     }
 
-    if (sanitizedTargets.length !== authoringSession.session.scope.targets.length) {
-      authoringSession.setSession((current) => ({
-        ...current,
-        scope: {
-          ...current.scope,
-          targets: sanitizeAuthoringTargets(current.scope.targets),
-        },
-      }));
-      return;
-    }
+    const sanitizedTargets = sanitizeAuthoringTargets(
+      authoringSession.session.scope.targets,
+    );
 
     if (sanitizedTargets.length === 0) {
       return;
@@ -416,10 +321,8 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     handleOpenEditModal,
     handleSubmitEditor,
     authoringSession: authoringSession.session,
-    authoringSubmitting: authoringSession.session.stage === 'synthesizing',
     handleAuthoringScenarioChange,
     handleAuthoringTargetsChange,
-    handleConfirmAuthoringScope,
     handleAuthoringAnswerChange,
     handleSubmitAuthoringAnswer,
     handleConfirmAuthoringDraft,

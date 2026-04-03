@@ -113,10 +113,8 @@ export const SkillsManagementPage = () => {
         editorSubmitting={skillEditor.editorSubmitting}
         editorMarkdownPreview={skillEditor.editorMarkdownPreview}
         authoringSession={skillEditor.authoringSession}
-        authoringSubmitting={skillEditor.authoringSubmitting}
         onAuthoringScenarioChange={skillEditor.handleAuthoringScenarioChange}
         onAuthoringTargetsChange={skillEditor.handleAuthoringTargetsChange}
-        onAuthoringConfirmScope={skillEditor.handleConfirmAuthoringScope}
         onAuthoringAnswerChange={skillEditor.handleAuthoringAnswerChange}
         onAuthoringSubmitAnswer={() => {
           void skillEditor.handleSubmitAuthoringAnswer();

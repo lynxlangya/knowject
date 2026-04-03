@@ -14,7 +14,6 @@ import type {
   SkillAuthoringTurnInput,
   UpdateSkillInput,
 } from './skills.types.js';
-import { validateSkillAuthoringTurnInput } from './validators/skills-authoring.validator.js';
 
 const getRequiredSkillId = (request: Request): string => {
   const skillId = request.params.skillId;
@@ -179,8 +178,6 @@ export const createSkillsRouter = (
       req.on('close', handleClientDisconnect);
 
       try {
-        validateSkillAuthoringTurnInput(req.body as SkillAuthoringTurnInput);
-
         if (abortController.signal.aborted) {
           return;
         }
