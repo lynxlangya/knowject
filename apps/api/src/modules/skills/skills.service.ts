@@ -63,6 +63,9 @@ export interface SkillsService {
   runAuthoringTurn(
     context: SkillsCommandContext,
     input: SkillAuthoringTurnInput,
+    options?: {
+      signal?: AbortSignal;
+    },
   ): Promise<SkillAuthoringTurnResponse>;
   deleteSkill(context: SkillsCommandContext, skillId: string): Promise<void>;
 }
@@ -187,7 +190,7 @@ export const createSkillsService = ({
       };
     },
 
-    runAuthoringTurn: async ({ actor }, input) => {
+    runAuthoringTurn: async ({ actor }, input, options) => {
       if (!authoringLlm) {
         throw new Error("Skill authoring LLM service is not configured");
       }
@@ -198,6 +201,7 @@ export const createSkillsService = ({
         actor,
         input: normalizedInput,
         llm: authoringLlm,
+        signal: options?.signal,
       });
     },
 

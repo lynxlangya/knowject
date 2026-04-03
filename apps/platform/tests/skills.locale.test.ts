@@ -67,6 +67,8 @@ test('skills locale resources freeze conversation authoring copy', () => {
   const zhAuthoring = zhSkills.authoring as Record<string, unknown>;
   const enScope = enAuthoring.scope as Record<string, unknown>;
   const zhScope = zhAuthoring.scope as Record<string, unknown>;
+  const enPlaceholders = enScope.placeholders as Record<string, unknown>;
+  const zhPlaceholders = zhScope.placeholders as Record<string, unknown>;
   const enActions = enAuthoring.actions as Record<string, unknown>;
   const zhActions = zhAuthoring.actions as Record<string, unknown>;
 
@@ -74,6 +76,8 @@ test('skills locale resources freeze conversation authoring copy', () => {
   assert.ok(zhAuthoring);
   assert.ok(enScope);
   assert.ok(zhScope);
+  assert.ok(enPlaceholders);
+  assert.ok(zhPlaceholders);
   assert.ok(enActions);
   assert.ok(zhActions);
 
@@ -87,10 +91,16 @@ test('skills locale resources freeze conversation authoring copy', () => {
   );
   assert.equal(zhActions.confirmDraft, '确认并填充 Skill');
   assert.equal(enActions.confirmDraft, 'Confirm and fill Skill');
+  assert.equal(zhActions.reset, '重置');
+  assert.equal(enActions.reset, 'Reset');
   assert.equal(zhScope.scenario, '目标场景');
   assert.equal(enScope.scenario, 'Target scenario');
   assert.equal(zhScope.targets, '涉及范围');
   assert.equal(enScope.targets, 'Scope targets');
+  assert.equal(zhPlaceholders.scenario, '请选择目标场景');
+  assert.equal(enPlaceholders.scenario, 'Select a target scenario');
+  assert.equal(zhPlaceholders.targets, '请选择涉及范围');
+  assert.equal(enPlaceholders.targets, 'Select scope targets');
 });
 
 test('skills contract and governance docs mention the live authoring turn flow', () => {
@@ -104,12 +114,14 @@ test('skills contract and governance docs mention the live authoring turn flow',
   );
 
   assert.match(contractSource, /POST \/api\/skills\/authoring\/turns/);
+  assert.match(contractSource, /POST \/api\/skills\/authoring\/turns\/stream/);
   assert.match(contractSource, /scope\.scenario/);
   assert.match(contractSource, /scope\.targets/);
   assert.match(contractSource, /currentStructuredDraft/);
 
   assert.match(governanceSource, /conversation/);
   assert.match(governanceSource, /structuredDraft/);
+  assert.match(governanceSource, /authoring\/turns\/stream/);
   assert.match(governanceSource, /POST \/api\/skills/);
 });
 

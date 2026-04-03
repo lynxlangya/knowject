@@ -12,6 +12,12 @@ export type {
   SkillAuthoringStage,
   SkillAuthoringStructuredDraft,
   SkillAuthoringTurnInput,
+  SkillAuthoringTurnStreamAckEvent,
+  SkillAuthoringTurnStreamDoneEvent,
+  SkillAuthoringTurnStreamErrorEvent,
+  SkillAuthoringTurnStreamEvent,
+  SkillAuthoringTurnStreamEventBase,
+  SkillAuthoringTurnStreamEventType,
   SkillAuthoringTurnResponse,
 } from './skills.authoring.js';
 

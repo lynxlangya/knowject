@@ -122,6 +122,7 @@ export const SkillsManagementPage = () => {
           void skillEditor.handleSubmitAuthoringAnswer();
         }}
         onAuthoringConfirmDraft={skillEditor.handleConfirmAuthoringDraft}
+        onAuthoringReset={skillEditor.handleResetCreateAuthoring}
         onCancel={skillEditor.resetEditorState}
         onSubmit={() => {
           void skillEditor.handleSubmitEditor();

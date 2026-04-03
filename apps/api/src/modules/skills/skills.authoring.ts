@@ -53,3 +53,37 @@ export interface SkillAuthoringTurnResponse {
   structuredDraft: SkillAuthoringStructuredDraft | null;
   readyForConfirmation: boolean;
 }
+
+export type SkillAuthoringTurnStreamEventType = 'ack' | 'done' | 'error';
+
+export interface SkillAuthoringTurnStreamEventBase {
+  version: 'v1';
+  type: SkillAuthoringTurnStreamEventType;
+  sequence: number;
+}
+
+export interface SkillAuthoringTurnStreamAckEvent
+  extends SkillAuthoringTurnStreamEventBase {
+  type: 'ack';
+  stage: 'synthesizing';
+}
+
+export interface SkillAuthoringTurnStreamDoneEvent
+  extends SkillAuthoringTurnStreamEventBase {
+  type: 'done';
+  turn: SkillAuthoringTurnResponse;
+}
+
+export interface SkillAuthoringTurnStreamErrorEvent
+  extends SkillAuthoringTurnStreamEventBase {
+  type: 'error';
+  status: number;
+  code: string;
+  message: string;
+  retryable: boolean;
+}
+
+export type SkillAuthoringTurnStreamEvent =
+  | SkillAuthoringTurnStreamAckEvent
+  | SkillAuthoringTurnStreamDoneEvent
+  | SkillAuthoringTurnStreamErrorEvent;

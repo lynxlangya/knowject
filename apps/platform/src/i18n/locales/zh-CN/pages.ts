@@ -656,6 +656,10 @@ export const pagesMessages = {
         title: '先选择这次 Skill 面向的场景和项目范围',
         scenario: '目标场景',
         targets: '涉及范围',
+        placeholders: {
+          scenario: '请选择目标场景',
+          targets: '请选择涉及范围',
+        },
         targetOptions: {
           skillsPage: '技能页面实现范围（apps/platform/src/pages/skills）',
           architecture: '当前系统架构事实（docs/current/architecture.md）',
@@ -665,6 +669,12 @@ export const pagesMessages = {
         continue: '继续回答',
         confirmDraft: '确认并填充 Skill',
         confirmScope: '确认范围并继续',
+        reset: '重置',
+      },
+      resetConfirm: {
+        title: '重置当前 Skill 创建流程？',
+        description: '这会清空已选范围、对话记录和已生成的 Skill 草稿。',
+        confirm: '确认重置',
       },
     },
     feedback: {

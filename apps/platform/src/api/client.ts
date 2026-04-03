@@ -3,7 +3,7 @@ import { getToken } from '@app/auth/token';
 import { clearAuthSession, getAuthUser } from '@app/auth/user';
 import { readGuestLocale } from '@app/providers/locale.storage';
 
-const getLocale = () => {
+export const getClientLocale = () => {
   return getAuthUser()?.locale ?? readGuestLocale();
 };
 
@@ -11,7 +11,7 @@ const baseClientOptions = {
   baseURL: '/api',
   timeout: 10000,
   dedupe: true,
-  getLocale: getLocale,
+  getLocale: getClientLocale,
 } satisfies HttpClientOptions;
 
 export const handleUnauthorized = (): void => {

@@ -27,6 +27,7 @@ export interface ProjectConversationProviderAdapter {
   generate(input: {
     llmConfig: EffectiveLlmConfig;
     messages: ProjectConversationProviderChatMessage[];
+    signal?: AbortSignal;
   }): Promise<string>;
   stream(input: {
     llmConfig: EffectiveLlmConfig;
@@ -331,7 +332,7 @@ const readSseDataPayload = (frame: string): string => {
 export const createProjectConversationProviderAdapter =
   (): ProjectConversationProviderAdapter => {
     return {
-      generate: async ({ llmConfig, messages }) => {
+      generate: async ({ llmConfig, messages, signal }) => {
         ensureProjectConversationProviderAvailability({
           llmConfig,
         });
@@ -344,6 +345,7 @@ export const createProjectConversationProviderAdapter =
             createOpenAiCompatibleRequestInit({
               llmConfig,
               messages,
+              signal,
             }),
           );
           responseBody = await parseResponseBody(response);
@@ -365,6 +367,21 @@ export const createProjectConversationProviderAdapter =
         } catch (error) {
           if (error instanceof AppError) {
             throw error;
+          }
+
+          if (isAbortError(error) && signal?.aborted) {
+            throw error;
+          }
+
+          if (isAbortError(error)) {
+            throw createProjectConversationLlmUpstreamError(
+              getFallbackMessage("project.conversation.timeout"),
+              error,
+              "project.conversation.timeout",
+              {
+                timeoutMs: llmConfig.requestTimeoutMs,
+              },
+            );
           }
 
           throw createProjectConversationLlmUpstreamError(

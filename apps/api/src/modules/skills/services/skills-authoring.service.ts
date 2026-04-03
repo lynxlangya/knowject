@@ -26,6 +26,7 @@ export interface SkillAuthoringLlmService {
   generateTurn(input: {
     actor: { id: string; username: string };
     session: NormalizedSkillAuthoringTurnInput;
+    signal?: AbortSignal;
   }): Promise<SkillAuthoringModelTurn>;
 }
 
@@ -263,10 +264,12 @@ export const runSkillAuthoringTurn = async ({
   actor,
   input,
   llm,
+  signal,
 }: {
   actor: { id: string; username: string };
   input: NormalizedSkillAuthoringTurnInput;
   llm: SkillAuthoringLlmService;
+  signal?: AbortSignal;
 }): Promise<SkillAuthoringTurnResponse> => {
   const nextQuestionCount = input.questionCount + 1;
   const currentSummary = buildAuthoringSummary(input);
@@ -285,6 +288,7 @@ export const runSkillAuthoringTurn = async ({
       questionCount: modelQuestionCount,
       currentSummary,
     },
+    signal,
   });
 
   if (turnKind !== 'synthesize') {

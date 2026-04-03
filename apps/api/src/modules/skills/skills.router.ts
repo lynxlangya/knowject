@@ -1,6 +1,10 @@
-import { Router, type Request } from 'express';
+import { Router, type NextFunction, type Request, type Response } from 'express';
 import type { RequestHandler } from 'express';
+import { AppError } from '@lib/app-error.js';
+import { resolveLocalizedAppErrorMessage } from '@lib/app-error-message.js';
 import { asyncHandler } from '@lib/async-handler.js';
+import { DEFAULT_LOCALE } from '@lib/locale.js';
+import { getMessage } from '@lib/locale.messages.js';
 import { sendCreated, sendSuccess } from '@lib/api-response.js';
 import { getRequiredAuthUser } from '@lib/request-auth.js';
 import type { SkillsService } from './skills.service.js';
@@ -10,10 +14,58 @@ import type {
   SkillAuthoringTurnInput,
   UpdateSkillInput,
 } from './skills.types.js';
+import { validateSkillAuthoringTurnInput } from './validators/skills-authoring.validator.js';
 
 const getRequiredSkillId = (request: Request): string => {
   const skillId = request.params.skillId;
   return Array.isArray(skillId) ? skillId[0] ?? '' : skillId;
+};
+
+const waitForSseDrain = async (response: Response): Promise<void> => {
+  await new Promise<void>((resolve, reject) => {
+    const cleanup = (): void => {
+      response.off('drain', handleDrain);
+      response.off('close', handleClose);
+      response.off('error', handleError);
+    };
+
+    const handleDrain = (): void => {
+      cleanup();
+      resolve();
+    };
+
+    const handleClose = (): void => {
+      cleanup();
+      resolve();
+    };
+
+    const handleError = (error: Error): void => {
+      cleanup();
+      reject(error);
+    };
+
+    response.on('drain', handleDrain);
+    response.on('close', handleClose);
+    response.on('error', handleError);
+
+    if (response.writableEnded || response.destroyed) {
+      cleanup();
+      resolve();
+    }
+  });
+};
+
+const writeSseChunk = async (
+  response: Response,
+  chunk: string,
+): Promise<void> => {
+  if (response.writableEnded || response.destroyed) {
+    return;
+  }
+
+  if (!response.write(chunk)) {
+    await waitForSseDrain(response);
+  }
 };
 
 export const createSkillsRouter = (
@@ -76,6 +128,130 @@ export const createSkillsRouter = (
 
     sendSuccess(res, result);
   }));
+
+  skillsRouter.post(
+    '/authoring/turns/stream',
+    async (
+      req: Request,
+      res: Response,
+      next: NextFunction,
+    ): Promise<void> => {
+      const abortController = new AbortController();
+      let streamStarted = false;
+      let sequence = 0;
+      const handleClientDisconnect = () => {
+        if (!abortController.signal.aborted) {
+          abortController.abort();
+        }
+      };
+
+      const startStream = (): void => {
+        if (streamStarted || res.headersSent) {
+          return;
+        }
+
+        res.status(200);
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-transform');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+        streamStarted = true;
+      };
+
+      const emitEvent = async (event: Record<string, unknown>): Promise<void> => {
+        if (res.writableEnded || res.destroyed) {
+          return;
+        }
+
+        startStream();
+        sequence += 1;
+        await writeSseChunk(
+          res,
+          `data: ${JSON.stringify({
+            version: 'v1',
+            sequence,
+            ...event,
+          })}\n\n`,
+        );
+      };
+
+      req.on('close', handleClientDisconnect);
+
+      try {
+        validateSkillAuthoringTurnInput(req.body as SkillAuthoringTurnInput);
+
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        await emitEvent({
+          type: 'ack',
+          stage: 'synthesizing',
+        });
+
+        const result = await skillsService.runAuthoringTurn(
+          {
+            actor: getRequiredAuthUser(req),
+          },
+          req.body as SkillAuthoringTurnInput,
+          {
+            signal: abortController.signal,
+          },
+        );
+
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        await emitEvent({
+          type: 'done',
+          turn: result,
+        });
+      } catch (error) {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        if (!streamStarted) {
+          next(error);
+          return;
+        }
+
+        const normalizedError =
+          error instanceof AppError
+            ? error
+            : new AppError({
+                statusCode: 500,
+                code: 'INTERNAL_SERVER_ERROR',
+                message: getMessage('api.internalError', DEFAULT_LOCALE) ?? '',
+                messageKey: 'api.internalError',
+                cause: error,
+              });
+
+        await emitEvent({
+          type: 'error',
+          status: normalizedError.statusCode,
+          code: normalizedError.code,
+          message: resolveLocalizedAppErrorMessage(
+            normalizedError,
+            req.locale ?? DEFAULT_LOCALE,
+          ),
+          retryable: normalizedError.statusCode >= 500,
+        });
+      } finally {
+        req.off('close', handleClientDisconnect);
+
+        if (
+          !abortController.signal.aborted &&
+          !res.writableEnded &&
+          !res.destroyed
+        ) {
+          res.end();
+        }
+      }
+    },
+  );
 
   skillsRouter.patch(
     '/:skillId',

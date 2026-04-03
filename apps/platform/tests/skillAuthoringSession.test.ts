@@ -122,6 +122,27 @@ test('aligns authoring turns client to live backend contract', () => {
   assert.match(apiSource, /options/);
   assert.match(apiSource, /structuredDraft/);
   assert.match(apiSource, /readyForConfirmation/);
+  assert.match(apiSource, /const SKILL_AUTHORING_TURN_TIMEOUT_MS = 35000/);
+  assert.match(
+    apiSource,
+    /client\.post<ApiEnvelope<SkillAuthoringTurnResponse>>\([\s\S]*timeout:\s*SKILL_AUTHORING_TURN_TIMEOUT_MS/,
+  );
+  assert.match(apiSource, /SkillAuthoringTurnStreamEventType/);
+});
+
+test('consumes Skill authoring via SSE stream transport', () => {
+  const streamSource = readFileSync(
+    new URL('../src/api/skills.stream.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(streamSource, /\/api\/skills\/authoring\/turns\/stream/);
+  assert.match(streamSource, /text\/event-stream/);
+  assert.match(streamSource, /LOCALE_HEADER/);
+  assert.match(streamSource, /signal:\s*options\.signal/);
+  assert.match(streamSource, /type === 'done'/);
+  assert.match(streamSource, /type === 'error'/);
+  assert.match(streamSource, /new ApiError\(event\.message,\s*event\.status,\s*event\.code/);
 });
 
 test('enters synthesizing while waiting for the authoring response', () => {
@@ -131,7 +152,35 @@ test('enters synthesizing while waiting for the authoring response', () => {
   );
 
   assert.match(hookSource, /stage:\s*'synthesizing'/);
-  assert.match(hookSource, /await runSkillAuthoringTurn/);
+  assert.match(hookSource, /await streamSkillAuthoringTurn/);
+});
+
+test('restores the draft answer and editable session when the authoring request fails', () => {
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(hookSource, /const previousSession = session/);
+  assert.match(hookSource, /catch \(error\) \{/);
+  assert.match(hookSource, /stage:\s*previousSession\.stage/);
+  assert.match(hookSource, /messages:\s*previousSession\.messages/);
+  assert.match(hookSource, /pendingAnswer:\s*answer/);
+});
+
+test('authoring session can cancel an in-flight stream and avoid stale replay after reset or close', () => {
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillAuthoringSession.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(hookSource, /useRef/);
+  assert.match(hookSource, /const activeTurnRef = useRef/);
+  assert.match(hookSource, /new AbortController\(\)/);
+  assert.match(hookSource, /controller\.abort\(reason\)/);
+  assert.match(hookSource, /cancelActiveTurn/);
+  assert.match(hookSource, /getSkillAuthoringAbortReason\(controller\.signal\) === 'cancel'/);
+  assert.match(hookSource, /activeTurnRef\.current\?\.requestId !== requestId/);
 });
 
 test('strips local message fields back to { role, content } for the backend request', () => {

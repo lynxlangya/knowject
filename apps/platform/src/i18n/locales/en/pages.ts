@@ -737,6 +737,10 @@ export const pagesMessages = {
         title: 'Start by selecting the target scenario and project scope for this Skill',
         scenario: 'Target scenario',
         targets: 'Scope targets',
+        placeholders: {
+          scenario: 'Select a target scenario',
+          targets: 'Select scope targets',
+        },
         targetOptions: {
           skillsPage: 'Skills page implementation scope (apps/platform/src/pages/skills)',
           architecture: 'Current system architecture facts (docs/current/architecture.md)',
@@ -746,6 +750,12 @@ export const pagesMessages = {
         continue: 'Continue',
         confirmDraft: 'Confirm and fill Skill',
         confirmScope: 'Confirm scope and continue',
+        reset: 'Reset',
+      },
+      resetConfirm: {
+        title: 'Reset the current Skill creation flow?',
+        description: 'This clears the selected scope, conversation history, and generated Skill draft.',
+        confirm: 'Reset',
       },
     },
     feedback: {

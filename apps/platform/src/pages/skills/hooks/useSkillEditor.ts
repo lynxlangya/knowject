@@ -8,7 +8,10 @@ import {
   type SkillDetailResponse,
   type SkillSummaryResponse,
 } from '@api/skills';
-import type { EditorMode } from '../types/skillsManagement.types';
+import type {
+  EditorMode,
+  SkillAuthoringSessionState,
+} from '../types/skillsManagement.types';
 import { tp } from '../skills.i18n';
 import { AUTHORING_SCOPE_TARGET_ALLOWLIST } from '../constants/skillsManagement.constants';
 import {
@@ -68,6 +71,22 @@ const hasRecoverableAuthoringProgress = ({
   );
 };
 
+const getAuthoringStageAfterScopeChange = ({
+  currentStage,
+  scenario,
+  targets,
+}: {
+  currentStage: SkillAuthoringSessionState['stage'];
+  scenario: SkillEditorDraft['category'] | null;
+  targets: string[];
+}): SkillAuthoringSessionState['stage'] => {
+  if (!scenario || targets.length === 0) {
+    return 'scope_selecting';
+  }
+
+  return currentStage === 'scope_selecting' ? 'interviewing' : currentStage;
+};
+
 export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   const authoringSession = useSkillAuthoringSession();
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
@@ -96,6 +115,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   }, [editorDraft]);
 
   const resetEditorState = () => {
+    authoringSession.cancelActiveTurn();
     setEditorMode(null);
     setEditorTabKey('conversation');
     setEditingSkill(null);
@@ -256,17 +276,31 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
         ...current.scope,
         scenario,
       },
+      stage: getAuthoringStageAfterScopeChange({
+        currentStage: current.stage,
+        scenario,
+        targets: current.scope.targets,
+      }),
     }));
   };
 
   const handleAuthoringTargetsChange = (targets: string[]) => {
-    authoringSession.setSession((current) => ({
-      ...current,
-      scope: {
-        ...current.scope,
-        targets: sanitizeAuthoringTargets(targets),
-      },
-    }));
+    authoringSession.setSession((current) => {
+      const sanitizedTargets = sanitizeAuthoringTargets(targets);
+
+      return {
+        ...current,
+        scope: {
+          ...current.scope,
+          targets: sanitizedTargets,
+        },
+        stage: getAuthoringStageAfterScopeChange({
+          currentStage: current.stage,
+          scenario: current.scope.scenario,
+          targets: sanitizedTargets,
+        }),
+      };
+    });
   };
 
   const handleConfirmAuthoringScope = () => {
@@ -287,7 +321,11 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
           ...current.scope,
           targets: sanitizedTargets,
         },
-        stage: 'interviewing',
+        stage: getAuthoringStageAfterScopeChange({
+          currentStage: current.stage,
+          scenario: current.scope.scenario,
+          targets: sanitizedTargets,
+        }),
       };
     });
   };
@@ -349,6 +387,19 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     hydrateEditorDraftFromAuthoring(draft);
   };
 
+  const handleResetCreateAuthoring = () => {
+    if (editorMode !== 'create') {
+      return;
+    }
+
+    authoringSession.startFreshSession();
+    setEditorTabKey('conversation');
+    setEditingSkill(null);
+    setEditorDraft(createEmptySkillEditorDraft());
+    setEditorLoading(false);
+    setEditorSubmitting(false);
+  };
+
   return {
     editorMode,
     editorTabKey,
@@ -372,5 +423,6 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     handleAuthoringAnswerChange,
     handleSubmitAuthoringAnswer,
     handleConfirmAuthoringDraft,
+    handleResetCreateAuthoring,
   };
 };

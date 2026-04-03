@@ -1125,6 +1125,259 @@ test('createSkillAuthoringLlmService degrades invalid model structured draft def
   }
 });
 
+test('createSkillAuthoringLlmService raises provider timeout floor for slower authoring turns', async () => {
+  const env = await createEnv();
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async (_input, init) => {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    if (init?.signal?.aborted) {
+      throw new DOMException(
+        'The operation was aborted due to timeout',
+        'AbortError',
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                assistantMessage: '我先继续追问。',
+                nextQuestion: '请补充输出要求。',
+                options: [],
+                structuredDraft: null,
+              }),
+            },
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+        },
+      },
+    );
+  }) as typeof fetch;
+
+  const llm = createSkillAuthoringLlmService({
+    env: {
+      ...env,
+      openai: {
+        ...env.openai,
+        apiKey: 'test-api-key',
+        requestTimeoutMs: 5,
+      },
+    },
+    settingsRepository: {
+      getSettings: async () => null,
+    } as never,
+  });
+
+  try {
+    const result = await llm.generateTurn({
+      actor: ACTOR,
+      session: createNormalizedAuthoringTurnInput({
+        questionCount: 1,
+        messages: [
+          {
+            role: 'user',
+            content: '请继续追问。',
+          },
+        ],
+      }),
+    });
+
+    assert.equal(result.assistantMessage, '我先继续追问。');
+    assert.equal(result.nextQuestion, '请补充输出要求。');
+  } finally {
+    globalThis.fetch = originalFetch;
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('createSkillAuthoringLlmService maps provider AbortError to project conversation timeout semantics', async () => {
+  const env = await createEnv();
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async () => {
+    throw new DOMException(
+      'The operation was aborted due to timeout',
+      'AbortError',
+    );
+  }) as typeof fetch;
+
+  const llm = createSkillAuthoringLlmService({
+    env: {
+      ...env,
+      openai: {
+        ...env.openai,
+        apiKey: 'test-api-key',
+      },
+    },
+    settingsRepository: {
+      getSettings: async () => null,
+    } as never,
+  });
+
+  try {
+    await assert.rejects(
+      () =>
+        llm.generateTurn({
+          actor: ACTOR,
+          session: createNormalizedAuthoringTurnInput({
+            questionCount: 1,
+            messages: [
+              {
+                role: 'user',
+                content: '请继续追问。',
+              },
+            ],
+          }),
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'PROJECT_CONVERSATION_LLM_UPSTREAM_ERROR');
+        assert.equal(error.messageKey, 'project.conversation.timeout');
+        assert.deepEqual(error.details, {
+          timeoutMs: 30000,
+        });
+        return true;
+      },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('createSkillAuthoringLlmService preserves caller-driven aborts for stream cancellation', async () => {
+  const env = await createEnv();
+  const originalFetch = globalThis.fetch;
+  let observedSignal: AbortSignal | undefined;
+
+  globalThis.fetch = (async (_input, init) => {
+    observedSignal = init?.signal ?? undefined;
+
+    return await new Promise<Response>((_resolve, reject) => {
+      if (init?.signal?.aborted) {
+        reject(new DOMException('Aborted', 'AbortError'));
+        return;
+      }
+
+      init?.signal?.addEventListener(
+        'abort',
+        () => {
+          reject(new DOMException('Aborted', 'AbortError'));
+        },
+        { once: true },
+      );
+    });
+  }) as typeof fetch;
+
+  const llm = createSkillAuthoringLlmService({
+    env: {
+      ...env,
+      openai: {
+        ...env.openai,
+        apiKey: 'test-api-key',
+      },
+    },
+    settingsRepository: {
+      getSettings: async () => null,
+    } as never,
+  });
+  const abortController = new AbortController();
+
+  try {
+    const generation = llm.generateTurn({
+      actor: ACTOR,
+      session: createNormalizedAuthoringTurnInput({
+        questionCount: 1,
+        messages: [
+          {
+            role: 'user',
+            content: '请继续追问。',
+          },
+        ],
+      }),
+      signal: abortController.signal,
+    });
+
+    abortController.abort();
+
+    await assert.rejects(
+      () => generation,
+      (error: unknown) => {
+        assert.ok(error instanceof DOMException);
+        assert.equal(error.name, 'AbortError');
+        assert.equal(observedSignal?.aborted, true);
+        return true;
+      },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test('runAuthoringTurn forwards request abort signal to the authoring llm', async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  let capturedSignal: AbortSignal | undefined;
+  const service = createTestSkillsService({
+    env,
+    repository,
+    authoringLlm: {
+      generateTurn: async ({ signal }) => {
+        capturedSignal = signal;
+        return {
+          assistantMessage: '继续确认。',
+          nextQuestion: '请补充输出要求。',
+          options: [],
+          structuredDraft: null,
+        };
+      },
+    },
+  });
+  const abortController = new AbortController();
+
+  try {
+    await service.runAuthoringTurn(
+      { actor: ACTOR },
+      {
+        scope: {
+          scenario: 'engineering_execution',
+          targets: ['apps/platform/src/pages/skills'],
+        },
+        messages: [
+          {
+            role: 'assistant',
+            content: '先说说你想创建什么 Skill。',
+          },
+          {
+            role: 'user',
+            content: '我想让它先聚焦当前技能页。',
+          },
+        ],
+        questionCount: 1,
+        currentSummary: '',
+        currentStructuredDraft: null,
+      },
+      {
+        signal: abortController.signal,
+      },
+    );
+
+    assert.equal(capturedSignal, abortController.signal);
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
 test('runAuthoringTurn exposes synthesizing as an independent stage contract (red)', async () => {
   const env = await createEnv();
   const service = createTestSkillsService({
@@ -1236,6 +1489,13 @@ test('skills router wires authoring turns endpoint to the service', async () => 
 
   assert.match(routerSource, /skillsRouter\.post\('\/authoring\/turns'/u);
   assert.match(routerSource, /skillsService\.runAuthoringTurn/u);
+  assert.match(routerSource, /skillsRouter\.post\(\s*'\/authoring\/turns\/stream'/u);
+  assert.match(routerSource, /validateSkillAuthoringTurnInput/u);
+  assert.match(routerSource, /text\/event-stream/u);
+  assert.match(routerSource, /req\.on\('close', handleClientDisconnect\)/u);
+  assert.match(routerSource, /type:\s*'ack'/u);
+  assert.match(routerSource, /type:\s*'done'/u);
+  assert.match(routerSource, /status:\s*normalizedError\.statusCode/u);
 });
 
 test('preset skills remain readable but immutable', async () => {

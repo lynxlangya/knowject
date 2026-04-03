@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  runSkillAuthoringTurn,
   type SkillAuthoringStructuredDraft,
 } from '@api/skills';
+import { isAbortError, streamSkillAuthoringTurn } from '@api/skills.stream';
 import type {
   SkillAuthoringCreateScopeState,
   SkillAuthoringSessionMessage,
@@ -124,10 +124,34 @@ const hasRealProgress = (session: SkillAuthoringSessionState): boolean => {
   );
 };
 
+type SkillAuthoringAbortReason = 'cancel' | 'reset' | 'superseded' | 'unmount';
+
+interface ActiveSkillAuthoringTurn {
+  requestId: number;
+  controller: AbortController;
+}
+
+const isSkillAuthoringAbortReason = (
+  value: unknown,
+): value is SkillAuthoringAbortReason => {
+  return value === 'cancel' ||
+    value === 'reset' ||
+    value === 'superseded' ||
+    value === 'unmount';
+};
+
+const getSkillAuthoringAbortReason = (
+  signal: AbortSignal,
+): SkillAuthoringAbortReason | null => {
+  return isSkillAuthoringAbortReason(signal.reason) ? signal.reason : null;
+};
+
 export const useSkillAuthoringSession = () => {
   const [session, setSession] = useState<SkillAuthoringSessionState>(() =>
     readSessionFromLocalStorage(),
   );
+  const activeTurnRef = useRef<ActiveSkillAuthoringTurn | null>(null);
+  const nextTurnRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (!isBrowser()) return;
@@ -138,6 +162,42 @@ export const useSkillAuthoringSession = () => {
       console.warn('[useSkillAuthoringSession] localStorage 持久化失败:', error);
     }
   }, [session]);
+
+  useEffect(() => {
+    return () => {
+      const activeTurn = activeTurnRef.current;
+      if (activeTurn && !activeTurn.controller.signal.aborted) {
+        activeTurn.controller.abort('unmount');
+      }
+    };
+  }, []);
+
+  const abortActiveTurn = (reason: SkillAuthoringAbortReason) => {
+    const activeTurn = activeTurnRef.current;
+
+    if (!activeTurn || activeTurn.controller.signal.aborted) {
+      return;
+    }
+
+    activeTurn.controller.abort(reason);
+  };
+
+  const restoreSessionSnapshot = (
+    previousSession: SkillAuthoringSessionState,
+    answer: string,
+  ) => {
+    setSession((current) => ({
+      ...current,
+      stage: previousSession.stage,
+      scope: previousSession.scope,
+      messages: previousSession.messages,
+      questionCount: previousSession.questionCount,
+      currentSummary: previousSession.currentSummary,
+      structuredDraft: previousSession.structuredDraft,
+      readyForConfirmation: previousSession.readyForConfirmation,
+      pendingAnswer: answer,
+    }));
+  };
 
   const applyStructuredDraft = (draft: SkillAuthoringStructuredDraft) => {
     setSession((current) => ({
@@ -178,6 +238,7 @@ export const useSkillAuthoringSession = () => {
   };
 
   const startFreshSession = () => {
+    abortActiveTurn('reset');
     if (isBrowser()) {
       localStorage.removeItem(STORAGE_KEY);
     }
@@ -187,6 +248,10 @@ export const useSkillAuthoringSession = () => {
 
   const resetSession = () => {
     startFreshSession();
+  };
+
+  const cancelActiveTurn = () => {
+    abortActiveTurn('cancel');
   };
 
   const appendMessage = (message: Omit<SkillAuthoringSessionMessage, 'id'>) => {
@@ -207,6 +272,16 @@ export const useSkillAuthoringSession = () => {
       throw new Error('authoring scope is not selected');
     }
 
+    const previousSession = session;
+    abortActiveTurn('superseded');
+
+    const requestId = nextTurnRequestIdRef.current + 1;
+    nextTurnRequestIdRef.current = requestId;
+    const controller = new AbortController();
+    activeTurnRef.current = {
+      requestId,
+      controller,
+    };
     const nextMessages: SkillAuthoringSessionMessage[] = [
       ...session.messages,
       {
@@ -223,42 +298,72 @@ export const useSkillAuthoringSession = () => {
       messages: nextMessages,
     }));
 
-    const result = await runSkillAuthoringTurn({
-      scope: {
-        scenario: session.scope.scenario,
-        targets: session.scope.targets,
-      },
-      messages: nextMessages.map((message) => ({
-        role: message.role,
-        content: message.content,
-      })),
-      questionCount: session.questionCount,
-      currentSummary: session.currentSummary,
-      currentStructuredDraft: session.structuredDraft,
-    });
+    try {
+      const result = await streamSkillAuthoringTurn({
+        scope: {
+          scenario: session.scope.scenario,
+          targets: session.scope.targets,
+        },
+        messages: nextMessages.map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
+        questionCount: session.questionCount,
+        currentSummary: session.currentSummary,
+        currentStructuredDraft: session.structuredDraft,
+      }, {
+        signal: controller.signal,
+      });
 
-    setSession((current) => ({
-      ...current,
-      stage: result.stage,
-      questionCount: result.questionCount,
-      currentSummary: result.currentSummary,
-      structuredDraft: result.structuredDraft,
-      readyForConfirmation: result.readyForConfirmation,
-      pendingAnswer: '',
-      messages: [
-        ...current.messages,
-        {
-          id: createMessageId(),
-          role: 'assistant',
-          content: result.assistantMessage,
-        },
-        {
-          id: createMessageId(),
-          role: 'assistant',
-          content: result.nextQuestion,
-        },
-      ],
-    }));
+      if (
+        activeTurnRef.current?.requestId !== requestId ||
+        controller.signal.aborted
+      ) {
+        if (getSkillAuthoringAbortReason(controller.signal) === 'cancel') {
+          restoreSessionSnapshot(previousSession, answer);
+        }
+        return;
+      }
+
+      setSession((current) => ({
+        ...current,
+        stage: result.stage,
+        questionCount: result.questionCount,
+        currentSummary: result.currentSummary,
+        structuredDraft: result.structuredDraft,
+        readyForConfirmation: result.readyForConfirmation,
+        pendingAnswer: '',
+        messages: [
+          ...current.messages,
+          {
+            id: createMessageId(),
+            role: 'assistant',
+            content: result.assistantMessage,
+          },
+          {
+            id: createMessageId(),
+            role: 'assistant',
+            content: result.nextQuestion,
+          },
+        ],
+      }));
+    } catch (error) {
+      const isStaleRequest = activeTurnRef.current?.requestId !== requestId;
+
+      if (isStaleRequest || controller.signal.aborted || isAbortError(error)) {
+        if (getSkillAuthoringAbortReason(controller.signal) === 'cancel') {
+          restoreSessionSnapshot(previousSession, answer);
+        }
+        return;
+      }
+
+      restoreSessionSnapshot(previousSession, answer);
+      throw error;
+    } finally {
+      if (activeTurnRef.current?.requestId === requestId) {
+        activeTurnRef.current = null;
+      }
+    }
   };
 
   return {
@@ -270,6 +375,7 @@ export const useSkillAuthoringSession = () => {
     resumeExistingSession,
     startFreshSession,
     resetSession,
+    cancelActiveTurn,
     appendMessage,
     submitAnswer,
   };

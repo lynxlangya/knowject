@@ -7,6 +7,8 @@ import { validateSkillDefinitionInput } from '../skills.definition.js';
 import type { SkillAuthoringOption } from '../skills.authoring.js';
 import type { NormalizedSkillAuthoringTurnInput, SkillAuthoringLlmService, SkillAuthoringModelDraft, SkillAuthoringModelTurn } from './skills-authoring.service.js';
 
+const SKILL_AUTHORING_LLM_TIMEOUT_MS = 30000;
+
 const extractJsonPayload = (value: string): string => {
   const normalizedValue = value.trim();
 
@@ -238,17 +240,25 @@ export const createSkillAuthoringLlmService = ({
   const providerAdapter = createProjectConversationProviderAdapter();
 
   return {
-    async generateTurn({ actor, session }) {
+    async generateTurn({ actor, session, signal }) {
       const llmConfig = await getEffectiveLlmConfig({
         env,
         repository: settingsRepository,
       });
+      const authoringLlmConfig = {
+        ...llmConfig,
+        requestTimeoutMs: Math.max(
+          llmConfig.requestTimeoutMs,
+          SKILL_AUTHORING_LLM_TIMEOUT_MS,
+        ),
+      };
       const rawContent = await providerAdapter.generate({
-        llmConfig,
+        llmConfig: authoringLlmConfig,
         messages: buildSkillAuthoringMessages({
           actorName: actor.username,
           session,
         }),
+        signal,
       });
 
       return parseSkillAuthoringModelTurn(rawContent);

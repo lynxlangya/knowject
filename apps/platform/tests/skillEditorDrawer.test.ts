@@ -11,11 +11,11 @@ test('SkillEditorModal uses a right drawer shell instead of modal chrome', () =>
     'utf8',
   );
 
-  assert.match(source, /import\s+\{\s*Alert,\s*Button,\s*Drawer,\s*Input,/);
+  assert.match(source, /import\s+\{\s*Button,\s*Drawer,\s*Input,/);
   assert.doesNotMatch(source, /import\s+\{[\s\S]*\bModal\b[\s\S]*\}\s+from 'antd'/);
   assert.match(source, /<Drawer[\s\S]*?open=\{editorMode !== null\}/);
   assert.match(source, /<Drawer[\s\S]*?placement="right"/);
-  assert.match(source, /<Drawer[\s\S]*?size=\{720\}/);
+  assert.match(source, /<Drawer[\s\S]*?size="large"/);
   assert.match(source, /<Drawer[\s\S]*?footer=\{/);
   assert.doesNotMatch(source, /<Modal/);
   assert.doesNotMatch(source, /onOk=\{onSubmit\}/);
@@ -40,6 +40,14 @@ test('Skill editor drawer wires create flow to conversation-first authoring tab'
     modalSource,
     /onEditorTabKeyChange\(activeKey as 'conversation' \| 'editor' \| 'preview'\)/,
   );
+  assert.match(modalSource, /tabPlacement="start"/);
+  assert.doesNotMatch(modalSource, /tabPosition=/);
+  assert.match(modalSource, /Popconfirm/);
+  assert.match(modalSource, /onAuthoringReset/);
+  assert.match(modalSource, /tp\('authoring\.resetConfirm\.title'\)/);
+  assert.match(modalSource, /tp\('authoring\.resetConfirm\.description'\)/);
+  assert.match(modalSource, /tp\('authoring\.resetConfirm\.confirm'\)/);
+  assert.doesNotMatch(modalSource, /t\('skills\.authoring\.resetConfirm\.title'\)/);
   assert.match(modalSource, /tab\.key === 'conversation'/);
   assert.match(hookSource, /editorMode === 'create'/);
   assert.match(hookSource, /setEditorTabKey\('conversation'\)/);
@@ -80,6 +88,10 @@ test('SkillsManagementPage passes authoring session props into SkillEditorModal'
     pageSource,
     /onAuthoringConfirmDraft=\{skillEditor\.handleConfirmAuthoringDraft\}/,
   );
+  assert.match(
+    pageSource,
+    /onAuthoringReset=\{skillEditor\.handleResetCreateAuthoring\}/,
+  );
 });
 
 test('create-flow authoring targets are sanitized against controlled allowlist', () => {
@@ -102,7 +114,7 @@ test('create-flow authoring targets are sanitized against controlled allowlist',
   );
   assert.match(
     hookSource,
-    /targets:\s*sanitizeAuthoringTargets\(targets\)/,
+    /const sanitizedTargets = sanitizeAuthoringTargets\(targets\)/,
   );
   assert.match(
     hookSource,
@@ -140,9 +152,22 @@ test('scope must be confirmed before the authoring answer input can continue', (
     /disabled=\{!hasConfirmedScope \|\| authoringSubmitting\}/,
   );
   assert.match(
+    conversationSource,
+    /value=\{authoringSubmitting \? '' : session\.pendingAnswer\}/,
+  );
+  assert.match(
     hookSource,
     /if \(authoringSession\.session\.stage === 'scope_selecting'\) \{/,
   );
+  assert.match(
+    conversationSource,
+    /placeholder=\{t\('skills\.authoring\.scope\.placeholders\.scenario'\)\}/,
+  );
+  assert.match(
+    conversationSource,
+    /placeholder=\{t\('skills\.authoring\.scope\.placeholders\.targets'\)\}/,
+  );
+  assert.doesNotMatch(conversationSource, /showArrow/);
 });
 
 test('reopen path derives recoverability from sanitized targets in one consistent branch', () => {
@@ -156,4 +181,44 @@ test('reopen path derives recoverability from sanitized targets in one consisten
     /setSession\(\(current\) => \(\{[\s\S]*targets: sanitizeAuthoringTargets\(current\.scope\.targets\)/,
   );
   assert.doesNotMatch(hookSource, /authoringSession\.resumeExistingSession\(\)/);
+});
+
+test('create-flow reset clears authoring progress and returns the drawer to initial state', () => {
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(hookSource, /const handleResetCreateAuthoring = \(\) => \{/);
+  assert.match(hookSource, /if \(editorMode !== 'create'\) \{\s*return;\s*\}/);
+  assert.match(hookSource, /authoringSession\.startFreshSession\(\)/);
+  assert.match(hookSource, /authoringSession\.cancelActiveTurn\(\)/);
+  assert.match(hookSource, /setEditorTabKey\('conversation'\)/);
+  assert.match(hookSource, /setEditorDraft\(createEmptySkillEditorDraft\(\)\)/);
+  assert.match(hookSource, /setEditingSkill\(null\)/);
+});
+
+test('scope selection auto-advances from reset state once scenario and targets are complete', () => {
+  const hookSource = readFileSync(
+    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(hookSource, /const getAuthoringStageAfterScopeChange = \(/);
+  assert.match(
+    hookSource,
+    /if \(!scenario \|\| targets.length === 0\) \{\s*return 'scope_selecting';\s*\}/,
+  );
+  assert.match(
+    hookSource,
+    /return currentStage === 'scope_selecting' \? 'interviewing' : currentStage;/,
+  );
+  assert.match(
+    hookSource,
+    /stage: getAuthoringStageAfterScopeChange\([\s\S]*scenario[\s\S]*\)/,
+  );
+  assert.match(
+    hookSource,
+    /stage: getAuthoringStageAfterScopeChange\([\s\S]*sanitizeAuthoringTargets\(targets\)[\s\S]*\)/,
+  );
 });

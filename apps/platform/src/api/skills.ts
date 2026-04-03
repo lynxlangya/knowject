@@ -254,12 +254,51 @@ export interface SkillAuthoringTurnResponse {
   readyForConfirmation: boolean;
 }
 
+export type SkillAuthoringTurnStreamEventType = 'ack' | 'done' | 'error';
+
+export interface SkillAuthoringTurnStreamEventBase {
+  version: 'v1';
+  type: SkillAuthoringTurnStreamEventType;
+  sequence: number;
+}
+
+export interface SkillAuthoringTurnStreamAckEvent
+  extends SkillAuthoringTurnStreamEventBase {
+  type: 'ack';
+  stage: 'synthesizing';
+}
+
+export interface SkillAuthoringTurnStreamDoneEvent
+  extends SkillAuthoringTurnStreamEventBase {
+  type: 'done';
+  turn: SkillAuthoringTurnResponse;
+}
+
+export interface SkillAuthoringTurnStreamErrorEvent
+  extends SkillAuthoringTurnStreamEventBase {
+  type: 'error';
+  status: number;
+  code: string;
+  message: string;
+  retryable: boolean;
+}
+
+export type SkillAuthoringTurnStreamEvent =
+  | SkillAuthoringTurnStreamAckEvent
+  | SkillAuthoringTurnStreamDoneEvent
+  | SkillAuthoringTurnStreamErrorEvent;
+
+const SKILL_AUTHORING_TURN_TIMEOUT_MS = 35000;
+
 export const runSkillAuthoringTurn = async (
   payload: SkillAuthoringTurnRequest,
 ): Promise<SkillAuthoringTurnResponse> => {
   const response = await client.post<ApiEnvelope<SkillAuthoringTurnResponse>>(
     '/skills/authoring/turns',
     payload,
+    {
+      timeout: SKILL_AUTHORING_TURN_TIMEOUT_MS,
+    },
   );
 
   return unwrapApiData(response.data);
