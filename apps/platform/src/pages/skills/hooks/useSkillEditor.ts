@@ -1,19 +1,18 @@
-import { useMemo, useState } from 'react';
-import { extractApiErrorMessage } from '@api/error';
+import { useMemo, useState } from "react";
+import { extractApiErrorMessage } from "@api/error";
 import {
   createSkill,
+  type SkillAuthoringHumanOverrides,
+  type SkillAuthoringInference,
   getSkillDetail,
   type SkillAuthoringStructuredDraft,
   updateSkill,
   type SkillDetailResponse,
   type SkillSummaryResponse,
-} from '@api/skills';
-import type {
-  EditorMode,
-  SkillAuthoringSessionState,
-} from '../types/skillsManagement.types';
-import { tp } from '../skills.i18n';
-import { AUTHORING_SCOPE_TARGET_ALLOWLIST } from '../constants/skillsManagement.constants';
+} from "@api/skills";
+import type { EditorMode } from "../types/skillsManagement.types";
+import { tp } from "../skills.i18n";
+import { AUTHORING_SCOPE_TARGET_ALLOWLIST } from "../constants/skillsManagement.constants";
 import {
   buildSkillMarkdownPreview,
   createEmptySkillEditorDraft,
@@ -21,8 +20,12 @@ import {
   normalizeSkillDefinition,
   type SkillEditorDraft,
   validateSkillEditorDraft,
-} from '../skillDefinition';
-import { useSkillAuthoringSession, hasRealProgress, resolveAuthoringResumeStage } from './useSkillAuthoringSession';
+} from "../skillDefinition";
+import {
+  useSkillAuthoringSession,
+  hasRealProgress,
+  resolveAuthoringResumeStage,
+} from "./useSkillAuthoringSession";
 
 interface SkillEditorMessageApi {
   success: (content: string) => void;
@@ -43,28 +46,83 @@ const sanitizeAuthoringTargets = (targets: string[]): string[] => {
   );
 };
 
-const getAuthoringStageAfterScopeChange = ({
-  currentStage,
+const buildAuthoringInference = ({
   scenario,
   targets,
 }: {
-  currentStage: SkillAuthoringSessionState['stage'];
-  scenario: SkillEditorDraft['category'] | null;
+  scenario: SkillEditorDraft["category"] | null;
   targets: string[];
-}): SkillAuthoringSessionState['stage'] => {
-  if (!scenario || targets.length === 0) {
-    return 'scope_selecting';
+}): SkillAuthoringInference | null => {
+  if (!scenario && targets.length === 0) {
+    return null;
   }
 
-  return currentStage === 'scope_selecting' ? 'interviewing' : currentStage;
+  return {
+    category: scenario,
+    contextTargets: targets,
+  };
+};
+
+const sanitizeAuthoringInference = (
+  inference: SkillAuthoringInference | null,
+): SkillAuthoringInference | null => {
+  if (!inference) {
+    return null;
+  }
+
+  return {
+    ...inference,
+    contextTargets: sanitizeAuthoringTargets(inference.contextTargets),
+  };
+};
+
+const buildAuthoringHumanOverrides = ({
+  scenario,
+  targets,
+}: {
+  scenario: SkillEditorDraft["category"] | null;
+  targets: string[];
+}): SkillAuthoringHumanOverrides | null => {
+  const overrides: SkillAuthoringHumanOverrides = {};
+
+  if (scenario !== null) {
+    overrides.category = scenario;
+  }
+
+  if (targets.length > 0) {
+    overrides.contextTargets = targets;
+  }
+
+  return Object.keys(overrides).length > 0 ? overrides : null;
+};
+
+const sanitizeAuthoringHumanOverrides = (
+  overrides: SkillAuthoringHumanOverrides | null,
+): SkillAuthoringHumanOverrides | null => {
+  if (!overrides) {
+    return null;
+  }
+
+  const sanitizedOverrides: SkillAuthoringHumanOverrides = {
+    ...(overrides.category !== undefined
+      ? { category: overrides.category }
+      : {}),
+    ...(overrides.contextTargets !== undefined
+      ? {
+          contextTargets: sanitizeAuthoringTargets(overrides.contextTargets),
+        }
+      : {}),
+  };
+
+  return Object.keys(sanitizedOverrides).length > 0 ? sanitizedOverrides : null;
 };
 
 export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   const authoringSession = useSkillAuthoringSession();
   const [editorMode, setEditorMode] = useState<EditorMode>(null);
   const [editorTabKey, setEditorTabKey] = useState<
-    'conversation' | 'editor' | 'preview'
-  >('conversation');
+    "conversation" | "editor" | "preview"
+  >("conversation");
   const [editingSkill, setEditingSkill] = useState<SkillDetailResponse | null>(
     null,
   );
@@ -89,7 +147,7 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   const resetEditorState = () => {
     authoringSession.cancelActiveTurn();
     setEditorMode(null);
-    setEditorTabKey('conversation');
+    setEditorTabKey("conversation");
     setEditingSkill(null);
     setEditorDraft(createEmptySkillEditorDraft());
     setEditorLoading(false);
@@ -105,16 +163,16 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
         description: draft.description,
         category: draft.category,
         owner: draft.owner,
-        status: 'draft',
+        status: "draft",
         definition: draft.definition,
       }),
     );
-    setEditorTabKey('editor');
+    setEditorTabKey("editor");
   };
 
   const handleOpenCreateModal = () => {
-    setEditorMode('create');
-    setEditorTabKey('conversation');
+    setEditorMode("create");
+    setEditorTabKey("conversation");
     setEditingSkill(null);
 
     if (!hasRealProgress(authoringSession.session)) {
@@ -123,14 +181,32 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     }
 
     const { structuredDraft } = authoringSession.session;
-    authoringSession.setSession((current) => ({
-      ...current,
-      scope: {
-        ...current.scope,
-        targets: sanitizeAuthoringTargets(current.scope.targets),
-      },
-      stage: resolveAuthoringResumeStage(current),
-    }));
+    authoringSession.setSession((current) => {
+      const sanitizedTargets = sanitizeAuthoringTargets(current.scope.targets);
+      const currentInference =
+        sanitizeAuthoringInference(current.currentInference) ??
+        buildAuthoringInference({
+          scenario: current.scope.scenario,
+          targets: sanitizedTargets,
+        });
+      const humanOverrides =
+        sanitizeAuthoringHumanOverrides(current.humanOverrides) ??
+        buildAuthoringHumanOverrides({
+          scenario: current.scope.scenario,
+          targets: sanitizedTargets,
+        });
+
+      return {
+        ...current,
+        scope: {
+          ...current.scope,
+          targets: sanitizedTargets,
+        },
+        currentInference,
+        humanOverrides,
+        stage: resolveAuthoringResumeStage(current),
+      };
+    });
 
     if (structuredDraft) {
       hydrateEditorDraftFromAuthoring(structuredDraft);
@@ -138,8 +214,8 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   };
 
   const handleOpenEditModal = async (skill: SkillSummaryResponse) => {
-    setEditorMode('edit');
-    setEditorTabKey('editor');
+    setEditorMode("edit");
+    setEditorTabKey("editor");
     authoringSession.startFreshSession();
     setEditorLoading(true);
 
@@ -157,9 +233,12 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
         }),
       );
     } catch (currentError) {
-      console.error('[SkillsManagementPage] 加载 Skill 详情失败:', currentError);
+      console.error(
+        "[SkillsManagementPage] 加载 Skill 详情失败:",
+        currentError,
+      );
       message.error(
-        extractApiErrorMessage(currentError, tp('feedback.detailLoadFailed')),
+        extractApiErrorMessage(currentError, tp("feedback.detailLoadFailed")),
       );
       resetEditorState();
     } finally {
@@ -169,8 +248,8 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
 
   const handleSubmitEditor = async () => {
     if (!editorValidation.valid) {
-      message.warning(tp('feedback.definitionInvalid'));
-      setEditorTabKey('editor');
+      message.warning(tp("feedback.definitionInvalid"));
+      setEditorTabKey("editor");
       return;
     }
 
@@ -185,64 +264,30 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
         definition: normalizeSkillDefinition(editorDraft.definition),
       };
 
-      if (editorMode === 'create') {
+      if (editorMode === "create") {
         await createSkill(payload);
         authoringSession.startFreshSession();
-        message.success(tp('feedback.createdDraft'));
+        message.success(tp("feedback.createdDraft"));
       }
 
-      if (editorMode === 'edit' && editingSkill) {
+      if (editorMode === "edit" && editingSkill) {
         await updateSkill(editingSkill.id, {
           ...payload,
           status: editorDraft.status,
         });
-        message.success(tp('feedback.saved'));
+        message.success(tp("feedback.saved"));
       }
 
       resetEditorState();
       onSaved();
     } catch (currentError) {
-      console.error('[SkillsManagementPage] 保存 Skill 失败:', currentError);
+      console.error("[SkillsManagementPage] 保存 Skill 失败:", currentError);
       message.error(
-        extractApiErrorMessage(currentError, tp('feedback.saveFailed')),
+        extractApiErrorMessage(currentError, tp("feedback.saveFailed")),
       );
     } finally {
       setEditorSubmitting(false);
     }
-  };
-
-  const handleAuthoringScenarioChange = (scenario: SkillEditorDraft['category']) => {
-    authoringSession.setSession((current) => ({
-      ...current,
-      scope: {
-        ...current.scope,
-        scenario,
-      },
-      stage: getAuthoringStageAfterScopeChange({
-        currentStage: current.stage,
-        scenario,
-        targets: current.scope.targets,
-      }),
-    }));
-  };
-
-  const handleAuthoringTargetsChange = (targets: string[]) => {
-    authoringSession.setSession((current) => {
-      const sanitizedTargets = sanitizeAuthoringTargets(targets);
-
-      return {
-        ...current,
-        scope: {
-          ...current.scope,
-          targets: sanitizedTargets,
-        },
-        stage: getAuthoringStageAfterScopeChange({
-          currentStage: current.stage,
-          scenario: current.scope.scenario,
-          targets: sanitizedTargets,
-        }),
-      };
-    });
   };
 
   const handleAuthoringAnswerChange = (answer: string) => {
@@ -259,24 +304,18 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
       return;
     }
 
-    if (authoringSession.session.stage === 'scope_selecting') {
-      return;
-    }
-
-    const sanitizedTargets = sanitizeAuthoringTargets(
-      authoringSession.session.scope.targets,
-    );
-
-    if (sanitizedTargets.length === 0) {
-      return;
-    }
-
     try {
       await authoringSession.submitAnswer(answer);
     } catch (currentError) {
-      console.error('[SkillsManagementPage] 提交 Skill 对话回答失败:', currentError);
+      console.error(
+        "[SkillsManagementPage] 提交 Skill 对话回答失败:",
+        currentError,
+      );
       message.error(
-        extractApiErrorMessage(currentError, tp('feedback.authoringTurnFailed')),
+        extractApiErrorMessage(
+          currentError,
+          tp("feedback.authoringTurnFailed"),
+        ),
       );
     }
   };
@@ -293,12 +332,12 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
   };
 
   const handleResetCreateAuthoring = () => {
-    if (editorMode !== 'create') {
+    if (editorMode !== "create") {
       return;
     }
 
     authoringSession.startFreshSession();
-    setEditorTabKey('conversation');
+    setEditorTabKey("conversation");
     setEditingSkill(null);
     setEditorDraft(createEmptySkillEditorDraft());
     setEditorLoading(false);
@@ -321,8 +360,6 @@ export const useSkillEditor = ({ message, onSaved }: UseSkillEditorOptions) => {
     handleOpenEditModal,
     handleSubmitEditor,
     authoringSession: authoringSession.session,
-    handleAuthoringScenarioChange,
-    handleAuthoringTargetsChange,
     handleAuthoringAnswerChange,
     handleSubmitAuthoringAnswer,
     handleConfirmAuthoringDraft,

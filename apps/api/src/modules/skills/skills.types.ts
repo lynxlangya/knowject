@@ -1,11 +1,13 @@
-import type { ObjectId } from 'mongodb';
-import type { AuthenticatedRequestUser } from '@modules/auth/auth.types.js';
+import type { ObjectId } from "mongodb";
+import type { AuthenticatedRequestUser } from "@modules/auth/auth.types.js";
 import type {
   SkillCategory,
   SkillDefinitionFields,
   SkillStatus,
-} from './skills.definition.js';
+} from "./skills.definition.js";
 export type {
+  SkillAuthoringHumanOverrides,
+  SkillAuthoringInference,
   SkillAuthoringMessage,
   SkillAuthoringOption,
   SkillAuthoringScopeInput,
@@ -19,45 +21,45 @@ export type {
   SkillAuthoringTurnStreamEventBase,
   SkillAuthoringTurnStreamEventType,
   SkillAuthoringTurnResponse,
-} from './skills.authoring.js';
+} from "./skills.authoring.js";
 
 export interface SkillsCommandContext {
   actor: AuthenticatedRequestUser;
 }
 
 export const SKILL_TYPES = [
-  'repository_search',
-  'repository_inspection',
-  'knowledge_search',
-  'markdown_bundle',
+  "repository_search",
+  "repository_inspection",
+  "knowledge_search",
+  "markdown_bundle",
 ] as const;
 export type SkillType = (typeof SKILL_TYPES)[number];
 
-export const SKILL_SOURCES = ['preset', 'team'] as const;
+export const SKILL_SOURCES = ["preset", "team"] as const;
 export type MethodAssetSkillSource = (typeof SKILL_SOURCES)[number];
-export const LEGACY_SKILL_SOURCES = ['system', 'custom', 'imported'] as const;
+export const LEGACY_SKILL_SOURCES = ["system", "custom", "imported"] as const;
 export type LegacySkillSource = (typeof LEGACY_SKILL_SOURCES)[number];
 export type SkillSource = MethodAssetSkillSource | LegacySkillSource;
 export type PersistedSkillSource = SkillSource;
 export type ReadSkillSource = MethodAssetSkillSource;
 
-export const SKILL_ORIGINS = ['manual', 'github', 'url'] as const;
+export const SKILL_ORIGINS = ["manual", "github", "url"] as const;
 export type SkillOrigin = (typeof SKILL_ORIGINS)[number];
 
 export const SKILL_HANDLERS = [
-  'repository.search_codebase',
-  'repository.check_git_log',
-  'knowledge.search_documents',
+  "repository.search_codebase",
+  "repository.check_git_log",
+  "knowledge.search_documents",
 ] as const;
 export type SkillHandler = (typeof SKILL_HANDLERS)[number];
 
-export const SKILL_RUNTIME_STATUSES = ['available', 'contract_only'] as const;
+export const SKILL_RUNTIME_STATUSES = ["available", "contract_only"] as const;
 export type SkillRuntimeStatus = (typeof SKILL_RUNTIME_STATUSES)[number];
 
-export const SKILL_LIFECYCLE_STATUSES = ['draft', 'published'] as const;
+export const SKILL_LIFECYCLE_STATUSES = ["draft", "published"] as const;
 export type SkillLifecycleStatus = (typeof SKILL_LIFECYCLE_STATUSES)[number];
 
-export const SKILL_PARAMETER_TYPES = ['string', 'integer', 'boolean'] as const;
+export const SKILL_PARAMETER_TYPES = ["string", "integer", "boolean"] as const;
 export type SkillParameterType = (typeof SKILL_PARAMETER_TYPES)[number];
 
 export type SkillParameterDefaultValue = string | number | boolean;
@@ -72,7 +74,7 @@ export interface SkillParameterSchemaProperty {
 }
 
 export interface SkillParametersSchema {
-  type: 'object';
+  type: "object";
   description: string;
   additionalProperties: false;
   properties: Record<string, SkillParameterSchemaProperty>;
@@ -196,19 +198,19 @@ export interface SkillsListResponse {
   total: number;
   items: SkillSummaryResponse[];
   meta: {
-    module: 'skills';
-    stage: 'GA-09';
-    registry: 'preset+team';
+    module: "skills";
+    stage: "GA-09";
+    registry: "preset+team";
     builtinOnly: false;
     boundaries: {
-      businessRuntime: 'node-express';
-      registryStore: 'mongodb+fs';
-      knowledgeAccess: 'service-layer-only';
-      execution: 'service-linked-or-contract-only';
-      authoring: 'structured-method-asset';
-      source: 'team-created-only';
-      binding: 'project-first';
-      runtime: 'manual-or-recommended-in-conversation';
+      businessRuntime: "node-express";
+      registryStore: "mongodb+fs";
+      knowledgeAccess: "service-layer-only";
+      execution: "service-linked-or-contract-only";
+      authoring: "structured-method-asset";
+      source: "team-created-only";
+      binding: "project-first";
+      runtime: "manual-or-recommended-in-conversation";
     };
   };
 }

@@ -1,11 +1,16 @@
-import type { AppEnv } from '@config/env.js';
-import { getEffectiveLlmConfig } from '@config/ai-config.js';
-import { AppError } from '@lib/app-error.js';
-import { createProjectConversationProviderAdapter } from '@modules/projects/project-conversation-provider.js';
-import type { SettingsRepository } from '@modules/settings/settings.repository.js';
-import { validateSkillDefinitionInput } from '../skills.definition.js';
-import type { SkillAuthoringOption } from '../skills.authoring.js';
-import type { NormalizedSkillAuthoringTurnInput, SkillAuthoringLlmService, SkillAuthoringModelDraft, SkillAuthoringModelTurn } from './skills-authoring.service.js';
+import type { AppEnv } from "@config/env.js";
+import { getEffectiveLlmConfig } from "@config/ai-config.js";
+import { AppError } from "@lib/app-error.js";
+import { createProjectConversationProviderAdapter } from "@modules/projects/project-conversation-provider.js";
+import type { SettingsRepository } from "@modules/settings/settings.repository.js";
+import { validateSkillDefinitionInput } from "../skills.definition.js";
+import type { SkillAuthoringOption } from "../skills.authoring.js";
+import type {
+  NormalizedSkillAuthoringTurnInput,
+  SkillAuthoringLlmService,
+  SkillAuthoringModelDraft,
+  SkillAuthoringModelTurn,
+} from "./skills-authoring.service.js";
 
 const SKILL_AUTHORING_LLM_TIMEOUT_MS = 30000;
 
@@ -16,7 +21,7 @@ const extractJsonPayload = (value: string): string => {
     return normalizedValue;
   }
 
-  if (normalizedValue.startsWith('{')) {
+  if (normalizedValue.startsWith("{")) {
     return normalizedValue;
   }
 
@@ -26,8 +31,8 @@ const extractJsonPayload = (value: string): string => {
     return fencedMatch[1].trim();
   }
 
-  const objectStart = normalizedValue.indexOf('{');
-  const objectEnd = normalizedValue.lastIndexOf('}');
+  const objectStart = normalizedValue.indexOf("{");
+  const objectEnd = normalizedValue.lastIndexOf("}");
 
   if (objectStart >= 0 && objectEnd > objectStart) {
     return normalizedValue.slice(objectStart, objectEnd + 1);
@@ -41,17 +46,14 @@ const createInvalidAuthoringModelResponseError = (
 ): AppError => {
   return new AppError({
     statusCode: 502,
-    code: 'SKILL_AUTHORING_LLM_INVALID_RESPONSE',
-    message: 'Skill authoring model returned invalid response',
+    code: "SKILL_AUTHORING_LLM_INVALID_RESPONSE",
+    message: "Skill authoring model returned invalid response",
     cause,
   });
 };
 
-const readRequiredModelString = (
-  value: unknown,
-  field: string,
-): string => {
-  if (typeof value !== 'string' || !value.trim()) {
+const readRequiredModelString = (value: unknown, field: string): string => {
+  if (typeof value !== "string" || !value.trim()) {
     throw createInvalidAuthoringModelResponseError(
       new Error(`${field} must be a non-empty string`),
     );
@@ -66,21 +68,21 @@ const normalizeAuthoringOptions = (value: unknown): SkillAuthoringOption[] => {
   }
 
   return value.flatMap((item): SkillAuthoringOption[] => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
       return [];
     }
 
     const option = item as Record<string, unknown>;
-    const id = typeof option.id === 'string' ? option.id.trim() : '';
-    const label = typeof option.label === 'string' ? option.label.trim() : '';
+    const id = typeof option.id === "string" ? option.id.trim() : "";
+    const label = typeof option.label === "string" ? option.label.trim() : "";
     const rationale =
-      typeof option.rationale === 'string' ? option.rationale.trim() : '';
+      typeof option.rationale === "string" ? option.rationale.trim() : "";
 
     if (
-      (id !== 'a' && id !== 'b' && id !== 'c') ||
+      (id !== "a" && id !== "b" && id !== "c") ||
       !label ||
       !rationale ||
-      typeof option.recommended !== 'boolean'
+      typeof option.recommended !== "boolean"
     ) {
       return [];
     }
@@ -96,15 +98,17 @@ const normalizeAuthoringOptions = (value: unknown): SkillAuthoringOption[] => {
   });
 };
 
-const normalizeModelDraft = (value: unknown): SkillAuthoringModelDraft | null => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+const normalizeModelDraft = (
+  value: unknown,
+): SkillAuthoringModelDraft | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
 
   const draft = value as Record<string, unknown>;
-  let definition: SkillAuthoringModelDraft['definition'];
+  let definition: SkillAuthoringModelDraft["definition"];
 
-  if (draft.definition && typeof draft.definition === 'object') {
+  if (draft.definition && typeof draft.definition === "object") {
     try {
       definition = validateSkillDefinitionInput(draft.definition);
     } catch (error) {
@@ -115,17 +119,19 @@ const normalizeModelDraft = (value: unknown): SkillAuthoringModelDraft | null =>
   }
 
   return {
-    ...(typeof draft.name === 'string' && draft.name.trim()
+    ...(typeof draft.name === "string" && draft.name.trim()
       ? { name: draft.name.trim() }
       : {}),
-    ...(typeof draft.description === 'string' && draft.description.trim()
+    ...(typeof draft.description === "string" && draft.description.trim()
       ? { description: draft.description.trim() }
       : {}),
     ...(definition ? { definition } : {}),
   };
 };
 
-const parseSkillAuthoringModelTurn = (rawContent: string): SkillAuthoringModelTurn => {
+const parseSkillAuthoringModelTurn = (
+  rawContent: string,
+): SkillAuthoringModelTurn => {
   let payload: unknown;
 
   try {
@@ -134,7 +140,7 @@ const parseSkillAuthoringModelTurn = (rawContent: string): SkillAuthoringModelTu
     throw createInvalidAuthoringModelResponseError(error);
   }
 
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw createInvalidAuthoringModelResponseError();
   }
 
@@ -143,11 +149,11 @@ const parseSkillAuthoringModelTurn = (rawContent: string): SkillAuthoringModelTu
   return {
     assistantMessage: readRequiredModelString(
       normalizedPayload.assistantMessage,
-      'assistantMessage',
+      "assistantMessage",
     ),
     nextQuestion: readRequiredModelString(
       normalizedPayload.nextQuestion,
-      'nextQuestion',
+      "nextQuestion",
     ),
     options: normalizeAuthoringOptions(normalizedPayload.options),
     structuredDraft: normalizeModelDraft(normalizedPayload.structuredDraft),
@@ -162,48 +168,53 @@ const buildSkillAuthoringContextPrompt = ({
   session: NormalizedSkillAuthoringTurnInput;
 }): string => {
   return [
-    'Current skill authoring context:',
+    "Skill authoring state:",
     `actorName: ${actorName}`,
-    `scenario: ${session.scope.scenario}`,
-    `targets: ${session.scope.targets.join(', ')}`,
     `questionCount: ${session.questionCount}`,
-    `currentSummary: ${session.currentSummary || '(empty)'}`,
+    `currentSummary: ${session.currentSummary || "(empty)"}`,
+    `effectiveScopeFallback: ${JSON.stringify(session.scope)}`,
     `currentStructuredDraft: ${JSON.stringify(session.currentStructuredDraft)}`,
-    '',
-    'Respond with valid JSON only:',
+    `currentInference: ${JSON.stringify(session.currentInference)}`,
+    `humanOverrides: ${JSON.stringify(session.humanOverrides)}`,
+    "",
+    "Return exactly one valid JSON object with this shape:",
     JSON.stringify({
-      assistantMessage: 'string',
-      nextQuestion: 'string',
+      assistantMessage: "string",
+      nextQuestion: "string",
       options: [
         {
-          id: 'a',
-          label: 'string',
-          rationale: 'string',
+          id: "a",
+          label: "string",
+          rationale: "string",
           recommended: true,
         },
       ],
       structuredDraft: {
-        name: 'string',
-        description: 'string',
+        name: "string",
+        description: "string",
         definition: {
-          goal: 'string',
-          triggerScenarios: ['string'],
-          requiredContext: ['string'],
-          workflow: ['string'],
-          outputContract: ['string'],
-          guardrails: ['string'],
-          artifacts: ['string'],
-          projectBindingNotes: ['string'],
-          followupQuestionsStrategy: 'required',
+          goal: "string",
+          triggerScenarios: ["string"],
+          requiredContext: ["string"],
+          workflow: ["string"],
+          outputContract: ["string"],
+          guardrails: ["string"],
+          artifacts: ["string"],
+          projectBindingNotes: ["string"],
+          followupQuestionsStrategy: "required",
         },
       },
     }),
-    '',
-    'Rules:',
-    '- Keep options only when the next turn is a key decision round.',
-    '- For synthesizing, summarize the current state and avoid emitting a draft unless information is already sufficient.',
-    '- If a structured draft is included, keep followupQuestionsStrategy as required.',
-  ].join('\n');
+    "",
+    "Rules:",
+    "- Do not ask the user to preselect scenario or targets before continuing the conversation.",
+    "- Use the dialogue, currentSummary, currentInference, and humanOverrides to decide the next step.",
+    "- Keep options only when the next turn is a key decision round.",
+    "- If information is insufficient, keep structuredDraft as null.",
+    "- If a structured draft is included, keep followupQuestionsStrategy as required.",
+    "- Do not wrap JSON in markdown fences.",
+    "- Do not output any prose before or after the JSON object.",
+  ].join("\n");
 };
 
 const buildSkillAuthoringMessages = ({
@@ -215,13 +226,13 @@ const buildSkillAuthoringMessages = ({
 }) => {
   return [
     {
-      role: 'system' as const,
+      role: "system" as const,
       content:
-        'You are the backend skill authoring assistant for Knowject. Ask controlled questions, summarize accurately, and return valid JSON only.',
+        "You are the backend skill authoring assistant for Knowject. Continue the conversation based on current state, summarize accurately, and return valid JSON only.",
     },
     ...session.messages,
     {
-      role: 'user' as const,
+      role: "user" as const,
       content: buildSkillAuthoringContextPrompt({
         actorName,
         session,

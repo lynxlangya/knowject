@@ -1,15 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 import {
+  SKILL_CATEGORY_VALUES,
+  type SkillAuthoringHumanOverrides,
+  type SkillAuthoringInference,
+  type SkillCategory,
   type SkillAuthoringStructuredDraft,
-} from '@api/skills';
-import { isAbortError, streamSkillAuthoringTurn } from '@api/skills.stream';
+} from "@api/skills";
+import { isAbortError, streamSkillAuthoringTurn } from "@api/skills.stream";
+import { AUTHORING_SCOPE_TARGET_ALLOWLIST } from "../constants/skillsManagement.constants";
 import type {
   SkillAuthoringCreateScopeState,
   SkillAuthoringSessionMessage,
   SkillAuthoringSessionState,
-} from '../types/skillsManagement.types';
+} from "../types/skillsManagement.types";
 
-const STORAGE_KEY = 'knowject:skills:create-authoring-session';
+const STORAGE_KEY = "knowject:skills:create-authoring-session";
 
 const EMPTY_SCOPE: SkillAuthoringCreateScopeState = {
   scenario: null,
@@ -17,91 +22,233 @@ const EMPTY_SCOPE: SkillAuthoringCreateScopeState = {
 };
 
 const SCOPE_INTRO_MESSAGE: SkillAuthoringSessionMessage = {
-  id: 'assistant-scope-intro',
-  role: 'assistant',
-  content: '先从目标场景和涉及范围开始，我会基于这两个边界继续追问。',
+  id: "assistant-scope-intro",
+  role: "assistant",
+  content:
+    "先直接说清这个 Skill 想解决什么问题，我会在对话里逐步收敛范围和草稿。",
 };
 
 const createEmptySessionState = (): SkillAuthoringSessionState => ({
-  stage: 'scope_selecting',
+  stage: "interviewing",
   scope: EMPTY_SCOPE,
   messages: [SCOPE_INTRO_MESSAGE],
   questionCount: 0,
-  currentSummary: '',
+  currentSummary: "",
   structuredDraft: null,
+  currentInference: null,
+  humanOverrides: null,
   readyForConfirmation: false,
-  pendingAnswer: '',
+  pendingAnswer: "",
 });
 
-const isBrowser = () => typeof window !== 'undefined';
+const isBrowser = () => typeof window !== "undefined";
 
-const isValidStage = (value: unknown): value is SkillAuthoringSessionState['stage'] =>
-  value === 'scope_selecting' ||
-  value === 'interviewing' ||
-  value === 'synthesizing' ||
-  value === 'awaiting_confirmation' ||
-  value === 'hydrated';
+const isValidStage = (
+  value: unknown,
+): value is SkillAuthoringSessionState["stage"] =>
+  value === "interviewing" ||
+  value === "synthesizing" ||
+  value === "awaiting_confirmation" ||
+  value === "hydrated";
 
-const isValidScope = (value: unknown): value is SkillAuthoringCreateScopeState => {
-  if (!value || typeof value !== 'object') return false;
+const normalizeStoredStage = (
+  value: unknown,
+): SkillAuthoringSessionState["stage"] | null => {
+  if (value === "scope_selecting") {
+    return "interviewing";
+  }
+
+  return isValidStage(value) ? value : null;
+};
+
+const isSkillCategory = (value: unknown): value is SkillCategory =>
+  typeof value === "string" &&
+  SKILL_CATEGORY_VALUES.includes(value as SkillCategory);
+
+const isAllowedAuthoringTarget = (value: unknown): value is string =>
+  typeof value === "string" &&
+  AUTHORING_SCOPE_TARGET_ALLOWLIST.includes(
+    value as (typeof AUTHORING_SCOPE_TARGET_ALLOWLIST)[number],
+  );
+
+const sanitizeStoredAuthoringTargets = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(value.filter((item): item is string => isAllowedAuthoringTarget(item))),
+  );
+};
+
+const isValidScope = (
+  value: unknown,
+): value is SkillAuthoringCreateScopeState => {
+  if (!value || typeof value !== "object") return false;
 
   const scope = value as Partial<SkillAuthoringCreateScopeState>;
   const hasValidScenario =
     scope.scenario === null ||
     scope.scenario === undefined ||
-    typeof scope.scenario === 'string';
+    isSkillCategory(scope.scenario);
 
   return hasValidScenario && Array.isArray(scope.targets);
 };
 
-const isValidMessages = (value: unknown): value is SkillAuthoringSessionMessage[] => {
+const isValidMessages = (
+  value: unknown,
+): value is SkillAuthoringSessionMessage[] => {
   if (!Array.isArray(value)) return false;
 
   return value.every(
     (message) =>
       message &&
-      typeof message === 'object' &&
-      (message.role === 'assistant' || message.role === 'user') &&
-      typeof message.content === 'string',
+      typeof message === "object" &&
+      (message.role === "assistant" || message.role === "user") &&
+      typeof message.content === "string",
   );
+};
+
+const isValidInference = (value: unknown): value is SkillAuthoringInference => {
+  if (!value || typeof value !== "object") return false;
+
+  const inference = value as Partial<SkillAuthoringInference>;
+  const hasValidCategory =
+    inference.category === null ||
+    inference.category === undefined ||
+    isSkillCategory(inference.category);
+
+  return hasValidCategory && Array.isArray(inference.contextTargets);
+};
+
+const isValidHumanOverrides = (
+  value: unknown,
+): value is SkillAuthoringHumanOverrides => {
+  if (!value || typeof value !== "object") return false;
+
+  const overrides = value as Partial<SkillAuthoringHumanOverrides>;
+  const hasValidCategory =
+    overrides.category === null ||
+    overrides.category === undefined ||
+    isSkillCategory(overrides.category);
+  const hasValidTargets =
+    overrides.contextTargets === undefined ||
+    Array.isArray(overrides.contextTargets);
+
+  return hasValidCategory && hasValidTargets;
+};
+
+const createInferenceFromScope = (
+  scope: SkillAuthoringCreateScopeState,
+): SkillAuthoringInference | null => {
+  if (!scope.scenario && scope.targets.length === 0) {
+    return null;
+  }
+
+  return {
+    category: scope.scenario,
+    contextTargets: scope.targets,
+  };
+};
+
+const createHumanOverridesFromScope = (
+  scope: SkillAuthoringCreateScopeState,
+): SkillAuthoringHumanOverrides | null => {
+  const overrides: SkillAuthoringHumanOverrides = {};
+
+  if (scope.scenario !== null) {
+    overrides.category = scope.scenario;
+  }
+
+  if (scope.targets.length > 0) {
+    overrides.contextTargets = scope.targets;
+  }
+
+  return Object.keys(overrides).length > 0 ? overrides : null;
 };
 
 const readSessionFromLocalStorage = (): SkillAuthoringSessionState => {
   if (!isBrowser()) return createEmptySessionState();
 
-  const raw = localStorage.getItem('knowject:skills:create-authoring-session');
+  const raw = localStorage.getItem("knowject:skills:create-authoring-session");
   if (!raw) return createEmptySessionState();
 
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') {
-      throw new Error('invalid session payload');
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("invalid session payload");
     }
 
     const record = parsed as Partial<SkillAuthoringSessionState>;
-    if (!isValidStage(record.stage)) {
-      throw new Error('invalid session stage');
+    const normalizedStage = normalizeStoredStage(record.stage);
+    if (!normalizedStage) {
+      throw new Error("invalid session stage");
     }
     if (record.scope && !isValidScope(record.scope)) {
-      throw new Error('invalid session scope');
+      throw new Error("invalid session scope");
     }
     if (record.messages && !isValidMessages(record.messages)) {
-      throw new Error('invalid session messages');
+      throw new Error("invalid session messages");
     }
+    if (record.currentInference && !isValidInference(record.currentInference)) {
+      throw new Error("invalid session inference");
+    }
+    if (
+      record.humanOverrides &&
+      !isValidHumanOverrides(record.humanOverrides)
+    ) {
+      throw new Error("invalid session humanOverrides");
+    }
+
+    const normalizedScope: SkillAuthoringCreateScopeState = {
+      scenario: record.scope?.scenario ?? null,
+      targets: sanitizeStoredAuthoringTargets(record.scope?.targets),
+    };
+    const normalizedCurrentInference = record.currentInference
+      ? {
+          ...record.currentInference,
+          contextTargets: sanitizeStoredAuthoringTargets(
+            record.currentInference.contextTargets,
+          ),
+        }
+      : createInferenceFromScope(normalizedScope);
+    const normalizedHumanOverrides = record.humanOverrides
+      ? {
+          ...(record.humanOverrides.category !== undefined
+            ? { category: record.humanOverrides.category }
+            : {}),
+          ...(record.humanOverrides.contextTargets !== undefined
+            ? {
+                contextTargets: sanitizeStoredAuthoringTargets(
+                  record.humanOverrides.contextTargets,
+                ),
+              }
+            : {}),
+        }
+      : createHumanOverridesFromScope(normalizedScope);
 
     return {
       ...createEmptySessionState(),
-      stage: record.stage,
-      scope: record.scope ?? EMPTY_SCOPE,
+      stage: normalizedStage,
+      scope: normalizedScope,
       messages: record.messages ?? [SCOPE_INTRO_MESSAGE],
       questionCount: record.questionCount ?? 0,
-      currentSummary: record.currentSummary ?? '',
+      currentSummary: record.currentSummary ?? "",
       structuredDraft: record.structuredDraft ?? null,
+      currentInference: normalizedCurrentInference,
+      humanOverrides:
+        normalizedHumanOverrides &&
+        Object.keys(normalizedHumanOverrides).length > 0
+          ? normalizedHumanOverrides
+          : null,
       readyForConfirmation: record.readyForConfirmation ?? false,
-      pendingAnswer: record.pendingAnswer ?? '',
+      pendingAnswer: record.pendingAnswer ?? "",
     };
   } catch (error) {
-    console.warn('[useSkillAuthoringSession] localStorage 恢复失败，将回退为新会话:', error);
+    console.warn(
+      "[useSkillAuthoringSession] localStorage 恢复失败，将回退为新会话:",
+      error,
+    );
     localStorage.removeItem(STORAGE_KEY);
     return createEmptySessionState();
   }
@@ -109,31 +256,43 @@ const readSessionFromLocalStorage = (): SkillAuthoringSessionState => {
 
 const createMessageId = (): string => {
   if (!isBrowser()) return `${Date.now()}`;
-  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  );
 };
 
-export const hasRealProgress = (session: SkillAuthoringSessionState): boolean => {
+export const hasRealProgress = (
+  session: SkillAuthoringSessionState,
+): boolean => {
   return Boolean(
     session.scope.scenario ||
-      session.scope.targets.length > 0 ||
-      session.messages.length > 1 ||
-      session.questionCount > 0 ||
-      session.currentSummary.trim() ||
-      session.structuredDraft ||
-      session.pendingAnswer.trim(),
+    session.scope.targets.length > 0 ||
+    session.messages.length > 1 ||
+    session.questionCount > 0 ||
+    session.currentSummary.trim() ||
+    session.structuredDraft ||
+    session.currentInference?.category ||
+    session.currentInference?.contextTargets.length ||
+    session.humanOverrides?.category !== undefined ||
+    (session.humanOverrides?.contextTargets?.length ?? 0) > 0 ||
+    session.pendingAnswer.trim(),
   );
 };
 
 export const resolveAuthoringResumeStage = (
   current: SkillAuthoringSessionState,
-): SkillAuthoringSessionState['stage'] => {
-  if (current.stage !== 'scope_selecting') return current.stage;
-  if (current.pendingAnswer.trim()) return 'synthesizing';
-  if (current.structuredDraft) return 'hydrated';
-  return 'interviewing';
+): SkillAuthoringSessionState["stage"] => {
+  if (current.readyForConfirmation && current.structuredDraft) {
+    return "hydrated";
+  }
+  if (current.readyForConfirmation) {
+    return "awaiting_confirmation";
+  }
+  return "interviewing";
 };
 
-type SkillAuthoringAbortReason = 'cancel' | 'reset' | 'superseded' | 'unmount';
+type SkillAuthoringAbortReason = "cancel" | "reset" | "superseded" | "unmount";
 
 interface ActiveSkillAuthoringTurn {
   requestId: number;
@@ -143,10 +302,12 @@ interface ActiveSkillAuthoringTurn {
 const isSkillAuthoringAbortReason = (
   value: unknown,
 ): value is SkillAuthoringAbortReason => {
-  return value === 'cancel' ||
-    value === 'reset' ||
-    value === 'superseded' ||
-    value === 'unmount';
+  return (
+    value === "cancel" ||
+    value === "reset" ||
+    value === "superseded" ||
+    value === "unmount"
+  );
 };
 
 const getSkillAuthoringAbortReason = (
@@ -161,7 +322,9 @@ export const useSkillAuthoringSession = () => {
   );
   const activeTurnRef = useRef<ActiveSkillAuthoringTurn | null>(null);
   const nextTurnRequestIdRef = useRef(0);
-  const lastPersistedSessionRef = useRef<SkillAuthoringSessionState | null>(null);
+  const lastPersistedSessionRef = useRef<SkillAuthoringSessionState | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!isBrowser()) return;
@@ -171,7 +334,10 @@ export const useSkillAuthoringSession = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
-      console.warn('[useSkillAuthoringSession] localStorage 持久化失败:', error);
+      console.warn(
+        "[useSkillAuthoringSession] localStorage 持久化失败:",
+        error,
+      );
     }
   }, [session]);
 
@@ -179,7 +345,7 @@ export const useSkillAuthoringSession = () => {
     return () => {
       const activeTurn = activeTurnRef.current;
       if (activeTurn && !activeTurn.controller.signal.aborted) {
-        activeTurn.controller.abort('unmount');
+        activeTurn.controller.abort("unmount");
       }
     };
   }, []);
@@ -206,6 +372,8 @@ export const useSkillAuthoringSession = () => {
       questionCount: previousSession.questionCount,
       currentSummary: previousSession.currentSummary,
       structuredDraft: previousSession.structuredDraft,
+      currentInference: previousSession.currentInference,
+      humanOverrides: previousSession.humanOverrides,
       readyForConfirmation: previousSession.readyForConfirmation,
       pendingAnswer: answer,
     }));
@@ -214,7 +382,7 @@ export const useSkillAuthoringSession = () => {
   const applyStructuredDraft = (draft: SkillAuthoringStructuredDraft) => {
     setSession((current) => ({
       ...current,
-      stage: 'hydrated',
+      stage: "hydrated",
       structuredDraft: draft,
       readyForConfirmation: true,
     }));
@@ -226,10 +394,10 @@ export const useSkillAuthoringSession = () => {
 
   const resumeExistingSession = () => {
     if (!hasRecoverableSession()) {
-      if (session.stage !== 'scope_selecting') {
+      if (session.stage !== "interviewing") {
         setSession((current) => ({
           ...current,
-          stage: 'scope_selecting',
+          stage: "interviewing",
         }));
       }
       return;
@@ -242,7 +410,7 @@ export const useSkillAuthoringSession = () => {
   };
 
   const startFreshSession = () => {
-    abortActiveTurn('reset');
+    abortActiveTurn("reset");
     if (isBrowser()) {
       localStorage.removeItem(STORAGE_KEY);
     }
@@ -251,10 +419,10 @@ export const useSkillAuthoringSession = () => {
   };
 
   const cancelActiveTurn = () => {
-    abortActiveTurn('cancel');
+    abortActiveTurn("cancel");
   };
 
-  const appendMessage = (message: Omit<SkillAuthoringSessionMessage, 'id'>) => {
+  const appendMessage = (message: Omit<SkillAuthoringSessionMessage, "id">) => {
     setSession((current) => ({
       ...current,
       messages: [
@@ -268,12 +436,8 @@ export const useSkillAuthoringSession = () => {
   };
 
   const submitAnswer = async (answer: string) => {
-    if (!session.scope.scenario) {
-      throw new Error('authoring scope is not selected');
-    }
-
     const previousSession = session;
-    abortActiveTurn('superseded');
+    abortActiveTurn("superseded");
 
     const requestId = nextTurnRequestIdRef.current + 1;
     nextTurnRequestIdRef.current = requestId;
@@ -286,40 +450,51 @@ export const useSkillAuthoringSession = () => {
       ...session.messages,
       {
         id: createMessageId(),
-        role: 'user',
+        role: "user",
         content: answer,
       },
     ];
 
     setSession((current) => ({
       ...current,
-      stage: 'synthesizing',
+      stage: "synthesizing",
       pendingAnswer: answer,
       messages: nextMessages,
     }));
 
     try {
-      const result = await streamSkillAuthoringTurn({
-        scope: {
-          scenario: session.scope.scenario,
-          targets: session.scope.targets,
+      const currentInference =
+        session.currentInference ?? createInferenceFromScope(session.scope);
+      const normalizedScope =
+        session.scope.scenario && session.scope.targets.length > 0
+          ? {
+              scenario: session.scope.scenario,
+              targets: session.scope.targets,
+            }
+          : null;
+      const result = await streamSkillAuthoringTurn(
+        {
+          scope: normalizedScope,
+          messages: nextMessages.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+          questionCount: session.questionCount,
+          currentSummary: session.currentSummary,
+          currentStructuredDraft: session.structuredDraft,
+          currentInference,
+          humanOverrides: session.humanOverrides,
         },
-        messages: nextMessages.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
-        questionCount: session.questionCount,
-        currentSummary: session.currentSummary,
-        currentStructuredDraft: session.structuredDraft,
-      }, {
-        signal: controller.signal,
-      });
+        {
+          signal: controller.signal,
+        },
+      );
 
       if (
         activeTurnRef.current?.requestId !== requestId ||
         controller.signal.aborted
       ) {
-        if (getSkillAuthoringAbortReason(controller.signal) === 'cancel') {
+        if (getSkillAuthoringAbortReason(controller.signal) === "cancel") {
           restoreSessionSnapshot(previousSession, answer);
         }
         return;
@@ -331,18 +506,20 @@ export const useSkillAuthoringSession = () => {
         questionCount: result.questionCount,
         currentSummary: result.currentSummary,
         structuredDraft: result.structuredDraft,
+        currentInference: result.currentInference,
+        humanOverrides: current.humanOverrides,
         readyForConfirmation: result.readyForConfirmation,
-        pendingAnswer: '',
+        pendingAnswer: "",
         messages: [
           ...current.messages,
           {
             id: createMessageId(),
-            role: 'assistant',
+            role: "assistant",
             content: result.assistantMessage,
           },
           {
             id: createMessageId(),
-            role: 'assistant',
+            role: "assistant",
             content: result.nextQuestion,
           },
         ],
@@ -351,7 +528,7 @@ export const useSkillAuthoringSession = () => {
       const isStaleRequest = activeTurnRef.current?.requestId !== requestId;
 
       if (isStaleRequest || controller.signal.aborted || isAbortError(error)) {
-        if (getSkillAuthoringAbortReason(controller.signal) === 'cancel') {
+        if (getSkillAuthoringAbortReason(controller.signal) === "cancel") {
           restoreSessionSnapshot(previousSession, answer);
         }
         return;

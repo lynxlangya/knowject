@@ -1,18 +1,21 @@
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import test from 'node:test';
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
 
-test('SkillEditorModal uses a right drawer shell instead of modal chrome', () => {
+test("SkillEditorModal uses a right drawer shell instead of modal chrome", () => {
   const source = readFileSync(
     new URL(
-      '../src/pages/skills/components/SkillEditorModal.tsx',
+      "../src/pages/skills/components/SkillEditorModal.tsx",
       import.meta.url,
     ),
-    'utf8',
+    "utf8",
   );
 
   assert.match(source, /import\s+\{\s*Button,\s*Drawer,\s*Input,/);
-  assert.doesNotMatch(source, /import\s+\{[\s\S]*\bModal\b[\s\S]*\}\s+from 'antd'/);
+  assert.doesNotMatch(
+    source,
+    /import\s+\{[\s\S]*\bModal\b[\s\S]*\}\s+from 'antd'/,
+  );
   assert.match(source, /<Drawer[\s\S]*?open=\{editorMode !== null\}/);
   assert.match(source, /<Drawer[\s\S]*?placement="right"/);
   assert.match(source, /<Drawer[\s\S]*?size="large"/);
@@ -23,61 +26,65 @@ test('SkillEditorModal uses a right drawer shell instead of modal chrome', () =>
   assert.doesNotMatch(source, /width=\{960\}/);
 });
 
-test('Skill editor drawer wires create flow to conversation-first authoring tab', () => {
+test("Skill editor drawer wires create flow to conversation-first authoring tab", () => {
   const modalSource = readFileSync(
     new URL(
-      '../src/pages/skills/components/SkillEditorModal.tsx',
+      "../src/pages/skills/components/SkillEditorModal.tsx",
       import.meta.url,
     ),
-    'utf8',
+    "utf8",
   );
   const hookSource = readFileSync(
-    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
-    'utf8',
+    new URL("../src/pages/skills/hooks/useSkillEditor.ts", import.meta.url),
+    "utf8",
   );
 
   assert.match(
     modalSource,
-    /onEditorTabKeyChange\(activeKey as 'conversation' \| 'editor' \| 'preview'\)/,
+    /onEditorTabKeyChange\([\s\S]*activeKey as ["']conversation["'] \| ["']editor["'] \| ["']preview["'][\s\S]*\)/,
   );
   assert.match(modalSource, /tabPlacement="start"/);
   assert.doesNotMatch(modalSource, /tabPosition=/);
   assert.match(modalSource, /Popconfirm/);
   assert.match(modalSource, /onAuthoringReset/);
-  assert.match(modalSource, /tp\('authoring\.resetConfirm\.title'\)/);
-  assert.match(modalSource, /tp\('authoring\.resetConfirm\.description'\)/);
-  assert.match(modalSource, /tp\('authoring\.resetConfirm\.confirm'\)/);
-  assert.doesNotMatch(modalSource, /t\('skills\.authoring\.resetConfirm\.title'\)/);
-  assert.match(modalSource, /tab\.key === 'conversation'/);
-  assert.match(hookSource, /editorMode === 'create'/);
-  assert.match(hookSource, /setEditorTabKey\('conversation'\)/);
+  assert.match(modalSource, /tp\(["']authoring\.resetConfirm\.title["']\)/);
+  assert.match(
+    modalSource,
+    /tp\(["']authoring\.resetConfirm\.description["']\)/,
+  );
+  assert.match(modalSource, /tp\(["']authoring\.resetConfirm\.confirm["']\)/);
+  assert.doesNotMatch(
+    modalSource,
+    /t\(["']skills\.authoring\.resetConfirm\.title["']\)/,
+  );
+  assert.match(modalSource, /tab\.key === ["']conversation["']/);
+  assert.match(hookSource, /editorMode === ["']create["']/);
+  assert.match(hookSource, /setEditorTabKey\(["']conversation["']\)/);
   assert.match(hookSource, /hydrateEditorDraftFromAuthoring/);
   assert.match(hookSource, /startFreshSession\(\)/);
 
   const conversationTabSource = readFileSync(
     new URL(
-      '../src/pages/skills/components/SkillAuthoringConversationTab.tsx',
+      "../src/pages/skills/components/SkillAuthoringConversationTab.tsx",
       import.meta.url,
     ),
-    'utf8',
+    "utf8",
   );
-  assert.match(conversationTabSource, /session\.stage === 'synthesizing'/);
+  assert.match(
+    conversationTabSource,
+    /session\.stage === ["']synthesizing["']/,
+  );
 });
 
-test('SkillsManagementPage passes authoring session props into SkillEditorModal', () => {
+test("SkillsManagementPage passes authoring session props into SkillEditorModal", () => {
   const pageSource = readFileSync(
-    new URL('../src/pages/skills/SkillsManagementPage.tsx', import.meta.url),
-    'utf8',
+    new URL("../src/pages/skills/SkillsManagementPage.tsx", import.meta.url),
+    "utf8",
   );
 
-  assert.match(pageSource, /authoringSession=\{skillEditor\.authoringSession\}/);
   assert.match(
     pageSource,
-    /onAuthoringScenarioChange=\{skillEditor\.handleAuthoringScenarioChange\}/,
-  );
-  assert.match(
-    pageSource,
-    /onAuthoringTargetsChange=\{skillEditor\.handleAuthoringTargetsChange\}/,
+    /authoringSession=\{skillEditor\.authoringSession\}/,
   );
   assert.match(
     pageSource,
@@ -97,131 +104,124 @@ test('SkillsManagementPage passes authoring session props into SkillEditorModal'
   );
 });
 
-test('create-flow authoring targets are sanitized against controlled allowlist', () => {
+test("create-flow authoring targets are sanitized against controlled allowlist", () => {
   const constantsSource = readFileSync(
     new URL(
-      '../src/pages/skills/constants/skillsManagement.constants.ts',
+      "../src/pages/skills/constants/skillsManagement.constants.ts",
       import.meta.url,
     ),
-    'utf8',
+    "utf8",
   );
   const hookSource = readFileSync(
-    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
-    'utf8',
+    new URL("../src/pages/skills/hooks/useSkillEditor.ts", import.meta.url),
+    "utf8",
   );
 
   assert.match(constantsSource, /AUTHORING_SCOPE_TARGET_ALLOWLIST/);
   assert.match(
     hookSource,
-    /sanitizeAuthoringTargets\([\s\S]*authoringSession\.session\.scope\.targets[\s\S]*\)/,
+    /const sanitizedTargets = sanitizeAuthoringTargets\(current\.scope\.targets\)/,
   );
-  assert.match(
-    hookSource,
-    /const sanitizedTargets = sanitizeAuthoringTargets\(targets\)/,
-  );
-  assert.match(
-    hookSource,
-    /AUTHORING_SCOPE_TARGET_ALLOWLIST\.includes/,
-  );
+  assert.match(hookSource, /AUTHORING_SCOPE_TARGET_ALLOWLIST\.includes/);
 });
 
-test('successful create clears the recoverable authoring session before reopen', () => {
+test("successful create clears the recoverable authoring session before reopen", () => {
   const hookSource = readFileSync(
-    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
-    'utf8',
+    new URL("../src/pages/skills/hooks/useSkillEditor.ts", import.meta.url),
+    "utf8",
   );
 
-  assert.match(hookSource, /if \(editorMode === 'create'\) \{/);
+  assert.match(hookSource, /if \(editorMode === ["']create["']\) \{/);
   assert.match(hookSource, /await createSkill\(payload\)/);
   assert.match(hookSource, /authoringSession\.startFreshSession\(\)/);
 });
 
-test('scope must be confirmed before the authoring answer input can continue', () => {
+test("authoring answer input can continue without pre-confirmed scope", () => {
   const conversationSource = readFileSync(
     new URL(
-      '../src/pages/skills/components/SkillAuthoringConversationTab.tsx',
+      "../src/pages/skills/components/SkillAuthoringConversationTab.tsx",
       import.meta.url,
     ),
-    'utf8',
+    "utf8",
   );
   const hookSource = readFileSync(
-    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
-    'utf8',
+    new URL("../src/pages/skills/hooks/useSkillEditor.ts", import.meta.url),
+    "utf8",
   );
 
-  assert.match(conversationSource, /session\.stage !== 'scope_selecting'/);
+  assert.doesNotMatch(conversationSource, /hasConfirmedScope/);
+  assert.match(conversationSource, /disabled=\{authoringSubmitting\}/);
   assert.match(
     conversationSource,
-    /disabled=\{!hasConfirmedScope \|\| authoringSubmitting\}/,
+    /value=\{authoringSubmitting \? "" : session\.pendingAnswer\}/,
+  );
+  assert.doesNotMatch(hookSource, /scope_selecting/);
+  assert.match(
+    conversationSource,
+    /t\("skills\.authoring\.inference\.title"\)/,
   );
   assert.match(
     conversationSource,
-    /value=\{authoringSubmitting \? '' : session\.pendingAnswer\}/,
+    /t\("skills\.authoring\.inference\.summary"\)/,
+  );
+  assert.doesNotMatch(
+    conversationSource,
+    /t\("skills\.authoring\.scope\.title"\)/,
+  );
+  assert.doesNotMatch(conversationSource, /onScenarioChange/);
+  assert.doesNotMatch(conversationSource, /onTargetsChange/);
+  assert.doesNotMatch(conversationSource, /<Select/);
+});
+
+test("reopen path derives recoverability from sanitized targets in one consistent branch", () => {
+  const hookSource = readFileSync(
+    new URL("../src/pages/skills/hooks/useSkillEditor.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    hookSource,
+    /setSession\(\(current\) => \{[\s\S]*targets: sanitizedTargets[\s\S]*\}\);/s,
   );
   assert.match(
     hookSource,
-    /if \(authoringSession\.session\.stage === 'scope_selecting'\) \{/,
+    /sanitizeAuthoringInference\(current\.currentInference\)\s*\?\?\s*buildAuthoringInference/,
   );
-  assert.match(
-    conversationSource,
-    /placeholder=\{t\('skills\.authoring\.scope\.placeholders\.scenario'\)\}/,
-  );
-  assert.match(
-    conversationSource,
-    /placeholder=\{t\('skills\.authoring\.scope\.placeholders\.targets'\)\}/,
-  );
-  assert.doesNotMatch(conversationSource, /showArrow/);
-});
-
-test('reopen path derives recoverability from sanitized targets in one consistent branch', () => {
-  const hookSource = readFileSync(
-    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
-    'utf8',
-  );
-
   assert.match(
     hookSource,
-    /setSession\(\(current\) => \(\{[\s\S]*targets: sanitizeAuthoringTargets\(current\.scope\.targets\)/,
+    /sanitizeAuthoringHumanOverrides\(current\.humanOverrides\)\s*\?\?\s*buildAuthoringHumanOverrides/,
   );
-  assert.doesNotMatch(hookSource, /authoringSession\.resumeExistingSession\(\)/);
+  assert.doesNotMatch(
+    hookSource,
+    /authoringSession\.resumeExistingSession\(\)/,
+  );
 });
 
-test('create-flow reset clears authoring progress and returns the drawer to initial state', () => {
+test("create-flow reset clears authoring progress and returns the drawer to initial state", () => {
   const hookSource = readFileSync(
-    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
-    'utf8',
+    new URL("../src/pages/skills/hooks/useSkillEditor.ts", import.meta.url),
+    "utf8",
   );
 
   assert.match(hookSource, /const handleResetCreateAuthoring = \(\) => \{/);
-  assert.match(hookSource, /if \(editorMode !== 'create'\) \{\s*return;\s*\}/);
+  assert.match(
+    hookSource,
+    /if \(editorMode !== ["']create["']\) \{\s*return;\s*\}/,
+  );
   assert.match(hookSource, /authoringSession\.startFreshSession\(\)/);
   assert.match(hookSource, /authoringSession\.cancelActiveTurn\(\)/);
-  assert.match(hookSource, /setEditorTabKey\('conversation'\)/);
+  assert.match(hookSource, /setEditorTabKey\(["']conversation["']\)/);
   assert.match(hookSource, /setEditorDraft\(createEmptySkillEditorDraft\(\)\)/);
   assert.match(hookSource, /setEditingSkill\(null\)/);
 });
 
-test('scope selection auto-advances from reset state once scenario and targets are complete', () => {
+test("create-flow no longer keeps scope-selecting as a prerequisite stage", () => {
   const hookSource = readFileSync(
-    new URL('../src/pages/skills/hooks/useSkillEditor.ts', import.meta.url),
-    'utf8',
+    new URL("../src/pages/skills/hooks/useSkillEditor.ts", import.meta.url),
+    "utf8",
   );
 
-  assert.match(hookSource, /const getAuthoringStageAfterScopeChange = \(/);
-  assert.match(
-    hookSource,
-    /if \(!scenario \|\| targets.length === 0\) \{\s*return 'scope_selecting';\s*\}/,
-  );
-  assert.match(
-    hookSource,
-    /return currentStage === 'scope_selecting' \? 'interviewing' : currentStage;/,
-  );
-  assert.match(
-    hookSource,
-    /stage: getAuthoringStageAfterScopeChange\([\s\S]*scenario[\s\S]*\)/,
-  );
-  assert.match(
-    hookSource,
-    /stage: getAuthoringStageAfterScopeChange\([\s\S]*sanitizeAuthoringTargets\(targets\)[\s\S]*\)/,
-  );
+  assert.doesNotMatch(hookSource, /getAuthoringStageAfterScopeChange/);
+  assert.doesNotMatch(hookSource, /handleAuthoringScenarioChange/);
+  assert.doesNotMatch(hookSource, /handleAuthoringTargetsChange/);
 });

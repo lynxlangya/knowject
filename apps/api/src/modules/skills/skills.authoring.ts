@@ -1,14 +1,12 @@
 import type {
   SkillCategory,
   SkillDefinitionFields,
-} from './skills.definition.js';
+} from "./skills.definition.js";
 
 export type SkillAuthoringStage =
-  | 'scope_selecting'
-  | 'interviewing'
-  | 'synthesizing'
-  | 'awaiting_confirmation'
-  | 'hydrated';
+  | "interviewing"
+  | "synthesizing"
+  | "awaiting_confirmation";
 
 export interface SkillAuthoringScopeInput {
   scenario: SkillCategory;
@@ -16,8 +14,19 @@ export interface SkillAuthoringScopeInput {
 }
 
 export interface SkillAuthoringMessage {
-  role: 'assistant' | 'user';
+  role: "assistant" | "user";
   content: string;
+}
+
+export interface SkillAuthoringInference {
+  category: SkillCategory | null;
+  contextTargets: string[];
+  rationale?: string;
+}
+
+export interface SkillAuthoringHumanOverrides {
+  category?: SkillCategory | null;
+  contextTargets?: string[];
 }
 
 export interface SkillAuthoringTurnInput {
@@ -26,10 +35,12 @@ export interface SkillAuthoringTurnInput {
   questionCount?: unknown;
   currentSummary?: unknown;
   currentStructuredDraft?: unknown;
+  currentInference?: unknown;
+  humanOverrides?: unknown;
 }
 
 export interface SkillAuthoringOption {
-  id: 'a' | 'b' | 'c';
+  id: "a" | "b" | "c";
   label: string;
   rationale: string;
   recommended: boolean;
@@ -50,33 +61,30 @@ export interface SkillAuthoringTurnResponse {
   options: SkillAuthoringOption[];
   questionCount: number;
   currentSummary: string;
+  currentInference: SkillAuthoringInference;
   structuredDraft: SkillAuthoringStructuredDraft | null;
   readyForConfirmation: boolean;
 }
 
-export type SkillAuthoringTurnStreamEventType = 'ack' | 'done' | 'error';
+export type SkillAuthoringTurnStreamEventType = "ack" | "done" | "error";
 
 export interface SkillAuthoringTurnStreamEventBase {
-  version: 'v1';
+  version: "v1";
   type: SkillAuthoringTurnStreamEventType;
   sequence: number;
 }
 
-export interface SkillAuthoringTurnStreamAckEvent
-  extends SkillAuthoringTurnStreamEventBase {
-  type: 'ack';
-  stage: 'synthesizing';
+export interface SkillAuthoringTurnStreamAckEvent extends SkillAuthoringTurnStreamEventBase {
+  type: "ack";
 }
 
-export interface SkillAuthoringTurnStreamDoneEvent
-  extends SkillAuthoringTurnStreamEventBase {
-  type: 'done';
+export interface SkillAuthoringTurnStreamDoneEvent extends SkillAuthoringTurnStreamEventBase {
+  type: "done";
   turn: SkillAuthoringTurnResponse;
 }
 
-export interface SkillAuthoringTurnStreamErrorEvent
-  extends SkillAuthoringTurnStreamEventBase {
-  type: 'error';
+export interface SkillAuthoringTurnStreamErrorEvent extends SkillAuthoringTurnStreamEventBase {
+  type: "error";
   status: number;
   code: string;
   message: string;

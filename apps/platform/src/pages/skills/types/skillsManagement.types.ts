@@ -1,17 +1,21 @@
 import type {
+  SkillAuthoringHumanOverrides,
+  SkillAuthoringInference,
   SkillCategory,
   SkillDefinitionFields,
   SkillSource,
   SkillStatus,
   SkillAuthoringStage,
   SkillAuthoringStructuredDraft,
-} from '@api/skills';
+} from "@api/skills";
 
-export type SkillSidebarFilter = 'all' | SkillStatus | SkillSource;
+export type SkillSidebarFilter = "all" | SkillStatus | SkillSource;
 
-export type EditorMode = 'create' | 'edit' | null;
+export type EditorMode = "create" | "edit" | null;
 
-export type SkillAuthoringSessionStage = SkillAuthoringStage;
+export type SkillAuthoringSessionStage =
+  | SkillAuthoringStage
+  | "hydrated";
 
 export interface SkillAuthoringCreateScopeState {
   scenario: SkillCategory | null;
@@ -20,7 +24,7 @@ export interface SkillAuthoringCreateScopeState {
 
 export interface SkillAuthoringSessionMessage {
   id?: string;
-  role: 'assistant' | 'user';
+  role: "assistant" | "user";
   content: string;
 }
 
@@ -31,6 +35,8 @@ export interface SkillAuthoringSessionState {
   questionCount: number;
   currentSummary: string;
   structuredDraft: SkillAuthoringStructuredDraft | null;
+  currentInference: SkillAuthoringInference | null;
+  humanOverrides: SkillAuthoringHumanOverrides | null;
   readyForConfirmation: boolean;
   pendingAnswer: string;
 }

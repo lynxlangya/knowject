@@ -1,31 +1,36 @@
-import { Router, type NextFunction, type Request, type Response } from 'express';
-import type { RequestHandler } from 'express';
-import { AppError } from '@lib/app-error.js';
-import { resolveLocalizedAppErrorMessage } from '@lib/app-error-message.js';
-import { asyncHandler } from '@lib/async-handler.js';
-import { DEFAULT_LOCALE } from '@lib/locale.js';
-import { getMessage } from '@lib/locale.messages.js';
-import { sendCreated, sendSuccess } from '@lib/api-response.js';
-import { getRequiredAuthUser } from '@lib/request-auth.js';
-import type { SkillsService } from './skills.service.js';
+import {
+  Router,
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
+import type { RequestHandler } from "express";
+import { AppError } from "@lib/app-error.js";
+import { resolveLocalizedAppErrorMessage } from "@lib/app-error-message.js";
+import { asyncHandler } from "@lib/async-handler.js";
+import { DEFAULT_LOCALE } from "@lib/locale.js";
+import { getMessage } from "@lib/locale.messages.js";
+import { sendCreated, sendSuccess } from "@lib/api-response.js";
+import { getRequiredAuthUser } from "@lib/request-auth.js";
+import type { SkillsService } from "./skills.service.js";
 import type {
   CreateSkillInput,
   ListSkillsInput,
   SkillAuthoringTurnInput,
   UpdateSkillInput,
-} from './skills.types.js';
+} from "./skills.types.js";
 
 const getRequiredSkillId = (request: Request): string => {
   const skillId = request.params.skillId;
-  return Array.isArray(skillId) ? skillId[0] ?? '' : skillId;
+  return Array.isArray(skillId) ? (skillId[0] ?? "") : skillId;
 };
 
 const waitForSseDrain = async (response: Response): Promise<void> => {
   await new Promise<void>((resolve, reject) => {
     const cleanup = (): void => {
-      response.off('drain', handleDrain);
-      response.off('close', handleClose);
-      response.off('error', handleError);
+      response.off("drain", handleDrain);
+      response.off("close", handleClose);
+      response.off("error", handleError);
     };
 
     const handleDrain = (): void => {
@@ -43,9 +48,9 @@ const waitForSseDrain = async (response: Response): Promise<void> => {
       reject(error);
     };
 
-    response.on('drain', handleDrain);
-    response.on('close', handleClose);
-    response.on('error', handleError);
+    response.on("drain", handleDrain);
+    response.on("close", handleClose);
+    response.on("error", handleError);
 
     if (response.writableEnded || response.destroyed) {
       cleanup();
@@ -76,7 +81,7 @@ export const createSkillsRouter = (
   skillsRouter.use(requireAuth);
 
   skillsRouter.get(
-    '/',
+    "/",
     asyncHandler(async (req, res) => {
       const result = await skillsService.listSkills(
         {
@@ -90,7 +95,7 @@ export const createSkillsRouter = (
   );
 
   skillsRouter.get(
-    '/:skillId',
+    "/:skillId",
     asyncHandler(async (req, res) => {
       const result = await skillsService.getSkillDetail(
         {
@@ -104,7 +109,7 @@ export const createSkillsRouter = (
   );
 
   skillsRouter.post(
-    '/',
+    "/",
     asyncHandler(async (req, res) => {
       const result = await skillsService.createSkill(
         {
@@ -117,24 +122,23 @@ export const createSkillsRouter = (
     }),
   );
 
-  skillsRouter.post('/authoring/turns', asyncHandler(async (req, res) => {
-    const result = await skillsService.runAuthoringTurn(
-      {
-        actor: getRequiredAuthUser(req),
-      },
-      req.body as SkillAuthoringTurnInput,
-    );
+  skillsRouter.post(
+    "/authoring/turns",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.runAuthoringTurn(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        req.body as SkillAuthoringTurnInput,
+      );
 
-    sendSuccess(res, result);
-  }));
+      sendSuccess(res, result);
+    }),
+  );
 
   skillsRouter.post(
-    '/authoring/turns/stream',
-    async (
-      req: Request,
-      res: Response,
-      next: NextFunction,
-    ): Promise<void> => {
+    "/authoring/turns/stream",
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       const abortController = new AbortController();
       let streamStarted = false;
       let sequence = 0;
@@ -150,15 +154,17 @@ export const createSkillsRouter = (
         }
 
         res.status(200);
-        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-        res.setHeader('Cache-Control', 'no-cache, no-transform');
-        res.setHeader('Connection', 'keep-alive');
-        res.setHeader('X-Accel-Buffering', 'no');
+        res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache, no-transform");
+        res.setHeader("Connection", "keep-alive");
+        res.setHeader("X-Accel-Buffering", "no");
         res.flushHeaders();
         streamStarted = true;
       };
 
-      const emitEvent = async (event: Record<string, unknown>): Promise<void> => {
+      const emitEvent = async (
+        event: Record<string, unknown>,
+      ): Promise<void> => {
         if (res.writableEnded || res.destroyed) {
           return;
         }
@@ -168,14 +174,14 @@ export const createSkillsRouter = (
         await writeSseChunk(
           res,
           `data: ${JSON.stringify({
-            version: 'v1',
+            version: "v1",
             sequence,
             ...event,
           })}\n\n`,
         );
       };
 
-      req.on('close', handleClientDisconnect);
+      req.on("close", handleClientDisconnect);
 
       try {
         if (abortController.signal.aborted) {
@@ -183,8 +189,7 @@ export const createSkillsRouter = (
         }
 
         await emitEvent({
-          type: 'ack',
-          stage: 'synthesizing',
+          type: "ack",
         });
 
         const result = await skillsService.runAuthoringTurn(
@@ -202,7 +207,7 @@ export const createSkillsRouter = (
         }
 
         await emitEvent({
-          type: 'done',
+          type: "done",
           turn: result,
         });
       } catch (error) {
@@ -220,14 +225,14 @@ export const createSkillsRouter = (
             ? error
             : new AppError({
                 statusCode: 500,
-                code: 'INTERNAL_SERVER_ERROR',
-                message: getMessage('api.internalError', DEFAULT_LOCALE) ?? '',
-                messageKey: 'api.internalError',
+                code: "INTERNAL_SERVER_ERROR",
+                message: getMessage("api.internalError", DEFAULT_LOCALE) ?? "",
+                messageKey: "api.internalError",
                 cause: error,
               });
 
         await emitEvent({
-          type: 'error',
+          type: "error",
           status: normalizedError.statusCode,
           code: normalizedError.code,
           message: resolveLocalizedAppErrorMessage(
@@ -237,7 +242,7 @@ export const createSkillsRouter = (
           retryable: normalizedError.statusCode >= 500,
         });
       } finally {
-        req.off('close', handleClientDisconnect);
+        req.off("close", handleClientDisconnect);
 
         if (
           !abortController.signal.aborted &&
@@ -251,7 +256,7 @@ export const createSkillsRouter = (
   );
 
   skillsRouter.patch(
-    '/:skillId',
+    "/:skillId",
     asyncHandler(async (req, res) => {
       const result = await skillsService.updateSkill(
         {
@@ -266,7 +271,7 @@ export const createSkillsRouter = (
   );
 
   skillsRouter.delete(
-    '/:skillId',
+    "/:skillId",
     asyncHandler(async (req, res) => {
       await skillsService.deleteSkill(
         {
