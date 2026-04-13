@@ -631,35 +631,21 @@ export const pagesMessages = {
   skills: {
     title: "Skills",
     subtitle:
-      "Govern reusable team method assets, bind them into projects, and reuse them in conversations.",
-    create: "Create skill",
+      "Keep a clean team-skill catalog for project binding and minimal governance.",
     reload: "Refresh catalog",
     retry: "Retry",
-    emptyAll: "There are no skills yet. Create one method asset first.",
+    emptyAll: "There are no team skills yet.",
     emptyFiltered: "There are no skills in this group right now",
-    readOnlyTag: "Read only",
     moreActions: "More actions: {{name}}",
     updatedAt: "Updated {{value}}",
     owner: "Owner",
     ownerFallback: "No owner recorded yet.",
     action: {
-      readonly: "Preset skill, view only",
-      view: "View",
-      edit: "Edit",
       activate: "Mark active",
       moveToDraft: "Move to draft",
       deprecate: "Deprecate",
       archive: "Archive",
       delete: "Delete",
-    },
-    tabs: {
-      conversation: "Conversation",
-      editor: "Editor",
-      preview: "Preview",
-    },
-    source: {
-      preset: "Preset",
-      team: "Team",
     },
     status: {
       title: "Method asset status",
@@ -687,12 +673,6 @@ export const pagesMessages = {
       activeValue: "{{count}}",
       activeHintNone: "There are no remaining drafts right now.",
       activeHintDrafts: "{{count}} method assets are still in draft.",
-      preset: "Preset",
-      presetValue: "{{count}}",
-      presetHint: "Core methods maintained by Knowject.",
-      team: "Team",
-      teamValue: "{{count}}",
-      teamHint: "Team-authored method assets.",
     },
     filters: {
       all: "All",
@@ -700,96 +680,9 @@ export const pagesMessages = {
       draft: "Draft",
       deprecated: "Deprecated",
       archived: "Archived",
-      preset: "Preset",
-      team: "Team",
-    },
-    editor: {
-      createTitle: "Create skill",
-      editTitle: "Edit skill",
-      createDraft: "Create draft",
-      save: "Save changes",
-      cancel: "Cancel",
-      intro:
-        "A skill is a structured method asset. Define the goal, workflow, output contract, and project notes here; the preview tab renders the generated SKILL.md view.",
-      invalid: "The skill cannot be saved yet",
-      valid: "Structured definition is ready to save",
-      validationPreview:
-        "Resolve the required fields before using this method asset",
-      fields: {
-        name: "Name",
-        owner: "Owner",
-        description: "Description",
-        category: "Category",
-      },
-      placeholders: {
-        name: "For example: Implementation readiness check",
-        owner: "For example: Knowject Core or Team Infra",
-        description:
-          "Summarize the team problem this method asset is designed to solve.",
-      },
-      waitingName: "Waiting for name",
-      waitingDescription: "Waiting for description",
-      waitingOwner: "Waiting for owner",
-      waitingBody: "The generated SKILL.md preview will appear here.",
-      validation: {
-        required: "{{field}} is required",
-      },
-    },
-    authoring: {
-      intro:
-        "Describe the problem this Skill should solve, and the conversation will gradually narrow the scope and draft.",
-      synthesizing: "Synthesizing your answers and generating a Skill draft...",
-      scope: {
-        title:
-          "Optional: adjust the target scenario and reference scope for this Skill",
-        scenario: "Target scenario",
-        targets: "Scope targets",
-        placeholders: {
-          scenario: "Optional: adjust the target scenario",
-          targets: "Optional: adjust scope targets",
-        },
-        targetOptions: {
-          skillsPage:
-            "Skills page implementation scope (apps/platform/src/pages/skills)",
-          architecture:
-            "Current system architecture facts (docs/current/architecture.md)",
-        },
-      },
-      inference: {
-        title: "Inferring...",
-        category: "Current category",
-        targets: "Current scope",
-        summary: "Current summary",
-        categoryResolved: "Current category: {{value}}",
-        targetsResolved: "Current scope: {{value}}",
-        emptyCategory: "Current category still inferring...",
-        emptyTargets: "Current scope still inferring...",
-        emptySummary:
-          "Keep talking and this will condense into summary points.",
-      },
-      actions: {
-        continue: "Continue",
-        confirmDraft: "Confirm and fill Skill",
-        confirmScope: "Confirm scope and continue",
-        reset: "Reset",
-      },
-      resetConfirm: {
-        title: "Reset the current Skill creation flow?",
-        description:
-          "This clears the conversation history, inferred results, and generated Skill draft.",
-        confirm: "Reset",
-      },
     },
     feedback: {
       loadFailed: "Loading the skills catalog failed. Please try again later",
-      detailLoadFailed:
-        "Loading the skill details failed. Please try again later",
-      authoringTurnFailed:
-        "Submitting the authoring answer failed. Please try again later",
-      definitionInvalid: "Complete the required structured fields first",
-      createdDraft: "Skill draft created",
-      saved: "Skill saved",
-      saveFailed: "Saving the skill failed. Please try again later",
       statusUpdated: '"{{name}}" updated to {{status}}',
       statusUpdateFailed:
         "Updating the skill status failed. Please try again later",
@@ -799,28 +692,13 @@ export const pagesMessages = {
       deleteConfirm: "Delete",
       deleted: '"{{name}}" deleted',
     },
-    preview: {
-      title: "Generated preview",
-      owner: "Owner",
-      waitingList: "Add content in the editor to see a preview summary.",
-    },
-    viewer: {
-      title: "View skill",
-      source: "Source",
-      status: "Status",
-      category: "Category",
-    },
     definition: {
       previewEmpty: "No content yet.",
       goal: {
         label: "Goal",
-        placeholder:
-          "State the final outcome this method asset should produce.",
       },
       triggerScenarios: {
         label: "Trigger scenarios",
-        add: "Add scenario",
-        placeholder: "Describe when this method asset should be used.",
       },
       requiredContext: {
         label: "Required context",

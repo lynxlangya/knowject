@@ -63,11 +63,6 @@ export interface SkillImportProvenance {
   githubUrl: string | null;
 }
 
-export interface SkillBundleFileRecord {
-  path: string;
-  size: number;
-}
-
 export interface SkillSummaryResponse {
   id: string;
   slug: string;
@@ -95,11 +90,6 @@ export interface SkillSummaryResponse {
   publishedAt: string | null;
 }
 
-export interface SkillDetailResponse extends SkillSummaryResponse {
-  skillMarkdown: string;
-  bundleFiles: SkillBundleFileRecord[];
-}
-
 export interface SkillListResponse {
   total: number;
   items: SkillSummaryResponse[];
@@ -121,26 +111,14 @@ export interface SkillListResponse {
   };
 }
 
-export interface SkillDetailEnvelope {
-  skill: SkillDetailResponse;
-}
-
 export interface SkillMutationResponse {
-  skill: SkillDetailResponse;
+  skill: SkillSummaryResponse;
 }
 
 export interface ListSkillsParams {
   source?: SkillSource;
   lifecycleStatus?: SkillLifecycleStatus;
   bindable?: boolean;
-}
-
-export interface CreateSkillRequest {
-  name: string;
-  description: string;
-  category: SkillCategory;
-  owner: string;
-  definition: SkillDefinitionFields;
 }
 
 export interface UpdateSkillRequest {
@@ -158,27 +136,6 @@ export const listSkills = async (
   const response = await client.get<ApiEnvelope<SkillListResponse>>("/skills", {
     params,
   });
-  return unwrapApiData(response.data);
-};
-
-export const getSkillDetail = async (
-  skillId: string,
-): Promise<SkillDetailEnvelope> => {
-  const response = await client.get<ApiEnvelope<SkillDetailEnvelope>>(
-    `/skills/${encodeURIComponent(skillId)}`,
-  );
-
-  return unwrapApiData(response.data);
-};
-
-export const createSkill = async (
-  payload: CreateSkillRequest,
-): Promise<SkillMutationResponse> => {
-  const response = await client.post<ApiEnvelope<SkillMutationResponse>>(
-    "/skills",
-    payload,
-  );
-
   return unwrapApiData(response.data);
 };
 
@@ -200,113 +157,4 @@ export const deleteSkill = async (skillId: string): Promise<void> => {
   );
 
   unwrapApiData(response.data);
-};
-
-export type SkillAuthoringStage =
-  | "interviewing"
-  | "synthesizing"
-  | "awaiting_confirmation";
-
-export interface SkillAuthoringScopeInput {
-  scenario: SkillCategory;
-  targets: string[];
-}
-
-export interface SkillAuthoringMessage {
-  role: "assistant" | "user";
-  content: string;
-}
-
-export interface SkillAuthoringInference {
-  category: SkillCategory | null;
-  contextTargets: string[];
-  rationale?: string;
-}
-
-export interface SkillAuthoringHumanOverrides {
-  category?: SkillCategory | null;
-  contextTargets?: string[];
-}
-
-export interface SkillAuthoringOption {
-  id: "a" | "b" | "c";
-  label: string;
-  rationale: string;
-  recommended: boolean;
-}
-
-export interface SkillAuthoringStructuredDraft {
-  name: string;
-  description: string;
-  category: SkillCategory;
-  owner: string;
-  definition: SkillDefinitionFields;
-}
-
-export interface SkillAuthoringTurnRequest {
-  scope?: SkillAuthoringScopeInput | null;
-  messages: SkillAuthoringMessage[];
-  questionCount: number;
-  currentSummary: string;
-  currentStructuredDraft?: SkillAuthoringStructuredDraft | null;
-  currentInference?: SkillAuthoringInference | null;
-  humanOverrides?: SkillAuthoringHumanOverrides | null;
-}
-
-export interface SkillAuthoringTurnResponse {
-  stage: SkillAuthoringStage;
-  assistantMessage: string;
-  nextQuestion: string;
-  options: SkillAuthoringOption[];
-  questionCount: number;
-  currentSummary: string;
-  currentInference: SkillAuthoringInference;
-  structuredDraft: SkillAuthoringStructuredDraft | null;
-  readyForConfirmation: boolean;
-}
-
-export type SkillAuthoringTurnStreamEventType = "ack" | "done" | "error";
-
-export interface SkillAuthoringTurnStreamEventBase {
-  version: "v1";
-  type: SkillAuthoringTurnStreamEventType;
-  sequence: number;
-}
-
-export interface SkillAuthoringTurnStreamAckEvent extends SkillAuthoringTurnStreamEventBase {
-  type: "ack";
-}
-
-export interface SkillAuthoringTurnStreamDoneEvent extends SkillAuthoringTurnStreamEventBase {
-  type: "done";
-  turn: SkillAuthoringTurnResponse;
-}
-
-export interface SkillAuthoringTurnStreamErrorEvent extends SkillAuthoringTurnStreamEventBase {
-  type: "error";
-  status: number;
-  code: string;
-  message: string;
-  retryable: boolean;
-}
-
-export type SkillAuthoringTurnStreamEvent =
-  | SkillAuthoringTurnStreamAckEvent
-  | SkillAuthoringTurnStreamDoneEvent
-  | SkillAuthoringTurnStreamErrorEvent;
-
-const SKILL_AUTHORING_TURN_TIMEOUT_MS = 35000;
-
-export const runSkillAuthoringTurn = async (
-  payload: SkillAuthoringTurnRequest,
-): Promise<SkillAuthoringTurnResponse> => {
-  const response = await client.post<ApiEnvelope<SkillAuthoringTurnResponse>>(
-    "/skills/authoring/turns",
-    payload,
-    {
-      timeout: SKILL_AUTHORING_TURN_TIMEOUT_MS,
-    },
-  );
-
-  return unwrapApiData(response.data);
 };

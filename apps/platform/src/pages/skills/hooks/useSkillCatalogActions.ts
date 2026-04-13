@@ -1,11 +1,11 @@
-import { extractApiErrorMessage } from '@api/error';
+import { extractApiErrorMessage } from "@api/error";
 import {
   deleteSkill,
   updateSkill,
   type SkillStatus,
   type SkillSummaryResponse,
-} from '@api/skills';
-import { tp } from '../skills.i18n';
+} from "@api/skills";
+import { tp } from "../skills.i18n";
 
 interface SkillActionMessageApi {
   success: (content: string) => void;
@@ -27,8 +27,6 @@ interface UseSkillCatalogActionsOptions {
   message: SkillActionMessageApi;
   modal: SkillActionModalApi;
   onReload: () => void;
-  onOpenView: (skill: SkillSummaryResponse) => Promise<void>;
-  onOpenEdit: (skill: SkillSummaryResponse) => Promise<void>;
 }
 
 const updateSkillStatus = async (
@@ -42,8 +40,6 @@ export const useSkillCatalogActions = ({
   message,
   modal,
   onReload,
-  onOpenView,
-  onOpenEdit,
 }: UseSkillCatalogActionsOptions) => {
   const handleStatusChange = async (
     skill: SkillSummaryResponse,
@@ -52,32 +48,35 @@ export const useSkillCatalogActions = ({
     try {
       await updateSkillStatus(skill, status);
       message.success(
-        tp('feedback.statusUpdated', {
+        tp("feedback.statusUpdated", {
           name: skill.name,
           status: tp(`status.option.${status}`),
         }),
       );
       onReload();
     } catch (currentError) {
-      console.error('[SkillsManagementPage] 更新 Skill 状态失败:', currentError);
+      console.error(
+        "[SkillsManagementPage] 更新 Skill 状态失败:",
+        currentError,
+      );
       message.error(
-        extractApiErrorMessage(currentError, tp('feedback.statusUpdateFailed')),
+        extractApiErrorMessage(currentError, tp("feedback.statusUpdateFailed")),
       );
     }
   };
 
   const handleDeleteSkill = (skill: SkillSummaryResponse) => {
     modal.confirm({
-      title: tp('feedback.deleteTitle', { name: skill.name }),
-      content: tp('feedback.deleteDescription'),
-      okText: tp('feedback.deleteConfirm'),
+      title: tp("feedback.deleteTitle", { name: skill.name }),
+      content: tp("feedback.deleteDescription"),
+      okText: tp("feedback.deleteConfirm"),
       okButtonProps: {
         danger: true,
       },
-      cancelText: tp('editor.cancel'),
+      cancelText: tp("editor.cancel"),
       onOk: async () => {
         await deleteSkill(skill.id);
-        message.success(tp('feedback.deleted', { name: skill.name }));
+        message.success(tp("feedback.deleted", { name: skill.name }));
         onReload();
       },
     });
@@ -87,37 +86,27 @@ export const useSkillCatalogActions = ({
     skill: SkillSummaryResponse,
     actionKey: string,
   ) => {
-    if (actionKey === 'view') {
-      void onOpenView(skill);
+    if (actionKey === "activate") {
+      void handleStatusChange(skill, "active");
       return;
     }
 
-    if (actionKey === 'edit') {
-      void onOpenEdit(skill);
+    if (actionKey === "deprecate") {
+      void handleStatusChange(skill, "deprecated");
       return;
     }
 
-    if (actionKey === 'activate') {
-      void handleStatusChange(skill, 'active');
+    if (actionKey === "archive") {
+      void handleStatusChange(skill, "archived");
       return;
     }
 
-    if (actionKey === 'deprecate') {
-      void handleStatusChange(skill, 'deprecated');
+    if (actionKey === "draft") {
+      void handleStatusChange(skill, "draft");
       return;
     }
 
-    if (actionKey === 'archive') {
-      void handleStatusChange(skill, 'archived');
-      return;
-    }
-
-    if (actionKey === 'draft') {
-      void handleStatusChange(skill, 'draft');
-      return;
-    }
-
-    if (actionKey === 'delete') {
+    if (actionKey === "delete") {
       handleDeleteSkill(skill);
     }
   };

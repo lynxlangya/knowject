@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { extractApiErrorMessage } from '@api/error';
-import { listSkills, type SkillSummaryResponse } from '@api/skills';
-import type { SkillSidebarFilter } from '../types/skillsManagement.types';
-import { tp } from '../skills.i18n';
-import { buildSkillFilterGroups, filterSkills } from '../utils/skillFilter';
-import { buildSkillSummaryItems } from '../utils/skillSummary';
+import { useEffect, useMemo, useState } from "react";
+import { extractApiErrorMessage } from "@api/error";
+import { listSkills, type SkillSummaryResponse } from "@api/skills";
+import type { SkillSidebarFilter } from "../types/skillsManagement.types";
+import { tp } from "../skills.i18n";
+import { buildSkillFilterGroups, filterSkills } from "../utils/skillFilter";
+import { buildSkillSummaryItems } from "../utils/skillSummary";
 
 export const useSkillsListState = () => {
   const [items, setItems] = useState<SkillSummaryResponse[]>([]);
@@ -12,7 +12,7 @@ export const useSkillsListState = () => {
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const [selectedFilter, setSelectedFilter] =
-    useState<SkillSidebarFilter>('all');
+    useState<SkillSidebarFilter>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -22,7 +22,7 @@ export const useSkillsListState = () => {
       setError(null);
 
       try {
-        const response = await listSkills();
+        const response = await listSkills({ source: "team" });
 
         if (cancelled) {
           return;
@@ -34,9 +34,9 @@ export const useSkillsListState = () => {
           return;
         }
 
-        console.error('[SkillsManagementPage] 加载技能目录失败:', currentError);
+        console.error("[SkillsManagementPage] 加载技能目录失败:", currentError);
         setError(
-          extractApiErrorMessage(currentError, tp('feedback.loadFailed')),
+          extractApiErrorMessage(currentError, tp("feedback.loadFailed")),
         );
       } finally {
         if (!cancelled) {
