@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { listAgents, type AgentResponse } from '@api/agents';
-import { extractApiErrorMessage } from '@api/error';
-import { listKnowledge, type KnowledgeSummaryResponse } from '@api/knowledge';
-import { listSkills, type SkillSummaryResponse } from '@api/skills';
-import { tp } from './project.i18n';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { listAgents, type AgentResponse } from "@api/agents";
+import { extractApiErrorMessage } from "@api/error";
+import { listKnowledge, type KnowledgeSummaryResponse } from "@api/knowledge";
+import { listSkills, type SkillSummaryResponse } from "@api/skills";
+import { AGENTS_FEATURE_ENABLED } from "@app/navigation/features";
+import { tp } from "./project.i18n";
 
 export interface UseGlobalAssetCatalogsResult {
   knowledge: {
@@ -27,9 +28,9 @@ export const useGlobalAssetCatalogs = (
   projectId: string | null,
 ): UseGlobalAssetCatalogsResult => {
   const latestProjectIdRef = useRef<string | null>(projectId);
-  const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeSummaryResponse[]>(
-    [],
-  );
+  const [knowledgeItems, setKnowledgeItems] = useState<
+    KnowledgeSummaryResponse[]
+  >([]);
   const [knowledgeLoading, setKnowledgeLoading] = useState(false);
   const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
   const [agentsItems, setAgentsItems] = useState<AgentResponse[]>([]);
@@ -47,57 +48,70 @@ export const useGlobalAssetCatalogs = (
     }
 
     setKnowledgeLoading(true);
-    setAgentsLoading(true);
     setSkillsLoading(true);
+    setAgentsLoading(AGENTS_FEATURE_ENABLED);
 
     const [knowledgeResult, agentsResult, skillsResult] =
-      await Promise.allSettled([listKnowledge(), listAgents(), listSkills()]);
+      await Promise.allSettled([
+        listKnowledge(),
+        AGENTS_FEATURE_ENABLED ? listAgents() : Promise.resolve({ items: [] }),
+        listSkills(),
+      ]);
 
     if (latestProjectIdRef.current !== requestProjectId) {
       return;
     }
 
-    if (knowledgeResult.status === 'fulfilled') {
+    if (knowledgeResult.status === "fulfilled") {
       setKnowledgeItems(knowledgeResult.value.items);
       setKnowledgeError(null);
     } else {
       console.error(
-        '[ProjectLayout] 加载知识库目录失败:',
+        "[ProjectLayout] 加载知识库目录失败:",
         knowledgeResult.reason,
       );
       setKnowledgeItems([]);
       setKnowledgeError(
         extractApiErrorMessage(
           knowledgeResult.reason,
-          tp('resources.alertGlobalKnowledge'),
+          tp("resources.alertGlobalKnowledge"),
         ),
       );
     }
 
-    if (agentsResult.status === 'fulfilled') {
+    if (agentsResult.status === "fulfilled") {
       setAgentsItems(agentsResult.value.items);
       setAgentsError(null);
-    } else {
-      console.error('[ProjectLayout] 加载 Agent 目录失败:', agentsResult.reason);
+    } else if (AGENTS_FEATURE_ENABLED) {
+      console.error(
+        "[ProjectLayout] 加载 Agent 目录失败:",
+        agentsResult.reason,
+      );
       setAgentsItems([]);
       setAgentsError(
         extractApiErrorMessage(
           agentsResult.reason,
-          tp('resources.alertAgents'),
+          tp("resources.alertAgents"),
         ),
       );
+    } else {
+      setAgentsItems([]);
+      setAgentsError(null);
     }
 
-    if (skillsResult.status === 'fulfilled') {
+    if (skillsResult.status === "fulfilled") {
       setSkillsItems(skillsResult.value.items);
       setSkillsError(null);
     } else {
-      console.error('[ProjectLayout] 加载 Skill 目录失败:', skillsResult.reason);
+      console.error(
+        "[ProjectLayout] 加载 Skill 目录失败:",
+        skillsResult.reason,
+      );
       setSkillsItems([]);
       setSkillsError(
         extractApiErrorMessage(
           skillsResult.reason,
-          tp('resources.alertSkills'),
+          tp("resources.alertSkills"),
         ),
       );
     }

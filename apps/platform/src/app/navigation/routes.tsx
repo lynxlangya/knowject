@@ -1,25 +1,26 @@
-import { Navigate, type RouteObject } from 'react-router-dom';
-import { RequireAuth } from '@app/guards/RequireAuth';
-import { AuthedLayout } from '@app/layouts/AuthedLayout';
-import { PATHS, ROUTE_PATTERNS } from './paths';
-import { LoginPage } from '@pages/login/LoginPage';
-import { HomePage } from '@pages/home/HomePage';
-import { ProjectLayout } from '@pages/project/ProjectLayout';
-import { ProjectOverviewPage } from '@pages/project/ProjectOverviewPage';
-import { ProjectChatPage } from '@pages/project/ProjectChatPage';
-import { ProjectResourcesPage } from '@pages/project/ProjectResourcesPage';
-import { ProjectMembersPage } from '@pages/project/ProjectMembersPage';
-import { KnowledgePage } from '@pages/knowledge/KnowledgePage';
-import { SkillsPage } from '@pages/skills/SkillsPage';
-import { AgentsPage } from '@pages/agents/AgentsPage';
-import { MembersPage } from '@pages/members/MembersPage';
-import { AnalyticsPage } from '@pages/analytics/AnalyticsPage';
-import { SettingsPage } from '@pages/settings/SettingsPage';
-import { NotFoundPage } from '@pages/notfound/NotFoundPage';
+import { Navigate, type RouteObject } from "react-router-dom";
+import { RequireAuth } from "@app/guards/RequireAuth";
+import { AuthedLayout } from "@app/layouts/AuthedLayout";
+import { AGENTS_GLOBAL_PAGE_ENABLED } from "./features";
+import { PATHS, ROUTE_PATTERNS } from "./paths";
+import { LoginPage } from "@pages/login/LoginPage";
+import { HomePage } from "@pages/home/HomePage";
+import { ProjectLayout } from "@pages/project/ProjectLayout";
+import { ProjectOverviewPage } from "@pages/project/ProjectOverviewPage";
+import { ProjectChatPage } from "@pages/project/ProjectChatPage";
+import { ProjectResourcesPage } from "@pages/project/ProjectResourcesPage";
+import { ProjectMembersPage } from "@pages/project/ProjectMembersPage";
+import { KnowledgePage } from "@pages/knowledge/KnowledgePage";
+import { SkillsPage } from "@pages/skills/SkillsPage";
+import { AgentsPage } from "@pages/agents/AgentsPage";
+import { MembersPage } from "@pages/members/MembersPage";
+import { AnalyticsPage } from "@pages/analytics/AnalyticsPage";
+import { SettingsPage } from "@pages/settings/SettingsPage";
+import { NotFoundPage } from "@pages/notfound/NotFoundPage";
 import {
   ProjectResourceRedirect,
   ProjectSectionRedirect,
-} from './routeRedirects';
+} from "./routeRedirects";
 
 const legacyProjectResourceRoutes: RouteObject[] = [
   {
@@ -57,7 +58,7 @@ export const routes: RouteObject[] = [
     element: <LoginPage />,
   },
   {
-    path: '/',
+    path: "/",
     element: (
       <RequireAuth>
         <AuthedLayout />
@@ -81,23 +82,23 @@ export const routes: RouteObject[] = [
             element: <ProjectSectionRedirect section="overview" />,
           },
           {
-            path: 'overview',
+            path: "overview",
             element: <ProjectOverviewPage />,
           },
           {
-            path: 'chat',
+            path: "chat",
             element: <ProjectChatPage />,
           },
           {
-            path: 'chat/:chatId',
+            path: "chat/:chatId",
             element: <ProjectChatPage />,
           },
           {
-            path: 'resources',
+            path: "resources",
             element: <ProjectResourcesPage />,
           },
           {
-            path: 'members',
+            path: "members",
             element: <ProjectMembersPage />,
           },
         ],
@@ -114,7 +115,11 @@ export const routes: RouteObject[] = [
       },
       {
         path: PATHS.agents,
-        element: <AgentsPage />,
+        element: AGENTS_GLOBAL_PAGE_ENABLED ? (
+          <AgentsPage />
+        ) : (
+          <Navigate to={PATHS.home} replace />
+        ),
       },
       {
         path: PATHS.members,
@@ -131,7 +136,7 @@ export const routes: RouteObject[] = [
     ],
   },
   {
-    path: '*',
+    path: "*",
     element: <NotFoundPage />,
   },
 ];

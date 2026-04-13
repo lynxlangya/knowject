@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
-import { Avatar, Empty, Tabs, Typography } from 'antd';
-import { useTranslation } from 'react-i18next';
-import type { MemberAssetSummary, MemberViewModel } from '../members.types';
+import { useMemo } from "react";
+import { Avatar, Empty, Tabs, Typography } from "antd";
+import { useTranslation } from "react-i18next";
+import { AGENTS_FEATURE_ENABLED } from "@app/navigation/features";
+import type { MemberAssetSummary, MemberViewModel } from "../members.types";
 import {
   getCollaborationRoleLabels,
   getInitials,
@@ -10,8 +11,8 @@ import {
   formatDisplayDate,
   formatDisplayDateTime,
   getAssetGroupTitle,
-} from '../members.helpers';
-import { SubtleScrollArea } from './SubtleScrollArea';
+} from "../members.helpers";
+import { SubtleScrollArea } from "./SubtleScrollArea";
 
 interface MemberDetailPanelProps {
   member: MemberViewModel | null;
@@ -19,9 +20,11 @@ interface MemberDetailPanelProps {
 
 const renderAssetGroups = (
   assets: MemberAssetSummary,
-  t: ReturnType<typeof useTranslation<'pages'>>['t'],
+  t: ReturnType<typeof useTranslation<"pages">>["t"],
 ) => {
-  const groups: Array<keyof MemberAssetSummary> = ['knowledge', 'skills', 'agents'];
+  const groups: Array<keyof MemberAssetSummary> = AGENTS_FEATURE_ENABLED
+    ? ["knowledge", "skills", "agents"]
+    : ["knowledge", "skills"];
 
   return (
     <div className="grid gap-4 xl:grid-cols-3">
@@ -38,13 +41,13 @@ const renderAssetGroups = (
                 {getAssetGroupTitle(t, groupKey)}
               </Typography.Title>
               <span className="rounded-full bg-white px-2.5 py-1 text-xs text-slate-500">
-                {t('members.assets.count', { count: items.length })}
+                {t("members.assets.count", { count: items.length })}
               </span>
             </div>
 
             {items.length === 0 ? (
               <Typography.Paragraph className="mb-0! mt-4 text-sm! text-slate-500!">
-                {t('members.assets.emptyGroup')}
+                {t("members.assets.emptyGroup")}
               </Typography.Paragraph>
             ) : (
               <div className="mt-4 flex flex-col gap-3">
@@ -76,7 +79,7 @@ const renderAssetGroups = (
 };
 
 export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
-  const { t, i18n } = useTranslation('pages');
+  const { t, i18n } = useTranslation("pages");
   const collaborationRoleLabels = getCollaborationRoleLabels(t);
   const memberStatusMeta = getMemberStatusMeta(t);
   const projectAccessRoleLabels = getProjectAccessRoleLabels(t);
@@ -84,7 +87,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
   if (!member) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center">
-        <Empty description={t('members.detail.selectPrompt')} />
+        <Empty description={t("members.detail.selectPrompt")} />
       </div>
     );
   }
@@ -93,28 +96,30 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
   const statusMeta = memberStatusMeta[member.primaryStatus];
 
   const adminProjects = useMemo(
-    () => member.projects.filter((project) => project.projectRole === 'admin'),
+    () => member.projects.filter((project) => project.projectRole === "admin"),
     [member.projects],
   );
 
   const summaryStats = useMemo(
     () => [
       {
-        label: t('members.detail.firstCollaboration'),
+        label: t("members.detail.firstCollaboration"),
         value: formatDisplayDate(member.firstCollaborationAt, i18n.language, t),
       },
       {
-        label: t('members.detail.latestCollaboration'),
+        label: t("members.detail.latestCollaboration"),
         value:
           member.recentActivity?.displayTime ??
           formatDisplayDateTime(member.lastProjectActivityAt, i18n.language, t),
       },
       {
-        label: t('members.detail.assetsSummary'),
-        value: `${member.assets.knowledge.length} / ${member.assets.skills.length} / ${member.assets.agents.length}`,
+        label: t("members.detail.assetsSummary"),
+        value: AGENTS_FEATURE_ENABLED
+          ? `${member.assets.knowledge.length} / ${member.assets.skills.length} / ${member.assets.agents.length}`
+          : `${member.assets.knowledge.length} / ${member.assets.skills.length}`,
       },
       {
-        label: t('members.detail.projectStatusBreakdown'),
+        label: t("members.detail.projectStatusBreakdown"),
         value: `${member.activeProjectCount}/${member.syncingProjectCount}/${member.blockedProjectCount}/${member.idleProjectCount}`,
       },
     ],
@@ -140,7 +145,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
               </Typography.Title>
               {member.isCurrentUser ? (
                 <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">
-                  {t('members.detail.currentAccount')}
+                  {t("members.detail.currentAccount")}
                 </span>
               ) : null}
               <span
@@ -157,18 +162,18 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
             <div className="mt-3 flex flex-wrap gap-2">
               {member.primaryRole ? (
                 <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                  {t('members.detail.primaryRole', {
+                  {t("members.detail.primaryRole", {
                     role: collaborationRoleLabels[member.primaryRole],
                   })}
                 </span>
               ) : null}
               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                {t('members.detail.visibleProjects', {
+                {t("members.detail.visibleProjects", {
                   count: member.visibleProjectCount,
                 })}
               </span>
               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                {t('members.detail.adminProjects', {
+                {t("members.detail.adminProjects", {
                   count: member.adminProjectCount,
                 })}
               </span>
@@ -199,13 +204,19 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
           <Tabs
             items={[
               {
-                key: 'overview',
-                label: t('members.detail.overview'),
+                key: "overview",
+                label: t("members.detail.overview"),
                 children: (
                   <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-                    <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in" style={{ animationDelay: '0ms' }}>
-                      <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        {t('members.detail.currentFocus')}
+                    <div
+                      className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in"
+                      style={{ animationDelay: "0ms" }}
+                    >
+                      <Typography.Title
+                        level={5}
+                        className="mb-0! text-slate-800!"
+                      >
+                        {t("members.detail.currentFocus")}
                       </Typography.Title>
                       <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-7! text-slate-600!">
                         {member.focusSummary}
@@ -223,15 +234,21 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                           ))
                         ) : (
                           <Typography.Text className="text-sm text-slate-400">
-                            {t('members.detail.noResponsibilityTags')}
+                            {t("members.detail.noResponsibilityTags")}
                           </Typography.Text>
                         )}
                       </div>
                     </div>
 
-                    <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in" style={{ animationDelay: '60ms' }}>
-                      <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        {t('members.detail.recentActivity')}
+                    <div
+                      className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in"
+                      style={{ animationDelay: "60ms" }}
+                    >
+                      <Typography.Title
+                        level={5}
+                        className="mb-0! text-slate-800!"
+                      >
+                        {t("members.detail.recentActivity")}
                       </Typography.Title>
                       {member.recentActivity ? (
                         <>
@@ -239,7 +256,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                             {member.recentActivity.summary}
                           </Typography.Paragraph>
                           <Typography.Text className="mt-2 block text-xs text-slate-400">
-                            {t('members.detail.activityType', {
+                            {t("members.detail.activityType", {
                               type: member.recentActivity.type,
                               time: member.recentActivity.displayTime,
                             })}
@@ -247,7 +264,7 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                         </>
                       ) : (
                         <Typography.Paragraph className="mb-0! mt-3 text-sm! text-slate-500!">
-                          {t('members.detail.noRecentActivity')}
+                          {t("members.detail.noRecentActivity")}
                         </Typography.Paragraph>
                       )}
                     </div>
@@ -255,8 +272,8 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                 ),
               },
               {
-                key: 'projects',
-                label: t('members.detail.projectsTab'),
+                key: "projects",
+                label: t("members.detail.projectsTab"),
                 children: (
                   <div className="flex flex-col gap-3">
                     {member.projects.map((project, index) => (
@@ -268,7 +285,10 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <Typography.Title level={5} className="mb-0! text-slate-800!">
+                              <Typography.Title
+                                level={5}
+                                className="mb-0! text-slate-800!"
+                              >
                                 {project.name}
                               </Typography.Title>
                               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
@@ -283,12 +303,17 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                               </span>
                               {project.collaborationRole ? (
                                 <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600">
-                                  {collaborationRoleLabels[project.collaborationRole]}
+                                  {
+                                    collaborationRoleLabels[
+                                      project.collaborationRole
+                                    ]
+                                  }
                                 </span>
                               ) : null}
                             </div>
                             <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-600!">
-                              {project.description.trim() || t('members.detail.projectDescriptionFallback')}
+                              {project.description.trim() ||
+                                t("members.detail.projectDescriptionFallback")}
                             </Typography.Paragraph>
                             <Typography.Paragraph className="mb-0! mt-3 text-sm! leading-6! text-slate-500!">
                               {project.focusSummary}
@@ -298,17 +323,27 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                           <div className="grid gap-3 sm:grid-cols-3 xl:min-w-85">
                             {[
                               {
-                                label: t('members.detail.knowledgeCount'),
-                                value: t('members.detail.itemCount', { count: project.knowledgeCount }),
+                                label: t("members.detail.knowledgeCount"),
+                                value: t("members.detail.itemCount", {
+                                  count: project.knowledgeCount,
+                                }),
                               },
                               {
-                                label: t('members.detail.skillCount'),
-                                value: t('members.detail.itemCount', { count: project.skillCount }),
+                                label: t("members.detail.skillCount"),
+                                value: t("members.detail.itemCount", {
+                                  count: project.skillCount,
+                                }),
                               },
-                              {
-                                label: t('members.detail.agentCount'),
-                                value: t('members.detail.itemCount', { count: project.agentCount }),
-                              },
+                              ...(AGENTS_FEATURE_ENABLED
+                                ? [
+                                    {
+                                      label: t("members.detail.agentCount"),
+                                      value: t("members.detail.itemCount", {
+                                        count: project.agentCount,
+                                      }),
+                                    },
+                                  ]
+                                : []),
                             ].map((item) => (
                               <div
                                 key={item.label}
@@ -326,17 +361,29 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-400">
-                          <span>{t('members.detail.joinedAt', {
-                            time: formatDisplayDateTime(project.joinedAt, i18n.language, t),
-                          })}</span>
-                          <span>{t('members.detail.updatedAt', {
-                            time: formatDisplayDateTime(project.updatedAt, i18n.language, t),
-                          })}</span>
                           <span>
-                            {t('members.detail.latestAction', {
+                            {t("members.detail.joinedAt", {
+                              time: formatDisplayDateTime(
+                                project.joinedAt,
+                                i18n.language,
+                                t,
+                              ),
+                            })}
+                          </span>
+                          <span>
+                            {t("members.detail.updatedAt", {
+                              time: formatDisplayDateTime(
+                                project.updatedAt,
+                                i18n.language,
+                                t,
+                              ),
+                            })}
+                          </span>
+                          <span>
+                            {t("members.detail.latestAction", {
                               summary:
                                 project.recentActivity?.summary ??
-                                t('members.detail.latestActionFallback'),
+                                t("members.detail.latestActionFallback"),
                             })}
                           </span>
                         </div>
@@ -346,50 +393,70 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                 ),
               },
               {
-                key: 'assets',
-                label: t('members.detail.assetsTab'),
+                key: "assets",
+                label: t("members.detail.assetsTab"),
                 children: renderAssetGroups(member.assets, t),
               },
               {
-                key: 'permissions',
-                label: t('members.detail.permissionsTab'),
+                key: "permissions",
+                label: t("members.detail.permissionsTab"),
                 children: (
                   <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-                    <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in" style={{ animationDelay: '0ms' }}>
-                      <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        {t('members.detail.permissionSummary')}
+                    <div
+                      className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in"
+                      style={{ animationDelay: "0ms" }}
+                    >
+                      <Typography.Title
+                        level={5}
+                        className="mb-0! text-slate-800!"
+                      >
+                        {t("members.detail.permissionSummary")}
                       </Typography.Title>
                       <div className="mt-4 flex flex-col gap-3">
                         <div className="rounded-2xl border border-white bg-white px-4 py-3">
                           <Typography.Text className="text-xs text-slate-400">
-                            {t('members.detail.manageableProjects')}
+                            {t("members.detail.manageableProjects")}
                           </Typography.Text>
                           <Typography.Paragraph className="mb-0! mt-2 text-sm! font-medium text-slate-700!">
-                            {t('members.detail.itemCount', { count: member.adminProjectCount })}
+                            {t("members.detail.itemCount", {
+                              count: member.adminProjectCount,
+                            })}
                           </Typography.Paragraph>
                         </div>
                         <div className="rounded-2xl border border-white bg-white px-4 py-3">
                           <Typography.Text className="text-xs text-slate-400">
-                            {t('members.detail.collaboratorProjects')}
+                            {t("members.detail.collaboratorProjects")}
                           </Typography.Text>
                           <Typography.Paragraph className="mb-0! mt-2 text-sm! font-medium text-slate-700!">
-                            {t('members.detail.itemCount', { count: member.memberProjectCount })}
+                            {t("members.detail.itemCount", {
+                              count: member.memberProjectCount,
+                            })}
                           </Typography.Paragraph>
                         </div>
                         <Typography.Paragraph className="mb-0! text-sm! leading-6! text-slate-500!">
-                          {t('members.detail.permissionSummaryHint')}
+                          {t("members.detail.permissionSummaryHint")}
                         </Typography.Paragraph>
                       </div>
                     </div>
 
-                    <div className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in" style={{ animationDelay: '60ms' }}>
-                      <Typography.Title level={5} className="mb-0! text-slate-800!">
-                        {t('members.detail.accessScope')}
+                    <div
+                      className="rounded-card border border-[#C2EDE6] bg-[#F2FDFB] p-5 animate-metric-fade-in"
+                      style={{ animationDelay: "60ms" }}
+                    >
+                      <Typography.Title
+                        level={5}
+                        className="mb-0! text-slate-800!"
+                      >
+                        {t("members.detail.accessScope")}
                       </Typography.Title>
 
                       {member.projects.length === 0 ? (
                         <div className="mt-6">
-                          <Empty description={t('members.detail.noVisiblePermissions')} />
+                          <Empty
+                            description={t(
+                              "members.detail.noVisiblePermissions",
+                            )}
+                          />
                         </div>
                       ) : (
                         <div className="mt-4 flex flex-col gap-3">
@@ -403,8 +470,12 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                                   {project.name}
                                 </Typography.Text>
                                 <Typography.Text className="mt-1 block text-xs text-slate-400">
-                                  {t('members.detail.joinedIn', {
-                                    time: formatDisplayDateTime(project.joinedAt, i18n.language, t),
+                                  {t("members.detail.joinedIn", {
+                                    time: formatDisplayDateTime(
+                                      project.joinedAt,
+                                      i18n.language,
+                                      t,
+                                    ),
                                   })}
                                 </Typography.Text>
                               </div>
@@ -414,7 +485,11 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
                                 </span>
                                 {project.collaborationRole ? (
                                   <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">
-                                    {collaborationRoleLabels[project.collaborationRole]}
+                                    {
+                                      collaborationRoleLabels[
+                                        project.collaborationRole
+                                      ]
+                                    }
                                   </span>
                                 ) : null}
                               </div>
@@ -432,7 +507,9 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
           {adminProjects.length > 0 ? (
             <div className="rounded-card border border-amber-200 bg-amber-50/60 p-4">
               <Typography.Text className="text-sm font-medium text-amber-800">
-                {t('members.detail.adminImpact', { count: adminProjects.length })}
+                {t("members.detail.adminImpact", {
+                  count: adminProjects.length,
+                })}
               </Typography.Text>
             </div>
           ) : null}

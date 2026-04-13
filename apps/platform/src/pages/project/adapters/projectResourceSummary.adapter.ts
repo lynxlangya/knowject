@@ -32,33 +32,26 @@ export const buildProjectResourceSummaryItems = ({
 }): ProjectResourceSummaryItem[] => {
   return [
     {
-      label: tp('resources.summary.knowledge'),
-      value: tp('resources.summary.countValue', {
+      label: tp("resources.summary.knowledge"),
+      value: tp("resources.summary.countValue", {
         count: resourceCountByGroup.knowledge,
       }),
-      hint: tp('resources.summary.knowledgeHint', {
+      hint: tp("resources.summary.knowledgeHint", {
         global: globalKnowledgeCount,
         project: projectKnowledgeCount,
       }),
     },
     {
-      label: tp('resources.summary.skills'),
-      value: tp('resources.summary.countValue', {
+      label: tp("resources.summary.skills"),
+      value: tp("resources.summary.countValue", {
         count: resourceCountByGroup.skills,
       }),
-      hint: tp('resources.summary.skillsHint'),
+      hint: tp("resources.summary.skillsHint"),
     },
     {
-      label: tp('resources.summary.agents'),
-      value: tp('resources.summary.countValue', {
-        count: resourceCountByGroup.agents,
-      }),
-      hint: tp('resources.summary.agentsHint'),
-    },
-    {
-      label: tp('resources.summary.layered'),
-      value: tp('resources.summary.layeredValue'),
-      hint: tp('resources.summary.layeredHint'),
+      label: tp("resources.summary.layered"),
+      value: tp("resources.summary.layeredValue"),
+      hint: tp("resources.summary.layeredHint"),
     },
   ];
 };

@@ -6,60 +6,69 @@ import {
   TeamOutlined,
   LineChartOutlined,
   SettingOutlined,
-} from '@ant-design/icons';
-import type { MenuProps } from 'antd';
-import { PATHS } from './paths';
+} from "@ant-design/icons";
+import type { MenuProps } from "antd";
+import { AGENTS_GLOBAL_PAGE_ENABLED } from "./features";
+import { PATHS } from "./paths";
 
-type MenuItem = Required<MenuProps>['items'][number];
+type MenuItem = Required<MenuProps>["items"][number];
 
-const MENU_KEYS = [
+const MENU_KEYS: string[] = [
   PATHS.home,
   PATHS.knowledge,
   PATHS.skills,
-  PATHS.agents,
   PATHS.members,
   PATHS.analytics,
   PATHS.settings,
-] as const;
+];
+
+if (AGENTS_GLOBAL_PAGE_ENABLED) {
+  MENU_KEYS.splice(3, 0, PATHS.agents);
+}
 
 export const getMenuItems = (t: (key: string) => string): MenuItem[] => {
-  return [
+  const items: MenuItem[] = [
     {
       key: PATHS.home,
       icon: <HomeOutlined />,
-      label: t('menu.home'),
+      label: t("menu.home"),
     },
     {
       key: PATHS.knowledge,
       icon: <BookOutlined />,
-      label: t('menu.knowledge'),
+      label: t("menu.knowledge"),
     },
     {
       key: PATHS.skills,
       icon: <AppstoreOutlined />,
-      label: t('menu.skills'),
-    },
-    {
-      key: PATHS.agents,
-      icon: <RobotOutlined />,
-      label: t('menu.agents'),
+      label: t("menu.skills"),
     },
     {
       key: PATHS.members,
       icon: <TeamOutlined />,
-      label: t('menu.members'),
+      label: t("menu.members"),
     },
     {
       key: PATHS.analytics,
       icon: <LineChartOutlined />,
-      label: t('menu.analytics'),
+      label: t("menu.analytics"),
     },
     {
       key: PATHS.settings,
       icon: <SettingOutlined />,
-      label: t('menu.settings'),
+      label: t("menu.settings"),
     },
   ];
+
+  if (AGENTS_GLOBAL_PAGE_ENABLED) {
+    items.splice(3, 0, {
+      key: PATHS.agents,
+      icon: <RobotOutlined />,
+      label: t("menu.agents"),
+    });
+  }
+
+  return items;
 };
 
 export const getMenuPath = (key: string): string => key;

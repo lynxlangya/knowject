@@ -1,12 +1,13 @@
-import { Tooltip, Typography } from 'antd';
-import { useTranslation } from 'react-i18next';
+import { Tooltip, Typography } from "antd";
+import { useTranslation } from "react-i18next";
+import { AGENTS_FEATURE_ENABLED } from "@app/navigation/features";
 import type {
   ProjectMember,
   ProjectOverviewStats,
   ProjectSummary,
   ProjectWorkspaceMeta,
-} from '@app/project/project.types';
-import { KNOWJECT_BRAND } from '@styles/brand';
+} from "@app/project/project.types";
+import { KNOWJECT_BRAND } from "@styles/brand";
 
 interface ProjectHeaderProps {
   project: ProjectSummary;
@@ -21,18 +22,24 @@ export const ProjectHeader = ({
   meta,
   stats,
 }: ProjectHeaderProps) => {
-  const { t } = useTranslation('project');
-  const projectInitial = (project.name.trim().slice(0, 1) || 'P').toUpperCase();
+  const { t } = useTranslation("project");
+  const projectInitial = (project.name.trim().slice(0, 1) || "P").toUpperCase();
   const projectDescription = project.description.trim() || meta.summary;
   const activeMembers = members.filter((member) => member.isActive);
   const visibleMembers = activeMembers.slice(0, 5);
-  const hiddenMemberCount = Math.max(activeMembers.length - visibleMembers.length, 0);
-  const statLabelClassName = 'text-xs font-semibold leading-none text-slate-600';
+  const hiddenMemberCount = Math.max(
+    activeMembers.length - visibleMembers.length,
+    0,
+  );
+  const statLabelClassName =
+    "text-xs font-semibold leading-none text-slate-600";
   const statItems = [
-    { label: t('header.knowledge'), value: stats.knowledgeCount },
-    { label: t('header.skills'), value: stats.skillCount },
-    { label: t('header.agents'), value: stats.agentCount },
-    { label: t('header.conversations'), value: stats.conversationCount },
+    { label: t("header.knowledge"), value: stats.knowledgeCount },
+    { label: t("header.skills"), value: stats.skillCount },
+    ...(AGENTS_FEATURE_ENABLED
+      ? [{ label: t("header.agents"), value: stats.agentCount }]
+      : []),
+    { label: t("header.conversations"), value: stats.conversationCount },
   ];
 
   return (
@@ -42,15 +49,19 @@ export const ProjectHeader = ({
           <div
             className="flex h-16 w-16 items-center justify-center rounded-card border text-2xl font-semibold text-white"
             style={{
-              borderColor: 'rgba(255,255,255,0.6)',
+              borderColor: "rgba(255,255,255,0.6)",
               backgroundImage: KNOWJECT_BRAND.iconGradient,
-              boxShadow: '0 10px 24px rgba(40,184,160,0.18), inset 0 1px 0 rgba(255,255,255,0.55)',
+              boxShadow:
+                "0 10px 24px rgba(40,184,160,0.18), inset 0 1px 0 rgba(255,255,255,0.55)",
             }}
           >
             {projectInitial}
           </div>
           <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
-            <Typography.Title level={2} className="mb-0! mt-0! leading-[1.08]! text-slate-800!">
+            <Typography.Title
+              level={2}
+              className="mb-0! mt-0! leading-[1.08]! text-slate-800!"
+            >
               {project.name}
             </Typography.Title>
             <Typography.Paragraph className="mb-0! max-w-2xl text-base! text-slate-500!">
@@ -62,32 +73,36 @@ export const ProjectHeader = ({
         <div className="grid w-full gap-2 sm:grid-cols-2 lg:w-78 lg:shrink-0">
           <div className="rounded-[14px] border border-white/80 bg-white/78 px-3.5 py-2.5 shadow-[0_8px_18px_rgba(148,163,184,0.08)] backdrop-blur sm:col-span-2">
             <Typography.Text className={statLabelClassName}>
-              {t('header.activeMembers')}
+              {t("header.activeMembers")}
             </Typography.Text>
             <div className="mt-1.5 flex items-center">
-	              {visibleMembers.map((member, index) => (
-	                <Tooltip key={member.id} title={member.name}>
-	                  <div
+              {visibleMembers.map((member, index) => (
+                <Tooltip key={member.id} title={member.name}>
+                  <div
                     className={[
-                      'relative h-5 w-5 shrink-0 overflow-hidden rounded-full ring-1 ring-white shadow-[0_4px_10px_rgba(15,23,42,0.12)] transition-transform duration-200 hover:z-10 hover:-translate-y-0.5',
-	                      index === 0 ? '' : '-ml-1',
-	                    ].join(' ')}
-	                  >
-	                    {member.avatarUrl ? (
-	                      <img src={member.avatarUrl} alt={member.name} className="h-full w-full object-cover" />
-	                    ) : (
-	                      <span
-	                        className="flex h-full w-full items-center justify-center text-[9px] font-semibold text-white"
-	                        style={{
-	                          backgroundImage: KNOWJECT_BRAND.iconGradient,
-	                        }}
-	                      >
-	                        {(member.name.trim().charAt(0) || 'M').toUpperCase()}
-	                      </span>
-	                    )}
-	                  </div>
-	                </Tooltip>
-	              ))}
+                      "relative h-5 w-5 shrink-0 overflow-hidden rounded-full ring-1 ring-white shadow-[0_4px_10px_rgba(15,23,42,0.12)] transition-transform duration-200 hover:z-10 hover:-translate-y-0.5",
+                      index === 0 ? "" : "-ml-1",
+                    ].join(" ")}
+                  >
+                    {member.avatarUrl ? (
+                      <img
+                        src={member.avatarUrl}
+                        alt={member.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span
+                        className="flex h-full w-full items-center justify-center text-[9px] font-semibold text-white"
+                        style={{
+                          backgroundImage: KNOWJECT_BRAND.iconGradient,
+                        }}
+                      >
+                        {(member.name.trim().charAt(0) || "M").toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                </Tooltip>
+              ))}
               {hiddenMemberCount > 0 ? (
                 <span className="-ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[9px] font-semibold text-slate-600 ring-1 ring-white shadow-[0_4px_10px_rgba(15,23,42,0.08)]">
                   +{hiddenMemberCount}
@@ -101,9 +116,7 @@ export const ProjectHeader = ({
               key={item.label}
               className="flex h-10 items-center justify-between rounded-xl border border-white/80 bg-white/70 px-3 py-1.5 shadow-[0_6px_14px_rgba(148,163,184,0.06)] backdrop-blur"
             >
-              <span className={statLabelClassName}>
-                {item.label}
-              </span>
+              <span className={statLabelClassName}>{item.label}</span>
               <span className="text-xl font-semibold leading-none text-slate-800">
                 {item.value}
               </span>

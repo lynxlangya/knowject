@@ -11,6 +11,7 @@ import {
   buildProjectOverviewPath,
   getProjectIdFromPathname,
 } from "@app/navigation/paths";
+import { AGENTS_PROJECT_BINDING_ENABLED } from "@app/navigation/features";
 import { getAuthUser } from "@app/auth/user";
 import { useLocale } from "@app/providers/locale.context";
 import type { SupportedLocale } from "@app/providers/locale.storage";
@@ -19,10 +20,7 @@ import { useProjectContext } from "@app/project/useProjectContext";
 import { SIDER_WIDTH } from "@app/layouts/layout.constants";
 import { AppSiderAccountPanel } from "./AppSiderAccountPanel";
 import { AppSiderProjectPanel } from "./AppSiderProjectPanel";
-import {
-  ProjectFormModal,
-  type ProjectFormValues,
-} from "./ProjectFormModal";
+import { ProjectFormModal, type ProjectFormValues } from "./ProjectFormModal";
 
 const { Sider } = Layout;
 
@@ -86,7 +84,9 @@ export const AppSider = ({
       name: values.name,
       description: values.description?.trim() ?? "",
       knowledgeBaseIds: values.knowledgeBaseIds ?? [],
-      agentIds: values.agentIds ?? [],
+      agentIds: AGENTS_PROJECT_BINDING_ENABLED
+        ? (values.agentIds ?? [])
+        : (editingProject?.agentIds ?? []),
       skillIds: values.skillIds ?? [],
     };
 
@@ -180,7 +180,9 @@ export const AppSider = ({
               return;
             }
 
-            message.success(t("messages.projectDeleted", { name: project.name }));
+            message.success(
+              t("messages.projectDeleted", { name: project.name }),
+            );
 
             if (project.id !== activeProjectId) {
               return;
@@ -218,9 +220,7 @@ export const AppSider = ({
     } catch (error) {
       console.error(error);
       message.error(
-        isApiError(error)
-          ? error.message
-          : t("account.languageSaveFailed"),
+        isApiError(error) ? error.message : t("account.languageSaveFailed"),
       );
     }
   };

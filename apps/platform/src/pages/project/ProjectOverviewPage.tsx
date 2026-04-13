@@ -1,40 +1,46 @@
-import { Alert } from 'antd';
-import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { OverviewActivityChart } from './components/overview/OverviewActivityChart';
-import { OverviewInsightList } from './components/overview/OverviewInsightList';
-import { OverviewKnowledgeHealthCard } from './components/overview/OverviewKnowledgeHealthCard';
-import { OverviewMetricStrip } from './components/overview/OverviewMetricStrip';
-import { useProjectPageContext } from './projectPageContext';
-import { buildProjectOverviewSummary } from './projectOverview.adapter';
-import { buildProjectOverviewInsights } from './projectOverview.insights';
-import { resolveProjectOverviewSummaryItems } from './projectOverviewPage.helpers';
+import { Alert } from "antd";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { AGENTS_FEATURE_ENABLED } from "@app/navigation/features";
+import { OverviewActivityChart } from "./components/overview/OverviewActivityChart";
+import { OverviewInsightList } from "./components/overview/OverviewInsightList";
+import { OverviewKnowledgeHealthCard } from "./components/overview/OverviewKnowledgeHealthCard";
+import { OverviewMetricStrip } from "./components/overview/OverviewMetricStrip";
+import { useProjectPageContext } from "./projectPageContext";
+import { buildProjectOverviewSummary } from "./projectOverview.adapter";
+import { buildProjectOverviewInsights } from "./projectOverview.insights";
+import { resolveProjectOverviewSummaryItems } from "./projectOverviewPage.helpers";
 
 export const ProjectOverviewPage = () => {
-  const { t, i18n } = useTranslation('project');
-  const { activeProject, conversations, globalAssetCatalogs, projectKnowledge } =
-    useProjectPageContext();
-  const locale = i18n.resolvedLanguage || 'en';
-  const requiresBoundGlobalKnowledge = activeProject.knowledgeBaseIds.length > 0;
+  const { t, i18n } = useTranslation("project");
+  const {
+    activeProject,
+    conversations,
+    globalAssetCatalogs,
+    projectKnowledge,
+  } = useProjectPageContext();
+  const locale = i18n.resolvedLanguage || "en";
+  const requiresBoundGlobalKnowledge =
+    activeProject.knowledgeBaseIds.length > 0;
   const formatDateTime = (value: string): string => {
     return new Intl.DateTimeFormat(locale, {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     }).format(new Date(value));
   };
   const formatUtcWeekday = (value: string): string => {
     return new Intl.DateTimeFormat(locale, {
-      weekday: 'short',
-      timeZone: 'UTC',
+      weekday: "short",
+      timeZone: "UTC",
     }).format(new Date(`${value}T00:00:00.000Z`));
   };
   const formatUtcDate = (value: string): string => {
     return new Intl.DateTimeFormat(locale, {
-      month: 'numeric',
-      day: 'numeric',
-      timeZone: 'UTC',
+      month: "numeric",
+      day: "numeric",
+      timeZone: "UTC",
     }).format(new Date(`${value}T00:00:00.000Z`));
   };
 
@@ -55,7 +61,9 @@ export const ProjectOverviewPage = () => {
 
     const boundKnowledgeIdSet = new Set(activeProject.knowledgeBaseIds);
 
-    return globalKnowledgeItems.filter((item) => boundKnowledgeIdSet.has(item.id));
+    return globalKnowledgeItems.filter((item) =>
+      boundKnowledgeIdSet.has(item.id),
+    );
   }, [
     activeProject.knowledgeBaseIds,
     globalAssetCatalogs.knowledge.loading,
@@ -103,7 +111,7 @@ export const ProjectOverviewPage = () => {
   const totalResourceCount =
     overviewSummary.coverage.knowledge +
     overviewSummary.coverage.skills +
-    overviewSummary.coverage.agents;
+    (AGENTS_FEATURE_ENABLED ? overviewSummary.coverage.agents : 0);
   const indexedCount = overviewSummary.knowledge.statusBreakdown.completed;
   const readinessBaseCount = overviewSummary.knowledge.totalKnowledgeCount;
   const hasKnowledgeReadinessRate =
@@ -113,14 +121,14 @@ export const ProjectOverviewPage = () => {
     : null;
 
   const knowledgeStateLabel = !overviewSummary.knowledge.available
-    ? t('overview.states.unavailable')
+    ? t("overview.states.unavailable")
     : overviewSummary.knowledge.statusBreakdown.failed > 0
-      ? t('overview.states.requiresAttention')
+      ? t("overview.states.requiresAttention")
       : overviewSummary.knowledge.statusBreakdown.pending +
             overviewSummary.knowledge.statusBreakdown.processing >
           0
-        ? t('overview.states.syncing')
-        : t('overview.states.healthy');
+        ? t("overview.states.syncing")
+        : t("overview.states.healthy");
 
   return (
     <section className="flex flex-col gap-4">
@@ -128,92 +136,96 @@ export const ProjectOverviewPage = () => {
         <Alert
           type="warning"
           showIcon
-          message={t('overview.states.partialLoadTitle')}
-          description={partialLoadErrors.join(' | ')}
+          message={t("overview.states.partialLoadTitle")}
+          description={partialLoadErrors.join(" | ")}
         />
       ) : null}
 
       <OverviewMetricStrip
-        eyebrow={t('overview.summary.eyebrow')}
-        title={t('overview.summary.title')}
-        description={t('overview.summary.description')}
+        eyebrow={t("overview.summary.eyebrow")}
+        title={t("overview.summary.title")}
+        description={t("overview.summary.description")}
         items={[
           {
-            id: 'active-conversations',
-            label: t('overview.summary.metrics.activeConversations'),
+            id: "active-conversations",
+            label: t("overview.summary.metrics.activeConversations"),
             value: overviewSummary.activity.available
               ? String(overviewSummary.activity.activeConversationCount7d)
-              : '—',
+              : "—",
             hint: overviewSummary.activity.available
               ? overviewSummary.activity.lastConversationActivityAt
-                ? t('overview.summary.hints.lastActivity', {
-                    value: formatDateTime(overviewSummary.activity.lastConversationActivityAt),
+                ? t("overview.summary.hints.lastActivity", {
+                    value: formatDateTime(
+                      overviewSummary.activity.lastConversationActivityAt,
+                    ),
                   })
-                : t('overview.states.noActivity')
-              : t('overview.states.unavailable'),
-            tone: overviewSummary.activity.available ? 'default' : 'warning',
+                : t("overview.states.noActivity")
+              : t("overview.states.unavailable"),
+            tone: overviewSummary.activity.available ? "default" : "warning",
           },
           {
-            id: 'knowledge-total',
-            label: t('overview.summary.metrics.knowledgeTotal'),
+            id: "knowledge-total",
+            label: t("overview.summary.metrics.knowledgeTotal"),
             value: overviewSummary.knowledge.available
               ? String(overviewSummary.knowledge.totalKnowledgeCount)
-              : '—',
+              : "—",
             hint: overviewSummary.knowledge.available
               ? readinessBaseCount > 0
-                ? t('overview.summary.hints.indexReady', {
-                    completed: overviewSummary.knowledge.statusBreakdown.completed,
+                ? t("overview.summary.hints.indexReady", {
+                    completed:
+                      overviewSummary.knowledge.statusBreakdown.completed,
                     total: readinessBaseCount,
                   })
-                : t('overview.states.unavailable')
-              : t('overview.states.unavailable'),
+                : t("overview.states.unavailable")
+              : t("overview.states.unavailable"),
             tone: !overviewSummary.knowledge.available
-              ? 'warning'
+              ? "warning"
               : overviewSummary.knowledge.statusBreakdown.failed > 0
-                ? 'warning'
-                : 'positive',
+                ? "warning"
+                : "positive",
           },
           {
-            id: 'documents-total',
-            label: t('overview.summary.metrics.documents'),
+            id: "documents-total",
+            label: t("overview.summary.metrics.documents"),
             value: overviewSummary.knowledge.available
               ? String(overviewSummary.knowledge.knowledgeDocumentCount)
-              : '—',
+              : "—",
             hint: overviewSummary.knowledge.available
-              ? t('overview.summary.hints.knowledgeWithDocuments', {
+              ? t("overview.summary.hints.knowledgeWithDocuments", {
                   count: overviewSummary.knowledge.knowledgeWithDocumentsCount,
                 })
-              : t('overview.states.unavailable'),
+              : t("overview.states.unavailable"),
             tone: !overviewSummary.knowledge.available
-              ? 'warning'
+              ? "warning"
               : overviewSummary.knowledge.knowledgeDocumentCount > 0
-                ? 'positive'
-                : 'warning',
+                ? "positive"
+                : "warning",
           },
           {
-            id: 'resource-coverage',
-            label: t('overview.summary.metrics.resourceCoverage'),
-            value: overviewSummary.knowledge.available ? String(totalResourceCount) : '—',
+            id: "resource-coverage",
+            label: t("overview.summary.metrics.resourceCoverage"),
+            value: overviewSummary.knowledge.available
+              ? String(totalResourceCount)
+              : "—",
             hint: overviewSummary.knowledge.available
-              ? t('overview.summary.hints.coverageMix', {
+              ? t("overview.summary.hints.coverageMix", {
                   knowledge: overviewSummary.coverage.knowledge,
                   skills: overviewSummary.coverage.skills,
-                  agents: overviewSummary.coverage.agents,
                 })
-              : t('overview.states.unavailable'),
+              : t("overview.states.unavailable"),
             tone: !overviewSummary.knowledge.available
-              ? 'warning'
+              ? "warning"
               : totalResourceCount > 0
-                ? 'default'
-                : 'warning',
+                ? "default"
+                : "warning",
           },
         ]}
       />
 
       <div className="grid gap-4 xl:grid-cols-3 mb-4">
         <OverviewActivityChart
-          title={t('overview.activity.title')}
-          description={t('overview.activity.description')}
+          title={t("overview.activity.title")}
+          description={t("overview.activity.description")}
           points={
             overviewSummary.activity.available
               ? overviewSummary.activity.trend7d.map((bucket) => ({
@@ -224,71 +236,73 @@ export const ProjectOverviewPage = () => {
                 }))
               : []
           }
-          avgLabel={t('overview.activity.avg')}
-          peakLabel={t('overview.activity.peak')}
-          emptyLabel={t('overview.states.unavailable')}
+          avgLabel={t("overview.activity.avg")}
+          peakLabel={t("overview.activity.peak")}
+          emptyLabel={t("overview.states.unavailable")}
           statsAvailable={overviewSummary.activity.available}
         />
         <OverviewKnowledgeHealthCard
-          title={t('overview.knowledge.title')}
-          description={t('overview.knowledge.description')}
+          title={t("overview.knowledge.title")}
+          description={t("overview.knowledge.description")}
           stateLabel={knowledgeStateLabel}
-          knowledgeTotalLabel={t('overview.knowledge.metrics.total')}
+          knowledgeTotalLabel={t("overview.knowledge.metrics.total")}
           knowledgeTotalValue={
             overviewSummary.knowledge.available
               ? String(overviewSummary.knowledge.totalKnowledgeCount)
-              : '—'
+              : "—"
           }
-          documentTotalLabel={t('overview.knowledge.metrics.documents')}
+          documentTotalLabel={t("overview.knowledge.metrics.documents")}
           documentTotalValue={
             overviewSummary.knowledge.available
               ? String(overviewSummary.knowledge.knowledgeDocumentCount)
-              : '—'
+              : "—"
           }
-          indexedLabel={t('overview.knowledge.metrics.indexed')}
-          indexedValue={overviewSummary.knowledge.available ? String(indexedCount) : '—'}
-          indexingRateLabel={t('overview.knowledge.metrics.rate')}
-          indexingRateValue={indexingRate === null ? '—' : `${indexingRate}%`}
+          indexedLabel={t("overview.knowledge.metrics.indexed")}
+          indexedValue={
+            overviewSummary.knowledge.available ? String(indexedCount) : "—"
+          }
+          indexingRateLabel={t("overview.knowledge.metrics.rate")}
+          indexingRateValue={indexingRate === null ? "—" : `${indexingRate}%`}
           indexingProgressPercent={indexingRate}
           statusItems={[
             {
-              id: 'completed',
-              label: t('overview.knowledge.status.completed'),
+              id: "completed",
+              label: t("overview.knowledge.status.completed"),
               value: overviewSummary.knowledge.available
                 ? overviewSummary.knowledge.statusBreakdown.completed
-                : '—',
-              tone: 'positive',
+                : "—",
+              tone: "positive",
             },
             {
-              id: 'processing',
-              label: t('overview.knowledge.status.processing'),
+              id: "processing",
+              label: t("overview.knowledge.status.processing"),
               value: overviewSummary.knowledge.available
                 ? overviewSummary.knowledge.statusBreakdown.processing
-                : '—',
-              tone: 'neutral',
+                : "—",
+              tone: "neutral",
             },
             {
-              id: 'pending',
-              label: t('overview.knowledge.status.pending'),
+              id: "pending",
+              label: t("overview.knowledge.status.pending"),
               value: overviewSummary.knowledge.available
                 ? overviewSummary.knowledge.statusBreakdown.pending
-                : '—',
-              tone: 'warning',
+                : "—",
+              tone: "warning",
             },
             {
-              id: 'failed',
-              label: t('overview.knowledge.status.failed'),
+              id: "failed",
+              label: t("overview.knowledge.status.failed"),
               value: overviewSummary.knowledge.available
                 ? overviewSummary.knowledge.statusBreakdown.failed
-                : '—',
-              tone: 'risk',
+                : "—",
+              tone: "risk",
             },
           ]}
         />
         <OverviewInsightList
-          title={t('overview.insights.title')}
-          description={t('overview.insights.description')}
-          emptyLabel={t('overview.insights.empty')}
+          title={t("overview.insights.title")}
+          description={t("overview.insights.description")}
+          emptyLabel={t("overview.insights.empty")}
           items={overviewInsights.map((insight) => ({
             id: insight.id,
             level: insight.level,

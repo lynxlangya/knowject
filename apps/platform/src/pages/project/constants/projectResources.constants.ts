@@ -1,3 +1,4 @@
+import { AGENTS_FEATURE_ENABLED } from "@app/navigation/features";
 import { PATHS } from "@app/navigation/paths";
 import type { ProjectResourceFocus } from "@app/project/project.types";
 import { tp } from "../project.i18n";
@@ -11,13 +12,16 @@ export const GLOBAL_PATH_BY_FOCUS: Record<ProjectResourceFocus, string> = {
   agents: PATHS.agents,
 };
 
-export const RESOURCE_FOCUS_KEYS = ["knowledge", "skills", "agents"] as const;
+export const RESOURCE_FOCUS_KEYS: ProjectResourceFocus[] =
+  AGENTS_FEATURE_ENABLED
+    ? ["knowledge", "skills", "agents"]
+    : ["knowledge", "skills"];
 
 export const formatProjectKnowledgeBatchUploadProgress = (
   current: number,
   total: number,
 ): string => {
-  return tp('resources.upload.progress', { current, total });
+  return tp("resources.upload.progress", { current, total });
 };
 
 export const formatProjectKnowledgeBatchUploadSuccessMessage = (
@@ -25,10 +29,10 @@ export const formatProjectKnowledgeBatchUploadSuccessMessage = (
   totalCount: number,
 ): string => {
   if (successCount === totalCount) {
-    return tp('resources.upload.successAll', { count: successCount });
+    return tp("resources.upload.successAll", { count: successCount });
   }
 
-  return tp('resources.upload.successPartial', {
+  return tp("resources.upload.successPartial", {
     success: successCount,
     total: totalCount,
   });

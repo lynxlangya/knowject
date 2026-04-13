@@ -1,3 +1,4 @@
+import { AGENTS_FEATURE_ENABLED } from "../../app/navigation/features";
 import type {
   ProjectOverviewInsight,
   ProjectOverviewInsightId,
@@ -28,7 +29,7 @@ export const buildProjectOverviewInsights = (
   const hasAnyResources =
     summary.coverage.knowledge > 0 ||
     summary.coverage.skills > 0 ||
-    summary.coverage.agents > 0;
+    (AGENTS_FEATURE_ENABLED && summary.coverage.agents > 0);
 
   if (summary.activity.available) {
     if (
@@ -75,7 +76,7 @@ export const buildProjectOverviewInsights = (
     summary.knowledge.available &&
     summary.coverage.knowledge > 0 &&
     summary.coverage.skills === 0 &&
-    summary.coverage.agents === 0
+    (!AGENTS_FEATURE_ENABLED || summary.coverage.agents === 0)
   ) {
     push(buildInsight("resource_stack_light", "warning"));
   }

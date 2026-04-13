@@ -1,17 +1,18 @@
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams } from "react-router-dom";
+import { AGENTS_FEATURE_ENABLED } from "./features";
 import {
   PATHS,
   buildProjectChatPath,
   buildProjectSectionPath,
   buildProjectResourcesPath,
-} from './paths';
+} from "./paths";
 import type {
   ProjectResourceFocus,
   ProjectSectionKey,
-} from '@app/project/project.types';
+} from "@app/project/project.types";
 
 export const ProjectSectionRedirect = ({
-  section = 'overview',
+  section = "overview",
 }: {
   section?: ProjectSectionKey;
 }) => {
@@ -24,7 +25,7 @@ export const ProjectSectionRedirect = ({
     return <Navigate to={PATHS.home} replace />;
   }
 
-  if (section === 'chat') {
+  if (section === "chat") {
     return <Navigate to={buildProjectChatPath(projectId, chatId)} replace />;
   }
 
@@ -40,6 +41,10 @@ export const ProjectResourceRedirect = ({
 
   if (!projectId) {
     return <Navigate to={PATHS.home} replace />;
+  }
+
+  if (focus === "agents" && !AGENTS_FEATURE_ENABLED) {
+    return <Navigate to={buildProjectResourcesPath(projectId)} replace />;
   }
 
   return <Navigate to={buildProjectResourcesPath(projectId, focus)} replace />;

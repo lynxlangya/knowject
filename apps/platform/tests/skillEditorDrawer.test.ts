@@ -173,6 +173,43 @@ test("authoring answer input can continue without pre-confirmed scope", () => {
   assert.doesNotMatch(conversationSource, /<Select/);
 });
 
+test("authoring inference header uses a compact wrap layout and truncates long text", () => {
+  const conversationSource = readFileSync(
+    new URL(
+      "../src/pages/skills/components/SkillAuthoringConversationTab.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    conversationSource,
+    /buildAuthoringSummaryItems\(session\.currentSummary\)/,
+  );
+  assert.match(
+    conversationSource,
+    /flex flex-wrap items-center gap-x-4 gap-y-1\.5 text-\[12px\] leading-5 text-slate-400/,
+  );
+  assert.match(conversationSource, /summaryItems\.map\(\(item, index\) => \(/);
+  assert.match(conversationSource, /{index \+ 1}\./);
+  assert.match(
+    conversationSource,
+    /className="min-w-0 flex-1 truncate text-\[13px\] leading-5 text-slate-600"/,
+  );
+  assert.match(
+    conversationSource,
+    /className="mt-2\.5 border-t border-slate-200\/70 pt-2\.5"/,
+  );
+  assert.doesNotMatch(
+    conversationSource,
+    /rounded-\[14px\] border border-slate-200\/70 bg-white\/75 px-4 py-3/,
+  );
+  assert.doesNotMatch(
+    conversationSource,
+    /md:grid-cols-\[140px_220px_minmax\(0,1fr\)\]/,
+  );
+});
+
 test("reopen path derives recoverability from sanitized targets in one consistent branch", () => {
   const hookSource = readFileSync(
     new URL("../src/pages/skills/hooks/useSkillEditor.ts", import.meta.url),

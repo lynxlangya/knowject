@@ -3,6 +3,7 @@ import type {
   ConversationSummary,
   ProjectSummary,
 } from "../../app/project/project.types";
+import { AGENTS_FEATURE_ENABLED } from "../../app/navigation/features";
 import type {
   ProjectOverviewActivityBucket,
   ProjectOverviewSummary,
@@ -14,7 +15,10 @@ type ProjectKnowledgeSummary = Pick<
 >;
 
 export interface BuildProjectOverviewSummaryInput {
-  project: Pick<ProjectSummary, "id" | "knowledgeBaseIds" | "skillIds" | "agentIds">;
+  project: Pick<
+    ProjectSummary,
+    "id" | "knowledgeBaseIds" | "skillIds" | "agentIds"
+  >;
   conversations: ConversationSummary[] | undefined;
   boundKnowledge: ProjectKnowledgeSummary[] | undefined;
   projectKnowledge: ProjectKnowledgeSummary[] | undefined;
@@ -22,14 +26,18 @@ export interface BuildProjectOverviewSummaryInput {
 }
 
 const startOfUtcDay = (value: Date): Date =>
-  new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+  new Date(
+    Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+  );
 
 const addUtcDays = (value: Date, deltaDays: number): Date =>
   new Date(value.getTime() + deltaDays * 24 * 60 * 60 * 1000);
 
 const toUtcDateKey = (value: Date): string => value.toISOString().slice(0, 10);
 
-const buildRecent7dBuckets = (nowIso: string): ProjectOverviewActivityBucket[] => {
+const buildRecent7dBuckets = (
+  nowIso: string,
+): ProjectOverviewActivityBucket[] => {
   const now = new Date(nowIso);
   const today = startOfUtcDay(now);
   const start = addUtcDays(today, -6);
@@ -123,7 +131,9 @@ export const buildProjectOverviewSummary = ({
   const trackedKnowledge = knowledgeAvailable
     ? Array.from(
         new Map(
-          [...boundKnowledgeItems, ...projectKnowledgeItems].map((item) => [item.id, item] as const),
+          [...boundKnowledgeItems, ...projectKnowledgeItems].map(
+            (item) => [item.id, item] as const,
+          ),
         ).values(),
       )
     : [];
@@ -177,7 +187,7 @@ export const buildProjectOverviewSummary = ({
     coverage: {
       knowledge: totalKnowledgeCount,
       skills: new Set(project.skillIds).size,
-      agents: new Set(project.agentIds).size,
+      agents: AGENTS_FEATURE_ENABLED ? new Set(project.agentIds).size : 0,
     },
   };
 };

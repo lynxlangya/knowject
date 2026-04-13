@@ -105,7 +105,7 @@ export const pagesMessages = {
       adminProjects: "管理项目：{{count}}",
       firstCollaboration: "首次协作",
       latestCollaboration: "最近协作",
-      assetsSummary: "知识 / 技能 / 智能体",
+      assetsSummary: "知识 / 技能",
       projectStatusBreakdown: "项目状态分布",
       overview: "概览",
       currentFocus: "当前关注",
@@ -334,7 +334,7 @@ export const pagesMessages = {
     usageCount: "使用项目：{{count}}",
   },
   knowledge: {
-    subtitle: "统一索引全局文档，供技能与智能体复用",
+    subtitle: "统一索引全局文档，供技能复用",
     sourceType: {
       global_docs: "global_docs · 全局文档",
       global_code: "global_code · 全局代码（预留）",
@@ -685,13 +685,15 @@ export const pagesMessages = {
         },
       },
       inference: {
-        title: "系统已推断",
+        title: "系统推断中...",
         category: "当前分类",
         targets: "当前范围",
         summary: "当前摘要",
-        emptyCategory: "仍在判断中",
-        emptyTargets: "还没有锁定参考范围",
-        emptySummary: "继续对话后，这里会实时更新。",
+        categoryResolved: "当前分类：{{value}}",
+        targetsResolved: "当前范围：{{value}}",
+        emptyCategory: "当前分类推断中...",
+        emptyTargets: "当前范围推断中...",
+        emptySummary: "继续对话后，这里会逐步收敛为摘要要点。",
       },
       actions: {
         continue: "继续回答",

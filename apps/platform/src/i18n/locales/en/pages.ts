@@ -113,7 +113,7 @@ export const pagesMessages = {
       adminProjects: "Admin projects: {{count}}",
       firstCollaboration: "First collaboration",
       latestCollaboration: "Latest collaboration",
-      assetsSummary: "Knowledge / Skills / Agents",
+      assetsSummary: "Knowledge / Skills",
       projectStatusBreakdown: "Project status breakdown",
       overview: "Overview",
       currentFocus: "Current focus",
@@ -366,8 +366,7 @@ export const pagesMessages = {
     usageCount: "Projects using this: {{count}}",
   },
   knowledge: {
-    subtitle:
-      "Index global documents in one place so skills and agents can reuse them.",
+    subtitle: "Index global documents in one place so skills can reuse them.",
     sourceType: {
       global_docs: "global_docs · Global documents",
       global_code: "global_code · Global code (reserved)",
@@ -757,13 +756,16 @@ export const pagesMessages = {
         },
       },
       inference: {
-        title: "Inferred so far",
+        title: "Inferring...",
         category: "Current category",
         targets: "Current scope",
         summary: "Current summary",
-        emptyCategory: "Still inferring",
-        emptyTargets: "No reference scope locked yet",
-        emptySummary: "Keep talking and this will update live.",
+        categoryResolved: "Current category: {{value}}",
+        targetsResolved: "Current scope: {{value}}",
+        emptyCategory: "Current category still inferring...",
+        emptyTargets: "Current scope still inferring...",
+        emptySummary:
+          "Keep talking and this will condense into summary points.",
       },
       actions: {
         continue: "Continue",

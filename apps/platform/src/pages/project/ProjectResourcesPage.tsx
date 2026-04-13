@@ -4,6 +4,7 @@ import type { KnowledgeDocumentResponse } from "@api/knowledge";
 import { App, Alert, Button, Dropdown, Typography } from "antd";
 import type { MenuProps } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { AGENTS_GLOBAL_PAGE_ENABLED } from "@app/navigation/features";
 import { PATHS } from "@app/navigation/paths";
 import type {
   ProjectResourceFocus,
@@ -162,10 +163,13 @@ export const ProjectResourcesPage = () => {
     },
     messages: {
       retryError: () => tp("resources.documentActions.retryError"),
-      rebuildDocumentSuccess: () => tp("resources.documentActions.rebuildSuccess"),
+      rebuildDocumentSuccess: () =>
+        tp("resources.documentActions.rebuildSuccess"),
       rebuildDocumentError: () => tp("resources.documentActions.rebuildError"),
-      rebuildKnowledgeSuccess: () => tp("resources.documentActions.rebuildAllSuccess"),
-      rebuildKnowledgeError: () => tp("resources.documentActions.rebuildAllError"),
+      rebuildKnowledgeSuccess: () =>
+        tp("resources.documentActions.rebuildAllSuccess"),
+      rebuildKnowledgeError: () =>
+        tp("resources.documentActions.rebuildAllError"),
       deleteDocumentError: () => tp("resources.documentActions.deleteError"),
     },
   });
@@ -409,6 +413,9 @@ export const ProjectResourcesPage = () => {
                 handleAddProjectResource(group.key, group.title)
               }
               onOpenGlobal={() => navigate(GLOBAL_PATH_BY_FOCUS[group.key])}
+              showOpenGlobal={
+                group.key !== "agents" || AGENTS_GLOBAL_PAGE_ENABLED
+              }
               onItemClick={
                 group.key === "knowledge" ? handleOpenKnowledgeItem : undefined
               }

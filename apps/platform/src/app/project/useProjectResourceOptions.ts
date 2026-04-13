@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { listAgents } from "@api/agents";
 import { listKnowledge } from "@api/knowledge";
 import { listSkills, type SkillSummaryResponse } from "@api/skills";
-import {
-  GLOBAL_KNOWLEDGE_OPTIONS,
-} from "./project.catalog";
+import { AGENTS_PROJECT_BINDING_ENABLED } from "@app/navigation/features";
+import { GLOBAL_KNOWLEDGE_OPTIONS } from "./project.catalog";
 import {
   createUnknownResourceOption,
   resolveSelectedResourceOptions,
@@ -20,11 +19,11 @@ interface UseProjectResourceOptionsOptions {
 }
 
 export const buildProjectSkillOptionLabel = (
-  item: Pick<SkillSummaryResponse, 'name' | 'source'>,
+  item: Pick<SkillSummaryResponse, "name" | "source">,
 ): string => {
-  return item.source === 'preset'
-    ? `${item.name} · ${tp('resources.item.presetSkill')}`
-    : `${item.name} · ${tp('resources.item.teamSkill')}`;
+  return item.source === "preset"
+    ? `${item.name} · ${tp("resources.item.presetSkill")}`
+    : `${item.name} · ${tp("resources.item.teamSkill")}`;
 };
 
 export const useProjectResourceOptions = ({
@@ -36,9 +35,9 @@ export const useProjectResourceOptions = ({
   const [knowledgeOptionsLoading, setKnowledgeOptionsLoading] = useState(false);
   const [agentOptionsLoading, setAgentOptionsLoading] = useState(false);
   const [skillOptionsLoading, setSkillOptionsLoading] = useState(false);
-  const [knowledgeOptions, setKnowledgeOptions] = useState<ProjectResourceOption[]>(
-    [],
-  );
+  const [knowledgeOptions, setKnowledgeOptions] = useState<
+    ProjectResourceOption[]
+  >([]);
   const [agentOptions, setAgentOptions] = useState<ProjectResourceOption[]>([]);
   const [skillOptions, setSkillOptions] = useState<ProjectResourceOption[]>([]);
 
@@ -51,15 +50,18 @@ export const useProjectResourceOptions = ({
 
     const loadProjectResourceOptions = async () => {
       setKnowledgeOptionsLoading(true);
-      setAgentOptionsLoading(true);
       setSkillOptionsLoading(true);
+      setAgentOptionsLoading(AGENTS_PROJECT_BINDING_ENABLED);
 
       try {
-        const [knowledgeResult, agentResult, skillResult] = await Promise.allSettled([
-          listKnowledge(),
-          listAgents(),
-          listSkills({ bindable: true }),
-        ]);
+        const [knowledgeResult, agentResult, skillResult] =
+          await Promise.allSettled([
+            listKnowledge(),
+            AGENTS_PROJECT_BINDING_ENABLED
+              ? listAgents()
+              : Promise.resolve({ items: [] }),
+            listSkills({ bindable: true }),
+          ]);
 
         if (cancelled) {
           return;
@@ -99,8 +101,10 @@ export const useProjectResourceOptions = ({
                   : `${item.name} · 已停用`,
             })),
           );
-        } else {
+        } else if (AGENTS_PROJECT_BINDING_ENABLED) {
           console.error(agentResult.reason);
+          setAgentOptions([]);
+        } else {
           setAgentOptions([]);
         }
       } catch (loadError) {
@@ -133,8 +137,9 @@ export const useProjectResourceOptions = ({
       selectedIds: selectedKnowledgeIds,
       baseOptions: knowledgeOptions,
       createFallbackOption: (knowledgeId) =>
-        GLOBAL_KNOWLEDGE_OPTIONS.find((option) => option.value === knowledgeId) ??
-        createUnknownResourceOption(knowledgeId, "知识库"),
+        GLOBAL_KNOWLEDGE_OPTIONS.find(
+          (option) => option.value === knowledgeId,
+        ) ?? createUnknownResourceOption(knowledgeId, "知识库"),
     });
   }, [knowledgeOptions, selectedKnowledgeIds]);
 

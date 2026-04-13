@@ -5,6 +5,7 @@ import {
   getCategoryOptions,
 } from "../constants/skillsManagement.constants";
 import type { SkillAuthoringSessionState } from "../types/skillsManagement.types";
+import { buildAuthoringSummaryItems } from "../utils/authoringSummary";
 
 interface SkillAuthoringConversationTabProps {
   session: SkillAuthoringSessionState;
@@ -35,9 +36,18 @@ export const SkillAuthoringConversationTab = ({
           target,
       )
     : [t("skills.authoring.inference.emptyTargets")];
-  const inferredSummary =
-    session.currentSummary.trim() ||
-    t("skills.authoring.inference.emptySummary");
+  const inferredTargetsText = inferredTargetLabels.join(" / ");
+  const summaryItems = buildAuthoringSummaryItems(session.currentSummary);
+  const categoryStatusText = session.currentInference?.category
+    ? t("skills.authoring.inference.categoryResolved", {
+        value: inferredCategoryLabel,
+      })
+    : t("skills.authoring.inference.emptyCategory");
+  const targetsStatusText = session.currentInference?.contextTargets.length
+    ? t("skills.authoring.inference.targetsResolved", {
+        value: inferredTargetsText,
+      })
+    : t("skills.authoring.inference.emptyTargets");
   const introMessage =
     session.messages[0]?.content ?? t("skills.authoring.intro");
   const conversationMessages =
@@ -52,42 +62,61 @@ export const SkillAuthoringConversationTab = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#eef4fa]">
-      <section className="border-b border-slate-200/80 bg-white/92 px-8 py-4">
-        <div className="mx-auto max-w-245">
-          <div className="flex flex-col gap-3 rounded-[18px] border border-slate-200/70 bg-slate-50/70 px-5 py-3 xl:flex-row xl:items-start xl:gap-6">
-            <div className="flex items-center gap-2.5 xl:pt-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <Typography.Text className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                {t("skills.authoring.inference.title")}
+      <section className="border-b border-slate-200/80 bg-white/92 px-6 py-3">
+        <div className="mx-auto max-w-220">
+          <div className="rounded-[18px] border border-slate-200/70 bg-slate-50/78 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] leading-5 text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`h-2 w-2 rounded-full bg-emerald-500 ${authoringSubmitting ? "animate-pulse" : ""}`}
+                />
+                <Typography.Text className="text-[12px] text-slate-400">
+                  {t("skills.authoring.inference.title")}
+                </Typography.Text>
+              </div>
+              <Typography.Text
+                className="max-w-full text-[12px] text-slate-400"
+                title={categoryStatusText}
+              >
+                {categoryStatusText}
+              </Typography.Text>
+              <Typography.Text
+                className="max-w-full text-[12px] text-slate-400"
+                title={targetsStatusText}
+              >
+                {targetsStatusText}
               </Typography.Text>
             </div>
-            <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-[140px_220px_minmax(0,1fr)]">
-              <div className="min-w-0">
-                <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">
-                  {t("skills.authoring.inference.category")}
-                </Typography.Text>
-                <div className="mt-1 text-[14px] font-medium leading-6 text-slate-700">
-                  {inferredCategoryLabel}
-                </div>
-              </div>
 
-              <div className="min-w-0">
-                <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">
-                  {t("skills.authoring.inference.targets")}
-                </Typography.Text>
-                <div className="mt-1 text-[14px] leading-6 text-slate-700">
-                  {inferredTargetLabels.join(" / ")}
-                </div>
-              </div>
+            <div className="mt-2.5 border-t border-slate-200/70 pt-2.5">
+              <Typography.Text className="text-[12px] font-medium text-slate-500">
+                {t("skills.authoring.inference.summary")}：
+              </Typography.Text>
 
-              <div className="min-w-0">
-                <Typography.Text className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">
-                  {t("skills.authoring.inference.summary")}
-                </Typography.Text>
-                <div className="mt-1 text-[14px] leading-6 text-slate-700 break-words">
-                  {inferredSummary}
+              {summaryItems.length > 0 ? (
+                <div className="mt-2 space-y-1.5">
+                  {summaryItems.map((item, index) => (
+                    <div
+                      key={`${index}-${item}`}
+                      className="flex items-start gap-2"
+                    >
+                      <span className="mt-[1px] w-4 shrink-0 text-[12px] leading-5 text-slate-400">
+                        {index + 1}.
+                      </span>
+                      <Typography.Text
+                        className="min-w-0 flex-1 truncate text-[13px] leading-5 text-slate-600"
+                        title={item}
+                      >
+                        {item}
+                      </Typography.Text>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <Typography.Text className="mt-2 block text-[12px] leading-5 text-slate-400">
+                  {t("skills.authoring.inference.emptySummary")}
+                </Typography.Text>
+              )}
             </div>
           </div>
         </div>

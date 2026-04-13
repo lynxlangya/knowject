@@ -98,10 +98,17 @@ test("skills locale resources freeze conversation authoring copy", () => {
     enScope.title,
     "Optional: adjust the target scenario and reference scope for this Skill",
   );
-  assert.equal(zhInference.title, "系统已推断");
-  assert.equal(enInference.title, "Inferred so far");
+  assert.equal(zhInference.title, "系统推断中...");
+  assert.equal(enInference.title, "Inferring...");
   assert.equal(zhInference.summary, "当前摘要");
   assert.equal(enInference.summary, "Current summary");
+  assert.equal(zhInference.emptyCategory, "当前分类推断中...");
+  assert.equal(
+    enInference.emptyCategory,
+    "Current category still inferring...",
+  );
+  assert.equal(zhInference.emptyTargets, "当前范围推断中...");
+  assert.equal(enInference.emptyTargets, "Current scope still inferring...");
 });
 
 test("skills contract and governance docs mention the live authoring turn flow", () => {

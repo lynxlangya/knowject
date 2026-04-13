@@ -1,11 +1,12 @@
-import type { TFunction } from 'i18next';
-import type { MemberOverviewResponseItem } from '@api/members';
-import type { ProjectRole } from '@api/projects';
-import type { SkillSummaryResponse } from '@api/skills';
+import type { TFunction } from "i18next";
+import type { MemberOverviewResponseItem } from "@api/members";
+import type { ProjectRole } from "@api/projects";
+import type { SkillSummaryResponse } from "@api/skills";
+import { AGENTS_FEATURE_ENABLED } from "@app/navigation/features";
 import {
   getCatalogMembers,
   getGlobalAssetById,
-} from '@app/project/project.catalog';
+} from "@app/project/project.catalog";
 import type {
   GlobalAssetItem,
   ProjectMember,
@@ -14,92 +15,89 @@ import type {
   ProjectResourceFocus,
   ProjectMemberStatus,
   ProjectSummary,
-} from '@app/project/project.types';
-import { getProjectMembers } from '@pages/project/projectWorkspaceSnapshot.mock';
+} from "@app/project/project.types";
+import { getProjectMembers } from "@pages/project/projectWorkspaceSnapshot.mock";
 import type {
   MemberAssetSummary,
   MemberFiltersState,
   MemberProjectViewModel,
   MemberViewModel,
-} from './members.types';
+} from "./members.types";
 
 export const getMemberStatusMeta = (
-  t: TFunction<'pages'>,
-): Record<
-  ProjectMemberStatus,
-  { label: string; className: string }
-> => ({
+  t: TFunction<"pages">,
+): Record<ProjectMemberStatus, { label: string; className: string }> => ({
   active: {
-    label: t('members.status.active'),
-    className: 'border-[#C2EDE6] bg-[#F2FDFB] text-[#1A8A77]',
+    label: t("members.status.active"),
+    className: "border-[#C2EDE6] bg-[#F2FDFB] text-[#1A8A77]",
   },
   syncing: {
-    label: t('members.status.syncing'),
-    className: 'border-[#B8D4E8] bg-[#EDF9FD] text-[#1E6A8A]',
+    label: t("members.status.syncing"),
+    className: "border-[#B8D4E8] bg-[#EDF9FD] text-[#1E6A8A]",
   },
   blocked: {
-    label: t('members.status.blocked'),
-    className: 'border-[#FECDD3] bg-[#FFF1F2] text-[#9F1239]',
+    label: t("members.status.blocked"),
+    className: "border-[#FECDD3] bg-[#FFF1F2] text-[#9F1239]",
   },
   idle: {
-    label: t('members.status.idle'),
-    className: 'border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]',
+    label: t("members.status.idle"),
+    className: "border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]",
   },
 });
 
 export const getProjectAccessRoleLabels = (
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): Record<ProjectRole, string> => ({
-  admin: t('members.accessRole.admin'),
-  member: t('members.accessRole.member'),
+  admin: t("members.accessRole.admin"),
+  member: t("members.accessRole.member"),
 });
 
 export const getCollaborationRoleLabels = (
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): Record<ProjectMemberRole, string> => ({
-  owner: t('members.collaborationRole.owner'),
-  product: t('members.collaborationRole.product'),
-  design: t('members.collaborationRole.design'),
-  frontend: t('members.collaborationRole.frontend'),
-  backend: t('members.collaborationRole.backend'),
-  marketing: t('members.collaborationRole.marketing'),
+  owner: t("members.collaborationRole.owner"),
+  product: t("members.collaborationRole.product"),
+  design: t("members.collaborationRole.design"),
+  frontend: t("members.collaborationRole.frontend"),
+  backend: t("members.collaborationRole.backend"),
+  marketing: t("members.collaborationRole.marketing"),
 });
 
 const STATUS_ORDER: ProjectMemberStatus[] = [
-  'active',
-  'syncing',
-  'blocked',
-  'idle',
+  "active",
+  "syncing",
+  "blocked",
+  "idle",
 ];
 
 const buildFallbackFocusSummary = (
   item: Pick<
     MemberOverviewResponseItem,
-    'visibleProjectCount' | 'adminProjectCount'
+    "visibleProjectCount" | "adminProjectCount"
   >,
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): string => {
   if (item.visibleProjectCount === 0) {
-    return t('members.focus.noVisibleProject');
+    return t("members.focus.noVisibleProject");
   }
 
   if (item.adminProjectCount > 0) {
-    return t('members.focus.adminProjects', {
+    return t("members.focus.adminProjects", {
       visibleProjectCount: item.visibleProjectCount,
       adminProjectCount: item.adminProjectCount,
     });
   }
 
-  return t('members.focus.memberProjects', {
+  return t("members.focus.memberProjects", {
     visibleProjectCount: item.visibleProjectCount,
   });
 };
 
 const buildFallbackProjectFocusSummary = (
   projectName: string,
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): string => {
-  return t('members.focus.projectFallback', {
+  return t("members.focus.projectFallback", {
     projectName,
   });
 };
@@ -115,7 +113,7 @@ const getActivityTimestamp = (
 };
 
 const getFallbackStatus = (
-  snapshots: Array<Pick<ProjectMember, 'status'>>,
+  snapshots: Array<Pick<ProjectMember, "status">>,
 ): ProjectMemberStatus => {
   for (const status of STATUS_ORDER) {
     if (snapshots.some((snapshot) => snapshot.status === status)) {
@@ -123,7 +121,7 @@ const getFallbackStatus = (
     }
   }
 
-  return 'idle';
+  return "idle";
 };
 
 const pickPrimaryProject = (
@@ -153,17 +151,20 @@ const pickPrimaryProject = (
 const buildUnknownAssetItem = (
   type: ProjectResourceFocus,
   id: string,
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): GlobalAssetItem => {
-  const typeLabel = getAssetGroupTitle(t, type === 'knowledge' ? 'knowledge' : type);
+  const typeLabel = getAssetGroupTitle(
+    t,
+    type === "knowledge" ? "knowledge" : type,
+  );
 
   return {
     id,
     type,
-    name: t('members.assets.unknownName', { id }),
-    description: t('members.assets.unknownDescription', { typeLabel }),
-    updatedAt: t('members.assets.notRecorded'),
-    owner: t('members.assets.unspecifiedOwner'),
+    name: t("members.assets.unknownName", { id }),
+    description: t("members.assets.unknownDescription", { typeLabel }),
+    updatedAt: t("members.assets.notRecorded"),
+    owner: t("members.assets.unspecifiedOwner"),
     usageCount: 0,
   };
 };
@@ -171,7 +172,7 @@ const buildUnknownAssetItem = (
 const resolveMemberAsset = (
   type: ProjectResourceFocus,
   id: string,
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): GlobalAssetItem => {
   return getGlobalAssetById(type, id) ?? buildUnknownAssetItem(type, id, t);
 };
@@ -179,25 +180,25 @@ const resolveMemberAsset = (
 const resolveSkillAsset = (
   id: string,
   skillsCatalog: SkillSummaryResponse[],
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
   locale: string,
 ): GlobalAssetItem => {
   const skill = skillsCatalog.find((item) => item.id === id);
 
   if (!skill) {
-    return buildUnknownAssetItem('skills', id, t);
+    return buildUnknownAssetItem("skills", id, t);
   }
 
   return {
     id: skill.id,
-    type: 'skills',
+    type: "skills",
     name: skill.name,
     description: skill.description,
     updatedAt: formatDisplayDateTime(skill.updatedAt, locale, t),
     owner:
-      skill.source === 'preset'
-        ? t('members.assets.system')
-        : t('members.assets.team'),
+      skill.source === "preset"
+        ? t("members.assets.system")
+        : t("members.assets.team"),
     usageCount: 0,
   };
 };
@@ -230,9 +231,11 @@ const buildMemberProjects = (
   item: MemberOverviewResponseItem,
   projects: ProjectSummary[],
   snapshotIndex: Map<string, ProjectMember>,
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): MemberProjectViewModel[] => {
-  const projectMap = new Map(projects.map((project) => [project.id, project] as const));
+  const projectMap = new Map(
+    projects.map((project) => [project.id, project] as const),
+  );
 
   return item.visibleProjects.map((visibleProject) => {
     const project = projectMap.get(visibleProject.id) ?? null;
@@ -248,9 +251,9 @@ const buildMemberProjects = (
       updatedAt: visibleProject.updatedAt,
       knowledgeCount: project?.knowledgeBaseIds.length ?? 0,
       skillCount: project?.skillIds.length ?? 0,
-      agentCount: project?.agentIds.length ?? 0,
+      agentCount: AGENTS_FEATURE_ENABLED ? (project?.agentIds.length ?? 0) : 0,
       collaborationRole: snapshot?.role ?? null,
-      status: snapshot?.status ?? 'idle',
+      status: snapshot?.status ?? "idle",
       focusSummary:
         snapshot?.focusSummary ??
         buildFallbackProjectFocusSummary(visibleProject.name, t),
@@ -264,13 +267,15 @@ const buildMemberAssets = (
   memberProjects: MemberProjectViewModel[],
   projects: ProjectSummary[],
   skillsCatalog: SkillSummaryResponse[],
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
   locale: string,
 ): MemberAssetSummary => {
-  const projectMap = new Map(projects.map((project) => [project.id, project] as const));
+  const projectMap = new Map(
+    projects.map((project) => [project.id, project] as const),
+  );
   const knowledgeIds = new Set<string>();
   const skillIds = new Set<string>();
-  const agentIds = new Set<string>();
+  const agentIds = AGENTS_FEATURE_ENABLED ? new Set<string>() : null;
 
   memberProjects.forEach((memberProject) => {
     const project = projectMap.get(memberProject.id);
@@ -284,20 +289,28 @@ const buildMemberAssets = (
     project.skillIds.forEach((id) => {
       skillIds.add(id);
     });
-    project.agentIds.forEach((id) => {
-      agentIds.add(id);
-    });
+    if (agentIds) {
+      project.agentIds.forEach((id) => {
+        agentIds.add(id);
+      });
+    }
   });
 
   return {
     knowledge: dedupeAssets(
-      Array.from(knowledgeIds).map((id) => resolveMemberAsset('knowledge', id, t)),
+      Array.from(knowledgeIds).map((id) =>
+        resolveMemberAsset("knowledge", id, t),
+      ),
     ),
     skills: dedupeAssets(
-      Array.from(skillIds).map((id) => resolveSkillAsset(id, skillsCatalog, t, locale)),
+      Array.from(skillIds).map((id) =>
+        resolveSkillAsset(id, skillsCatalog, t, locale),
+      ),
     ),
     agents: dedupeAssets(
-      Array.from(agentIds).map((id) => resolveMemberAsset('agents', id, t)),
+      Array.from(agentIds ?? []).map((id) =>
+        resolveMemberAsset("agents", id, t),
+      ),
     ),
   };
 };
@@ -314,7 +327,7 @@ export const buildMemberViewModels = ({
   projects: ProjectSummary[];
   currentUserId: string | null;
   skillsCatalog: SkillSummaryResponse[];
-  t: TFunction<'pages'>;
+  t: TFunction<"pages">;
   locale: string;
 }): MemberViewModel[] => {
   const avatarMap = new Map(
@@ -323,9 +336,20 @@ export const buildMemberViewModels = ({
   const snapshotIndex = buildProjectSnapshotIndex(projects);
 
   return items.map((item) => {
-    const memberProjects = buildMemberProjects(item, projects, snapshotIndex, t);
+    const memberProjects = buildMemberProjects(
+      item,
+      projects,
+      snapshotIndex,
+      t,
+    );
     const primaryProject = pickPrimaryProject(memberProjects);
-    const assets = buildMemberAssets(memberProjects, projects, skillsCatalog, t, locale);
+    const assets = buildMemberAssets(
+      memberProjects,
+      projects,
+      skillsCatalog,
+      t,
+      locale,
+    );
     const responsibilityTags = Array.from(
       new Set(memberProjects.flatMap((project) => project.responsibilityTags)),
     ).slice(0, 6);
@@ -402,20 +426,20 @@ export const filterMemberViewModels = (
       return false;
     }
 
-    if (filters.status !== 'all' && member.primaryStatus !== filters.status) {
+    if (filters.status !== "all" && member.primaryStatus !== filters.status) {
       return false;
     }
 
-    if (filters.adminScope === 'admin' && member.adminProjectCount === 0) {
+    if (filters.adminScope === "admin" && member.adminProjectCount === 0) {
       return false;
     }
 
-    if (filters.adminScope === 'member' && member.adminProjectCount > 0) {
+    if (filters.adminScope === "member" && member.adminProjectCount > 0) {
       return false;
     }
 
     if (
-      filters.projectId !== 'all' &&
+      filters.projectId !== "all" &&
       !member.projects.some((project) => project.id === filters.projectId)
     ) {
       return false;
@@ -425,13 +449,13 @@ export const filterMemberViewModels = (
   });
 
   return [...filteredMembers].sort((left, right) => {
-    if (filters.sortBy === 'projects') {
+    if (filters.sortBy === "projects") {
       if (left.visibleProjectCount !== right.visibleProjectCount) {
         return right.visibleProjectCount - left.visibleProjectCount;
       }
     }
 
-    if (filters.sortBy === 'joined') {
+    if (filters.sortBy === "joined") {
       const joinedDelta =
         getMemberJoinedSortValue(right) - getMemberJoinedSortValue(left);
 
@@ -447,7 +471,7 @@ export const filterMemberViewModels = (
       return activityDelta;
     }
 
-    return left.name.localeCompare(right.name, 'zh-CN');
+    return left.name.localeCompare(right.name, "zh-CN");
   });
 };
 
@@ -458,50 +482,50 @@ export const getInitials = (name: string): string => {
     .trim()
     .split(/\s+/)
     .slice(0, 2)
-    .map((item) => item[0]?.toUpperCase() ?? '')
-    .join('');
+    .map((item) => item[0]?.toUpperCase() ?? "")
+    .join("");
 };
 
 export const formatDisplayDate = (
   value: string | null,
   locale: string,
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): string => {
   if (!value) {
-    return t('members.date.empty');
+    return t("members.date.empty");
   }
 
   return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
+    dateStyle: "medium",
   }).format(new Date(value));
 };
 
 export const formatDisplayDateTime = (
   value: string | null,
   locale: string,
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
 ): string => {
   if (!value) {
-    return t('members.date.empty');
+    return t("members.date.empty");
   }
 
   return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 };
 
 export const getAssetGroupTitle = (
-  t: TFunction<'pages'>,
+  t: TFunction<"pages">,
   key: keyof MemberAssetSummary,
 ): string => {
-  if (key === 'knowledge') {
-    return t('members.assets.knowledge');
+  if (key === "knowledge") {
+    return t("members.assets.knowledge");
   }
 
-  if (key === 'skills') {
-    return t('members.assets.skills');
+  if (key === "skills") {
+    return t("members.assets.skills");
   }
 
-  return t('members.assets.agents');
+  return t("members.assets.agents");
 };

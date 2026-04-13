@@ -1,5 +1,6 @@
 import { Form, Input, Modal, Select } from "antd";
 import { useEffect } from "react";
+import { AGENTS_PROJECT_BINDING_ENABLED } from "@app/navigation/features";
 import type { ProjectSummary } from "@app/project/project.types";
 import { useProjectResourceOptions } from "@app/project/useProjectResourceOptions";
 
@@ -85,7 +86,9 @@ export const ProjectFormModal = ({
         <Form.Item
           name="name"
           label="项目名称"
-          rules={[{ required: true, whitespace: true, message: "请输入项目名称" }]}
+          rules={[
+            { required: true, whitespace: true, message: "请输入项目名称" },
+          ]}
         >
           <Input maxLength={40} placeholder="例如：移动端应用重构" />
         </Form.Item>
@@ -106,20 +109,26 @@ export const ProjectFormModal = ({
             placeholder="可选"
             loading={knowledgeOptionsLoading}
             options={resolvedKnowledgeOptions}
-            notFoundContent={knowledgeOptionsLoading ? "加载中..." : "暂无可选知识库"}
+            notFoundContent={
+              knowledgeOptionsLoading ? "加载中..." : "暂无可选知识库"
+            }
           />
         </Form.Item>
 
-        <Form.Item name="agentIds" label="智能体">
-          <Select
-            mode="multiple"
-            allowClear
-            placeholder="可选"
-            loading={agentOptionsLoading}
-            options={resolvedAgentOptions}
-            notFoundContent={agentOptionsLoading ? "加载中..." : "暂无可选智能体"}
-          />
-        </Form.Item>
+        {AGENTS_PROJECT_BINDING_ENABLED ? (
+          <Form.Item name="agentIds" label="智能体">
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="可选"
+              loading={agentOptionsLoading}
+              options={resolvedAgentOptions}
+              notFoundContent={
+                agentOptionsLoading ? "加载中..." : "暂无可选智能体"
+              }
+            />
+          </Form.Item>
+        ) : null}
 
         <Form.Item name="skillIds" label="技能">
           <Select
@@ -128,7 +137,9 @@ export const ProjectFormModal = ({
             placeholder="可选"
             loading={skillOptionsLoading}
             options={resolvedSkillOptions}
-            notFoundContent={skillOptionsLoading ? "加载中..." : "暂无可选 Skill"}
+            notFoundContent={
+              skillOptionsLoading ? "加载中..." : "暂无可选 Skill"
+            }
           />
         </Form.Item>
       </Form>
