@@ -19,9 +19,10 @@ import {
 } from "../skills.definition.js";
 import type { NormalizedSkillAuthoringTurnInput } from "../services/skills-authoring.service.js";
 
-const CONTROLLED_SCOPE_TARGETS = new Set<string>([
+export const CONTROLLED_SCOPE_TARGETS = new Set<string>([
   "apps/platform/src/pages/skills",
   "docs/current/architecture.md",
+  "apps/api/src/modules/skills",
 ]);
 
 const isSkillCategory = (value: string): value is SkillCategory => {

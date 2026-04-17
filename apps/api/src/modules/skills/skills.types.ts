@@ -22,6 +22,22 @@ export type {
   SkillAuthoringTurnStreamEventType,
   SkillAuthoringTurnResponse,
 } from "./skills.authoring.js";
+export type {
+  SkillCreationJobCreateInput,
+  SkillCreationJobEnvelope,
+  SkillCreationJobRefineInput,
+  SkillCreationJobResponse,
+  SkillCreationJobsListResponse,
+  SkillCreationJobSaveInput,
+  SkillCreationJobStatus,
+} from "./skills.creation-jobs.js";
+export type {
+  SkillCreationDraftGenerateInput,
+  SkillCreationDraftRefineInput,
+  SkillCreationDraftResponse,
+  SkillCreationDraftSaveInput,
+  SkillCreationTemplateHint,
+} from "./skills.creation.js";
 
 export interface SkillsCommandContext {
   actor: AuthenticatedRequestUser;

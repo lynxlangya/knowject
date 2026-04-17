@@ -23,6 +23,23 @@ export const SKILL_CATEGORY_VALUES = [
 export type SkillCategory = (typeof SKILL_CATEGORY_VALUES)[number];
 export type SkillStatus = "draft" | "active" | "deprecated" | "archived";
 export type SkillFollowupStrategy = "none" | "optional" | "required";
+export const SKILL_CREATION_TEMPLATE_HINT_VALUES = [
+  "goal",
+  "workflow",
+  "output",
+  "guardrails",
+] as const;
+export type SkillCreationTemplateHint =
+  (typeof SKILL_CREATION_TEMPLATE_HINT_VALUES)[number];
+export const SKILL_CREATION_JOB_STATUS_VALUES = [
+  "queued",
+  "generating",
+  "ready",
+  "failed",
+  "saved",
+] as const;
+export type SkillCreationJobStatus =
+  (typeof SKILL_CREATION_JOB_STATUS_VALUES)[number];
 
 export interface SkillDefinitionFields {
   goal: string;
@@ -90,6 +107,14 @@ export interface SkillSummaryResponse {
   publishedAt: string | null;
 }
 
+export interface SkillDetailResponse extends SkillSummaryResponse {
+  skillMarkdown: string;
+  bundleFiles: Array<{
+    path: string;
+    size: number;
+  }>;
+}
+
 export interface SkillListResponse {
   total: number;
   items: SkillSummaryResponse[];
@@ -112,7 +137,49 @@ export interface SkillListResponse {
 }
 
 export interface SkillMutationResponse {
-  skill: SkillSummaryResponse;
+  skill: SkillDetailResponse;
+}
+
+export interface SkillCreationInference {
+  category: SkillCategory | null;
+  contextTargets: string[];
+  rationale?: string;
+}
+
+export interface SkillCreationDraftResponse {
+  markdownDraft: string;
+  currentSummary: string;
+  currentInference: SkillCreationInference;
+  confirmationQuestions: string[];
+  needsFollowup: boolean;
+}
+
+export interface SkillCreationJobResponse {
+  id: string;
+  status: SkillCreationJobStatus;
+  name: string;
+  description: string;
+  taskIntent: string;
+  templateHint: SkillCreationTemplateHint | null;
+  markdownDraft: string | null;
+  currentSummary: string | null;
+  currentInference: SkillCreationInference | null;
+  confirmationQuestions: string[];
+  errorMessage: string | null;
+  savedSkillId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  failedAt: string | null;
+}
+
+export interface SkillCreationJobEnvelope {
+  job: SkillCreationJobResponse;
+}
+
+export interface SkillCreationJobsListResponse {
+  items: SkillCreationJobResponse[];
 }
 
 export interface ListSkillsParams {
@@ -130,6 +197,44 @@ export interface UpdateSkillRequest {
   status?: SkillStatus;
 }
 
+export interface GenerateSkillCreationDraftRequest {
+  name: string;
+  description: string;
+  taskIntent: string;
+  templateHint?: SkillCreationTemplateHint | null;
+}
+
+export interface RefineSkillCreationDraftRequest {
+  name: string;
+  description: string;
+  markdownDraft: string;
+  optimizationInstruction?: string;
+  currentInference?: SkillCreationInference | null;
+}
+
+export interface SaveSkillCreationDraftRequest {
+  markdownDraft: string;
+  currentInference?: SkillCreationInference | null;
+}
+
+export interface CreateSkillCreationJobRequest {
+  name: string;
+  description: string;
+  taskIntent: string;
+  templateHint?: SkillCreationTemplateHint | null;
+}
+
+export interface RefineSkillCreationJobRequest {
+  markdownDraft: string;
+  optimizationInstruction?: string;
+  currentInference?: SkillCreationInference | null;
+}
+
+export interface SaveSkillCreationJobRequest {
+  markdownDraft: string;
+  currentInference?: SkillCreationInference | null;
+}
+
 export const listSkills = async (
   params: ListSkillsParams = {},
 ): Promise<SkillListResponse> => {
@@ -145,6 +250,94 @@ export const updateSkill = async (
 ): Promise<SkillMutationResponse> => {
   const response = await client.patch<ApiEnvelope<SkillMutationResponse>>(
     `/skills/${encodeURIComponent(skillId)}`,
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const generateSkillCreationDraft = async (
+  payload: GenerateSkillCreationDraftRequest,
+): Promise<SkillCreationDraftResponse> => {
+  const response = await client.post<ApiEnvelope<SkillCreationDraftResponse>>(
+    "/skills/creation/drafts/generate",
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const createSkillCreationJob = async (
+  payload: CreateSkillCreationJobRequest,
+): Promise<SkillCreationJobEnvelope> => {
+  const response = await client.post<ApiEnvelope<SkillCreationJobEnvelope>>(
+    "/skills/creation/jobs",
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const listSkillCreationJobs = async (): Promise<SkillCreationJobsListResponse> => {
+  const response = await client.get<ApiEnvelope<SkillCreationJobsListResponse>>(
+    "/skills/creation/jobs",
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const getSkillCreationJob = async (
+  jobId: string,
+): Promise<SkillCreationJobEnvelope> => {
+  const response = await client.get<ApiEnvelope<SkillCreationJobEnvelope>>(
+    `/skills/creation/jobs/${encodeURIComponent(jobId)}`,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const refineSkillCreationJob = async (
+  jobId: string,
+  payload: RefineSkillCreationJobRequest,
+): Promise<SkillCreationJobEnvelope> => {
+  const response = await client.post<ApiEnvelope<SkillCreationJobEnvelope>>(
+    `/skills/creation/jobs/${encodeURIComponent(jobId)}/refine`,
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const saveSkillCreationJob = async (
+  jobId: string,
+  payload: SaveSkillCreationJobRequest,
+): Promise<SkillMutationResponse & SkillCreationJobEnvelope> => {
+  const response = await client.post<
+    ApiEnvelope<SkillMutationResponse & SkillCreationJobEnvelope>
+  >(
+    `/skills/creation/jobs/${encodeURIComponent(jobId)}/save`,
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const refineSkillCreationDraft = async (
+  payload: RefineSkillCreationDraftRequest,
+): Promise<SkillCreationDraftResponse> => {
+  const response = await client.post<ApiEnvelope<SkillCreationDraftResponse>>(
+    "/skills/creation/drafts/refine",
+    payload,
+  );
+
+  return unwrapApiData(response.data);
+};
+
+export const saveSkillCreationDraft = async (
+  payload: SaveSkillCreationDraftRequest,
+): Promise<SkillMutationResponse> => {
+  const response = await client.post<ApiEnvelope<SkillMutationResponse>>(
+    "/skills/creation/drafts/save",
     payload,
   );
 

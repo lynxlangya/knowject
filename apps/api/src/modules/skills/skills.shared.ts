@@ -20,6 +20,7 @@ import type {
 } from './skills.types.js';
 
 export const SKILLS_COLLECTION_NAME = 'skills';
+export const SKILL_CREATION_JOBS_COLLECTION_NAME = 'skill_creation_jobs';
 export const SKILL_ENTRY_FILE_NAME = 'SKILL.md';
 
 export const createSkillNotFoundError = (): AppError => {
@@ -28,6 +29,15 @@ export const createSkillNotFoundError = (): AppError => {
     code: 'SKILL_NOT_FOUND',
     message: getFallbackMessage('skills.notFound'),
     messageKey: 'skills.notFound',
+  });
+};
+
+export const createSkillCreationJobNotFoundError = (): AppError => {
+  return new AppError({
+    statusCode: 404,
+    code: 'SKILL_CREATION_JOB_NOT_FOUND',
+    message: getFallbackMessage('skills.creationJobNotFound'),
+    messageKey: 'skills.creationJobNotFound',
   });
 };
 

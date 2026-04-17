@@ -1,7 +1,11 @@
 import { ObjectId, type Collection, type WithId } from "mongodb";
 import type { MongoDatabaseManager } from "@db/mongo.js";
 import { toObjectId } from "@lib/mongo-id.js";
-import { SKILLS_COLLECTION_NAME } from "./skills.shared.js";
+import {
+  SKILL_CREATION_JOBS_COLLECTION_NAME,
+  SKILLS_COLLECTION_NAME,
+} from "./skills.shared.js";
+import type { SkillCreationJobDocument } from "./skills.creation-jobs.js";
 import type {
   SkillDocument,
   SkillLifecycleStatus,
@@ -11,6 +15,8 @@ import type {
 export class SkillsRepository {
   private skillIndexesEnsured = false;
   private ensureSkillIndexesPromise: Promise<void> | null = null;
+  private creationJobIndexesEnsured = false;
+  private ensureCreationJobIndexesPromise: Promise<void> | null = null;
 
   constructor(private readonly mongo: MongoDatabaseManager) {}
 
@@ -19,7 +25,10 @@ export class SkillsRepository {
   }
 
   async ensureMetadataModel(): Promise<void> {
-    await this.getSkillsCollection();
+    await Promise.all([
+      this.getSkillsCollection(),
+      this.getSkillCreationJobsCollection(),
+    ]);
   }
 
   async listSkills(filters?: {
@@ -130,12 +139,141 @@ export class SkillsRepository {
     return result.deletedCount === 1;
   }
 
+  async createSkillCreationJob(
+    document: SkillCreationJobDocument & {
+      _id: NonNullable<SkillCreationJobDocument["_id"]>;
+    },
+  ): Promise<WithId<SkillCreationJobDocument>> {
+    const collection = await this.getSkillCreationJobsCollection();
+    await collection.insertOne(document);
+    return document;
+  }
+
+  async listSkillCreationJobsByOwner(
+    ownerId: string,
+    options?: { limit?: number },
+  ): Promise<WithId<SkillCreationJobDocument>[]> {
+    const collection = await this.getSkillCreationJobsCollection();
+    return collection
+      .find({ ownerId })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(options?.limit ?? 20)
+      .toArray();
+  }
+
+  async findSkillCreationJobById(
+    jobId: string,
+  ): Promise<WithId<SkillCreationJobDocument> | null> {
+    const objectId = toObjectId(jobId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getSkillCreationJobsCollection();
+    return collection.findOne({ _id: objectId });
+  }
+
+  async findSkillCreationJobByIdForOwner(
+    jobId: string,
+    ownerId: string,
+  ): Promise<WithId<SkillCreationJobDocument> | null> {
+    const objectId = toObjectId(jobId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getSkillCreationJobsCollection();
+    return collection.findOne({ _id: objectId, ownerId });
+  }
+
+  async updateSkillCreationJob(
+    jobId: string,
+    ownerId: string,
+    patch: Partial<
+      Pick<
+        SkillCreationJobDocument,
+        | "name"
+        | "description"
+        | "taskIntent"
+        | "templateHint"
+        | "status"
+        | "markdownDraft"
+        | "currentSummary"
+        | "currentInference"
+        | "confirmationQuestions"
+        | "errorMessage"
+        | "savedSkillId"
+        | "updatedAt"
+        | "startedAt"
+        | "completedAt"
+        | "failedAt"
+        | "expiresAt"
+      >
+    >,
+  ): Promise<WithId<SkillCreationJobDocument> | null> {
+    const objectId = toObjectId(jobId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getSkillCreationJobsCollection();
+    return collection.findOneAndUpdate(
+      { _id: objectId, ownerId },
+      { $set: patch },
+      { returnDocument: "after" },
+    );
+  }
+
+  async updateSkillCreationJobById(
+    jobId: string,
+    patch: Partial<
+      Pick<
+        SkillCreationJobDocument,
+        | "status"
+        | "markdownDraft"
+        | "currentSummary"
+        | "currentInference"
+        | "confirmationQuestions"
+        | "errorMessage"
+        | "savedSkillId"
+        | "updatedAt"
+        | "startedAt"
+        | "completedAt"
+        | "failedAt"
+        | "expiresAt"
+      >
+    >,
+  ): Promise<WithId<SkillCreationJobDocument> | null> {
+    const objectId = toObjectId(jobId);
+    if (!objectId) {
+      return null;
+    }
+
+    const collection = await this.getSkillCreationJobsCollection();
+    return collection.findOneAndUpdate(
+      { _id: objectId },
+      { $set: patch },
+      { returnDocument: "after" },
+    );
+  }
+
   private async getSkillsCollection(): Promise<Collection<SkillDocument>> {
     await this.mongo.connect();
     const collection = this.mongo
       .getDb()
       .collection<SkillDocument>(SKILLS_COLLECTION_NAME);
     await this.ensureSkillIndexes(collection);
+    return collection;
+  }
+
+  private async getSkillCreationJobsCollection(): Promise<
+    Collection<SkillCreationJobDocument>
+  > {
+    await this.mongo.connect();
+    const collection = this.mongo
+      .getDb()
+      .collection<SkillCreationJobDocument>(SKILL_CREATION_JOBS_COLLECTION_NAME);
+    await this.ensureSkillCreationJobIndexes(collection);
     return collection;
   }
 
@@ -171,6 +309,35 @@ export class SkillsRepository {
     }
 
     await this.ensureSkillIndexesPromise;
+  }
+
+  private async ensureSkillCreationJobIndexes(
+    collection: Collection<SkillCreationJobDocument>,
+  ): Promise<void> {
+    if (this.creationJobIndexesEnsured) {
+      return;
+    }
+
+    if (!this.ensureCreationJobIndexesPromise) {
+      this.ensureCreationJobIndexesPromise = Promise.all([
+        collection.createIndex(
+          { ownerId: 1, updatedAt: -1 },
+          { name: "skill_creation_jobs_owner_updated_at_desc" },
+        ),
+        collection.createIndex(
+          { expiresAt: 1 },
+          { name: "skill_creation_jobs_expires_at_ttl", expireAfterSeconds: 0 },
+        ),
+      ])
+        .then(() => {
+          this.creationJobIndexesEnsured = true;
+        })
+        .finally(() => {
+          this.ensureCreationJobIndexesPromise = null;
+        });
+    }
+
+    await this.ensureCreationJobIndexesPromise;
   }
 }
 

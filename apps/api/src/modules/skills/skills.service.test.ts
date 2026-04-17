@@ -9,6 +9,7 @@ import type { AppEnv } from "@config/env.js";
 import { AppError } from "@lib/app-error.js";
 import { buildSkillMarkdownFromDefinition } from "./skills.definition.js";
 import type { SkillDefinitionFields } from "./skills.definition.js";
+import type { SkillCreationJobDocument } from "./skills.creation-jobs.js";
 import { createSkillAuthoringLlmService } from "./services/skills-authoring-llm.service.js";
 import {
   createNormalizedAuthoringTurnInput,
@@ -115,6 +116,11 @@ const createRepositoryStub = (
   > = [],
 ): SkillsRepository => {
   const items = [...initialSkills];
+  const jobs: Array<
+    SkillCreationJobDocument & {
+      _id: NonNullable<SkillCreationJobDocument["_id"]>;
+    }
+  > = [];
 
   return {
     listSkills: async (filters?: {
@@ -180,6 +186,68 @@ const createRepositoryStub = (
 
       items.splice(index, 1);
       return true;
+    },
+    createSkillCreationJob: async (
+      document: SkillCreationJobDocument & {
+        _id: NonNullable<SkillCreationJobDocument["_id"]>;
+      },
+    ) => {
+      jobs.push(document);
+      return document;
+    },
+    listSkillCreationJobsByOwner: async (ownerId: string) => {
+      return jobs
+        .filter((job) => job.ownerId === ownerId)
+        .sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime());
+    },
+    findSkillCreationJobById: async (jobId: string) => {
+      return jobs.find((job) => job._id.toHexString() === jobId) ?? null;
+    },
+    findSkillCreationJobByIdForOwner: async (jobId: string, ownerId: string) => {
+      return (
+        jobs.find(
+          (job) => job._id.toHexString() === jobId && job.ownerId === ownerId,
+        ) ?? null
+      );
+    },
+    updateSkillCreationJob: async (
+      jobId: string,
+      ownerId: string,
+      patch: Partial<SkillCreationJobDocument>,
+    ) => {
+      const index = jobs.findIndex(
+        (job) => job._id.toHexString() === jobId && job.ownerId === ownerId,
+      );
+
+      if (index < 0) {
+        return null;
+      }
+
+      const nextJob = {
+        ...jobs[index],
+        ...patch,
+        _id: jobs[index]!._id,
+      };
+      jobs[index] = nextJob;
+      return nextJob;
+    },
+    updateSkillCreationJobById: async (
+      jobId: string,
+      patch: Partial<SkillCreationJobDocument>,
+    ) => {
+      const index = jobs.findIndex((job) => job._id.toHexString() === jobId);
+
+      if (index < 0) {
+        return null;
+      }
+
+      const nextJob = {
+        ...jobs[index],
+        ...patch,
+        _id: jobs[index]!._id,
+      };
+      jobs[index] = nextJob;
+      return nextJob;
     },
     findSkillBySlugSync: (slug: string) =>
       items.find((item) => item.slug === slug) ?? null,
@@ -266,6 +334,24 @@ const createEnv = async (): Promise<AppEnv & { skillsRoot: string }> => {
     },
     skillsRoot,
   };
+};
+
+const waitForCondition = async (
+  predicate: () => Promise<boolean>,
+  options?: { attempts?: number; delayMs?: number },
+): Promise<void> => {
+  const attempts = options?.attempts ?? 20;
+  const delayMs = options?.delayMs ?? 10;
+
+  for (let index = 0; index < attempts; index += 1) {
+    if (await predicate()) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  throw new Error("Timed out waiting for condition");
 };
 
 const createTestSkillsService = ({
@@ -899,6 +985,369 @@ test("createSkill rejects invalid structured payloads and duplicate slugs", asyn
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.code, "SKILL_SLUG_CONFLICT");
+        return true;
+      },
+    );
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test("generateCreationDraft returns markdown draft contract for light-input creation", async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const result = await service.generateCreationDraft(
+      { actor: ACTOR },
+      {
+        name: "Skill 创建轻输入链路",
+        description: "把输入整理成可编辑 Skill 草稿，并在创建时使用",
+        taskIntent:
+          "生成一版 Markdown 草稿；补齐工作流；明确输出；保留后续优化入口",
+        templateHint: "workflow",
+      },
+    );
+
+    assert.match(result.markdownDraft, /^---/m);
+    assert.match(result.markdownDraft, /^name:\s+Skill 创建轻输入链路$/m);
+    assert.match(result.markdownDraft, /^# 作用$/m);
+    assert.match(result.markdownDraft, /^# 工作流$/m);
+    assert.ok(result.currentSummary.length > 0);
+    assert.ok(Array.isArray(result.confirmationQuestions));
+    assert.equal(typeof result.needsFollowup, "boolean");
+    assert.equal(result.currentInference.category, "engineering_execution");
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test("createCreationJob returns queued job and detached generation updates it to ready", async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const created = await service.createCreationJob(
+      { actor: ACTOR },
+      {
+        name: "Skill 异步生成任务",
+        description: "把轻输入异步整理成 Skill 草稿",
+        taskIntent: "提交后关闭弹框，在页面卡片里异步展示生成状态。",
+        templateHint: "workflow",
+      },
+    );
+
+    assert.equal(created.job.status, "queued");
+
+    await waitForCondition(async () => {
+      const result = await service.getCreationJob(
+        { actor: ACTOR },
+        created.job.id,
+      );
+      return result.job.status === "ready";
+    });
+
+    const result = await service.getCreationJob({ actor: ACTOR }, created.job.id);
+    assert.equal(result.job.status, "ready");
+    assert.match(result.job.markdownDraft ?? "", /^---/m);
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test("listCreationJobs returns jobs in descending updated order for the actor", async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const first = await service.createCreationJob(
+      { actor: ACTOR },
+      {
+        name: "Job A",
+        description: "第一个 job",
+        taskIntent: "先创建 A",
+      },
+    );
+    const second = await service.createCreationJob(
+      { actor: ACTOR },
+      {
+        name: "Job B",
+        description: "第二个 job",
+        taskIntent: "再创建 B",
+      },
+    );
+
+    const listed = await service.listCreationJobs({ actor: ACTOR });
+    assert.deepEqual(
+      listed.items.map((item) => item.id).sort(),
+      [first.job.id, second.job.id].sort(),
+    );
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test("refineCreationDraft keeps markdown draft contract and refreshes summary", async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const generated = await service.generateCreationDraft(
+      { actor: ACTOR },
+      {
+        name: "Skill 草稿优化",
+        description: "在创建时整理可复用的 Skill 草稿",
+        taskIntent: "先生成草稿，再根据修改继续优化工作流和输出。",
+      },
+    );
+
+    const result = await service.refineCreationDraft(
+      { actor: ACTOR },
+      {
+        name: "Skill 草稿优化",
+        description: "在创建时整理可复用的 Skill 草稿",
+        markdownDraft: `${generated.markdownDraft}\n# 项目注记\n\n- 先以轻输入创建态为主\n`,
+        optimizationInstruction: "把工作流写得更清晰，但不要改动输出要求。",
+        currentInference: generated.currentInference,
+      },
+    );
+
+    assert.match(result.markdownDraft, /^# 工作流$/m);
+    assert.ok(result.currentSummary.includes("用途："));
+    assert.deepEqual(
+      result.currentInference.contextTargets,
+      generated.currentInference.contextTargets,
+    );
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test("refineCreationDraft recomputes inference from the edited markdown draft", async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const markdownDraft = [
+      "---",
+      "name: Skill 架构事实整理",
+      "description: 梳理当前架构事实并沉淀为 Skill",
+      "---",
+      "",
+      "# 作用",
+      "",
+      "整理项目架构事实并输出可复用 Skill。",
+      "",
+      "# 触发场景",
+      "",
+      "- 当团队需要梳理架构事实时",
+      "",
+      "# 所需上下文",
+      "",
+      "- docs/current/architecture.md",
+      "",
+      "# 工作流",
+      "",
+      "1. 阅读 docs/current/architecture.md",
+      "2. 提炼模块边界",
+      "3. 输出 Skill 草稿",
+      "",
+      "# 输出",
+      "",
+      "- 可复用的架构事实 Skill",
+      "",
+      "# 注意事项",
+      "",
+      "- 不要臆造项目事实",
+      "",
+    ].join("\n");
+
+    const result = await service.refineCreationDraft(
+      { actor: ACTOR },
+      {
+        name: "Skill 架构事实整理",
+        description: "梳理当前架构事实并沉淀为 Skill",
+        markdownDraft,
+        currentInference: {
+          category: "engineering_execution",
+          contextTargets: ["apps/platform/src/pages/skills"],
+        },
+      },
+    );
+
+    assert.equal(
+      result.currentInference.category,
+      "documentation_architecture",
+    );
+    assert.deepEqual(result.currentInference.contextTargets, [
+      "docs/current/architecture.md",
+    ]);
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test("saveCreationDraft converts markdown draft into persisted definition and skillMarkdown", async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const markdownDraft = [
+      "---",
+      "name: Skill 创建轻输入链路",
+      "description: 把轻输入整理成可保存的 Skill 草稿",
+      "---",
+      "",
+      "# 作用",
+      "",
+      "把名称、描述和任务意图整理成一个可直接保存的 Skill。",
+      "",
+      "# 触发场景",
+      "",
+      "- 当团队需要快速创建新的 Skill 时",
+      "",
+      "# 所需上下文",
+      "",
+      "- 名称与描述",
+      "- 当前需求说明",
+      "",
+      "# 工作流",
+      "",
+      "1. 读取轻输入",
+      "2. 生成 Markdown 草稿",
+      "3. 校验并保存 Skill",
+      "",
+      "# 输出",
+      "",
+      "- 可保存的 Skill 草稿",
+      "- 清晰的工作流与输出说明",
+      "",
+      "# 注意事项",
+      "",
+      "- 信息不足时必须追问",
+      "- 不要臆造项目事实",
+      "",
+    ].join("\n");
+
+    const result = await service.saveCreationDraft(
+      { actor: ACTOR },
+      {
+        markdownDraft,
+        currentInference: {
+          category: "engineering_execution",
+          contextTargets: ["apps/platform/src/pages/skills"],
+        },
+      },
+    );
+
+    assert.equal(result.skill.name, "Skill 创建轻输入链路");
+    assert.equal(result.skill.owner, ACTOR.username);
+    assert.equal(
+      result.skill.definition?.followupQuestionsStrategy,
+      "required",
+    );
+    assert.deepEqual(result.skill.definition?.artifacts, []);
+    assert.deepEqual(result.skill.definition?.projectBindingNotes, []);
+    assert.match(
+      result.skill.skillMarkdown,
+      /Follow-up Questions Strategy\s+required/u,
+    );
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test("saveCreationDraft uses inference recomputed from the current markdown draft", async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    const markdownDraft = [
+      "---",
+      "name: Skill 架构事实沉淀",
+      "description: 把架构事实整理成可复用 Skill",
+      "---",
+      "",
+      "# 作用",
+      "",
+      "围绕架构事实整理一个可保存的 Skill。",
+      "",
+      "# 触发场景",
+      "",
+      "- 当团队需要梳理架构事实时",
+      "",
+      "# 所需上下文",
+      "",
+      "- docs/current/architecture.md",
+      "",
+      "# 工作流",
+      "",
+      "1. 阅读 docs/current/architecture.md",
+      "2. 提炼边界与约束",
+      "3. 保存 Skill",
+      "",
+      "# 输出",
+      "",
+      "- 可复用的 Skill 草稿",
+      "",
+      "# 注意事项",
+      "",
+      "- 信息不足时必须追问",
+      "",
+    ].join("\n");
+
+    const result = await service.saveCreationDraft(
+      { actor: ACTOR },
+      {
+        markdownDraft,
+        currentInference: {
+          category: "engineering_execution",
+          contextTargets: ["apps/platform/src/pages/skills"],
+        },
+      },
+    );
+
+    assert.equal(result.skill.category, "documentation_architecture");
+    assert.deepEqual(result.skill.definition?.projectBindingNotes, [
+      "当前推断参考范围：docs/current/architecture.md",
+    ]);
+  } finally {
+    await rm(env.skills.storageRoot, { recursive: true, force: true });
+  }
+});
+
+test("saveCreationDraft rejects markdown drafts without frontmatter", async () => {
+  const env = await createEnv();
+  const repository = createRepositoryStub();
+  const service = createTestSkillsService({ env, repository });
+
+  try {
+    await assert.rejects(
+      () =>
+        service.saveCreationDraft(
+          { actor: ACTOR },
+          {
+            markdownDraft: "# 作用\n\n缺少 frontmatter\n",
+          },
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 400);
+        assert.equal(error.code, "VALIDATION_ERROR");
+        const validationDetails = error.details as
+          | { fields?: Record<string, string> }
+          | undefined;
+        assert.match(
+          validationDetails?.fields?.["markdownDraft.frontmatter"] ?? "",
+          /markdownDraft\.frontmatter/u,
+        );
         return true;
       },
     );
@@ -1860,6 +2309,43 @@ test("skills router wires authoring turns endpoint to the service", async () => 
   assert.doesNotMatch(routerSource, /stage:\s*["']synthesizing["']/u);
   assert.match(routerSource, /type:\s*["']done["']/u);
   assert.match(routerSource, /status:\s*normalizedError\.statusCode/u);
+});
+
+test("skills router wires creation draft endpoints to the service", async () => {
+  const routerSource = readFileSync(
+    new URL("./skills.router.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    routerSource,
+    /skillsRouter\.post\(\s*["']\/creation\/drafts\/generate["']/u,
+  );
+  assert.match(routerSource, /skillsService\.generateCreationDraft/u);
+  assert.match(
+    routerSource,
+    /skillsRouter\.post\(\s*["']\/creation\/drafts\/refine["']/u,
+  );
+  assert.match(routerSource, /skillsService\.refineCreationDraft/u);
+  assert.match(
+    routerSource,
+    /skillsRouter\.post\(\s*["']\/creation\/drafts\/save["']/u,
+  );
+  assert.match(routerSource, /skillsService\.saveCreationDraft/u);
+});
+
+test("skills router wires creation job endpoints to the service", async () => {
+  const routerSource = readFileSync(
+    new URL("./skills.router.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(routerSource, /"\/creation\/jobs"/u);
+  assert.match(routerSource, /skillsService\.createCreationJob/u);
+  assert.match(routerSource, /skillsService\.listCreationJobs/u);
+  assert.match(routerSource, /skillsService\.getCreationJob/u);
+  assert.match(routerSource, /skillsService\.refineCreationJob/u);
+  assert.match(routerSource, /skillsService\.saveCreationJob/u);
 });
 
 test("preset skills remain readable but immutable", async () => {

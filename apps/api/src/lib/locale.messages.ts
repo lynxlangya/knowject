@@ -222,6 +222,7 @@ export const messages = {
     'settings.apiKey.reentryRequired':
       'Re-enter a new API key after changing the provider or base URL',
     'skills.notFound': 'Skill does not exist',
+    'skills.creationJobNotFound': 'Skill creation job does not exist',
     'skills.systemReadonly':
       'Built-in system skills cannot be edited or deleted',
     'skills.slugConflict': 'Skill slug already exists',
@@ -441,6 +442,7 @@ export const messages = {
     'settings.apiKey.reentryRequired':
       '切换 Provider 或 Base URL 后，请重新输入新的 API Key',
     'skills.notFound': 'Skill 不存在',
+    'skills.creationJobNotFound': 'Skill 创建任务不存在',
     'skills.systemReadonly': '系统内置 Skill 不可编辑或删除',
     'skills.slugConflict': 'Skill slug 已存在',
     'skills.inUse': 'Skill 已被绑定，暂不可操作',

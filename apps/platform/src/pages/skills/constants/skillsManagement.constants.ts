@@ -1,4 +1,9 @@
-import type { SkillCategory, SkillStatus } from "@api/skills";
+import type {
+  SkillCategory,
+  SkillCreationTemplateHint,
+  SkillStatus,
+} from "@api/skills";
+import type { SkillCreationTemplateOption } from "../types/skillsManagement.types";
 import { tp } from "../skills.i18n";
 
 export const getSkillsPageSubtitle = (): string => tp("subtitle");
@@ -51,4 +56,39 @@ export const CATEGORY_META: Record<
     { accentClass: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700" },
     "category.governance_capture",
   ),
+};
+
+const createTemplateMeta = (
+  value: SkillCreationTemplateHint,
+  labelKey: string,
+  previewKey: string,
+): SkillCreationTemplateOption => ({
+  value,
+  label: tp(labelKey),
+  preview: tp(previewKey),
+});
+
+export const getSkillCreationTemplateOptions = (): SkillCreationTemplateOption[] => {
+  return [
+    createTemplateMeta(
+      "goal",
+      "creation.templates.goal.label",
+      "creation.templates.goal.preview",
+    ),
+    createTemplateMeta(
+      "workflow",
+      "creation.templates.workflow.label",
+      "creation.templates.workflow.preview",
+    ),
+    createTemplateMeta(
+      "output",
+      "creation.templates.output.label",
+      "creation.templates.output.preview",
+    ),
+    createTemplateMeta(
+      "guardrails",
+      "creation.templates.guardrails.label",
+      "creation.templates.guardrails.preview",
+    ),
+  ];
 };

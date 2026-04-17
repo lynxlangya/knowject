@@ -6,6 +6,9 @@ import { pagesMessages as pagesMessagesZhCN } from "../src/i18n/locales/zh-CN/pa
 
 const files = [
   "../src/pages/skills/SkillsManagementPage.tsx",
+  "../src/pages/skills/components/SkillCreationDraftDrawer.tsx",
+  "../src/pages/skills/components/SkillCreationJobsPanel.tsx",
+  "../src/pages/skills/components/SkillCreationModal.tsx",
   "../src/pages/skills/components/SkillDetailPane.tsx",
   "../src/pages/skills/constants/skillsManagement.constants.ts",
   "../src/pages/skills/hooks/useSkillCatalogActions.ts",
@@ -50,6 +53,8 @@ test("skills locale resources reflect structured method-asset vocabulary", () =>
   assert.ok(!("publish" in zhAction));
   assert.ok(!("source" in enSkills));
   assert.ok(!("source" in zhSkills));
+  assert.ok("creation" in enSkills);
+  assert.ok("creation" in zhSkills);
 });
 
 test("skills locale resources keep mirrored cleanup-ready keys after removing drawers", () => {
@@ -79,7 +84,7 @@ test("skills locale resources keep mirrored cleanup-ready keys after removing dr
   assert.equal(enFilters.active, "Active");
 });
 
-test("skills contract and governance docs no longer describe live create drawers or authoring flow on the page", () => {
+test("skills contract and governance docs describe the live async creation job flow", () => {
   const contractSource = readFileSync(
     new URL("../../../docs/contracts/skills-contract.md", import.meta.url),
     "utf8",
@@ -92,11 +97,18 @@ test("skills contract and governance docs no longer describe live create drawers
   assert.match(contractSource, /GET \/api\/skills/);
   assert.match(contractSource, /PATCH \/api\/skills\/:skillId/);
   assert.match(contractSource, /POST \/api\/skills/);
+  assert.match(contractSource, /POST \/api\/skills\/creation\/jobs/);
+  assert.match(contractSource, /GET \/api\/skills\/creation\/jobs/);
+  assert.match(contractSource, /GET \/api\/skills\/creation\/jobs\/:jobId/);
+  assert.match(contractSource, /POST \/api\/skills\/creation\/jobs\/:jobId\/refine/);
+  assert.match(contractSource, /POST \/api\/skills\/creation\/jobs\/:jobId\/save/);
   assert.match(governanceSource, /\/skills/);
   assert.match(governanceSource, /POST \/api\/skills/);
-  assert.match(governanceSource, /不再暴露：/);
-  assert.match(governanceSource, /conversation-first authoring/);
-  assert.match(governanceSource, /查看抽屉/);
+  assert.match(governanceSource, /轻输入/);
+  assert.match(governanceSource, /Markdown 草稿/);
+  assert.match(governanceSource, /异步生成中的创建任务卡片/);
+  assert.match(governanceSource, /Drawer/);
+  assert.match(governanceSource, /creation\/jobs\/:jobId\/save/);
 });
 
 for (const file of files) {

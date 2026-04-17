@@ -632,6 +632,7 @@ export const pagesMessages = {
     title: "Skills",
     subtitle:
       "Keep a clean team-skill catalog for project binding and minimal governance.",
+    create: "Create skill",
     reload: "Refresh catalog",
     retry: "Retry",
     emptyAll: "There are no team skills yet.",
@@ -691,6 +692,129 @@ export const pagesMessages = {
         "After deletion, this method asset is removed from the global catalog and can no longer be bound to new projects.",
       deleteConfirm: "Delete",
       deleted: '"{{name}}" deleted',
+    },
+    creation: {
+      title: "Create skill",
+      intro:
+        "Start with the minimum input, then let the page generate a skill draft card asynchronously and open the Markdown in a drawer.",
+      cancel: "Cancel",
+      close: "Close",
+      generate: "Generate draft",
+      regenerate: "Regenerate draft",
+      optimize: "Continue optimizing",
+      save: "Save draft",
+      undo: "Undo",
+      drawer: {
+        title: "Skill draft",
+      },
+      jobs: {
+        title: "Active skill draft jobs",
+        subtitle:
+          "Creation tasks keep updating on page cards. Open the drawer from the card once the draft is ready.",
+        empty: "There are no active skill creation jobs right now.",
+        pollingStopped:
+          "Automatic refresh has paused. Refresh manually to continue checking progress.",
+        drawerGenerating:
+          "The backend is still generating or refining the Markdown draft. This drawer will update once it completes.",
+        drawerFailed:
+          "This task failed. Close the drawer and retry generation from the card.",
+        drawerEmpty: "There is no Markdown draft available for this job yet.",
+        status: {
+          queued: "Queued",
+          generating: "Generating",
+          ready: "Draft ready",
+          failed: "Failed",
+          saved: "Saved",
+        },
+        hint: {
+          queued: "The task was created and will start in the background shortly.",
+          generating: "The backend is generating the Markdown draft.",
+          ready: "The draft is ready. Click the card to open the drawer.",
+          failed: "Generation failed. Open the card to inspect details.",
+          saved: "This draft has already been saved as a formal skill.",
+        },
+        feedback: {
+          loadFailed: "Loading skill creation jobs failed. Please try again later",
+          submitFailed: "Submitting the skill creation job failed. Please try again later",
+          submitted:
+            "Skill draft generation has started. You can follow progress from the page card.",
+          failed: "Skill draft generation failed",
+        },
+      },
+      summary: {
+        title: "System summary",
+        empty: "The generated draft summary will appear here.",
+      },
+      confirmation: {
+        title: "Questions to confirm",
+        empty: "There are no extra confirmation questions right now.",
+      },
+      inference: {
+        category: "Inferred category: {{value}}",
+      },
+      markdown: {
+        label: "Markdown draft",
+        placeholder: "The generated Markdown draft will appear here.",
+      },
+      optimization: {
+        label: "Extra instruction (optional)",
+        placeholder:
+          "For example: Make the workflow clearer, but keep the output requirements unchanged.",
+      },
+      footer: {
+        hint: "Optimization stays local to the current draft and keeps one undo snapshot.",
+      },
+      fields: {
+        name: {
+          label: "Name",
+          placeholder: "For example: Lightweight skill creation flow",
+        },
+        description: {
+          label: "Description",
+          placeholder: "State what this skill does and when it should be used.",
+        },
+        taskIntent: {
+          label: "What it should do",
+          placeholder:
+            "Describe how this skill should work, which constraints matter, and what it should produce.",
+        },
+        template: {
+          label: "Helper template",
+          placeholder: "Optionally select a helper template",
+        },
+      },
+      templates: {
+        goal: {
+          label: "Goal-focused",
+          preview:
+            "This skill should help me consistently achieve:\nUse it in these situations:\nThe result I care about most is:",
+        },
+        workflow: {
+          label: "Workflow-focused",
+          preview:
+            "I want this skill to run like this:\n1. \n2. \n3. \n\nThings it should pay attention to:",
+        },
+        output: {
+          label: "Output-focused",
+          preview:
+            "I want this skill to finally output:\nThe output should ideally include:\nIt should not output:",
+        },
+        guardrails: {
+          label: "Constraint-focused",
+          preview:
+            "This skill must follow:\nThis skill must not do:\nIf information is missing, it should:",
+        },
+      },
+      feedback: {
+        generateFailed:
+          "Generating the skill draft failed. Please try again later",
+        optimizeFailed:
+          "Optimizing the skill draft failed. Please try again later",
+        saveFailed:
+          "Saving the skill draft failed. Please try again later",
+        optimized: "Draft optimized. You can undo to the previous version.",
+        saved: "Skill draft saved",
+      },
     },
     definition: {
       previewEmpty: "No content yet.",

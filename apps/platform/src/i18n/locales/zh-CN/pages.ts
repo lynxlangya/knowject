@@ -566,6 +566,7 @@ export const pagesMessages = {
   skills: {
     title: "技能",
     subtitle: "当前只保留团队 Skill 目录，用于项目绑定与最小治理。",
+    create: "新建 Skill",
     reload: "刷新目录",
     retry: "重试",
     emptyAll: "当前还没有团队 Skill。",
@@ -624,6 +625,120 @@ export const pagesMessages = {
         "删除后该方法资产会从全局目录移除，且不能再绑定到新项目。",
       deleteConfirm: "确认删除",
       deleted: "“{{name}}”已删除",
+    },
+    creation: {
+      title: "新建 Skill",
+      intro:
+        "先填最小输入，提交后会在页面上异步生成 Skill 草稿卡片，再通过抽屉查看和编辑 Markdown。",
+      cancel: "取消",
+      close: "关闭",
+      generate: "生成草稿",
+      regenerate: "重新生成草稿",
+      optimize: "继续优化",
+      save: "保存草稿",
+      undo: "撤销",
+      drawer: {
+        title: "Skill 草稿",
+      },
+      jobs: {
+        title: "生成中的 Skill 草稿",
+        subtitle: "创建任务会在页面卡片中持续更新状态，完成后点击卡片打开抽屉。",
+        empty: "当前没有进行中的 Skill 创建任务。",
+        pollingStopped: "自动刷新已暂停，请手动刷新继续观察生成进度。",
+        drawerGenerating: "后台正在生成或优化 Markdown 草稿，完成后这里会自动更新。",
+        drawerFailed: "当前任务执行失败，可关闭后重试生成。",
+        drawerEmpty: "当前任务还没有可展示的 Markdown 草稿。",
+        status: {
+          queued: "排队中",
+          generating: "生成中",
+          ready: "草稿已就绪",
+          failed: "生成失败",
+          saved: "已保存",
+        },
+        hint: {
+          queued: "任务已创建，后台即将开始生成。",
+          generating: "后台正在生成 Markdown 草稿。",
+          ready: "草稿已生成，可点击卡片打开抽屉查看。",
+          failed: "本次生成失败，可打开卡片查看详情。",
+          saved: "该草稿已经保存为正式 Skill。",
+        },
+        feedback: {
+          loadFailed: "加载 Skill 创建任务失败，请稍后重试",
+          submitFailed: "提交 Skill 创建任务失败，请稍后重试",
+          submitted: "已开始生成 Skill 草稿，可在页面卡片中查看进度",
+          failed: "Skill 草稿生成失败",
+        },
+      },
+      summary: {
+        title: "系统整理",
+        empty: "生成后会在这里展示系统整理出的当前摘要。",
+      },
+      confirmation: {
+        title: "待确认问题",
+        empty: "当前没有额外确认问题，可以直接继续编辑。",
+      },
+      inference: {
+        category: "推断分类：{{value}}",
+      },
+      markdown: {
+        label: "Markdown 草稿",
+        placeholder: "系统生成后会在这里展示 Markdown 草稿。",
+      },
+      optimization: {
+        label: "补充说明（选填）",
+        placeholder: "例如：把工作流写得更清晰，但不要改动输出要求。",
+      },
+      footer: {
+        hint: "优化只会在当前草稿基础上继续整理，并保留一次撤销。",
+      },
+      fields: {
+        name: {
+          label: "名称",
+          placeholder: "例如：Skill 创建轻输入链路",
+        },
+        description: {
+          label: "描述",
+          placeholder: "写清这个 Skill 做什么，以及什么时候使用。",
+        },
+        taskIntent: {
+          label: "具体要做的事情",
+          placeholder:
+            "描述你希望这个 Skill 具体怎么工作、关注哪些约束、最后产出什么。",
+        },
+        template: {
+          label: "辅助模板",
+          placeholder: "可选一个辅助模板帮助你组织输入",
+        },
+      },
+      templates: {
+        goal: {
+          label: "目标型",
+          preview:
+            "这个 Skill 要帮助我稳定完成：\n通常在这些情况下使用：\n我最看重的结果是：",
+        },
+        workflow: {
+          label: "流程型",
+          preview:
+            "我希望这个 Skill 按下面的方式执行：\n1. \n2. \n3. \n\n执行时需要注意：",
+        },
+        output: {
+          label: "输出型",
+          preview:
+            "我希望这个 Skill 最终输出：\n输出最好包含这些部分：\n不希望输出成：",
+        },
+        guardrails: {
+          label: "约束型",
+          preview:
+            "这个 Skill 必须遵守：\n这个 Skill 不能做：\n如果信息不足，应该：",
+        },
+      },
+      feedback: {
+        generateFailed: "生成 Skill 草稿失败，请稍后重试",
+        optimizeFailed: "优化 Skill 草稿失败，请稍后重试",
+        saveFailed: "保存 Skill 草稿失败，请稍后重试",
+        optimized: "草稿已优化，可撤销到优化前版本。",
+        saved: "Skill 草稿已保存",
+      },
     },
     definition: {
       previewEmpty: "暂未填写内容。",

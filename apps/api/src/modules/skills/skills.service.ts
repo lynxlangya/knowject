@@ -16,6 +16,15 @@ import {
 import type {
   CreateSkillInput,
   ListSkillsInput,
+  SkillCreationJobCreateInput,
+  SkillCreationJobEnvelope,
+  SkillCreationJobRefineInput,
+  SkillCreationJobsListResponse,
+  SkillCreationJobSaveInput,
+  SkillCreationDraftGenerateInput,
+  SkillCreationDraftRefineInput,
+  SkillCreationDraftResponse,
+  SkillCreationDraftSaveInput,
   SkillAuthoringTurnInput,
   SkillAuthoringTurnResponse,
   SkillDetailEnvelope,
@@ -31,16 +40,38 @@ import {
   runSkillAuthoringTurn,
   type SkillAuthoringLlmService,
 } from "./services/skills-authoring.service.js";
+import {
+  generateSkillCreationDraft,
+  refineSkillCreationDraft,
+  resolveSkillCreationDraftInference,
+  resolveSkillCreationDraftCategory,
+  type SkillCreationDraftLlmService,
+} from "./services/skills-creation-draft.service.js";
+import {
+  createSkillCreationJobDocument,
+  queueSkillCreationJobGenerate,
+  queueSkillCreationJobRefine,
+  toSkillCreationJobResponse,
+} from "./services/skills-creation-jobs.service.js";
 import { EMPTY_SKILL_REFERENCE_COUNTS } from "./services/skills-reference.service.js";
 import { updateManagedSkill } from "./services/skills-update.service.js";
 import type { SkillUsageLookup } from "./types/skills.service.types.js";
 import { buildSkillListMeta, sortSkillItems } from "./utils/skills.meta.js";
 import { validateSkillAuthoringTurnInput } from "./validators/skills-authoring.validator.js";
 import {
+  parseSkillCreationMarkdownDraft,
+} from "./skills.definition.js";
+import {
+  validateSkillCreationDraftGenerateInput,
+  validateSkillCreationDraftRefineInput,
+  validateSkillCreationDraftSaveInput,
+} from "./validators/skills-creation.validator.js";
+import {
   readRequiredSkillId,
   validateCreateSkillInput,
   validateUpdateSkillInput,
 } from "./validators/skills.validator.js";
+import { createSkillCreationJobNotFoundError } from "./skills.shared.js";
 
 export interface SkillsService {
   listSkills(
@@ -67,6 +98,45 @@ export interface SkillsService {
       signal?: AbortSignal;
     },
   ): Promise<SkillAuthoringTurnResponse>;
+  createCreationJob(
+    context: SkillsCommandContext,
+    input: SkillCreationJobCreateInput,
+  ): Promise<SkillCreationJobEnvelope>;
+  listCreationJobs(
+    context: SkillsCommandContext,
+  ): Promise<SkillCreationJobsListResponse>;
+  getCreationJob(
+    context: SkillsCommandContext,
+    jobId: string,
+  ): Promise<SkillCreationJobEnvelope>;
+  refineCreationJob(
+    context: SkillsCommandContext,
+    jobId: string,
+    input: SkillCreationJobRefineInput,
+  ): Promise<SkillCreationJobEnvelope>;
+  saveCreationJob(
+    context: SkillsCommandContext,
+    jobId: string,
+    input: SkillCreationJobSaveInput,
+  ): Promise<SkillMutationResponse & SkillCreationJobEnvelope>;
+  generateCreationDraft(
+    context: SkillsCommandContext,
+    input: SkillCreationDraftGenerateInput,
+    options?: {
+      signal?: AbortSignal;
+    },
+  ): Promise<SkillCreationDraftResponse>;
+  refineCreationDraft(
+    context: SkillsCommandContext,
+    input: SkillCreationDraftRefineInput,
+    options?: {
+      signal?: AbortSignal;
+    },
+  ): Promise<SkillCreationDraftResponse>;
+  saveCreationDraft(
+    context: SkillsCommandContext,
+    input: SkillCreationDraftSaveInput,
+  ): Promise<SkillMutationResponse>;
   deleteSkill(context: SkillsCommandContext, skillId: string): Promise<void>;
 }
 
@@ -74,6 +144,7 @@ export const createSkillsService = ({
   env,
   repository,
   authoringLlm,
+  creationDraftLlm,
   usageLookup = {
     countManagedSkillReferences: async () => EMPTY_SKILL_REFERENCE_COUNTS,
   },
@@ -81,6 +152,7 @@ export const createSkillsService = ({
   env: AppEnv;
   repository: SkillsRepository;
   authoringLlm?: SkillAuthoringLlmService;
+  creationDraftLlm?: SkillCreationDraftLlmService;
   usageLookup?: SkillUsageLookup;
 }): SkillsService => {
   return {
@@ -203,6 +275,245 @@ export const createSkillsService = ({
         llm: authoringLlm,
         signal: options?.signal,
       });
+    },
+
+    createCreationJob: async ({ actor }, input) => {
+      const normalizedInput = validateSkillCreationDraftGenerateInput(input);
+      const jobDocument = createSkillCreationJobDocument({
+        actor,
+        input: normalizedInput,
+      });
+      const persistedJob = await repository.createSkillCreationJob(jobDocument);
+      queueSkillCreationJobGenerate({
+        repository,
+        llm: creationDraftLlm,
+        job: persistedJob,
+      });
+
+      return {
+        job: toSkillCreationJobResponse(persistedJob),
+      };
+    },
+
+    listCreationJobs: async ({ actor }) => {
+      const jobs = await repository.listSkillCreationJobsByOwner(actor.id, {
+        limit: 20,
+      });
+
+      return {
+        items: jobs.map((job) => toSkillCreationJobResponse(job)),
+      };
+    },
+
+    getCreationJob: async ({ actor }, jobId) => {
+      const job = await repository.findSkillCreationJobByIdForOwner(
+        jobId,
+        actor.id,
+      );
+
+      if (!job) {
+        throw createSkillCreationJobNotFoundError();
+      }
+
+      return {
+        job: toSkillCreationJobResponse(job),
+      };
+    },
+
+    refineCreationJob: async ({ actor }, jobId, input) => {
+      const job = await repository.findSkillCreationJobByIdForOwner(jobId, actor.id);
+
+      if (!job) {
+        throw createSkillCreationJobNotFoundError();
+      }
+
+      const normalizedInput = validateSkillCreationDraftRefineInput({
+        name: job.name,
+        description: job.description,
+        ...input,
+      });
+
+      const queuedAt = new Date();
+      const updatedJob = await repository.updateSkillCreationJob(jobId, actor.id, {
+        markdownDraft: normalizedInput.markdownDraft,
+        currentInference: normalizedInput.currentInference,
+        status: "queued",
+        errorMessage: null,
+        updatedAt: queuedAt,
+      });
+
+      const nextJob = updatedJob ?? job;
+      queueSkillCreationJobRefine({
+        repository,
+        llm: creationDraftLlm,
+        job: {
+          ...nextJob,
+          description: job.description,
+          name: job.name,
+          taskIntent: job.taskIntent,
+          templateHint: job.templateHint,
+          ownerId: job.ownerId,
+          ownerUsername: job.ownerUsername,
+        },
+        markdownDraft: normalizedInput.markdownDraft,
+        optimizationInstruction: normalizedInput.optimizationInstruction,
+        currentInference: normalizedInput.currentInference,
+      });
+
+      return {
+        job: toSkillCreationJobResponse({
+          ...nextJob,
+          status: "queued",
+          errorMessage: null,
+        }),
+      };
+    },
+
+    saveCreationJob: async ({ actor }, jobId, input) => {
+      const normalizedInput = validateSkillCreationDraftSaveInput(input);
+      const job = await repository.findSkillCreationJobByIdForOwner(jobId, actor.id);
+
+      if (!job) {
+        throw createSkillCreationJobNotFoundError();
+      }
+
+      const parsedDraft = parseSkillCreationMarkdownDraft(
+        normalizedInput.markdownDraft,
+      );
+      const resolvedInference = resolveSkillCreationDraftInference({
+        description: parsedDraft.description,
+        markdownDraft: normalizedInput.markdownDraft,
+        currentInference: normalizedInput.currentInference,
+      });
+      const category =
+        resolvedInference.category ??
+        resolveSkillCreationDraftCategory({
+          description: parsedDraft.description,
+          markdownDraft: normalizedInput.markdownDraft,
+          currentInference: normalizedInput.currentInference,
+        });
+      const normalizedSkill = validateCreateSkillInput({
+        name: parsedDraft.name,
+        description: parsedDraft.description,
+        category,
+        owner: actor.username,
+        definition: {
+          ...parsedDraft.definition,
+          projectBindingNotes: Array.from(
+            new Set([
+              ...parsedDraft.definition.projectBindingNotes,
+              ...resolvedInference.contextTargets.map(
+                (target) => `当前推断参考范围：${target}`,
+              ),
+            ]),
+          ),
+        },
+      });
+      const bundleFiles = buildManualBundleFiles(normalizedSkill.skillMarkdown);
+      const persistedSkill = await createManagedSkill({
+        env,
+        repository,
+        actorId: actor.id,
+        normalizedSkill,
+        bundleFiles,
+      });
+      const updatedJob = await repository.updateSkillCreationJob(jobId, actor.id, {
+        status: "saved",
+        markdownDraft: normalizedInput.markdownDraft,
+        currentInference: resolvedInference,
+        currentSummary: job.currentSummary,
+        confirmationQuestions: job.confirmationQuestions,
+        savedSkillId: persistedSkill._id.toHexString(),
+        updatedAt: new Date(),
+        completedAt: new Date(),
+        errorMessage: null,
+      });
+
+      return {
+        skill: toSkillDetailResponse(persistedSkill),
+        job: toSkillCreationJobResponse(
+          updatedJob ?? {
+            ...job,
+            status: "saved",
+            markdownDraft: normalizedInput.markdownDraft,
+            currentInference: resolvedInference,
+            savedSkillId: persistedSkill._id.toHexString(),
+            updatedAt: new Date(),
+            completedAt: new Date(),
+            errorMessage: null,
+          },
+        ),
+      };
+    },
+
+    generateCreationDraft: async ({ actor }, input, options) => {
+      const normalizedInput = validateSkillCreationDraftGenerateInput(input);
+
+      return generateSkillCreationDraft({
+        actor,
+        input: normalizedInput,
+        llm: creationDraftLlm,
+        signal: options?.signal,
+      });
+    },
+
+    refineCreationDraft: async ({ actor }, input, options) => {
+      const normalizedInput = validateSkillCreationDraftRefineInput(input);
+
+      return refineSkillCreationDraft({
+        actor,
+        input: normalizedInput,
+        llm: creationDraftLlm,
+        signal: options?.signal,
+      });
+    },
+
+    saveCreationDraft: async ({ actor }, input) => {
+      const normalizedInput = validateSkillCreationDraftSaveInput(input);
+      const parsedDraft = parseSkillCreationMarkdownDraft(
+        normalizedInput.markdownDraft,
+      );
+      const resolvedInference = resolveSkillCreationDraftInference({
+        description: parsedDraft.description,
+        markdownDraft: normalizedInput.markdownDraft,
+        currentInference: normalizedInput.currentInference,
+      });
+      const category =
+        resolvedInference.category ??
+        resolveSkillCreationDraftCategory({
+          description: parsedDraft.description,
+          markdownDraft: normalizedInput.markdownDraft,
+          currentInference: normalizedInput.currentInference,
+        });
+      const normalizedSkill = validateCreateSkillInput({
+        name: parsedDraft.name,
+        description: parsedDraft.description,
+        category,
+        owner: actor.username,
+        definition: {
+          ...parsedDraft.definition,
+          projectBindingNotes: Array.from(
+            new Set([
+              ...parsedDraft.definition.projectBindingNotes,
+              ...resolvedInference.contextTargets.map(
+                (target) => `当前推断参考范围：${target}`,
+              ),
+            ]),
+          ),
+        },
+      });
+      const bundleFiles = buildManualBundleFiles(normalizedSkill.skillMarkdown);
+      const persistedSkill = await createManagedSkill({
+        env,
+        repository,
+        actorId: actor.id,
+        normalizedSkill,
+        bundleFiles,
+      });
+
+      return {
+        skill: toSkillDetailResponse(persistedSkill),
+      };
     },
 
     deleteSkill: async (_context, skillId) => {

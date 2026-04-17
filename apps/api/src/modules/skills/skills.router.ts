@@ -16,6 +16,12 @@ import type { SkillsService } from "./skills.service.js";
 import type {
   CreateSkillInput,
   ListSkillsInput,
+  SkillCreationJobCreateInput,
+  SkillCreationJobRefineInput,
+  SkillCreationJobSaveInput,
+  SkillCreationDraftGenerateInput,
+  SkillCreationDraftRefineInput,
+  SkillCreationDraftSaveInput,
   SkillAuthoringTurnInput,
   UpdateSkillInput,
 } from "./skills.types.js";
@@ -116,6 +122,117 @@ export const createSkillsRouter = (
           actor: getRequiredAuthUser(req),
         },
         req.body as CreateSkillInput,
+      );
+
+      sendCreated(res, result);
+    }),
+  );
+
+  skillsRouter.post(
+    "/creation/jobs",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.createCreationJob(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        req.body as SkillCreationJobCreateInput,
+      );
+
+      sendCreated(res, result);
+    }),
+  );
+
+  skillsRouter.get(
+    "/creation/jobs",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.listCreationJobs({
+        actor: getRequiredAuthUser(req),
+      });
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  skillsRouter.get(
+    "/creation/jobs/:jobId",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.getCreationJob(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        Array.isArray(req.params.jobId) ? (req.params.jobId[0] ?? "") : req.params.jobId,
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  skillsRouter.post(
+    "/creation/jobs/:jobId/refine",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.refineCreationJob(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        Array.isArray(req.params.jobId) ? (req.params.jobId[0] ?? "") : req.params.jobId,
+        req.body as SkillCreationJobRefineInput,
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  skillsRouter.post(
+    "/creation/jobs/:jobId/save",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.saveCreationJob(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        Array.isArray(req.params.jobId) ? (req.params.jobId[0] ?? "") : req.params.jobId,
+        req.body as SkillCreationJobSaveInput,
+      );
+
+      sendCreated(res, result);
+    }),
+  );
+
+  skillsRouter.post(
+    "/creation/drafts/generate",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.generateCreationDraft(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        req.body as SkillCreationDraftGenerateInput,
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  skillsRouter.post(
+    "/creation/drafts/refine",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.refineCreationDraft(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        req.body as SkillCreationDraftRefineInput,
+      );
+
+      sendSuccess(res, result);
+    }),
+  );
+
+  skillsRouter.post(
+    "/creation/drafts/save",
+    asyncHandler(async (req, res) => {
+      const result = await skillsService.saveCreationDraft(
+        {
+          actor: getRequiredAuthUser(req),
+        },
+        req.body as SkillCreationDraftSaveInput,
       );
 
       sendCreated(res, result);
