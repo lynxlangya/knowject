@@ -6,18 +6,18 @@
 
 Knowject 是一个面向开发团队的项目级 AI 知识工作台，目标是把代码、文档、设计资产与项目上下文沉淀成可持续复用的项目记忆，让搜索、协作与决策建立在真实仓库语境之上。
 
-当前仓库处于“基础框架已打通、核心 AI 工作流持续落地”的阶段：产品壳、鉴权、项目与成员主数据链路、项目资源绑定正式持久化、项目对话只读链路、全局知识库 / 技能 / 智能体治理链路、工作区设置中心，以及 Docker 部署基线已经具备；消息写入、项目级合并检索与更深的运行时闭环仍在持续实现中。
+当前仓库处于“主链路已打通、核心 AI 工作流持续收口”的阶段：产品壳、鉴权、项目与成员主数据链路、项目资源绑定正式持久化、项目对话读写与默认流式链路、全局知识库 / 技能治理链路、工作区设置中心，以及 Docker 部署基线已经具备；更完整的引用体验、运行时编排与 `global_code` 仍在持续实现中。
 
 ## 当前状态
 
-- `apps/platform` 已提供登录后产品壳、项目路由、成员管理界面、全局知识库 / 技能 / 智能体正式管理页，以及 `/settings` 工作区设置中心。
-- `apps/api` 已提供 `health`、`auth`、`members`、`projects`、`memberships`、知识库 CRUD / 上传 / 检索接口、Skill 正式资产 CRUD / 导入 / 草稿发布 / 绑定校验接口、正式 `agents` CRUD / 绑定接口，以及演示性质的 `memory` 接口。
-- 项目列表、项目基础信息、成员 roster、项目资源绑定、项目对话列表 / 详情与全局成员总览已经接入 `/api/projects*` 与 `/api/members`。
+- `apps/platform` 已提供登录后产品壳、项目路由、成员管理界面、全局知识库 / 技能正式管理页，以及 `/settings` 工作区设置中心；独立 `/agents` 路由在第一版当前暂时隐藏。
+- `apps/api` 已提供 `health`、`auth`、`members`、`projects`、`memberships`、知识库 CRUD / 上传 / 检索接口、Skill 正式资产 CRUD / 绑定校验接口、正式 `agents` CRUD / 绑定接口，以及演示性质的 `memory` 接口。
+- 项目列表、项目基础信息、成员 roster、项目资源绑定、项目对话列表 / 详情 / 写入与全局成员总览已经接入 `/api/projects*` 与 `/api/members`。
 - `knowject_project_resource_bindings` 现在只保留为历史本地数据的一次性迁移来源，运行时项目资源绑定已经持久化到后端项目模型。
 - 项目概览仍保留成员协作快照与部分展示文案的本地补充数据；项目资源页当前已经同时消费全局资产目录与项目私有知识目录。
 - `/knowledge`、`/skills` 已切到正式后端资产接口；其中 live `/skills` 页面当前已收口为最小管理面：只展示现有团队 Skill，并支持状态流转与删除，不再暴露创建、查看、编辑抽屉，也不再展示预设 Skill。项目资源页也已通过统一“接入知识库”弹层和知识库详情抽屉正式区分“全局绑定知识 / 项目私有知识”。`/agents` 的独立全局路由在第一版暂时隐藏，项目创建/编辑与项目资源页也不再暴露 Agent 相关入口，等待后续产品形态明确后再开放。
 - `/settings` 已切到正式 `/api/settings/*` 链路，支持向量模型、对话模型、索引参数与工作区信息配置；本期访问控制固定为“登录即可访问”，API Key 在服务端加密存储。
-- `GET /api/projects/:projectId/conversations` 与 `GET /api/projects/:projectId/conversations/:conversationId` 已提供当前项目对话读链路，但消息写入还未落地。
+- `GET /api/projects/:projectId/conversations`、`GET /api/projects/:projectId/conversations/:conversationId`、`POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 已组成当前项目对话读写主链路。
 - `pnpm verify:global-assets-foundation` 已作为 Week 3-4 最小自动验证入口，统一执行 API 测试、Python indexer 测试与前端类型检查。
 - `pnpm verify:index-ops-project-consumption` 已作为 Week 5-6 最小自动验证入口，统一执行项目知识 / 索引运维相关 API 测试、Python indexer 测试与前端类型检查。
 - 仓库已经提供本地与线上风格的 Docker Compose 基线，覆盖 `platform + api + indexer-py + mongodb + chroma`。
@@ -37,7 +37,7 @@ docker/       Compose、镜像构建、反向代理与初始化脚本
 scripts/      统一命令入口
 docs/         文档主根目录（事实源）
 .agents/      项目级 Skill live 根目录
-.codex/       Codex 配置与兼容说明目录
+.codex/       Codex 项目级配置目录
 ```
 
 ## 产品信息架构
@@ -124,13 +124,12 @@ pnpm knowject:help
 
 ## 文档入口
 
-当前仓库以 `docs/` 作为文档主根目录，`docs/exports/` 作为派生导出目录；`.agents/skills/` 是项目级 Skill live 根目录，`.codex/` 仅保留兼容说明与配置。
+当前仓库以 `docs/` 作为文档主根目录，`docs/exports/` 作为派生导出目录；`.agents/skills/` 是项目级 Skill live 根目录，`.codex/` 仅保留 `config.toml` 等项目级配置。
 
 - [项目规则](./AGENTS.md)
-- [Codex 工作区说明](./.codex/README.md)
-- [迁移说明](./.codex/MIGRATION.md)
 - [文档索引](./docs/README.md)
 - [架构事实](./docs/current/architecture.md)
+- [项目对话 source/citation 事实](./docs/current/project-chat-sources.md)
 - [Docker 使用现状](./docs/current/docker-usage.md)
 - [Docker 操作清单](./docs/current/docker-operation-checklist.md)
 - [认证与环境契约](./docs/contracts/auth-contract.md)

@@ -4,13 +4,13 @@
 
 ## 技术栈
 
-| 层 | 技术 |
-|---|---|
+| 层   | 技术                                              |
+| ---- | ------------------------------------------------- |
 | 前端 | React 19 + Vite 7 + Ant Design 6 + Tailwind CSS 4 |
-| 后端 | Express 4 + TypeScript + MongoDB Node.js Driver |
-| 索引 | FastAPI + uv |
-| 向量 | Chroma |
-| 仓库 | pnpm + Turborepo (monorepo) |
+| 后端 | Express 4 + TypeScript + MongoDB Node.js Driver   |
+| 索引 | FastAPI + uv                                      |
+| 向量 | Chroma                                            |
+| 仓库 | pnpm + Turborepo (monorepo)                       |
 
 ## 目录结构
 
@@ -18,7 +18,7 @@
 apps/
   platform/   # 前端 React 应用
   api/        # 后端 Express API
-  indexers-py/ # Python 索引服务
+  indexer-py/ # Python 索引服务
 packages/
   request/   # Axios 请求封装
   ui/        # 通用 UI 组件
@@ -38,13 +38,13 @@ docs/        # 唯一正式文档主源
 
 ## 协作约定
 
-| 主题 | 规范文件 |
-|---|---|
-| 前端 UI / 设计系统 | [.claude/rules/design.md](.claude/rules/design.md) |
-| 前端工程规范 | [.claude/rules/frontend.md](.claude/rules/frontend.md) |
-| 后端工程规范 | [.claude/rules/backend.md](.claude/rules/backend.md) |
-| 安全红线 | [.claude/rules/safety.md](.claude/rules/safety.md) |
-| Git 约定 | [.claude/rules/git.md](.claude/rules/git.md) |
+| 主题               | 规范文件                                               |
+| ------------------ | ------------------------------------------------------ |
+| 前端 UI / 设计系统 | [.claude/rules/design.md](.claude/rules/design.md)     |
+| 前端工程规范       | [.claude/rules/frontend.md](.claude/rules/frontend.md) |
+| 后端工程规范       | [.claude/rules/backend.md](.claude/rules/backend.md)   |
+| 安全红线           | [.claude/rules/safety.md](.claude/rules/safety.md)     |
+| Git 约定           | [.claude/rules/git.md](.claude/rules/git.md)           |
 
 ## 常用命令
 

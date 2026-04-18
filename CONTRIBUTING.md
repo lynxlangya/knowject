@@ -8,7 +8,7 @@ This repository is still in an active foundation stage, so the main goal of ever
 
 - Read the [README](./README.md) for the current product and repository scope.
 - Read [AGENTS.md](./AGENTS.md) for project-level collaboration rules.
-- Read [`.codex/README.md`](./.codex/README.md) when you are changing Codex workspace structure, docs governance, packs, or project-local skills.
+- Read [`docs/README.md`](./docs/README.md) when you are changing documentation entrypoints, truth-surface ownership, or export sync boundaries.
 - For architecture, routing, data-source, and Docker facts, use [`docs/current/architecture.md`](./docs/current/architecture.md) as the current source of truth.
 - Do not assume roadmap documents describe already shipped behavior.
 
@@ -66,7 +66,8 @@ If you touch Docker or environment behavior, also validate the compose configura
 Update documentation whenever behavior changes. At minimum:
 
 - Update [README.md](./README.md) when repository entrypoints, setup, or external-facing expectations change.
-- Update [`.codex/README.md`](./.codex/README.md) and [`.codex/MIGRATION.md`](./.codex/MIGRATION.md) when Codex workspace structure or ownership changes.
+- Update [AGENTS.md](./AGENTS.md) when collaboration entrypoints, truth-surface ownership, or subdirectory instruction boundaries change.
+- Update [docs/README.md](./docs/README.md) when documentation entrypoints or reading order changes.
 - Update [`docs/current/architecture.md`](./docs/current/architecture.md) when routes, data sources, storage keys, or module boundaries change.
 - Update [`docs/current/docker-usage.md`](./docs/current/docker-usage.md) and [docker/README.md](./docker/README.md) when Docker topology, ports, secrets, or deployment workflow changes.
 - Update [`docs/exports/chatgpt-projects/README.md`](./docs/exports/chatgpt-projects/README.md) when the ChatGPT Projects export bundle mapping or sync boundary changes.
