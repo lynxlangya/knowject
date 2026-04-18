@@ -11,6 +11,7 @@ import { createValidationAppError } from '@lib/validation.js';
 import { requestContextMiddleware } from '@middleware/request-context.js';
 import { createErrorHandler } from '@middleware/error-handler.js';
 import { createAuthRouter } from './auth.router.js';
+import { resetAuthAttemptRateLimitStore } from './auth.rate-limit.js';
 import type { AuthRepository } from './auth.repository.js';
 import type { AuthService } from './auth.service.js';
 
@@ -310,5 +311,90 @@ test('GET /api/auth/users without bearer token localizes auth error in english',
     assert.equal(response.status, 401);
     assert.equal(body.code, 'AUTH_TOKEN_INVALID');
     assert.equal(body.message, 'A valid access token is required');
+  });
+});
+
+test('GET /api/auth/users returns empty results for blank query', async () => {
+  const authService = createAuthService({
+    env: createTestEnv(),
+    repository: {
+      searchProfiles: async () => {
+        throw new Error('searchProfiles should not be called for blank query');
+      },
+    } as unknown as AuthRepository,
+  });
+  const app = createTestApp(authService, createRequireAuthStub());
+
+  await withServer(app, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/auth/users?query=`, {
+      headers: {
+        authorization: 'Bearer test-token',
+      },
+    });
+    const body = (await response.json()) as {
+      code: string;
+      data: { total: number; items: Array<unknown> };
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(body.code, 'SUCCESS');
+    assert.equal(body.data.total, 0);
+    assert.deepEqual(body.data.items, []);
+  });
+});
+
+test('POST /api/auth/login returns 429 after repeated attempts from the same client', async () => {
+  resetAuthAttemptRateLimitStore();
+
+  const authService = {
+    login: async () => ({
+      token: 'jwt-token',
+      user: {
+        id: 'user-1',
+        username: 'langya',
+        name: 'Langya',
+        locale: 'zh-CN',
+      },
+    }),
+  } as unknown as AuthService;
+  const app = createTestApp(authService, createRequireAuthStub());
+
+  await withServer(app, async (baseUrl) => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await fetch(`${baseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: 'langya',
+          password: 'password123',
+        }),
+      });
+
+      assert.equal(response.status, 200);
+    }
+
+    const blockedResponse = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: 'langya',
+        password: 'password123',
+      }),
+    });
+    const blockedBody = (await blockedResponse.json()) as {
+      code: string;
+      message: string;
+    };
+
+    assert.equal(blockedResponse.status, 429);
+    assert.equal(blockedBody.code, 'AUTH_RATE_LIMITED');
+    assert.equal(
+      blockedBody.message,
+      'Too many authentication attempts; please try again later',
+    );
   });
 });

@@ -331,6 +331,24 @@ def test_internal_routes_require_bearer_token_when_configured(
     }
 
 
+def test_unexpected_error_does_not_leak_exception_text(indexer_test_client: TestClient):
+    override_indexing_service(
+        indexer_test_client,
+        diagnostics_behavior=lambda: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+
+    try:
+        response = indexer_test_client.get("/internal/v1/index/diagnostics")
+    finally:
+        clear_overrides(indexer_test_client)
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "status": "failed",
+        "errorMessage": "Python indexer 内部错误",
+    }
+
+
 def test_index_documents_returns_unified_failure_for_invalid_json(
     indexer_test_client: TestClient,
 ):
@@ -444,7 +462,7 @@ def test_index_documents_maps_unexpected_error_to_failed_response(
     assert response.status_code == 500
     assert response.json() == {
         "status": "failed",
-        "errorMessage": "Python indexer 内部错误: boom",
+        "errorMessage": "Python indexer 内部错误",
     }
 
 

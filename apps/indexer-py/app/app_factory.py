@@ -109,9 +109,10 @@ def create_app(*, load_env_files: bool = True) -> FastAPI:
 
     @app.exception_handler(Exception)
     def handle_unexpected_error(_request: Request, exc: Exception) -> JSONResponse:
+        _ = exc
         return create_failure_response(
             500,
-            f"Python indexer 内部错误: {exc}",
+            "Python indexer 内部错误",
         )
 
     app.include_router(health_router)

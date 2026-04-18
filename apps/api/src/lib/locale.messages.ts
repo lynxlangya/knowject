@@ -213,6 +213,8 @@ export const messages = {
       'The current provider does not support online testing',
     'auth.usernameConflict': 'Username already exists',
     'auth.invalidCredentials': 'Invalid username or password',
+    'auth.rateLimited':
+      'Too many authentication attempts; please try again later',
     'auth.localeUnsupported': 'Locale is not supported',
     'auth.password.minLength': 'Password must be at least 8 characters',
     'auth.displayName.required': 'Display name is required',
@@ -434,6 +436,7 @@ export const messages = {
     'settings.llmTestProvider.unsupported': '当前 provider 暂不支持在线测试',
     'auth.usernameConflict': '用户名已存在',
     'auth.invalidCredentials': '用户名或密码错误',
+    'auth.rateLimited': '认证尝试过于频繁，请稍后再试',
     'auth.localeUnsupported': 'locale 不受支持',
     'auth.password.minLength': '密码至少需要 8 位',
     'auth.displayName.required': '请输入显示名称',

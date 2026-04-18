@@ -4,6 +4,7 @@ import { asyncHandler } from '@lib/async-handler.js';
 import { sendCreated, sendSuccess } from '@lib/api-response.js';
 import { getRequiredAuthUser } from '@lib/request-auth.js';
 import type { AuthService } from './auth.service.js';
+import { createAuthAttemptRateLimit } from './auth.rate-limit.js';
 import type {
   LoginInput,
   RegisterInput,
@@ -19,6 +20,9 @@ export const createAuthRouter = (
 
   authRouter.post(
     '/register',
+    createAuthAttemptRateLimit({
+      routeKey: 'register',
+    }),
     asyncHandler(async (req, res) => {
       const result = await authService.register(req.body as RegisterInput);
 
@@ -28,6 +32,9 @@ export const createAuthRouter = (
 
   authRouter.post(
     '/login',
+    createAuthAttemptRateLimit({
+      routeKey: 'login',
+    }),
     asyncHandler(async (req, res) => {
       const result = await authService.login(req.body as LoginInput);
 

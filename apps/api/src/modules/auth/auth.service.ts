@@ -284,6 +284,14 @@ export const createAuthService = ({
     searchUsers: async (input) => {
       const query = normalizeSearchQuery(input.query);
       const limit = normalizeSearchLimit(input.limit);
+
+      if (!query) {
+        return {
+          total: 0,
+          items: [],
+        };
+      }
+
       const items = await repository.searchProfiles(query, limit);
 
       return {

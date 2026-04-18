@@ -300,3 +300,24 @@ test('searchUsers keeps shared profile shape without locale', async () => {
   });
   assert.equal('locale' in (result.items[0] ?? {}), false);
 });
+
+test('searchUsers returns empty results when query is blank', async () => {
+  const repository = {
+    searchProfiles: async () => {
+      throw new Error('searchProfiles should not be called');
+    },
+  } as unknown as AuthRepository;
+
+  const service = createAuthService({
+    env: createTestEnv(),
+    repository,
+  });
+
+  const result = await service.searchUsers({
+    query: '   ',
+    limit: 10,
+  });
+
+  assert.equal(result.total, 0);
+  assert.deepEqual(result.items, []);
+});
