@@ -26,6 +26,7 @@ export {
 export const createProjectConversationTurnService = ({
   repository,
   projectConversationsRepository,
+  skillsRepository,
   conversationRuntime,
 }: ProjectConversationTurnServiceDependencies): ProjectConversationTurnService => {
   return {
@@ -33,6 +34,7 @@ export const createProjectConversationTurnService = ({
       return prepareProjectConversationTurn({
         repository,
         projectConversationsRepository,
+        skillsRepository,
         context,
         projectId,
         conversationId,
@@ -62,6 +64,7 @@ export const createProjectConversationTurnService = ({
       const preparedTurn = await prepareProjectConversationTurn({
         repository,
         projectConversationsRepository,
+        skillsRepository,
         context,
         projectId,
         conversationId,
@@ -87,6 +90,7 @@ export const createProjectConversationTurnService = ({
       const preparedTurn = await prepareProjectConversationTurn({
         repository,
         projectConversationsRepository,
+        skillsRepository,
         context,
         projectId,
         conversationId,

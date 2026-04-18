@@ -14,10 +14,13 @@ import { KnowledgeSourcePickerModal } from "@pages/knowledge/components/Knowledg
 import { KnowledgeTextInputModal } from "@pages/knowledge/components/KnowledgeTextInputModal";
 import { DOCUMENT_UPLOAD_ACCEPT } from "@pages/knowledge/knowledgeUpload.shared";
 import { useKnowledgeDocumentActions } from "@pages/knowledge/useKnowledgeDocumentActions";
+import { useProjectContext } from "@app/project/useProjectContext";
+import { useState } from "react";
 import { ProjectKnowledgeAccessModal } from "./components/ProjectKnowledgeAccessModal";
 import { ProjectKnowledgeDetailDrawer } from "./components/ProjectKnowledgeDetailDrawer";
 import { ProjectKnowledgeMetadataModal } from "./components/ProjectKnowledgeMetadataModal";
 import { ProjectResourceGroup } from "./components/ProjectResourceGroup";
+import { ProjectSkillAccessModal } from "./components/ProjectSkillAccessModal";
 import { ProjectResourcesSummary } from "./components/ProjectResourcesSummary";
 import {
   buildProjectResourceSummaryItems,
@@ -37,8 +40,12 @@ export const ProjectResourcesPage = () => {
   const { message, modal } = App.useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { updateProjectResourceBindings } = useProjectContext();
   const { activeProject, globalAssetCatalogs, projectKnowledge } =
     useProjectPageContext();
+  const [skillAccessModalOpen, setSkillAccessModalOpen] = useState(false);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [bindingSkills, setBindingSkills] = useState(false);
   const knowledgeCatalog = globalAssetCatalogs.knowledge.items;
   const knowledgeCatalogLoading = globalAssetCatalogs.knowledge.loading;
   const knowledgeCatalogError = globalAssetCatalogs.knowledge.error;
@@ -330,7 +337,56 @@ export const ProjectResourcesPage = () => {
       return;
     }
 
+    if (groupKey === "skills") {
+      setSelectedSkillIds([]);
+      setSkillAccessModalOpen(true);
+      return;
+    }
+
     message.info(tp("resources.nextStep", { title: groupTitle }));
+  };
+
+  const closeSkillAccessModal = () => {
+    setSkillAccessModalOpen(false);
+    setSelectedSkillIds([]);
+  };
+
+  const handleBindSkills = async () => {
+    if (selectedSkillIds.length === 0) {
+      message.warning(tp("resources.skillAccess.selectRequired"));
+      return;
+    }
+
+    setBindingSkills(true);
+
+    try {
+      const result = await updateProjectResourceBindings({
+        projectId: activeProject.id,
+        skillIds: Array.from(
+          new Set([...activeProject.skillIds, ...selectedSkillIds]),
+        ),
+      });
+
+      if (result === "not_found") {
+        message.error(tp("resources.mutations.projectMissing"));
+        return;
+      }
+
+      message.success(
+        tp("resources.skillAccess.success", { count: selectedSkillIds.length }),
+      );
+      closeSkillAccessModal();
+    } catch (currentError) {
+      console.error("[ProjectResources] 绑定项目技能失败:", currentError);
+      message.error(
+        extractApiErrorMessage(
+          currentError,
+          tp("resources.mutations.bindingUpdateFailed"),
+        ),
+      );
+    } finally {
+      setBindingSkills(false);
+    }
   };
 
   return (
@@ -473,6 +529,19 @@ export const ProjectResourcesPage = () => {
           void handleCreateProjectKnowledge(values);
         }}
         onOpenGlobalManagement={() => navigate(PATHS.knowledge)}
+      />
+
+      <ProjectSkillAccessModal
+        open={skillAccessModalOpen}
+        submitting={bindingSkills}
+        skillsCatalog={skillsCatalog}
+        boundSkillIds={activeProject.skillIds}
+        selectedSkillIds={selectedSkillIds}
+        onSelectedSkillIdsChange={setSelectedSkillIds}
+        onCancel={closeSkillAccessModal}
+        onConfirm={() => {
+          void handleBindSkills();
+        }}
       />
 
       <ProjectKnowledgeDetailDrawer

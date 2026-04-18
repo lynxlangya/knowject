@@ -12,6 +12,7 @@ export interface PendingProjectConversationTurnSubmission {
   content: string;
   clientRequestId: string;
   targetUserMessageId?: string;
+  skillId?: string;
 }
 
 export interface OptimisticProjectConversationReplay {
@@ -27,7 +28,8 @@ export const isSamePendingProjectConversationTurnSubmission = (
     left?.projectId === right.projectId &&
     left.conversationId === right.conversationId &&
     left.clientRequestId === right.clientRequestId &&
-    left.targetUserMessageId === right.targetUserMessageId
+    left.targetUserMessageId === right.targetUserMessageId &&
+    left.skillId === right.skillId
   );
 };
 
@@ -37,6 +39,7 @@ export const resolvePendingProjectConversationClientRequestId = ({
   conversationId,
   content,
   targetUserMessageId,
+  skillId,
   createClientRequestId = () => globalThis.crypto.randomUUID(),
 }: {
   pendingSubmission: PendingProjectConversationTurnSubmission | null;
@@ -44,6 +47,7 @@ export const resolvePendingProjectConversationClientRequestId = ({
   conversationId: string;
   content: string;
   targetUserMessageId?: string;
+  skillId?: string;
   createClientRequestId?: () => string;
 }): string => {
   if (
@@ -51,7 +55,8 @@ export const resolvePendingProjectConversationClientRequestId = ({
     pendingSubmission.projectId === projectId &&
     pendingSubmission.conversationId === conversationId &&
     pendingSubmission.content === content &&
-    pendingSubmission.targetUserMessageId === targetUserMessageId
+    pendingSubmission.targetUserMessageId === targetUserMessageId &&
+    pendingSubmission.skillId === skillId
   ) {
     return pendingSubmission.clientRequestId;
   }

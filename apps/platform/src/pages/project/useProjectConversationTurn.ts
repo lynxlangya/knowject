@@ -71,7 +71,7 @@ interface ProjectConversationSourceDrawerDraftSnapshot {
   sourceSeedEntries: ProjectConversationStreamSourcesSeedItem[];
   retrySubmission: Pick<
     PendingProjectConversationTurnSubmission,
-    'content' | 'targetUserMessageId'
+    'content' | 'targetUserMessageId' | 'skillId'
   >;
 }
 
@@ -344,6 +344,7 @@ export const useProjectConversationTurn = ({
     rawContent: string,
     options?: {
       targetUserMessageId?: string;
+      skillId?: string;
     },
   ) => {
     if (!chatId) {
@@ -363,6 +364,7 @@ export const useProjectConversationTurn = ({
     }
 
     const targetUserMessageId = options?.targetUserMessageId;
+    const skillId = options?.skillId;
 
     if (targetUserMessageId) {
       const targetUserMessage = currentConversationDetail?.messages.find(
@@ -384,6 +386,7 @@ export const useProjectConversationTurn = ({
       conversationId: requestConversationId,
       content: nextContent,
       targetUserMessageId,
+      skillId,
     });
     const previousMessageIds = new Set(
       currentConversationDetail?.messages.map((chatMessage) => chatMessage.id) ?? [],
@@ -394,6 +397,7 @@ export const useProjectConversationTurn = ({
       content: nextContent,
       clientRequestId,
       ...(targetUserMessageId ? { targetUserMessageId } : {}),
+      ...(skillId ? { skillId } : {}),
     } satisfies PendingProjectConversationTurnSubmission;
     const abortController = new AbortController();
     const pendingUserMessageCreatedAt = new Date().toISOString();
@@ -422,6 +426,7 @@ export const useProjectConversationTurn = ({
       retrySubmission: {
         content: nextContent,
         ...(targetUserMessageId ? { targetUserMessageId } : {}),
+        ...(skillId ? { skillId } : {}),
       },
     });
 
@@ -462,6 +467,7 @@ export const useProjectConversationTurn = ({
           content: nextContent,
           clientRequestId,
           ...(targetUserMessageId ? { targetUserMessageId } : {}),
+          ...(skillId ? { skillId } : {}),
         },
         {
           signal: abortController.signal,
@@ -708,6 +714,7 @@ export const useProjectConversationTurn = ({
 
     void handleSendMessage(sourceDrawerDraftSnapshot.retrySubmission.content, {
       targetUserMessageId: sourceDrawerDraftSnapshot.retrySubmission.targetUserMessageId,
+      skillId: sourceDrawerDraftSnapshot.retrySubmission.skillId,
     });
   };
 

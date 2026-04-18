@@ -117,6 +117,7 @@ export interface CreateProjectConversationMessageRequest {
   content: string;
   clientRequestId?: string;
   targetUserMessageId?: string;
+  skillId?: string;
 }
 
 export interface CreateProjectConversationStreamMessageRequest

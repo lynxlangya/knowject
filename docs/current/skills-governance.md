@@ -28,7 +28,7 @@
   - `deprecated`
   - `archived`
 - `bindable` 当前由 `status === active` 推导。
-- 项目与 Agent 侧当前都通过 `listSkills({ bindable: true })` 只消费可绑定的 Skill。
+- 前端新增/绑定选择器当前只允许团队自建且可绑定的 Skill；只读目录与历史绑定回显会继续保留 `preset + team` 元数据，避免已有绑定在 UI 中退化成未知项。
 
 ## 4. 结构化定义
 
@@ -100,8 +100,8 @@
   - `system/custom/imported` 来源模型
   - `publish` 动作心智
   - `runtime ready / contract reserved` 作为主展示语义
-- 项目资源页与项目创建/编辑表单当前把 Skill 作为“可绑定的方法资产”消费，显示 `预置方法资产 / 团队方法资产` 语义。
-- Agent 绑定选择器当前同样显示 `Preset method asset / Team method asset` 语义。
+- 项目资源页、项目创建/编辑表单与 Agent 绑定选择器当前新增选择时只允许 `team` Skill；成员协作页与项目态全局目录会保留 `preset + team` 的读侧元数据，用于兼容历史绑定展示。
+- 项目对话输入框当前新增显式 Skill picker，只展示“当前项目已绑定的 team Skill”；用户选中后，前端会在发送消息时显式携带 `skillId`，由后端把对应 Skill 的结构化定义注入本轮对话 prompt。
 
 ## 7. Authoring Contract Facts
 

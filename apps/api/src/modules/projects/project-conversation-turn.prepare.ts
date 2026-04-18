@@ -8,6 +8,11 @@ import {
   ProjectsRepository,
 } from "./projects.repository.js";
 import {
+  buildSkillBindableFlag,
+  normalizeStoredSkillForRead,
+} from "@modules/skills/skills.shared.js";
+import type { SkillsRepository } from "@modules/skills/skills.repository.js";
+import {
   createProjectConversationMessage,
   createProjectConversationNotFoundError,
   requireVisibleProject,
@@ -19,6 +24,7 @@ import type {
 import type {
   PreparedProjectConversationReplayRestoreState,
   PreparedProjectConversationTurn,
+  ProjectConversationSelectedSkill,
   ProjectConversationTurnPreparationOptions,
 } from "./types/project-conversation-turn.types.js";
 import {
@@ -29,11 +35,56 @@ import {
 } from "./project-conversation-turn.persist.js";
 import { buildReplayConversationMessages } from "./utils/project-conversation-turn.replay.js";
 import { findProjectConversationRetryState } from "./utils/project-conversation-turn.retry.js";
-import { validateCreateProjectConversationMessageInput } from "./validators/project-conversation-turn.validator.js";
+import {
+  createProjectConversationSkillSelectionError,
+  validateCreateProjectConversationMessageInput,
+} from "./validators/project-conversation-turn.validator.js";
+
+const resolveSelectedProjectConversationSkill = async ({
+  project,
+  skillId,
+  skillsRepository,
+}: {
+  project: Awaited<ReturnType<typeof requireVisibleProject>>;
+  skillId?: string;
+  skillsRepository?: Pick<SkillsRepository, "findSkillById">;
+}): Promise<ProjectConversationSelectedSkill | undefined> => {
+  if (!skillId) {
+    return undefined;
+  }
+
+  if (!project.skillIds.includes(skillId) || !skillsRepository) {
+    throw createProjectConversationSkillSelectionError();
+  }
+
+  const storedSkill = await skillsRepository.findSkillById(skillId);
+
+  if (!storedSkill) {
+    throw createProjectConversationSkillSelectionError();
+  }
+
+  const normalizedSkill = normalizeStoredSkillForRead(storedSkill);
+
+  if (
+    normalizedSkill.source !== "team" ||
+    !buildSkillBindableFlag(normalizedSkill.status)
+  ) {
+    throw createProjectConversationSkillSelectionError();
+  }
+
+  return {
+    id: storedSkill._id.toHexString(),
+    name: storedSkill.name,
+    description: storedSkill.description,
+    owner: normalizedSkill.owner,
+    definition: normalizedSkill.definition,
+  };
+};
 
 export const prepareProjectConversationTurn = async ({
   repository,
   projectConversationsRepository,
+  skillsRepository,
   context,
   projectId,
   conversationId,
@@ -42,6 +93,7 @@ export const prepareProjectConversationTurn = async ({
 }: {
   repository: ProjectsRepository;
   projectConversationsRepository: ProjectConversationsRepository;
+  skillsRepository?: Pick<SkillsRepository, "findSkillById">;
   context: ProjectCommandContext;
   projectId: string;
   conversationId: string;
@@ -53,8 +105,13 @@ export const prepareProjectConversationTurn = async ({
     projectId,
     context.actor,
   );
-  const { content, clientRequestId, targetUserMessageId } =
+  const { content, clientRequestId, targetUserMessageId, skillId } =
     validateCreateProjectConversationMessageInput(input, options);
+  const selectedSkill = await resolveSelectedProjectConversationSkill({
+    project: currentProject,
+    skillId,
+    skillsRepository,
+  });
   const persistedProjectId = currentProject._id.toHexString();
 
   let userConversation = await ensurePersistedConversationProject({
@@ -82,6 +139,7 @@ export const prepareProjectConversationTurn = async ({
       conversationId,
       conversation: userConversation,
       userMessage: reusableRetryState.userMessage,
+      ...(selectedSkill ? { selectedSkill } : {}),
       clientRequestId,
       existingAssistantMessage: reusableRetryState.assistantMessage,
     };
@@ -237,6 +295,7 @@ export const prepareProjectConversationTurn = async ({
       conversationId,
       conversation: userConversation,
       userMessage: retryState.userMessage,
+      ...(selectedSkill ? { selectedSkill } : {}),
       clientRequestId,
       existingAssistantMessage: retryState.assistantMessage,
       replayRestoreState,
@@ -249,6 +308,7 @@ export const prepareProjectConversationTurn = async ({
     conversationId,
     conversation: userConversation,
     userMessage,
+    ...(selectedSkill ? { selectedSkill } : {}),
     clientRequestId,
     existingAssistantMessage: null,
     replayRestoreState,

@@ -1,9 +1,7 @@
 import {
-  ArrowUpOutlined,
   CloseOutlined,
   PlusOutlined,
   PushpinOutlined,
-  StopOutlined,
 } from '@ant-design/icons';
 import { Bubble } from '@ant-design/x';
 import {
@@ -11,17 +9,16 @@ import {
   Button,
   Drawer,
   Empty,
-  Input,
   Skeleton,
   Typography,
 } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   PATHS,
 } from '@app/navigation/paths';
-import { KNOWJECT_BRAND } from '@styles/brand';
 import { ProjectConversationList } from './components/ProjectConversationList';
+import { ProjectChatComposer } from './components/ProjectChatComposer';
 import { ProjectConversationMessageRail } from './components/ProjectConversationMessageRail';
 import { ProjectConversationSourceDrawer } from './components/ProjectConversationSourceDrawer';
 import { ProjectKnowledgeAccessModal } from './components/ProjectKnowledgeAccessModal';
@@ -93,6 +90,7 @@ export const ProjectChatPage = () => {
   const {
     activeProject,
     conversations,
+    globalAssetCatalogs,
     projectKnowledge,
   } = useProjectPageContext();
   const conversationScopeKey = `${activeProject.id}:${chatId ?? ''}`;
@@ -110,6 +108,20 @@ export const ProjectChatPage = () => {
     setComposerState({
       scopeKey: conversationScopeKey,
       value,
+    });
+  };
+  const [selectedSkillState, setSelectedSkillState] = useState(() => ({
+    scopeKey: conversationScopeKey,
+    skillId: null as string | null,
+  }));
+  const selectedSkillId =
+    selectedSkillState.scopeKey === conversationScopeKey
+      ? selectedSkillState.skillId
+      : null;
+  const setSelectedSkillId = (skillId: string | null) => {
+    setSelectedSkillState({
+      scopeKey: conversationScopeKey,
+      skillId,
     });
   };
   const [mobileRailState, setMobileRailState] = useState(() => ({
@@ -133,6 +145,30 @@ export const ProjectChatPage = () => {
       chatId,
     };
   }, [activeProject.id, chatId]);
+
+  const availableConversationSkills = useMemo(() => {
+    const skillsById = new Map(
+      globalAssetCatalogs.skills.items.map((skill) => [skill.id, skill] as const),
+    );
+
+    return activeProject.skillIds
+      .map((skillId) => skillsById.get(skillId))
+      .filter((skill): skill is NonNullable<typeof skill> => Boolean(skill))
+      .filter((skill) => skill.source === 'team' && skill.bindable)
+      .map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+      }));
+  }, [activeProject.skillIds, globalAssetCatalogs.skills.items]);
+  const selectedConversationSkill =
+    availableConversationSkills.find((skill) => skill.id === selectedSkillId) ?? null;
+
+  useEffect(() => {
+    if (selectedSkillId && !selectedConversationSkill) {
+      setSelectedSkillId(null);
+    }
+  }, [selectedConversationSkill, selectedSkillId]);
 
   const {
     chatSettingsLoading,
@@ -188,6 +224,7 @@ export const ProjectChatPage = () => {
   } = useProjectChatUserMessageActions({
     currentConversationDetail,
     turnBusy,
+    selectedSkillId: selectedConversationSkill?.id ?? null,
     handleSendMessage,
   });
   const {
@@ -239,6 +276,7 @@ export const ProjectChatPage = () => {
     currentConversationDetail,
     messageActionLocked,
     turnBusy,
+    selectedSkillId: selectedConversationSkill?.id ?? null,
     handleSendMessage,
     setConversationDetail,
     refreshProjectKnowledge: projectKnowledge.refresh,
@@ -583,71 +621,23 @@ export const ProjectChatPage = () => {
 
                 <footer className="border-t border-slate-200/70 bg-white px-6 pb-5 pt-4">
                   <div className="mx-auto w-full max-w-7xl">
-                    <form
-                      className="rounded-hero border bg-white p-2.5 transition-colors duration-200"
-                      style={{
-                        borderColor: KNOWJECT_BRAND.primaryBorder,
+                    <ProjectChatComposer
+                      availableSkills={availableConversationSkills}
+                      value={composerValue}
+                      canSubmit={canSubmitMessage}
+                      sendActionLocked={sendActionLocked}
+                      isStreaming={isStreaming}
+                      submitLoading={streamStatus === 'reconciling'}
+                      selectedSkillId={selectedConversationSkill?.id ?? null}
+                      onValueChange={setComposerValue}
+                      onSelectedSkillIdChange={setSelectedSkillId}
+                      onSubmit={() => {
+                        void handleSendMessage(composerValue, {
+                          skillId: selectedConversationSkill?.id ?? undefined,
+                        });
                       }}
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        void handleSendMessage(composerValue);
-                      }}
-                    >
-                      <div className="flex items-end gap-3">
-                        <div className="min-w-0 flex-1">
-                          <Input.TextArea
-                            value={composerValue}
-                            autoSize={{ minRows: 1, maxRows: 6 }}
-                            disabled={sendActionLocked}
-                            variant="borderless"
-                            aria-label={tp('conversation.composerAria')}
-                            placeholder={tp('conversation.composerPlaceholder')}
-                            style={{ width: '100%' }}
-                            className="w-full! rounded-card-lg! bg-transparent! px-4! py-3! text-body! leading-7! text-slate-700! placeholder:text-slate-400!"
-                            onChange={(event) => setComposerValue(event.target.value)}
-                            onPressEnter={(event) => {
-                              if (event.shiftKey || event.nativeEvent.isComposing) {
-                                return;
-                              }
-
-                              event.preventDefault();
-                              void handleSendMessage(composerValue);
-                            }}
-                          />
-                        </div>
-
-                        {isStreaming ? (
-                          <Button
-                            htmlType="button"
-                            aria-label={tp('conversation.stop')}
-                            icon={<StopOutlined />}
-                            onClick={handleCancelStreaming}
-                            className="mb-1 h-11! rounded-full! border-slate-200! px-4! text-sm! font-semibold! text-slate-700!"
-                          >
-                            {tp('conversation.stop')}
-                          </Button>
-                        ) : (
-                          <Button
-                            type="primary"
-                            htmlType="submit"
-                            shape="circle"
-                            aria-label={tp('conversation.sendAria')}
-                            loading={streamStatus === 'reconciling'}
-                            disabled={!canSubmitMessage}
-                            icon={<ArrowUpOutlined />}
-                            className="mb-1 h-11! w-11! shrink-0 border-0!"
-                            style={{
-                              background: canSubmitMessage
-                                ? KNOWJECT_BRAND.primary
-                                : KNOWJECT_BRAND.primarySurfaceStrong,
-                              color: canSubmitMessage
-                                ? '#ffffff'
-                                : KNOWJECT_BRAND.textMuted,
-                            }}
-                          />
-                        )}
-                      </div>
-                    </form>
+                      onStop={handleCancelStreaming}
+                    />
                   </div>
                 </footer>
               </div>

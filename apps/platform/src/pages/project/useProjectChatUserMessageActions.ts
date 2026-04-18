@@ -8,10 +8,12 @@ import { tp } from './project.i18n';
 interface UseProjectChatUserMessageActionsOptions {
   currentConversationDetail: ProjectConversationDetailResponse | null;
   turnBusy: boolean;
+  selectedSkillId?: string | null;
   handleSendMessage: (
     content: string,
     options?: {
       targetUserMessageId?: string;
+      skillId?: string;
     },
   ) => Promise<void>;
 }
@@ -19,6 +21,7 @@ interface UseProjectChatUserMessageActionsOptions {
 export const useProjectChatUserMessageActions = ({
   currentConversationDetail,
   turnBusy,
+  selectedSkillId = null,
   handleSendMessage,
 }: UseProjectChatUserMessageActionsOptions) => {
   const { message } = App.useApp();
@@ -66,6 +69,7 @@ export const useProjectChatUserMessageActions = ({
 
     void handleSendMessage(targetUserMessage.content, {
       targetUserMessageId: targetUserMessage.id,
+      ...(selectedSkillId ? { skillId: selectedSkillId } : {}),
     });
   };
 
@@ -107,6 +111,7 @@ export const useProjectChatUserMessageActions = ({
     setEditingUserMessageId(null);
     void handleSendMessage(trimmedContent, {
       targetUserMessageId: messageId,
+      ...(selectedSkillId ? { skillId: selectedSkillId } : {}),
     });
   };
 

@@ -7,6 +7,7 @@ import type {
 } from "@modules/knowledge/knowledge.types.js";
 import type { SettingsRepository } from "@modules/settings/settings.repository.js";
 import type { EffectiveLlmConfig } from "@modules/settings/settings.types.js";
+import type { ProjectConversationSelectedSkill } from "./types/project-conversation-turn.types.js";
 import { buildDefaultProjectConversationTitle } from "./projects.shared.js";
 import {
   buildProjectConversationCitationSources,
@@ -41,6 +42,7 @@ export interface ProjectConversationRuntime {
     project: WithId<ProjectDocument>;
     conversation: ProjectConversationDocument;
     userMessage: ProjectConversationMessageDocument;
+    selectedSkill?: ProjectConversationSelectedSkill;
   }): Promise<{
     content: string;
     sources: ProjectConversationSourceDocument[];
@@ -52,6 +54,7 @@ export interface ProjectConversationRuntime {
     project: WithId<ProjectDocument>;
     conversation: ProjectConversationDocument;
     userMessage: ProjectConversationMessageDocument;
+    selectedSkill?: ProjectConversationSelectedSkill;
     signal?: AbortSignal;
     onSourcesSeed?(
       sources: ProjectConversationStreamSeedSource[],
@@ -88,6 +91,32 @@ const buildProjectConversationSystemPrompt = (projectName: string): string => {
     "5. 多来源则按 sourceKey 顺序依次追加多个占位。",
     "6. 不要在代码块、链接、列表标记内部输出占位。",
   ].join("\n");
+};
+
+const buildProjectConversationSelectedSkillPrompt = (
+  selectedSkill: ProjectConversationSelectedSkill,
+): string => {
+  return [
+    "",
+    "当前启用的项目 Skill：",
+    `- 名称：${selectedSkill.name}`,
+    `- 目标：${selectedSkill.definition.goal}`,
+    selectedSkill.definition.workflow.length > 0
+      ? `- 工作流：${selectedSkill.definition.workflow.join("；")}`
+      : null,
+    selectedSkill.definition.outputContract.length > 0
+      ? `- 输出约束：${selectedSkill.definition.outputContract.join("；")}`
+      : null,
+    selectedSkill.definition.guardrails.length > 0
+      ? `- Guardrails：${selectedSkill.definition.guardrails.join("；")}`
+      : null,
+    selectedSkill.definition.projectBindingNotes.length > 0
+      ? `- 项目注记：${selectedSkill.definition.projectBindingNotes.join("；")}`
+      : null,
+    "若用户请求与当前 Skill 无明显冲突，请优先按该 Skill 的 workflow、output contract 和 guardrails 组织回答。",
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join("\n");
 };
 
 const buildProjectConversationContextPrompt = ({
@@ -382,12 +411,14 @@ export const createProjectConversationRuntime = ({
     project,
     conversation,
     userMessage,
+    selectedSkill,
   }: {
     actor: KnowledgeCommandContext["actor"];
     locale?: KnowledgeCommandContext["locale"];
     project: WithId<ProjectDocument>;
     conversation: ProjectConversationDocument;
     userMessage: ProjectConversationMessageDocument;
+    selectedSkill?: ProjectConversationSelectedSkill;
   }): Promise<{
     llmConfig: Awaited<ReturnType<typeof getEffectiveLlmConfig>>;
     messages: Array<{
@@ -419,7 +450,14 @@ export const createProjectConversationRuntime = ({
       messages: [
         {
           role: "system" as const,
-          content: buildProjectConversationSystemPrompt(project.name),
+          content: [
+            buildProjectConversationSystemPrompt(project.name),
+            selectedSkill
+              ? buildProjectConversationSelectedSkillPrompt(selectedSkill)
+              : null,
+          ]
+            .filter((segment): segment is string => Boolean(segment))
+            .join("\n"),
         },
         ...toProjectConversationHistoryMessages(conversation, userMessage.id),
         {
@@ -489,6 +527,7 @@ export const createProjectConversationRuntime = ({
       project,
       conversation,
       userMessage,
+      selectedSkill,
     }) => {
       const { llmConfig, messages, sources } = await prepareAssistantReplyContext({
         actor,
@@ -496,6 +535,7 @@ export const createProjectConversationRuntime = ({
         project,
         conversation,
         userMessage,
+        selectedSkill,
       });
       const content = await providerAdapter.generate({
         llmConfig,
@@ -520,6 +560,7 @@ export const createProjectConversationRuntime = ({
       project,
       conversation,
       userMessage,
+      selectedSkill,
       signal,
       onSourcesSeed,
       onDelta,
@@ -530,6 +571,7 @@ export const createProjectConversationRuntime = ({
         project,
         conversation,
         userMessage,
+        selectedSkill,
       });
       const sourceSeeds = toProjectConversationStreamSeedSources(sources);
 

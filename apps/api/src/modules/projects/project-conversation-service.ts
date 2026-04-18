@@ -31,6 +31,7 @@ import {
   DEFAULT_PROJECT_CONVERSATION_TITLE,
   type ProjectConversationRuntime,
 } from "./project-conversation-runtime.js";
+import type { SkillsRepository } from "@modules/skills/skills.repository.js";
 import type {
   CreateProjectConversationInput,
   CreateProjectConversationMessageInput,
@@ -199,15 +200,18 @@ const materializeDefaultProjectConversation = async ({
 export const createProjectConversationService = ({
   repository,
   projectConversationsRepository,
+  skillsRepository,
   conversationRuntime,
 }: {
   repository: ProjectsRepository;
   projectConversationsRepository: ProjectConversationsRepository;
+  skillsRepository?: Pick<SkillsRepository, "findSkillById">;
   conversationRuntime?: ProjectConversationRuntime;
 }): ProjectConversationService => {
   const turnService = createProjectConversationTurnService({
     repository,
     projectConversationsRepository,
+    skillsRepository,
     conversationRuntime,
   });
 

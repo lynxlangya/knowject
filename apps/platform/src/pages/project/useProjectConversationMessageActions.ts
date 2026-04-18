@@ -57,10 +57,12 @@ interface UseProjectConversationMessageActionsOptions {
   currentConversationDetail: ProjectConversationDetailResponse | null;
   messageActionLocked: boolean;
   turnBusy: boolean;
+  selectedSkillId?: string | null;
   handleSendMessage: (
     content: string,
     options?: {
       targetUserMessageId?: string;
+      skillId?: string;
     },
   ) => Promise<void>;
   setConversationDetail: Dispatch<
@@ -75,6 +77,7 @@ export const useProjectConversationMessageActions = ({
   currentConversationDetail,
   messageActionLocked,
   turnBusy,
+  selectedSkillId = null,
   handleSendMessage,
   setConversationDetail,
   refreshProjectKnowledge,
@@ -249,6 +252,7 @@ export const useProjectConversationMessageActions = ({
 
       void handleSendMessage(retryTarget.content, {
         targetUserMessageId: retryTarget.id,
+        ...(selectedSkillId ? { skillId: selectedSkillId } : {}),
       });
       return true;
     },
@@ -257,6 +261,7 @@ export const useProjectConversationMessageActions = ({
       handleSendMessage,
       message,
       messageActionLocked,
+      selectedSkillId,
     ],
   );
 

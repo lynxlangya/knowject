@@ -9,6 +9,8 @@ const componentFiles = [
   '../src/pages/project/ProjectOverviewPage.tsx',
   '../src/pages/project/ProjectMembersPage.tsx',
   '../src/pages/project/components/ProjectHeader.tsx',
+  '../src/pages/project/components/ProjectChatComposer.tsx',
+  '../src/pages/project/components/ProjectSkillAccessModal.tsx',
 ] as const;
 
 const helperFiles = [
@@ -101,6 +103,44 @@ test('project resource locale exposes preset and team skill ownership copy', () 
   assert.equal(zhItems.presetSkill, '预置方法资产');
   assert.equal(enItems.teamSkill, 'Team method asset');
   assert.equal(zhItems.teamSkill, '团队方法资产');
+});
+
+test('project resource locale exposes skill access modal copy in both locales', () => {
+  const enSkillAccess = (projectMessagesEn.resources as Record<string, unknown>)
+    .skillAccess as Record<string, unknown>;
+  const zhSkillAccess = (projectMessagesZhCN.resources as Record<string, unknown>)
+    .skillAccess as Record<string, unknown>;
+
+  assert.ok(enSkillAccess);
+  assert.ok(zhSkillAccess);
+  assert.deepEqual(Object.keys(enSkillAccess), Object.keys(zhSkillAccess));
+  assert.equal(enSkillAccess.confirm, 'Add');
+  assert.equal(zhSkillAccess.confirm, '引入');
+});
+
+test('project conversation locale exposes composer plus aria copy in both locales', () => {
+  const enConversation = projectMessagesEn.conversation as Record<string, unknown>;
+  const zhConversation = projectMessagesZhCN.conversation as Record<string, unknown>;
+
+  assert.equal(
+    enConversation.composerPlusAria,
+    'Open more input actions (coming soon)',
+  );
+  assert.equal(
+    zhConversation.composerPlusAria,
+    '打开更多输入能力（即将支持）',
+  );
+});
+
+test('project conversation locale exposes skill picker copy in both locales', () => {
+  const enSkillPicker = (projectMessagesEn.conversation as Record<string, unknown>)
+    .skillPicker as Record<string, unknown>;
+  const zhSkillPicker = (projectMessagesZhCN.conversation as Record<string, unknown>)
+    .skillPicker as Record<string, unknown>;
+
+  assert.ok(enSkillPicker);
+  assert.ok(zhSkillPicker);
+  assert.deepEqual(Object.keys(enSkillPicker), Object.keys(zhSkillPicker));
 });
 
 test('ProjectOverviewPage no longer depends on legacy overview copy or recent resources helper', () => {

@@ -38,7 +38,7 @@ export const useAgentsListState = () => {
 
       try {
         const [agentsResult, knowledgeResult, skillsResult] = await Promise.all(
-          [listAgents(), listKnowledge(), listSkills({ bindable: true })],
+          [listAgents(), listKnowledge(), listSkills()],
         );
 
         if (cancelled) {

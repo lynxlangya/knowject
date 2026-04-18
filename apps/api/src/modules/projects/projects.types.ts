@@ -115,6 +115,7 @@ export interface CreateProjectConversationMessageInput {
   content?: unknown;
   clientRequestId?: unknown;
   targetUserMessageId?: unknown;
+  skillId?: unknown;
 }
 
 export interface UpdateProjectConversationMessageMetadataInput {

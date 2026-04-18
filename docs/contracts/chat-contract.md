@@ -32,12 +32,14 @@ Body (stream request contract):
   content: string;
   clientRequestId: string;
   targetUserMessageId?: string;
+  skillId?: string;
 }
 ```
 
 - `content` 必填，服务端按 “trim 后非空” 语义处理。
 - `clientRequestId` 对 `/messages/stream` 为必填，用于幂等与端到端关联（UI、SSE events、draft/persisted handoff）。
 - `targetUserMessageId` 表示在同一 conversation 内以某条 user message 为目标进行 replay/edit 写入。
+- `skillId` 可选；若提供，必须指向“当前项目已绑定的 team Skill”，服务端会把该 Skill 的结构化定义注入本轮对话 prompt。
 
 ### 1.2 Response Transport (SSE)
 

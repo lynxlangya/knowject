@@ -4,6 +4,7 @@ import type {
   ProjectsRepository,
 } from "../projects.repository.js";
 import type { ProjectConversationRuntime } from "../project-conversation-runtime.js";
+import type { SkillDefinitionFields } from "@modules/skills/skills.definition.js";
 import type {
   CreateProjectConversationMessageInput,
   ProjectCommandContext,
@@ -16,6 +17,15 @@ import type {
   ProjectConversationCitationContent,
   ProjectDocument,
 } from "../projects.types.js";
+import type { SkillsRepository } from "@modules/skills/skills.repository.js";
+
+export interface ProjectConversationSelectedSkill {
+  id: string;
+  name: string;
+  description: string;
+  owner?: string;
+  definition: SkillDefinitionFields;
+}
 
 export interface ProjectConversationAssistantReply {
   content: string;
@@ -39,6 +49,7 @@ export interface PreparedProjectConversationTurn {
   conversationId: string;
   conversation: ProjectConversationDocument;
   userMessage: ProjectConversationMessageDocument;
+  selectedSkill?: ProjectConversationSelectedSkill;
   clientRequestId?: string;
   existingAssistantMessage: ProjectConversationMessageDocument | null;
   replayRestoreState?: PreparedProjectConversationReplayRestoreState;
@@ -76,6 +87,7 @@ export interface ProjectConversationTurnService {
 export interface ProjectConversationTurnServiceDependencies {
   repository: ProjectsRepository;
   projectConversationsRepository: ProjectConversationsRepository;
+  skillsRepository?: Pick<SkillsRepository, "findSkillById">;
   conversationRuntime?: ProjectConversationRuntime;
 }
 
@@ -87,6 +99,7 @@ export interface ProjectConversationTurnInput {
   content: string;
   clientRequestId?: string;
   targetUserMessageId?: string;
+  skillId?: string;
 }
 
 export interface ProjectConversationRetryState {

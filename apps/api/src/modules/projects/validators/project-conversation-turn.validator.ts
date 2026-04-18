@@ -27,6 +27,10 @@ export const validateCreateProjectConversationMessageInput = (
     normalizedInput.targetUserMessageId,
     "targetUserMessageId",
   );
+  const skillId = readOptionalStringField(
+    normalizedInput.skillId,
+    "skillId",
+  );
 
   if (!content) {
     throw createValidationAppError(
@@ -54,6 +58,7 @@ export const validateCreateProjectConversationMessageInput = (
     content,
     clientRequestId,
     targetUserMessageId,
+    skillId,
   };
 };
 
@@ -94,5 +99,15 @@ export const createProjectConversationReplayTargetError = (): AppError => {
       ),
     },
     "validation.projectConversation.replayTarget.invalid",
+  );
+};
+
+export const createProjectConversationSkillSelectionError = (): AppError => {
+  return createValidationAppError(
+    getFallbackMessage("validation.projectConversation.skill.invalid"),
+    {
+      skillId: getFallbackMessage("validation.projectConversation.skill.invalid"),
+    },
+    "validation.projectConversation.skill.invalid",
   );
 };

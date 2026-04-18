@@ -61,6 +61,8 @@ export const messages = {
       'Streaming messages must include clientRequestId',
     'validation.projectConversation.replayTarget.invalid':
       'targetUserMessageId must point to a user message in this conversation',
+    'validation.projectConversation.skill.invalid':
+      'skillId must point to a team skill already bound to this project',
     'validation.knowledge.sourceType.invalid':
       'sourceType must be global_docs or global_code',
     'validation.knowledge.projectSourceType.unsupported':
@@ -314,6 +316,8 @@ export const messages = {
       '流式消息必须携带 clientRequestId',
     'validation.projectConversation.replayTarget.invalid':
       'targetUserMessageId 必须指向当前会话中的用户消息',
+    'validation.projectConversation.skill.invalid':
+      'skillId 必须指向当前项目已绑定的团队 Skill',
     'validation.knowledge.sourceType.invalid':
       'sourceType 只能为 global_docs 或 global_code',
     'validation.knowledge.projectSourceType.unsupported':

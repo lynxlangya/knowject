@@ -78,6 +78,7 @@ export const createApp = ({ env, mongo }: CreateAppOptions): Express => {
     projectConversationsRepository,
     authRepository,
     skillBindingValidator,
+    skillsRepository,
     knowledgeUsage: {
       deleteProjectKnowledge: async (projectId, actor) => {
         const knowledgeList = await knowledgeService.listProjectKnowledge(

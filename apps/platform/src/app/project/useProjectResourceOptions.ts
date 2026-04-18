@@ -40,6 +40,7 @@ export const useProjectResourceOptions = ({
   >([]);
   const [agentOptions, setAgentOptions] = useState<ProjectResourceOption[]>([]);
   const [skillOptions, setSkillOptions] = useState<ProjectResourceOption[]>([]);
+  const [skillItems, setSkillItems] = useState<SkillSummaryResponse[]>([]);
 
   useEffect(() => {
     if (!open) {
@@ -60,7 +61,7 @@ export const useProjectResourceOptions = ({
             AGENTS_PROJECT_BINDING_ENABLED
               ? listAgents()
               : Promise.resolve({ items: [] }),
-            listSkills({ bindable: true }),
+            listSkills(),
           ]);
 
         if (cancelled) {
@@ -80,14 +81,18 @@ export const useProjectResourceOptions = ({
         }
 
         if (skillResult.status === "fulfilled") {
+          setSkillItems(skillResult.value.items);
           setSkillOptions(
-            skillResult.value.items.map((item) => ({
-              value: item.id,
-              label: buildProjectSkillOptionLabel(item),
-            })),
+            skillResult.value.items
+              .filter((item) => item.source === "team" && item.bindable)
+              .map((item) => ({
+                value: item.id,
+                label: buildProjectSkillOptionLabel(item),
+              })),
           );
         } else {
           console.error(skillResult.reason);
+          setSkillItems([]);
           setSkillOptions([]);
         }
 
@@ -115,6 +120,7 @@ export const useProjectResourceOptions = ({
         console.error(loadError);
         setKnowledgeOptions([]);
         setAgentOptions([]);
+        setSkillItems([]);
         setSkillOptions([]);
       } finally {
         if (!cancelled) {
@@ -157,9 +163,20 @@ export const useProjectResourceOptions = ({
       selectedIds: selectedSkillIds,
       baseOptions: skillOptions,
       createFallbackOption: (skillId) =>
-        createUnknownResourceOption(skillId, "Skill"),
+        (() => {
+          const skill = skillItems.find((item) => item.id === skillId);
+
+          if (skill) {
+            return {
+              value: skill.id,
+              label: buildProjectSkillOptionLabel(skill),
+            };
+          }
+
+          return createUnknownResourceOption(skillId, "Skill");
+        })(),
     });
-  }, [selectedSkillIds, skillOptions]);
+  }, [selectedSkillIds, skillItems, skillOptions]);
 
   return {
     knowledgeOptionsLoading,

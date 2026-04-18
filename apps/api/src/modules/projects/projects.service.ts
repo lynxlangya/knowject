@@ -6,6 +6,7 @@ import {
 } from "@lib/validation.js";
 import type { AuthRepository } from "@modules/auth/auth.repository.js";
 import type { SkillBindingValidator } from "@modules/skills/skills.binding.js";
+import type { SkillsRepository } from "@modules/skills/skills.repository.js";
 import {
   createProjectConversationService,
   type ProjectConversationService,
@@ -233,6 +234,7 @@ export const createProjectsService = ({
   projectConversationsRepository,
   authRepository,
   skillBindingValidator,
+  skillsRepository,
   knowledgeUsage = NOOP_PROJECT_KNOWLEDGE_USAGE,
   conversationRuntime,
 }: {
@@ -240,12 +242,14 @@ export const createProjectsService = ({
   projectConversationsRepository: ProjectConversationsRepository;
   authRepository: AuthRepository;
   skillBindingValidator: SkillBindingValidator;
+  skillsRepository?: Pick<SkillsRepository, "findSkillById">;
   knowledgeUsage?: ProjectKnowledgeUsage;
   conversationRuntime?: ProjectConversationRuntime;
 }): ProjectsService => {
   const conversationService = createProjectConversationService({
     repository,
     projectConversationsRepository,
+    skillsRepository,
     conversationRuntime,
   });
 

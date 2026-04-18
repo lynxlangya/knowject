@@ -95,6 +95,7 @@ export const createSynchronousProjectConversationTurn = async ({
       project: preparedTurn.project,
       conversation: preparedTurn.conversation,
       userMessage: preparedTurn.userMessage,
+      selectedSkill: preparedTurn.selectedSkill,
     });
 
     const persistedAssistantReply =
@@ -222,6 +223,7 @@ export const createStreamingProjectConversationTurn = async ({
       project: preparedTurn.project,
       conversation: preparedTurn.conversation,
       userMessage: preparedTurn.userMessage,
+      selectedSkill: preparedTurn.selectedSkill,
       signal: options.signal,
       onSourcesSeed: async (sources) => {
         if (pendingSourcesSeed || sources.length === 0) {
