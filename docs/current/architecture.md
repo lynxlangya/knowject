@@ -12,7 +12,7 @@
 - 工程治理：`docs/standards/*`
 - 执行计划：`docs/plans/*`
 - 导出层：`docs/exports/*`，不是事实源
-- `.claude/*`：兼容摘要层，不覆盖事实源
+- `CLAUDE.md` / `.claude/*`：个人本地兼容层；可存在于本地，但不再作为仓库正式内容提交
 
 ## 2. Monorepo 拓扑
 

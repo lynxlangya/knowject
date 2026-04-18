@@ -8,11 +8,9 @@
 ## 2. 先读什么
 
 1. 根 `AGENTS.md`
-2. `.claude/rules/frontend.md`
-3. `.claude/rules/design.md`
-4. `apps/platform/README.md`
-5. `docs/current/architecture.md`
-6. 若任务在项目页，再读 `src/pages/project/AGENTS.md`
+2. `apps/platform/README.md`
+3. `docs/current/architecture.md`
+4. 若任务在项目页，再读 `src/pages/project/AGENTS.md`
 
 ## 3. 本层不能猜的事实
 

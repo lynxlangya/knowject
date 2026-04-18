@@ -57,14 +57,8 @@ docs/exports/chatgpt-projects/**
 !docs/exports/chatgpt-projects/PROJECT_BRIEF.md
 !docs/exports/chatgpt-projects/PROJECT_RULES.md
 !docs/exports/chatgpt-projects/README.md
-!.claude/
-.claude/*
-!.claude/memory/
-.claude/memory/*
-!.claude/memory/project_overview.md
-!.claude/rules/
-.claude/rules/*
-!.claude/rules/design.md
+CLAUDE.md
+.claude/
 !apps/platform/AGENTS.md
 !apps/platform/src/pages/project/AGENTS.md
 !apps/api/AGENTS.md

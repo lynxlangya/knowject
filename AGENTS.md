@@ -13,19 +13,10 @@
 
 - `AGENTS.md`：项目级长期指令入口；先看这里，再决定需要补读哪些事实源、规则或计划文档。
 
-### 1.2 Claude 风格 Memory（快速上下文，不是事实源）
+### 1.2 本地兼容层（可选，不是仓库事实源）
 
-- `.claude/memory/project_overview.md`：项目概览、当前阶段、结构 hotspot 的快速摘要。
-- `.claude/memory/user.md`：用户角色、协作偏好、提交偏好等轻量摘要。
-- 用法约束：`memory/*` 只用于“快速建立上下文”，不能覆盖源码、`docs/current/*`、`docs/contracts/*` 或本文件中的正式规则。
-
-### 1.3 Claude 风格 Rules（分领域细则，不替代主入口）
-
-- `.claude/rules/frontend.md`：前端分层、路由、i18n、Tailwind 等约束。
-- `.claude/rules/backend.md`：后端模块、路由模式、数据存储与 internal 路由约束。
-- `.claude/rules/safety.md`：secrets、env、品牌文本、文档同步等安全红线。
-- `.claude/rules/git.md`：提交草案、拆分策略、提交流程边界。
-- 用法约束：`rules/*` 用于承载稳定的领域细则；若与项目正式治理或当前实现事实冲突，应更新规则文件本身，而不是临时发明例外。
+- `CLAUDE.md` 与 `.claude/*` 若存在，只视为个人本地兼容层，不再作为仓库正式内容提交。
+- 这些本地文件只用于个人工作流加速，不能覆盖源码、`docs/current/*`、`docs/contracts/*` 或本文件中的正式规则。
 
 ### 1.4 正式事实源
 
@@ -40,9 +31,9 @@
 ### 1.5 冲突判定
 
 - 指令优先级沿用全局 AGENTS 约定。
-- 事实冲突时：源码与 `docs/current/*` 优先于 `.claude/memory/*`。
-- 治理冲突时：本文件与 `docs/standards/*` 优先于 `.claude/rules/*`。
-- 若 `.claude/*` 摘要失真，修正文档摘要本身，不把失真摘要当成例外依据。
+- 事实冲突时：源码与 `docs/current/*` 优先于任何本地兼容层摘要。
+- 治理冲突时：本文件与 `docs/standards/*` 优先于任何本地兼容层规则。
+- 若本地兼容层摘要失真，应修正个人本地文件，而不是把它当成仓库例外依据。
 
 ## 2. Root Governance
 
@@ -70,17 +61,15 @@
 - 以下变化默认触发 `docs/standards/document-sync-governance.md` 检查：Root governance、导出映射、Skill live root、工程治理标准变化。
 - 事实源同步优先级始终是：先更新 `docs/*`，再更新 `docs/exports/*`，最后修正兼容说明或摘要索引。
 - 入口文档检查默认覆盖：`README.md`、`docs/README.md`、`docs/current/architecture.md`、`docs/exports/README.md`、`docs/exports/chatgpt-projects/README.md`、`.agents/skills/README.md`、`apps/platform/README.md`、`apps/api/README.md`；`.codex/*` 兼容说明仅在对应文件实际存在时纳入检查。
-- 当变更只影响 Claude 风格摘要层时，应同步 `.claude/memory/*` 或 `.claude/rules/*`，但不得让这些摘要反向定义项目事实。
+- 当变更只影响个人本地兼容层时，不需要提交这些文件；不得让本地兼容层反向定义项目事实。
 
 ## 5. 快速路由
 
-- 需要项目现状、技术栈、当前阶段、hotspot：先看 `.claude/memory/project_overview.md`，再落回 `docs/current/architecture.md` 与源码核实。
-- 需要用户协作偏好：看 `.claude/memory/user.md`，若与当前对话冲突，以当前对话为准。
-- 需要前端实现约束：看 `.claude/rules/frontend.md`。
-- 需要前端设计系统与视觉约束：看 `.claude/rules/design.md`。
-- 需要后端实现约束：看 `.claude/rules/backend.md`。
-- 需要安全、env、品牌、文档同步红线：看 `.claude/rules/safety.md`。
-- 需要提交草案、拆分建议与 Git 边界：看 `.claude/rules/git.md`。
+- 需要项目现状、技术栈、当前阶段、hotspot：先看 `docs/current/architecture.md` 与源码。
+- 需要前端实现约束：看 `apps/platform/AGENTS.md` 与相关 `docs/current/*` / `docs/contracts/*`。
+- 需要后端实现约束：看 `apps/api/AGENTS.md` 与相关 `docs/current/*` / `docs/contracts/*`。
+- 需要安全、env、品牌、文档同步红线：看 `docs/standards/*` 与本文件。
+- 需要提交草案、拆分建议与 Git 边界：看全局 commit 规范与当前对话要求。
 - 进入以下目录时，先补读最近的子目录 `AGENTS.md`：
   - `apps/platform/`
   - `apps/platform/src/pages/project/`
@@ -92,14 +81,13 @@
 ## 6. 提交协作约定
 
 - 当任务已达到可提交状态，且用户明确要求“生成 commit 记录 / 提交信息”，或表达“我来提交代码”的意图时，默认把提交信息草案作为交付物的一部分给出。
-- 提交草案遵循全局 commit 规范与 `.claude/rules/git.md`，至少包含标题，以及 `Why`、`What`、`Validation`、`Risk` 四段正文。
+- 提交草案遵循全局 commit 规范与当前仓库正式规则，至少包含标题，以及 `Why`、`What`、`Validation`、`Risk` 四段正文。
 - 若当前工作区存在多个单一目的改动，优先拆分为多个 commit 草案，并说明推荐顺序。
 - 不得把未执行的验证、未确认的结论写入提交草案；除非用户明确要求直接提交，否则默认只生成草案，不执行 `git commit`。
 
 ## 7. 维护原则
 
 - `AGENTS.md` 只保留稳定的项目入口规则，不再重复堆放大量“当前实现细节”。
-- 高频变化的项目快照优先更新 `.claude/memory/*`。
-- 分领域稳定约束优先更新 `.claude/rules/*`。
+- 个人工作流若需要 Claude 兼容摘要或规则，应保留在本地忽略文件中，不作为仓库正式内容维护。
 - 目录级稳定差异优先通过子目录 `AGENTS.md` 承载，而不是继续扩张根入口。
 - 只有当协作主入口、优先级、truth surface、文档同步门禁或项目级覆盖规则变化时，才优先修改本文件。

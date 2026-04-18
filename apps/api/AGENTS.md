@@ -8,11 +8,10 @@
 ## 2. 先读什么
 
 1. 根 `AGENTS.md`
-2. `.claude/rules/backend.md`
-3. `apps/api/README.md`
-4. `docs/current/architecture.md`
-5. 与任务直接相关的 `docs/contracts/*`
-6. 若进入 `modules/projects` 或 `modules/knowledge`，继续读对应子目录 `AGENTS.md`
+2. `apps/api/README.md`
+3. `docs/current/architecture.md`
+4. 与任务直接相关的 `docs/contracts/*`
+5. 若进入 `modules/projects` 或 `modules/knowledge`，继续读对应子目录 `AGENTS.md`
 
 ## 3. 本层不能猜的事实
 
