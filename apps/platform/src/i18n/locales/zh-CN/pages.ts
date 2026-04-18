@@ -1,9 +1,20 @@
 export const pagesMessages = {
   home: {
-    title: "主页",
-    subtitle:
-      "在左侧「我的项目」中选择项目后，将进入项目概览、对话、资源与成员页。",
-    empty: "当前未打开项目，请从左侧项目列表进入。",
+    eyebrow: "项目知识工作台",
+    kicker: "Project memory, designed with calm.",
+    title: "欢迎来到 知项 · Knowject",
+    titleLead: "欢迎来到 知项",
+    titleBrand: "Knowject",
+    subtitle: "让项目知识，真正为团队所用。",
+    description:
+      "把分散在文档、对话与协作过程中的线索，整理成团队可以持续复用的项目记忆。",
+    hint: "从左侧选择一个项目，继续查看概览、对话、资源与成员。",
+    signature: "让项目知识，真正为团队所用。",
+    facets: {
+      knowledge: "知识沉淀",
+      conversation: "AI 对话与引用",
+      collaboration: "团队协作上下文",
+    },
   },
   notFound: {
     subtitle: "页面不存在或已被移动。",
@@ -11,8 +22,68 @@ export const pagesMessages = {
   },
   analytics: {
     title: "分析",
-    description:
-      "分析模块正在建设中，当前为独立路由占位页，后续将接入项目健康度与协作指标分析。",
+    eyebrow: "工作区概览",
+    subtitle:
+      "从跨项目视角查看当前工作区的活跃度、知识接入和需要关注的风险。",
+    status: "数据骨架已就绪",
+    summary: {
+      pending: "待接入",
+      items: {
+        activeProjects: {
+          label: "活跃项目",
+          hint: "接入正式数据后展示近 7 天有更新行为的项目数量。",
+        },
+        knowledgeConnected: {
+          label: "知识接入",
+          hint: "接入正式数据后展示已绑定知识资源的项目覆盖情况。",
+        },
+        recentConversations: {
+          label: "近 7 天对话",
+          hint: "接入正式数据后展示工作区内真实的近期对话活跃信号。",
+        },
+        attentionProjects: {
+          label: "需关注项目",
+          hint: "接入正式数据后展示当前最值得优先处理的风险项目数。",
+        },
+      },
+    },
+    chart: {
+      title: "近 7 天项目活跃趋势",
+      description: "单张趋势图保留为核心视图，用来承接工作区级活跃变化。",
+      state: "接入后实时更新",
+      frameLabel: "趋势骨架",
+      days: {
+        mon: "一",
+        tue: "二",
+        wed: "三",
+        thu: "四",
+        fri: "五",
+        sat: "六",
+        sun: "日",
+      },
+    },
+    attention: {
+      title: "当前最需关注",
+      description: "只保留值得优先处理的关注维度，避免报表化堆砌。",
+      items: {
+        indexing: {
+          label: "索引异常",
+          title: "知识链路的失败与处理中状态",
+          description: "正式数据接入后，这里会展示索引失败或长时间处理中对应的具体项目。",
+        },
+        citation: {
+          label: "引用不足",
+          title: "有对话但缺少有效引用的项目",
+          description: "正式数据接入后，这里会提示近期活跃但引用信号偏弱的项目。",
+        },
+        activity: {
+          label: "活跃偏低",
+          title: "资源已接入但近期活跃不足",
+          description: "正式数据接入后，这里会提示资源已建好但近期缺少协作动作的项目。",
+        },
+      },
+    },
+    footer: "当前首版只搭建分析骨架，后续接入正式工作区数据后会按相同结构实时更新。",
   },
   members: {
     title: "成员",

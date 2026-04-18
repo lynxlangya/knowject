@@ -1,10 +1,21 @@
 export const pagesMessages = {
   home: {
-    title: "Home",
-    subtitle:
-      "Choose a project from My Projects on the left to enter overview, chat, resources, and members.",
-    empty:
-      "No project is open yet. Enter one from the project list on the left.",
+    eyebrow: "Project knowledge workspace",
+    kicker: "Project memory, designed with calm.",
+    title: "Welcome to Knowject",
+    titleLead: "Welcome to",
+    titleBrand: "Knowject",
+    subtitle: "Make project knowledge truly usable for teams.",
+    description:
+      "Gather the signals scattered across docs, conversations, and collaboration into project memory your team can keep using.",
+    hint:
+      "Choose a project from the left to continue with overview, chat, resources, and members.",
+    signature: "Make project knowledge truly usable for teams.",
+    facets: {
+      knowledge: "Knowledge memory",
+      conversation: "AI chat and citations",
+      collaboration: "Shared team context",
+    },
   },
   notFound: {
     subtitle: "The page does not exist or has moved.",
@@ -12,8 +23,69 @@ export const pagesMessages = {
   },
   analytics: {
     title: "Analytics",
-    description:
-      "The analytics module is under construction. This route is currently a placeholder and will later connect project health and collaboration metrics.",
+    eyebrow: "Workspace overview",
+    subtitle:
+      "View activity, knowledge coverage, and the risks that need attention from a cross-project perspective.",
+    status: "Data frame ready",
+    summary: {
+      pending: "Pending",
+      items: {
+        activeProjects: {
+          label: "Active projects",
+          hint: "Live data will later show how many projects had updates in the last 7 days.",
+        },
+        knowledgeConnected: {
+          label: "Knowledge connected",
+          hint: "Live data will later show how many projects already have knowledge resources attached.",
+        },
+        recentConversations: {
+          label: "Recent conversations",
+          hint: "Live data will later surface real conversation activity signals across the workspace.",
+        },
+        attentionProjects: {
+          label: "Projects to watch",
+          hint: "Live data will later show how many projects currently need priority attention.",
+        },
+      },
+    },
+    chart: {
+      title: "Project activity over the last 7 days",
+      description: "Keep one chart as the main visual for workspace-level activity changes.",
+      state: "Updates when connected",
+      frameLabel: "Trend frame",
+      days: {
+        mon: "M",
+        tue: "T",
+        wed: "W",
+        thu: "T",
+        fri: "F",
+        sat: "S",
+        sun: "S",
+      },
+    },
+    attention: {
+      title: "Needs attention now",
+      description: "Keep only the most useful watch items instead of turning the page into a report wall.",
+      items: {
+        indexing: {
+          label: "Indexing",
+          title: "Failed or stalled knowledge processing",
+          description: "Once live data is connected, this area will list the projects affected by failed or long-running indexing states.",
+        },
+        citation: {
+          label: "Citation",
+          title: "Projects with chat activity but weak citation signals",
+          description: "Once live data is connected, this area will highlight recently active projects whose citation signals look thin.",
+        },
+        activity: {
+          label: "Activity",
+          title: "Projects with resources attached but low recent movement",
+          description: "Once live data is connected, this area will call out projects that look ready but are not seeing recent collaboration activity.",
+        },
+      },
+    },
+    footer:
+      "This first version only establishes the analytics frame. It will update in place once formal workspace data is connected.",
   },
   members: {
     title: "Members",
