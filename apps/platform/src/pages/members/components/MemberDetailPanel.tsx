@@ -18,6 +18,8 @@ interface MemberDetailPanelProps {
   member: MemberViewModel | null;
 }
 
+const EMPTY_MEMBER_PROJECTS: MemberViewModel["projects"] = [];
+
 const renderAssetGroups = (
   assets: MemberAssetSummary,
   t: ReturnType<typeof useTranslation<"pages">>["t"],
@@ -83,25 +85,19 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
   const collaborationRoleLabels = getCollaborationRoleLabels(t);
   const memberStatusMeta = getMemberStatusMeta(t);
   const projectAccessRoleLabels = getProjectAccessRoleLabels(t);
-
-  if (!member) {
-    return (
-      <div className="flex h-full min-h-0 items-center justify-center">
-        <Empty description={t("members.detail.selectPrompt")} />
-      </div>
-    );
-  }
-
-  const METRIC_STAGGER = 60;
-  const statusMeta = memberStatusMeta[member.primaryStatus];
+  const memberProjects = member?.projects ?? EMPTY_MEMBER_PROJECTS;
 
   const adminProjects = useMemo(
-    () => member.projects.filter((project) => project.projectRole === "admin"),
-    [member.projects],
+    () => memberProjects.filter((project) => project.projectRole === "admin"),
+    [memberProjects],
   );
 
-  const summaryStats = useMemo(
-    () => [
+  const summaryStats = useMemo(() => {
+    if (!member) {
+      return [];
+    }
+
+    return [
       {
         label: t("members.detail.firstCollaboration"),
         value: formatDisplayDate(member.firstCollaborationAt, i18n.language, t),
@@ -122,9 +118,19 @@ export const MemberDetailPanel = ({ member }: MemberDetailPanelProps) => {
         label: t("members.detail.projectStatusBreakdown"),
         value: `${member.activeProjectCount}/${member.syncingProjectCount}/${member.blockedProjectCount}/${member.idleProjectCount}`,
       },
-    ],
-    [member, t, i18n.language],
-  );
+    ];
+  }, [member, t, i18n.language]);
+
+  if (!member) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center">
+        <Empty description={t("members.detail.selectPrompt")} />
+      </div>
+    );
+  }
+
+  const METRIC_STAGGER = 60;
+  const statusMeta = memberStatusMeta[member.primaryStatus];
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-5 overflow-hidden">

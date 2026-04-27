@@ -164,12 +164,6 @@ export const ProjectChatPage = () => {
   const selectedConversationSkill =
     availableConversationSkills.find((skill) => skill.id === selectedSkillId) ?? null;
 
-  useEffect(() => {
-    if (selectedSkillId && !selectedConversationSkill) {
-      setSelectedSkillId(null);
-    }
-  }, [selectedConversationSkill, selectedSkillId]);
-
   const {
     chatSettingsLoading,
     chatSettingsError,
