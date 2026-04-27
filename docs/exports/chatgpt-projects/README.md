@@ -17,3 +17,7 @@
 - `CURRENT_ARCHITECTURE.md`
 - `PROJECT_BRIEF.md`
 - `GAP_ANALYSIS.md`
+
+如果要把 Knowject 作为简历核心项目展示，可额外使用：
+
+- `RESUME_CORE_PROJECT.md`
