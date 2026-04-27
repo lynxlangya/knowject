@@ -80,6 +80,18 @@ const createProjectConversationLlmUpstreamError = (
   });
 };
 
+const OPENAI_DEFAULT_TEMPERATURE_ONLY_MODEL_PATTERN = /^gpt-5(?:$|[-.])/i;
+const PROJECT_CONVERSATION_TEMPERATURE = 0.2;
+
+const shouldUseProjectConversationTemperature = (
+  llmConfig: EffectiveLlmConfig,
+): boolean => {
+  return !(
+    llmConfig.provider === "openai" &&
+    OPENAI_DEFAULT_TEMPERATURE_ONLY_MODEL_PATTERN.test(llmConfig.model.trim())
+  );
+};
+
 const extractOpenAiCompatibleTextContent = (content: unknown): string => {
   if (typeof content === "string") {
     return content;
@@ -285,7 +297,9 @@ const createOpenAiCompatibleRequestInit = ({
     body: JSON.stringify({
       model: llmConfig.model,
       messages,
-      temperature: 0.2,
+      ...(shouldUseProjectConversationTemperature(llmConfig)
+        ? { temperature: PROJECT_CONVERSATION_TEMPERATURE }
+        : {}),
       ...(stream ? { stream: true } : {}),
     }),
     signal: applyRequestTimeout

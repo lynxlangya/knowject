@@ -620,6 +620,8 @@ type CapturedLlmRequest = {
   body: {
     model?: string;
     messages?: Array<{ role: string; content: string }>;
+    temperature?: number;
+    stream?: boolean;
   };
 };
 
@@ -6121,6 +6123,8 @@ test('createProjectConversationRuntime uses merged retrieval and returns normali
     const latestPromptMessage = persistedMessages[persistedMessages.length - 1];
     assert.match(answerRequest.url, /https:\/\/api\.openai\.com\/v1\/chat\/completions/);
     assert.equal(answerRequest.body.model, 'gpt-5.4');
+    assert.equal(answerRequest.body.temperature, undefined);
+    assert.equal(groundingRequest.body.temperature, undefined);
     assert.match(
       latestPromptMessage?.content ?? '',
       /architecture\.md/,
@@ -6216,9 +6220,11 @@ test('createProjectConversationRuntime streams deltas from an OpenAI-compatible 
   global.fetch = async (_input, init) => {
     const body = JSON.parse(String(init?.body ?? '{}')) as {
       stream?: boolean;
+      temperature?: number;
     };
 
     if (body.stream) {
+      assert.equal(body.temperature, undefined);
       return createAbortAwareSseResponse({
         signal: init?.signal ?? undefined,
         encoder,
@@ -6774,6 +6780,7 @@ test('createProjectConversationRuntime accepts all configured supported provider
       const body = JSON.parse(String(init?.body ?? '{}')) as {
         model?: string;
         messages?: Array<{ content?: string }>;
+        temperature?: number;
       };
       const latestPrompt = body.messages?.[body.messages.length - 1]?.content ?? '';
 
@@ -6787,6 +6794,10 @@ test('createProjectConversationRuntime accepts all configured supported provider
         ).toString(),
       );
       assert.equal(body.model, activeProviderCase.model);
+      assert.equal(
+        body.temperature,
+        activeProviderCase.provider === 'openai' ? undefined : 0.2,
+      );
 
       if (/结构化 citation JSON/.test(latestPrompt)) {
         return new Response(
