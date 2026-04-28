@@ -118,22 +118,32 @@ export const LoginPage = () => {
     message.info(t('messages.forgotPassword'));
   };
 
+  const loginShellClassName = [
+    'flow-anim relative z-10 grid w-full max-w-[70rem] overflow-hidden rounded-shell bg-white shadow-[0_18px_48px_rgba(28,48,64,0.10),0_2px_10px_rgba(28,48,64,0.05)] grid-cols-[43%_57%] animate-[liftIn_260ms_ease-out_both]',
+    mode === 'register'
+      ? 'h-auto min-h-[min(760px,calc(100dvh-48px))]'
+      : 'h-[min(660px,calc(100dvh-88px))] min-h-[35rem]',
+    'max-[1080px]:grid-cols-[40%_60%] max-[960px]:h-auto max-[960px]:min-h-0 max-[960px]:grid-cols-1 max-[560px]:rounded-panel',
+  ].join(' ');
+
   return (
     <Layout
       className="min-h-screen"
       style={{
         backgroundImage: LOGIN_PAGE_BACKGROUND,
+        minHeight: '100dvh',
       }}
     >
-      <Content className="relative grid h-screen place-items-center overflow-hidden px-6 py-5 max-[960px]:p-3.5 max-[560px]:p-2">
+      <Content
+        className="relative grid place-items-center overflow-y-auto overflow-x-hidden px-6 py-6 max-[960px]:items-start max-[960px]:px-3.5 max-[960px]:py-5 max-[560px]:px-2.5 max-[560px]:py-3"
+        style={{
+          minHeight: '100dvh',
+        }}
+      >
         <LoginFlowBackground />
 
         <main
-          className="flow-anim relative z-10 grid w-full max-w-295 overflow-hidden rounded-shell border border-slate-200/95 bg-white/85 shadow-[0_10px_26px_rgba(15,23,42,0.06),0_24px_56px_rgba(15,23,42,0.08)] backdrop-blur-sm grid-cols-[56%_44%] animate-[liftIn_260ms_ease-out_both] max-[1199px]:grid-cols-[52%_48%] max-[960px]:h-auto max-[960px]:min-h-[calc(100dvh-28px)] max-[960px]:grid-cols-1 max-[560px]:min-h-[calc(100vh-20px)] max-[560px]:rounded-panel"
-          style={{
-            height: 'min(720px, calc(100vh - 120px))',
-            minHeight: '580px',
-          }}
+          className={loginShellClassName}
           aria-label="知项登录入口"
         >
           <LoginHeroPanel />

@@ -54,8 +54,8 @@ export const authMessages = {
   },
   hero: {
     features: {
-      deliveryBoost: 'Boost project delivery efficiency by 40%',
-      contextUnderstanding: 'Understand project context quickly in the right working context',
+      projectKnowledge: 'Project knowledge base',
+      teamContext: 'Team context',
     },
   },
 };

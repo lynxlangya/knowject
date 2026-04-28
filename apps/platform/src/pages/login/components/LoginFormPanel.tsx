@@ -46,11 +46,11 @@ export const LoginFormPanel = ({
   };
 
   return (
-    <section className="relative z-1 flex flex-col p-[clamp(30px,3.6vw,52px)] max-[960px]:px-5.5 max-[960px]:py-7 max-[560px]:px-3.5 max-[560px]:py-5.5">
-      <div>
-        <div className="mb-6">
-          <div className="mb-5 flex items-start justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
-            <div className="inline-flex w-fit items-center rounded-full border border-slate-200/80 bg-white/85 p-1 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+    <section className="relative z-1 flex flex-col bg-[#FBFDFC] p-[clamp(34px,4vw,58px)] max-[960px]:px-6 max-[960px]:py-8 max-[560px]:px-5 max-[560px]:py-6">
+      <div className="mx-auto flex w-full max-w-[28rem] flex-1 flex-col">
+        <div className="mb-7">
+          <div className="mb-8 flex justify-end max-[560px]:mb-6 max-[560px]:justify-start">
+            <div className="inline-flex w-fit items-center rounded-full bg-[#EDF5F3] p-1 shadow-[inset_0_0_0_1px_rgba(111,142,137,0.16)]">
               {LOGIN_LOCALE_OPTIONS.map((option) => {
                 const active = option.locale === locale;
 
@@ -59,18 +59,11 @@ export const LoginFormPanel = ({
                     key={option.locale}
                     type="button"
                     className={[
-                      'rounded-full px-3 py-1.5 text-xs font-semibold tracking-[0.01em] transition-colors',
+                      'min-h-8 rounded-full px-3 py-1 text-xs font-semibold transition-[background-color,color,box-shadow,transform] duration-150 active:scale-[0.96]',
                       active
-                        ? 'text-white! shadow-[0_8px_18px_rgba(27,80,183,0.24)]'
-                        : 'text-slate-500 hover:text-slate-900',
+                        ? 'bg-white text-[#163A36] shadow-[0_2px_8px_rgba(28,48,64,0.10)]'
+                        : 'text-[#6F8E89] [@media(hover:hover)]:hover:text-[#243635]',
                     ].join(' ')}
-                    style={
-                      active
-                        ? {
-                            backgroundImage: KNOWJECT_BRAND.navGradient,
-                          }
-                        : undefined
-                    }
                     onClick={() => {
                       void onLocaleChange(option.locale);
                     }}
@@ -84,20 +77,19 @@ export const LoginFormPanel = ({
 
           <Typography.Title
             level={2}
-            className="m-0! text-display-lg! font-[780]! leading-[1.04]! tracking-[-0.02em]! text-slate-900! max-[1199px]:text-[46px]! max-[960px]:text-[38px]! max-[560px]:text-3xl!"
+            className="m-0! text-[clamp(36px,4vw,46px)]! font-[760]! leading-[1.03]! tracking-[-0.02em]! text-[#0F172A]! max-[560px]:text-[32px]!"
           >
             {isRegisterMode ? t('register.title') : t('login.title')}
           </Typography.Title>
-          <Typography.Paragraph className="mb-0! mt-2.5! text-body! text-slate-500!">
+          <Typography.Paragraph className="mb-0! mt-3! text-body! leading-relaxed! text-[#607670]!">
             {isRegisterMode ? t('register.subtitle') : t('login.subtitle')}
           </Typography.Paragraph>
-          <div className="mt-3 inline-flex items-center gap-2 text-sm text-slate-500">
+          <div className="mt-3 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[#607670]">
             <span>{isRegisterMode ? t('register.hasAccount') : t('login.noAccount')}</span>
             <button
               type="button"
               onClick={() => onModeChange(isRegisterMode ? 'login' : 'register')}
-              className="cursor-pointer border-none bg-transparent p-0 font-semibold transition-opacity hover:opacity-90"
-              style={{ color: KNOWJECT_BRAND.primaryHover }}
+              className="cursor-pointer border-none bg-transparent p-0 font-semibold text-[#168E7B] transition-opacity [@media(hover:hover)]:hover:opacity-80"
             >
               {isRegisterMode ? t('register.action') : t('login.action')}
             </button>
@@ -192,12 +184,12 @@ export const LoginFormPanel = ({
             </Form.Item>
 
             {isRegisterMode ? (
-              <div className="text-sm text-slate-400">{t('register.directEntryHint')}</div>
+              <div className="text-sm text-[#7C9691]">{t('register.directEntryHint')}</div>
             ) : (
               <Button
-                className="p-0! font-medium! hover:opacity-90!"
+                className="p-0! font-medium! transition-opacity! [@media(hover:hover)]:hover:opacity-80!"
                 type="link"
-                style={{ color: KNOWJECT_BRAND.primary }}
+                style={{ color: KNOWJECT_BRAND.primaryText }}
                 onClick={onForgotPassword}
               >
                 {t('actions.forgotPassword')}
@@ -209,10 +201,10 @@ export const LoginFormPanel = ({
             <Button
               type="primary"
               htmlType="submit"
-              className="h-14! rounded-hero! border-none! text-base! font-bold! tracking-[0.01em]! transition-all! duration-200! hover:-translate-y-px! active:translate-y-0!"
+              className="h-[54px]! rounded-hero! border-none! text-base! font-bold! transition-[box-shadow,transform,background-color]! duration-200! [@media(hover:hover)]:hover:-translate-y-px! active:scale-[0.96]!"
               style={{
-                backgroundImage: KNOWJECT_BRAND.navGradient,
-                boxShadow: `0 8px 20px ${KNOWJECT_BRAND.primaryGlow}, inset 0 0 0 1px rgba(255,255,255,0.34)`,
+                background: '#123765',
+                boxShadow: '0 12px 24px rgba(18,55,101,0.18)',
               }}
               loading={loading}
               block
@@ -224,25 +216,23 @@ export const LoginFormPanel = ({
       </div>
 
       {isRegisterMode ? (
-        <Typography.Paragraph className="mb-0! mt-auto! pt-8 text-center text-sm! text-slate-500!">
+        <Typography.Paragraph className="mb-0! mt-auto! pt-7 text-center text-sm! text-[#607670]! max-[960px]:pt-6">
           {t('register.hasAccount')}
           <button
             type="button"
             onClick={() => onModeChange('login')}
-            className="cursor-pointer border-none bg-transparent p-0 font-semibold transition-opacity hover:opacity-90"
-            style={{ color: KNOWJECT_BRAND.primaryHover }}
+            className="cursor-pointer border-none bg-transparent p-0 font-semibold text-[#168E7B] transition-opacity [@media(hover:hover)]:hover:opacity-80"
           >
             {t('register.footerAction')}
           </button>
         </Typography.Paragraph>
       ) : (
-        <Typography.Paragraph className="mb-0! mt-auto! pt-8 text-center text-sm! text-slate-500!">
+        <Typography.Paragraph className="mb-0! mt-auto! pt-7 text-center text-sm! text-[#607670]! max-[960px]:pt-6">
           {t('actions.help')}
           <button
             type="button"
             onClick={onForgotPassword}
-            className="cursor-pointer border-none bg-transparent p-0 font-semibold transition-opacity hover:opacity-90"
-            style={{ color: KNOWJECT_BRAND.primaryHover }}
+            className="cursor-pointer border-none bg-transparent p-0 font-semibold text-[#168E7B] transition-opacity [@media(hover:hover)]:hover:opacity-80"
           >
             {t('actions.contactSupport')}
           </button>

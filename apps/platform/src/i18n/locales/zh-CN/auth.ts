@@ -54,8 +54,8 @@ export const authMessages = {
   },
   hero: {
     features: {
-      deliveryBoost: '提升项目交付效率达 40%',
-      contextUnderstanding: '在真实语境中快速理解项目上下文',
+      projectKnowledge: '项目知识库',
+      teamContext: '团队上下文',
     },
   },
 };
