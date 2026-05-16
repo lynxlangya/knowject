@@ -2,7 +2,7 @@
 
 Cross-role collaboration Skills for Claude Code and Codex. Project-anchored. Opinionated.
 
-> Status: Phase 2 in progress. Shipped: `knowject-context-init`, `knowject-read-api`, `knowject-prd-to-mock`. Pending: `knowject-read-design`.
+> Status: Tier 1 complete. Shipped: `knowject-context-init`, `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`. Next: Tier 2 roadmap.
 
 ---
 
@@ -14,7 +14,7 @@ Three audiences, three core scenarios:
 |---|---|---|
 | Product / PM | Turn a written requirement into a high-fidelity HTML mock | `knowject-prd-to-mock` |
 | Frontend + Backend | Discover API endpoints during integration; generate a typed client | `knowject-read-api` |
-| Design -> Frontend | Turn a UI mock into component code | `knowject-read-design` (Phase 2) |
+| Design -> Frontend | Turn a UI mock into component code | `knowject-read-design` |
 | Everyone | Anchor the Skills to your project (stack, brand, paths) | `knowject-context-init` |
 
 Each Skill reads `knowject/context.yaml` in your project to ground its output in your brand, your tech stack, and your conventions instead of producing generic AI output.
@@ -126,7 +126,6 @@ See [LICENSE](./LICENSE). Source-available: personal evaluation and non-commerci
 ## Status & Roadmap
 
 - [x] Phase 1: `skills/` scaffold, schema, `knowject-context-init`, install/verify scripts
-- [ ] Phase 2: `knowject-read-design`
-- [x] Phase 2 (partial): `knowject-read-api`, `knowject-prd-to-mock`
-- [ ] Phase 3: Tier 2 - `api-to-types`, `mock-to-api`, `prd-validate`, `changelog`
+- [x] Phase 2: `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`
+- [ ] Phase 3: Tier 2 — `api-to-types`, `mock-to-api`, `prd-validate`, `changelog`
 - [ ] Phase 4: Claude Code plugin manifest, official marketplace listing
