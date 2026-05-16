@@ -1,0 +1,4 @@
+interface:
+  display_name: "PLACEHOLDER"
+  short_description: "PLACEHOLDER"
+  default_prompt: "PLACEHOLDER $knowject-read-api"
