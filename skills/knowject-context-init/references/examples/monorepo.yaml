@@ -1,0 +1,46 @@
+# skills/knowject-context-init/references/examples/monorepo.yaml
+# Example: pnpm monorepo with apps/web + apps/server (generic SaaS shape)
+# Naming is intentionally generic — Knowject Skills must work for any project,
+# not be tied to a specific host repo.
+knowject_version: "0.1"
+
+project:
+  name: acme-platform
+  description: Internal SaaS platform monorepo
+  type: monorepo
+  locale: en
+
+stack:
+  package_manager: pnpm@10
+  frontend:
+    framework: react@19
+    bundler: vite@7
+    ui: antd@6
+    styling: tailwind@4
+    language: typescript@5.9
+  backend:
+    framework: express@4
+    language: typescript@5.9
+    database: mongodb@7
+
+design:
+  sources:
+    - path: files/designs/
+      format: png
+  output:
+    components_dir: apps/web/src/components
+    pages_dir: apps/web/src/pages
+
+api:
+  sources:
+    - format: express
+      path: apps/server/src/modules
+  client:
+    wrapper: "@acme/request"
+    output_dir: apps/web/src/api
+
+brand:
+  primary_color: "#1677ff"
+  font_family: "Inter, system-ui"
+  voice: "professional, concise"
+  reference_mocks: []

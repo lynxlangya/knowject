@@ -1,0 +1,32 @@
+# skills/knowject-context-init/references/examples/frontend-only.yaml
+# Example: pure frontend SPA, no backend
+knowject_version: "0.1"
+
+project:
+  name: my-portfolio
+  description: Personal portfolio site
+  type: frontend-only
+  locale: en
+
+stack:
+  package_manager: pnpm@9
+  frontend:
+    framework: react@19
+    bundler: vite@5
+    ui: shadcn
+    styling: tailwind@3
+    language: typescript@5.5
+
+design:
+  sources:
+    - path: design/
+      format: figma-export
+  output:
+    components_dir: src/components
+    pages_dir: src/pages
+
+brand:
+  primary_color: "#0ea5e9"
+  font_family: "Inter, system-ui"
+  voice: "minimal, technical"
+  reference_mocks: []

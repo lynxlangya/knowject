@@ -1,0 +1,44 @@
+# skills/knowject-context-init/references/examples/full-stack.yaml
+# Example: classic frontend/ + backend/ split (not a monorepo workspace)
+knowject_version: "0.1"
+
+project:
+  name: blog-platform
+  description: Multi-tenant blog platform
+  type: full-stack
+  locale: en
+
+stack:
+  package_manager: pnpm@9
+  frontend:
+    framework: vue@3
+    bundler: vite@5
+    ui: naive
+    styling: tailwind@3
+    language: typescript@5.6
+  backend:
+    framework: nest@10
+    language: typescript@5.6
+    database: mysql@8
+
+design:
+  sources:
+    - path: frontend/design/
+      format: png
+  output:
+    components_dir: frontend/src/components
+    pages_dir: frontend/src/views
+
+api:
+  sources:
+    - format: nest
+      path: backend/src/modules
+  client:
+    wrapper: axios
+    output_dir: frontend/src/api
+
+brand:
+  primary_color: "#10b981"
+  font_family: "Lato, sans-serif"
+  voice: "friendly, approachable"
+  reference_mocks: []
