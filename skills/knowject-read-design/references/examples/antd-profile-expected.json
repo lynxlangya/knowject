@@ -1,0 +1,12 @@
+{
+  "framework": "react",
+  "framework_version": "19",
+  "ui_library": "antd",
+  "ui_library_version": "6",
+  "styling": "tailwind",
+  "language": "typescript",
+  "component_extension": "tsx",
+  "components_dir": "apps/platform/src/components",
+  "pages_dir": "apps/platform/src/pages",
+  "import_template": "import { <Component> } from 'antd';"
+}
