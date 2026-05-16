@@ -1,11 +1,11 @@
 {
   "source": "express-input.routes.ts",
   "endpoints": [
-    { "method": "GET",    "path": "/users",                              "params": [],                  "line": 6 },
-    { "method": "GET",    "path": "/users/:id",                          "params": ["id"],              "line": 10 },
-    { "method": "POST",   "path": "/users",                              "params": [],                  "line": 14 },
-    { "method": "PATCH",  "path": "/users/:id",                          "params": ["id"],              "line": 18 },
-    { "method": "DELETE", "path": "/users/:id",                          "params": ["id"],              "line": 22 },
-    { "method": "GET",    "path": "/orders/:orderId/items/:itemId",      "params": ["orderId", "itemId"], "line": 26 }
+    { "method": "GET",    "path": "/users",                              "params": [],                  "line": 7 },
+    { "method": "GET",    "path": "/users/:id",                          "params": ["id"],              "line": 11 },
+    { "method": "POST",   "path": "/users",                              "params": [],                  "line": 15 },
+    { "method": "PATCH",  "path": "/users/:id",                          "params": ["id"],              "line": 19 },
+    { "method": "DELETE", "path": "/users/:id",                          "params": ["id"],              "line": 23 },
+    { "method": "GET",    "path": "/orders/:orderId/items/:itemId",      "params": ["orderId", "itemId"], "line": 27 }
   ]
 }
