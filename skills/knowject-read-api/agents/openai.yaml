@@ -1,4 +1,6 @@
+# skills/knowject-read-api/agents/openai.yaml
+# Codex adapter for knowject-read-api Skill.
 interface:
-  display_name: "PLACEHOLDER"
-  short_description: "PLACEHOLDER"
-  default_prompt: "PLACEHOLDER $knowject-read-api"
+  display_name: "Knowject Read API"
+  short_description: "Discover backend API endpoints from Express or OpenAPI sources declared in knowject/context.yaml, and generate a typed client using the project's HTTP wrapper."
+  default_prompt: "Use $knowject-read-api to read knowject/context.yaml#api, scan api.sources[*] (format=express|openapi), and either answer discovery questions about the endpoint inventory or generate a typed-client TypeScript file under api.client.output_dir using api.client.wrapper. Prefer the deterministic extractor scripts in skills/knowject-read-api/scripts/ over ad-hoc grep when source format matches."
