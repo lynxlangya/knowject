@@ -11,7 +11,7 @@ homepage: https://github.com/langya/knowject
 skills:
   - knowject-context-init
   - knowject-read-api
+  - knowject-prd-to-mock
 # Tier 2 placeholders (not yet implemented):
 roadmap:
   - knowject-read-design
-  - knowject-prd-to-mock
