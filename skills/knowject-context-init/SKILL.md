@@ -109,9 +109,9 @@ If the user answers "暂无" / "later" to design or api blocks, omit those entir
    Knowject Skills 已就绪。
 
    下一步你可以：
-     - 让 read-design Skill 把 UI 稿写成组件代码
-     - 让 prd-to-mock Skill 把需求文字变成 HTML 原型
-     - 让 read-api Skill 发现并消费后端 API
+     - 让 knowject-read-design Skill 把 UI 稿写成组件代码
+     - 让 knowject-prd-to-mock Skill 把需求文字变成 HTML 原型
+     - 让 knowject-read-api Skill 发现并消费后端 API
 
    配置文件: knowject/context.yaml
    有任何字段不对，直接编辑即可。

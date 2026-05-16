@@ -22,6 +22,8 @@ fi
 
 failures=0
 checks=0
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 
 note() { echo "→ $1"; checks=$((checks+1)); }
 fail() { echo "❌ $1" >&2; failures=$((failures+1)); }
@@ -102,6 +104,55 @@ for f in "$SKILLS_DIR"/knowject-context-init/references/examples/*.yaml; do
   fi
 done
 [ "$all_ok" -eq 1 ] && pass "all example yamls validate"
+
+# 6. context.yaml schema rejects malformed project blocks without traceback
+note "context.yaml schema rejects non-mapping project"
+bad_project="$TMP_DIR/bad-project.yaml"
+cat > "$bad_project" <<'YAML'
+knowject_version: "0.1"
+project: invalid
+stack:
+  package_manager: pnpm@10
+YAML
+if output=$(python3 "$SKILLS_DIR/_shared/schema.py" "$bad_project" 2>&1); then
+  fail "bad project unexpectedly passed schema"
+elif echo "$output" | grep -q "Traceback"; then
+  fail "bad project produced traceback"
+elif echo "$output" | grep -q "project: expected mapping"; then
+  pass "non-mapping project reports validation error"
+else
+  fail "bad project did not report expected project mapping error"
+fi
+
+# 7. context.yaml schema rejects forbidden env/secret fields
+note "context.yaml schema rejects forbidden env fields"
+forbidden_fields="$TMP_DIR/forbidden-fields.yaml"
+cat > "$forbidden_fields" <<'YAML'
+knowject_version: "0.1"
+project:
+  name: Demo
+  description: Demo project
+  type: backend-only
+  locale: zh
+stack:
+  package_manager: pnpm@10
+  backend:
+    framework: Express
+    language: TypeScript
+api:
+  sources:
+    - format: express
+      path: apps/api/src/modules
+      base_url: https://api.example.com
+  api_key: should-not-live-here
+YAML
+if output=$(python3 "$SKILLS_DIR/_shared/schema.py" "$forbidden_fields" 2>&1); then
+  fail "forbidden env fields unexpectedly passed schema"
+elif echo "$output" | grep -q "api.sources\[0\].base_url" && echo "$output" | grep -q "api.api_key"; then
+  pass "forbidden env fields report validation errors"
+else
+  fail "forbidden env fields did not report expected validation errors"
+fi
 
 # Report
 echo ""

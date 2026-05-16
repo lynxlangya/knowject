@@ -1,7 +1,7 @@
 # skills/knowject-context-init/references/examples/backend-only.yaml
 # Example: pure backend service, no frontend
 # Note: api.client is omitted because there is no frontend caller; backend-only Skills
-# (e.g. read-api in discovery mode) operate on api.sources alone.
+# (e.g. knowject-read-api in discovery mode) operate on api.sources alone.
 knowject_version: "0.1"
 
 project:

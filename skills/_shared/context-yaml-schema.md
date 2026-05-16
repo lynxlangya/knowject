@@ -15,7 +15,7 @@ api: {...}          # optional (recommended when backend exists)
 brand: {...}        # optional (recommended when frontend exists)
 ```
 
-**Partial config is legal.** You can ship a valid `context.yaml` with only `project` + `stack`. Skills that need a missing block (e.g., `read-design` needs `design`) will refuse to run on that block and report which fields you must add. They will not fabricate values.
+**Partial config is legal.** You can ship a valid `context.yaml` with only `project` + `stack`. Skills that need a missing block (e.g., `knowject-read-design` needs `design`) will refuse to run on that block and report which fields you must add. They will not fabricate values.
 
 ## `project` (required)
 

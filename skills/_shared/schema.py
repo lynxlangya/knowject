@@ -41,6 +41,18 @@ DESIGN_FORMATS = {"png", "figma-export", "pdf", "sketch", "url"}
 API_FORMATS = {"express", "openapi", "fastapi", "nest", "markdown"}
 HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 SCHEMA_VERSIONS = {"0.1"}
+FORBIDDEN_KEY_SUFFIXES = (
+    "apikey",
+    "baseurl",
+    "connectionstring",
+    "credential",
+    "credentials",
+    "databaseurl",
+    "dburl",
+    "password",
+    "secret",
+    "token",
+)
 
 
 # ---------- helpers ----------
@@ -52,8 +64,36 @@ def _is_str(v: Any) -> bool:
     return isinstance(v, str) and v != ""
 
 
+def _normalize_key(key: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", key.lower())
+
+
+def _is_forbidden_key(key: Any) -> bool:
+    if not isinstance(key, str):
+        return False
+    normalized = _normalize_key(key)
+    return any(normalized.endswith(suffix) for suffix in FORBIDDEN_KEY_SUFFIXES)
+
+
+def _check_forbidden_fields(value: Any, path: str, errors: list[str]) -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            key_path = f"{path}.{key}" if path else str(key)
+            if _is_forbidden_key(key):
+                _err(
+                    errors,
+                    key_path,
+                    "forbidden environment/secret field; use .env or deployment config",
+                )
+            _check_forbidden_fields(child, key_path, errors)
+    elif isinstance(value, list):
+        for i, child in enumerate(value):
+            item_path = f"{path}[{i}]" if path else f"[{i}]"
+            _check_forbidden_fields(child, item_path, errors)
+
+
 def _check_required_keys(
-    block: dict, required: list[str], path: str, errors: list[str]
+    block: Any, required: list[str], path: str, errors: list[str]
 ) -> None:
     if not isinstance(block, dict):
         _err(errors, path, f"expected mapping, got {type(block).__name__}")
@@ -66,7 +106,12 @@ def _check_required_keys(
 
 
 # ---------- block validators ----------
-def validate_project(block: dict, errors: list[str]) -> None:
+def validate_project(block: Any, errors: list[str]) -> None:
+    if not isinstance(block, dict):
+        _check_required_keys(
+            block, ["name", "description", "type", "locale"], "project", errors
+        )
+        return
     _check_required_keys(
         block, ["name", "description", "type", "locale"], "project", errors
     )
@@ -191,6 +236,7 @@ def validate(doc: dict) -> list[str]:
     errors: list[str] = []
     if not isinstance(doc, dict):
         return ["root: expected mapping"]
+    _check_forbidden_fields(doc, "", errors)
 
     ver = doc.get("knowject_version")
     if ver not in SCHEMA_VERSIONS:
@@ -207,7 +253,7 @@ def validate(doc: dict) -> list[str]:
         validate_project(project, errors)
 
     stack = doc.get("stack")
-    project_type = (project or {}).get("type", "")
+    project_type = project.get("type", "") if isinstance(project, dict) else ""
     if stack is None:
         _err(errors, "stack", "required block missing")
     else:
