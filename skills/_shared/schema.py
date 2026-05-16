@@ -61,6 +61,8 @@ def _check_required_keys(
     for k in required:
         if k not in block:
             _err(errors, path, f"missing required field '{k}'")
+        elif not _is_str(block[k]):
+            _err(errors, f"{path}.{k}", "required non-empty string")
 
 
 # ---------- block validators ----------
