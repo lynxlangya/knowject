@@ -217,6 +217,48 @@ else
   fail "extract-brand-brief.py missing"
 fi
 
+# 11. extract-framework-profile.py - antd fixture round-trip
+note "extract-framework-profile.py matches antd fixture"
+if [ -f "$SKILLS_DIR/knowject-read-design/scripts/extract-framework-profile.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-read-design/references/examples/antd-profile-expected.json"
+  inp_file="$SKILLS_DIR/knowject-read-design/references/examples/antd-profile-input.yaml"
+  if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
+    actual_norm=$(python3 "$SKILLS_DIR/knowject-read-design/scripts/extract-framework-profile.py" "$inp_file" \
+      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True, ensure_ascii=False))")
+    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True, ensure_ascii=False))")
+    if [ "$actual_norm" = "$expected_norm" ]; then
+      pass "framework profile (antd) matches expected"
+    else
+      fail "framework profile (antd) output differs (see antd-profile-expected.json)"
+    fi
+  else
+    fail "antd profile fixture missing"
+  fi
+else
+  fail "extract-framework-profile.py missing"
+fi
+
+# 12. extract-framework-profile.py - shadcn fixture round-trip
+note "extract-framework-profile.py matches shadcn fixture"
+if [ -f "$SKILLS_DIR/knowject-read-design/scripts/extract-framework-profile.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-read-design/references/examples/shadcn-profile-expected.json"
+  inp_file="$SKILLS_DIR/knowject-read-design/references/examples/shadcn-profile-input.yaml"
+  if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
+    actual_norm=$(python3 "$SKILLS_DIR/knowject-read-design/scripts/extract-framework-profile.py" "$inp_file" \
+      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True, ensure_ascii=False))")
+    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True, ensure_ascii=False))")
+    if [ "$actual_norm" = "$expected_norm" ]; then
+      pass "framework profile (shadcn) matches expected"
+    else
+      fail "framework profile (shadcn) output differs (see shadcn-profile-expected.json)"
+    fi
+  else
+    fail "shadcn profile fixture missing"
+  fi
+else
+  fail "extract-framework-profile.py missing"
+fi
+
 # Report
 echo ""
 echo "Checks: $checks | Failures: $failures"
