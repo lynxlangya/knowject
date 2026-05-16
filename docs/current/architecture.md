@@ -26,6 +26,7 @@ packages/
   ui/          共享 UI 组件
 docs/          正式文档主源
 .agents/       仓库共享 skills
+skills/        Knowject Skills 对外发行物（独立 lifecycle，可未来抽 repo）
 .codex/        项目级 Codex 配置
 ```
 
@@ -63,6 +64,13 @@ docs/          正式文档主源
 - `packages/request`：共享请求封装、统一错误处理、请求去重与下载辅助。
 - `packages/ui`：共享 UI 组件。
 - 当前 packages 不承载业务真相源。
+
+### `skills/`
+
+- 对外发行的 Knowject Skills 包，供 Claude Code 与 Codex 消费。
+- 与 `.agents/skills/` 完全独立：前者面向所有项目的协作场景，后者只服务本仓库内部治理。
+- 不依赖 `apps/*` 或 `packages/*`；可独立抽离为独立 repo。
+- Skill 与 schema 详情：`skills/README.md`、`skills/_shared/context-yaml-schema.md`。
 
 ## 4. 当前主要业务主链路
 

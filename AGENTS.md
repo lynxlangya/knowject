@@ -40,6 +40,7 @@
 - `docs/` 是唯一正式文档主源；truth surface 按目录边界管理。
 - `docs/exports/` 是派生导出层，不承担事实源职责；当前 live 导出入口是 `docs/exports/chatgpt-projects/*`。
 - 项目级 Skill 的 live 根目录是 `.agents/skills/`；`.codex/` 仅保留 Codex 配置与兼容说明。
+- `skills/` 是对外发行物的 live root：跨角色协作 Skill 包（Claude Code + Codex 消费），对外用户通过 `bash skills/scripts/install.sh` 安装。它与 `.agents/skills/`（仓库内部开发治理 Skill）互不替代，目录、target、license 都独立。新增 / 修改 `skills/*` 时，遵循 `skills/_shared/contributing-skills.md` 的 PR checklist。
 - `.codex/` 不再承载正式文档、导出包与 Skill 主内容。
 - 取舍依据：优先单一真相源与稳定入口，避免多入口并行造成事实漂移。
 

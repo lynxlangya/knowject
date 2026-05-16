@@ -1,0 +1,23 @@
+# skills/knowject-context-init/references/examples/backend-only.yaml
+# Example: pure backend service, no frontend
+# Note: api.client is omitted because there is no frontend caller; backend-only Skills
+# (e.g. knowject-read-api in discovery mode) operate on api.sources alone.
+knowject_version: "0.1"
+
+project:
+  name: payment-service
+  description: Internal payment processing service
+  type: backend-only
+  locale: zh-en
+
+stack:
+  package_manager: pnpm@10
+  backend:
+    framework: fastify@4
+    language: typescript@5.9
+    database: postgres@16
+
+api:
+  sources:
+    - format: openapi
+      path: docs/openapi.yaml

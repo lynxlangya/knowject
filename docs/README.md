@@ -70,3 +70,7 @@
 
 - 原始输入材料、认知总结、研究输入。
 - 仅供参考，不作为当前事实源。
+
+## See Also
+
+- [`skills/`](../skills/README.md) — Knowject Skills 对外发行物入口（跨角色协作 Skill 包；不归 `docs/` 治理，但作为对外文档与 `docs/` 并列）。

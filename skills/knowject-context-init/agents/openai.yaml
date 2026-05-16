@@ -1,0 +1,7 @@
+# skills/knowject-context-init/agents/openai.yaml
+# Codex adapter for knowject-context-init Skill.
+# Format matches existing .agents/skills/*/agents/openai.yaml convention (tool contract).
+interface:
+  display_name: "Knowject Context Init"
+  short_description: "Initialize knowject/context.yaml in a project — scan, detect, ask only what's missing, write + validate."
+  default_prompt: "Use $knowject-context-init to set up Knowject Skills in this project: scan stack/paths/brand, ask only undetectable fields, write knowject/context.yaml + knowject/README.md, validate against skills/_shared/schema.py. Respect partial config (design/api/brand optional). Never write secrets."

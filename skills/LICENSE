@@ -1,0 +1,102 @@
+Knowject Proprietary Source-Available License
+Version 1.0
+Effective Date: 2026-03-15
+
+Copyright (c) 2026 Wang Yunfan. All rights reserved.
+
+This repository is made available under a limited, source-available license.
+It is not released under an OSI-approved open source license.
+
+1. Definitions
+
+"Software" means the source code, object code, documentation, configuration,
+assets, and other materials contained in this repository, except where a file
+or dependency states otherwise.
+
+"Licensor" means Wang Yunfan, the copyright owner of the Software.
+
+"Commercial Use" means any use that is intended for or directed toward
+commercial advantage, monetary compensation, revenue generation, business
+operations, client delivery, paid services, or other organizational benefit.
+Commercial Use includes, without limitation:
+
+- use by or for a company, employer, client, institution, government entity,
+  or other organization;
+- internal business use, internal tooling, research and development,
+  benchmarking, training, or evaluation performed for organizational benefit;
+- use in a product, service, hosted offering, SaaS, consulting engagement,
+  outsourcing engagement, or paid support arrangement;
+- selling, sublicensing, distributing, or otherwise monetizing the Software or
+  any derivative work.
+
+2. Limited License Grant
+
+Subject to this License, the Licensor grants you a limited, revocable,
+non-exclusive, non-transferable, non-sublicensable license to:
+
+- view, download, clone, run, and modify the Software; and
+- create derivative works of the Software
+
+solely for your own personal, non-commercial learning, private study,
+evaluation, and non-production experimentation.
+
+3. Restrictions
+
+Except with the Licensor's prior written permission, you may not:
+
+- use the Software for any Commercial Use;
+- use the Software for or on behalf of any company, employer, client,
+  institution, government entity, or other organization;
+- deploy, host, operate, or make the Software available to third parties as a
+  service;
+- sell, license, sublicense, rent, lease, assign, distribute, publish, or
+  otherwise exploit the Software or derivative works;
+- remove or obscure copyright, license, or attribution notices; or
+- represent that the Licensor endorses you or your use of the Software.
+
+4. Contributions
+
+Unless the Licensor agrees otherwise in writing, any contribution intentionally
+submitted for inclusion in the Software is provided without expectation of
+compensation, and the Licensor may use, modify, distribute, and relicense that
+contribution as part of the Software.
+
+5. Third-Party Components
+
+The Software may include or depend on third-party components that are licensed
+under separate terms. Those components remain subject to their own licenses,
+and this License does not limit any rights that you may have under those
+separate licenses.
+
+6. Ownership and Reservation of Rights
+
+The Software is licensed, not sold. The Licensor retains all right, title, and
+interest in and to the Software, including all intellectual property rights.
+No patent license, trademark license, or other implied license is granted
+under this License. All rights not expressly granted are reserved.
+
+7. Termination
+
+This License terminates automatically if you violate any term of this License.
+Upon termination, you must stop using the Software and destroy all copies in
+your possession or control, except to the extent retention is required by law.
+
+8. Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. YOU BEAR ALL RISK
+ARISING OUT OF USE OF THE SOFTWARE.
+
+9. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR SHALL NOT BE LIABLE FOR
+ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT, OR
+OTHERWISE, ARISING FROM OR IN CONNECTION WITH THE SOFTWARE OR THE USE OF OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+10. Commercial Licensing
+
+If you want to use the Software for any Commercial Use, or for any company,
+organizational, client, or revenue-generating scenario, you must first obtain
+the Licensor's prior written permission.
