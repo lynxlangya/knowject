@@ -196,6 +196,27 @@ else
   fail "extract-openapi-endpoints.py missing"
 fi
 
+# 10. extract-brand-brief.py - fixture round-trip
+note "extract-brand-brief.py matches fixture"
+if [ -f "$SKILLS_DIR/knowject-prd-to-mock/scripts/extract-brand-brief.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-prd-to-mock/references/examples/brand-brief-expected.json"
+  inp_file="$SKILLS_DIR/knowject-prd-to-mock/references/examples/brand-brief-input.yaml"
+  if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
+    actual_norm=$(python3 "$SKILLS_DIR/knowject-prd-to-mock/scripts/extract-brand-brief.py" "$inp_file" \
+      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True, ensure_ascii=False))")
+    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True, ensure_ascii=False))")
+    if [ "$actual_norm" = "$expected_norm" ]; then
+      pass "brand brief extractor matches expected"
+    else
+      fail "brand brief extractor output differs from expected (see references/examples/brand-brief-expected.json)"
+    fi
+  else
+    fail "brand brief fixture or expected file missing"
+  fi
+else
+  fail "extract-brand-brief.py missing"
+fi
+
 # Report
 echo ""
 echo "Checks: $checks | Failures: $failures"
