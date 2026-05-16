@@ -1,0 +1,21 @@
+knowject_version: "0.1"
+project:
+  name: ShadcnDemo
+  description: Shadcn variant fixture
+  type: frontend-only
+  locale: en
+stack:
+  package_manager: pnpm@10
+  frontend:
+    framework: react@19
+    bundler: vite@7
+    ui: shadcn@latest
+    styling: tailwind@4
+    language: typescript@5.9
+design:
+  sources:
+    - path: design/
+      format: png
+  output:
+    components_dir: src/components
+    pages_dir: src/pages

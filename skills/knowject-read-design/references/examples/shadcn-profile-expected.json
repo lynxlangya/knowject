@@ -1,0 +1,12 @@
+{
+  "framework": "react",
+  "framework_version": "19",
+  "ui_library": "shadcn",
+  "ui_library_version": "latest",
+  "styling": "tailwind",
+  "language": "typescript",
+  "component_extension": "tsx",
+  "components_dir": "src/components",
+  "pages_dir": "src/pages",
+  "import_template": "import { <Component> } from '@/components/ui/<component-kebab>';"
+}
