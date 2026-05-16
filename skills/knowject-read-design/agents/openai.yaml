@@ -1,4 +1,6 @@
+# skills/knowject-read-design/agents/openai.yaml
+# Codex adapter for knowject-read-design Skill.
 interface:
-  display_name: "PLACEHOLDER"
-  short_description: "PLACEHOLDER"
-  default_prompt: "PLACEHOLDER $knowject-read-design"
+  display_name: "Knowject Read Design"
+  short_description: "Turn a UI design source (PNG/PDF/Figma export) into component skeleton code aligned to the project's UI library (antd / mui / shadcn / chakra / naive / mantine) and design.output directories from knowject/context.yaml."
+  default_prompt: "Use $knowject-read-design to read knowject/context.yaml#stack.frontend + design.output, run extract-framework-profile.py for the codegen profile, then ingest the user's design source per references/source-format-recipes.md. First output a component decomposition plan (markdown) for user confirmation. Only after explicit confirmation, write skeleton .tsx/.jsx files into design.output.components_dir per the matching ui-library profile. Never overwrite existing files silently."
