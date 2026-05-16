@@ -1,4 +1,6 @@
+# skills/knowject-prd-to-mock/agents/openai.yaml
+# Codex adapter for knowject-prd-to-mock Skill.
 interface:
-  display_name: "PLACEHOLDER"
-  short_description: "PLACEHOLDER"
-  default_prompt: "PLACEHOLDER $knowject-prd-to-mock"
+  display_name: "Knowject PRD to Mock"
+  short_description: "Turn a written requirement into a single-page HTML mock anchored to knowject/context.yaml brand tokens (primary color, font, voice, locale)."
+  default_prompt: "Use $knowject-prd-to-mock to read knowject/context.yaml#brand and the user's written PRD, then produce a single self-contained HTML file (Tailwind CDN + brand CSS variables + locale-aware copy) at a user-chosen path. Microcopy follows brand.voice per references/voice-tone-guide.md. Never overwrite existing files silently; diff first, ask, then write."
