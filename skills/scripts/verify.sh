@@ -154,6 +154,48 @@ else
   fail "forbidden env fields did not report expected validation errors"
 fi
 
+# 8. extract-express-routes.py - fixture round-trip
+note "extract-express-routes.py matches fixture"
+if [ -f "$SKILLS_DIR/knowject-read-api/scripts/extract-express-routes.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-read-api/references/examples/express-expected.json"
+  inp_file="$SKILLS_DIR/knowject-read-api/references/examples/express-input.routes.ts"
+  if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
+    actual_norm=$(python3 "$SKILLS_DIR/knowject-read-api/scripts/extract-express-routes.py" "$inp_file" \
+      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True))")
+    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True))")
+    if [ "$actual_norm" = "$expected_norm" ]; then
+      pass "express extractor matches expected"
+    else
+      fail "express extractor output differs from expected (see references/examples/express-expected.json)"
+    fi
+  else
+    fail "express fixture or expected file missing"
+  fi
+else
+  fail "extract-express-routes.py missing"
+fi
+
+# 9. extract-openapi-endpoints.py - fixture round-trip
+note "extract-openapi-endpoints.py matches fixture"
+if [ -f "$SKILLS_DIR/knowject-read-api/scripts/extract-openapi-endpoints.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-read-api/references/examples/openapi-expected.json"
+  inp_file="$SKILLS_DIR/knowject-read-api/references/examples/openapi-input.yaml"
+  if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
+    actual_norm=$(python3 "$SKILLS_DIR/knowject-read-api/scripts/extract-openapi-endpoints.py" "$inp_file" \
+      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True))")
+    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True))")
+    if [ "$actual_norm" = "$expected_norm" ]; then
+      pass "openapi extractor matches expected"
+    else
+      fail "openapi extractor output differs from expected (see references/examples/openapi-expected.json)"
+    fi
+  else
+    fail "openapi fixture or expected file missing"
+  fi
+else
+  fail "extract-openapi-endpoints.py missing"
+fi
+
 # Report
 echo ""
 echo "Checks: $checks | Failures: $failures"
