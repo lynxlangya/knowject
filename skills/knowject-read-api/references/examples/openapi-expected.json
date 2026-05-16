@@ -1,0 +1,9 @@
+{
+  "source": "openapi-input.yaml",
+  "endpoints": [
+    { "method": "GET",    "path": "/users",      "params": [],     "operationId": "listUsers",  "summary": "List users" },
+    { "method": "POST",   "path": "/users",      "params": [],     "operationId": "createUser", "summary": "Create a user" },
+    { "method": "GET",    "path": "/users/{id}", "params": ["id"], "operationId": "getUser",    "summary": "Get a user by id" },
+    { "method": "DELETE", "path": "/users/{id}", "params": ["id"], "operationId": "deleteUser", "summary": "Delete a user" }
+  ]
+}

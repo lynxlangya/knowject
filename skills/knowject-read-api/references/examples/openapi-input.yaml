@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: Fixture API
+  version: "1.0.0"
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users
+      responses:
+        "200":
+          description: ok
+    post:
+      operationId: createUser
+      summary: Create a user
+      responses:
+        "201":
+          description: created
+  /users/{id}:
+    get:
+      operationId: getUser
+      summary: Get a user by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+    delete:
+      operationId: deleteUser
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: deleted
