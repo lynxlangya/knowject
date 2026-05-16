@@ -1,0 +1,17 @@
+# skills/manifest.yaml
+# Knowject Skills — distribution manifest
+# Schema version follows knowject_version in context.yaml; this is the package version.
+name: knowject-skills
+version: "0.1.0"
+description: |
+  Cross-role collaboration Skills for Claude Code and Codex.
+  Project-anchored via knowject/context.yaml. Opinionated for product/dev/design handoff.
+license: SEE LICENSE
+homepage: https://github.com/langya/knowject
+skills:
+  - knowject-context-init
+# Tier 2 placeholders (not yet implemented):
+roadmap:
+  - knowject-read-design
+  - knowject-prd-to-mock
+  - knowject-read-api
