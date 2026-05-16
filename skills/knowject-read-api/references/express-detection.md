@@ -14,6 +14,8 @@ The deterministic path:
 python3 <SKILLS_ROOT>/knowject-read-api/scripts/extract-express-routes.py <route-file>
 ```
 
+It recognizes `app`, the generic `router`, and variables initialized with `Router()` such as `skillsRouter.get('/x', ...)`.
+
 Output shape:
 
 ```json
