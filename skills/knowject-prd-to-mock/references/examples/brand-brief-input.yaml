@@ -1,0 +1,19 @@
+knowject_version: "0.1"
+project:
+  name: Knowject
+  description: 让项目知识为团队所用
+  type: monorepo
+  locale: zh
+stack:
+  package_manager: pnpm@10
+  frontend:
+    framework: react@19
+    bundler: vite@7
+    ui: antd@6
+    styling: tailwind@4
+    language: typescript@5.9
+brand:
+  primary_color: "#1677ff"
+  font_family: "Inter, system-ui"
+  voice: "professional, concise"
+  logo_path: publicity.png

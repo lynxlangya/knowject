@@ -1,0 +1,10 @@
+{
+  "project_name": "Knowject",
+  "project_description": "让项目知识为团队所用",
+  "locale": "zh",
+  "ui_library": "antd@6",
+  "primary_color": "#1677ff",
+  "font_family": "Inter, system-ui",
+  "voice": "professional, concise",
+  "logo_path": "publicity.png"
+}
