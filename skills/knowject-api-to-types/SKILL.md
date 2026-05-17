@@ -134,5 +134,5 @@ Output:
 - Rewrite flow: [`references/typed-client-rewrite.md`](./references/typed-client-rewrite.md)
 - Non-OpenAPI refusal recipes: [`references/non-openapi-refusal.md`](./references/non-openapi-refusal.md)
 - Examples: [`references/examples/`](./references/examples/)
-- Product design: [`../ROADMAP.md`](../ROADMAP.md) Phase 3 Active + "Design (locked 2026-05-17)"
+- Product design: [`../ROADMAP.md`](../ROADMAP.md) Decision log entries for the 2026-05-17 narrowing and Phase 3 ship
 - Schema reference: [`../_shared/context-yaml-schema.md`](../_shared/context-yaml-schema.md)
