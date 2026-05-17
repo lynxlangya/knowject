@@ -1,0 +1,4 @@
+interface:
+  display_name: "Knowject API to Types"
+  short_description: "Temporary scaffold for generating TypeScript declarations from OpenAPI and wiring them into knowject-read-api output."
+  default_prompt: "Use $knowject-api-to-types after the full Skill body lands; this temporary scaffold exists only to keep manifest registration verify-green."

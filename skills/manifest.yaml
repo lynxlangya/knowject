@@ -13,7 +13,7 @@ skills:
   - knowject-read-api
   - knowject-prd-to-mock
   - knowject-read-design
+  - knowject-api-to-types
 # Tier 2 placeholders (not yet implemented):
 # See ROADMAP.md for the Active / Deferred catalog and the decision log.
-roadmap:
-  - knowject-api-to-types
+roadmap: []
