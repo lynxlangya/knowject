@@ -264,6 +264,48 @@ else
   fail "extract-framework-profile.py missing"
 fi
 
+# 13. extract-types-from-openapi.py - fixture round-trip
+note "extract-types-from-openapi.py matches fixture"
+if [ -f "$SKILLS_DIR/knowject-api-to-types/scripts/extract-types-from-openapi.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/types-extraction-expected.json"
+  inp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/openapi-input.yaml"
+  if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
+    actual_norm=$(python3 "$SKILLS_DIR/knowject-api-to-types/scripts/extract-types-from-openapi.py" "$inp_file" --module users \
+      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True, ensure_ascii=False))")
+    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True, ensure_ascii=False))")
+    if [ "$actual_norm" = "$expected_norm" ]; then
+      pass "types extractor matches expected"
+    else
+      fail "types extractor output differs from expected (see references/examples/types-extraction-expected.json)"
+    fi
+  else
+    fail "types fixture or expected file missing"
+  fi
+else
+  fail "extract-types-from-openapi.py missing"
+fi
+
+# 14. rewrite-typed-client.py - fixture round-trip
+note "rewrite-typed-client.py matches fixture"
+if [ -f "$SKILLS_DIR/knowject-api-to-types/scripts/rewrite-typed-client.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/client-rewritten-expected.ts"
+  inp_client="$SKILLS_DIR/knowject-api-to-types/references/examples/client-input.ts"
+  inp_mapping="$SKILLS_DIR/knowject-api-to-types/references/examples/types-extraction-expected.json"
+  if [ -f "$exp_file" ] && [ -f "$inp_client" ] && [ -f "$inp_mapping" ]; then
+    actual=$(python3 "$SKILLS_DIR/knowject-api-to-types/scripts/rewrite-typed-client.py" "$inp_client" "$inp_mapping" users 2>/dev/null)
+    expected=$(cat "$exp_file")
+    if [ "$actual" = "$expected" ]; then
+      pass "client rewriter matches expected"
+    else
+      fail "client rewriter output differs from expected (see references/examples/client-rewritten-expected.ts)"
+    fi
+  else
+    fail "client rewriter fixture or expected file missing"
+  fi
+else
+  fail "rewrite-typed-client.py missing"
+fi
+
 # Report
 echo ""
 echo "Checks: $checks | Failures: $failures"
