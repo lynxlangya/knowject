@@ -12,12 +12,7 @@ Canonical product roadmap for the `skills/` distribution. The Active catalog, de
 | `knowject-read-api` | Phase 2 — Tier 1 | `docs/plans/tasks-knowject-skills-read-api.md` |
 | `knowject-prd-to-mock` | Phase 2 — Tier 1 | `docs/plans/tasks-knowject-skills-prd-to-mock.md` |
 | `knowject-read-design` | Phase 2 — Tier 1 | `docs/plans/tasks-knowject-skills-read-design.md` |
-
-## Phase 3 — Active
-
-| Skill | Purpose | Why this and not the rest |
-|---|---|---|
-| `knowject-api-to-types` | Backend schema (Express routes / OpenAPI) → cross-stack TypeScript types | Closes the typed-client loop opened by `knowject-read-api` — fills in the `unknown` placeholders its generated clients return. Differentiation from `openapi-typescript` is Express-route support (no OpenAPI required), which has no equivalent off-the-shelf tool. |
+| `knowject-api-to-types` | Phase 3 | `docs/plans/tasks-knowject-skills-api-to-types.md` |
 
 ## Deferred (2026-05-17 narrowing)
 
@@ -44,6 +39,33 @@ Catalog changes (ship / promote to Active / defer / deprecate) require:
 Versioning is on the whole product (`manifest.yaml#version`), not per-Skill.
 
 ## Decision log
+
+### 2026-05-17 — Phase 3 shipped: api-to-types
+
+**Trigger:** Phase 2 Tier 1 stabilized; api-to-types remained the sole
+Tier 2 survivor of the 2026-05-17 narrowing decision.
+
+**Outcome:** `knowject-api-to-types` shipped per the locked design
+(OpenAPI-only Day-1 input; A+C hybrid integration with read-api's
+typed client; sibling `.types.ts` colocation in `api.client.output_dir`).
+
+**Implementation summary:**
+
+- Two Python scripts (`extract-types-from-openapi.py`,
+  `rewrite-typed-client.py`) under `skills/knowject-api-to-types/scripts/`,
+  each covered by a verify.sh fixture round-trip (checks #13 / #14).
+- Three reference docs (`openapi-to-typescript-mapping.md`,
+  `typed-client-rewrite.md`, `non-openapi-refusal.md`) lock the
+  schema mapping rules, the rewrite flow, and the per-framework
+  OpenAPI exposure recommendations respectively.
+- SKILL.md body wires Mode A (rewrite+emit) and Mode B (emit-only
+  fallback) with explicit diff-confirm gates.
+- Day-1 deliberate non-goals: request/query/path body typing (response
+  types only), runtime validators (zod/io-ts), non-OpenAPI native
+  parsers — all surfaced in the "What this Skill does NOT do" section
+  for future v2 candidates.
+
+**Phase 4 unblocks:** Claude Code plugin manifest + marketplace listing.
 
 ### 2026-05-17 — Tier 2 narrowing (4 → 1)
 

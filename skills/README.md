@@ -2,7 +2,7 @@
 
 Cross-role collaboration Skills for Claude Code and Codex. Project-anchored. Opinionated.
 
-> Status: Tier 1 complete. Shipped: `knowject-context-init`, `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`. Next: Tier 2 roadmap.
+> Status: Phase 3 complete. Shipped: `knowject-context-init`, `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`, `knowject-api-to-types`. Next: Phase 4 — Claude Code plugin marketplace.
 
 ---
 
@@ -13,7 +13,7 @@ Three audiences, three core scenarios:
 | Audience | Scenario | Skill |
 |---|---|---|
 | Product / PM | Turn a written requirement into a high-fidelity HTML mock | `knowject-prd-to-mock` |
-| Frontend + Backend | Discover API endpoints during integration; generate a typed client | `knowject-read-api` |
+| Frontend + Backend | Discover API endpoints during integration; generate a typed client (with full TS types from OpenAPI) | `knowject-read-api` + `knowject-api-to-types` |
 | Design -> Frontend | Turn a UI mock into component code | `knowject-read-design` |
 | Everyone | Anchor the Skills to your project (stack, brand, paths) | `knowject-context-init` |
 
@@ -127,5 +127,5 @@ See [LICENSE](./LICENSE). Source-available: personal evaluation and non-commerci
 
 - [x] Phase 1: `skills/` scaffold, schema, `knowject-context-init`, install/verify scripts
 - [x] Phase 2: `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`
-- [ ] Phase 3: `api-to-types` (see [`ROADMAP.md`](./ROADMAP.md) for the Active / Deferred catalog and the 2026-05-17 Tier 2 narrowing decision)
+- [x] Phase 3: `knowject-api-to-types`
 - [ ] Phase 4: Claude Code plugin manifest, official marketplace listing
