@@ -21,22 +21,35 @@ except ImportError:
 HTTP_METHODS = ("get", "post", "put", "patch", "delete", "options", "head")
 
 
+def path_param_names(*groups):
+    names = []
+    seen = set()
+    for group in groups:
+        if not isinstance(group, list):
+            continue
+        for p in group:
+            if not isinstance(p, dict) or p.get("in") != "path":
+                continue
+            name = p.get("name")
+            if name and name not in seen:
+                names.append(name)
+                seen.add(name)
+    return names
+
+
 def extract(doc: dict, source: str) -> dict:
     endpoints = []
     paths = (doc or {}).get("paths", {}) or {}
     for path, ops in paths.items():
         if not isinstance(ops, dict):
             continue
+        path_parameters = ops.get("parameters", [])
         for method, op in ops.items():
             if method.lower() not in HTTP_METHODS:
                 continue
             if not isinstance(op, dict):
                 continue
-            params = [
-                p.get("name")
-                for p in op.get("parameters", []) or []
-                if isinstance(p, dict) and p.get("in") == "path" and p.get("name")
-            ]
+            params = path_param_names(path_parameters, op.get("parameters", []))
             endpoints.append(
                 {
                     "method": method.upper(),

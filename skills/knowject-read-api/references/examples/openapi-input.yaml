@@ -17,25 +17,20 @@ paths:
         "201":
           description: created
   /users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
     get:
       operationId: getUser
       summary: Get a user by id
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
       responses:
         "200":
           description: ok
     delete:
       operationId: deleteUser
       summary: Delete a user
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
       responses:
         "204":
           description: deleted

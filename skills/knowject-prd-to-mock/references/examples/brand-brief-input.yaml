@@ -12,6 +12,10 @@ stack:
     ui: antd@6
     styling: tailwind@4
     language: typescript@5.9
+  backend:
+    framework: express@4
+    language: typescript@5.9
+    database: mongodb@7
 brand:
   primary_color: "#1677ff"
   font_family: "Inter, system-ui"

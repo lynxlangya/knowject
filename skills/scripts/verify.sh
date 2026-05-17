@@ -97,9 +97,14 @@ done
 # 5. context.yaml schema validates all examples (self-contained, no apps/indexer-py)
 note "context.yaml schema validates all examples"
 all_ok=1
-for f in "$SKILLS_DIR"/knowject-context-init/references/examples/*.yaml; do
+context_fixtures=(
+  "$SKILLS_DIR"/knowject-context-init/references/examples/*.yaml
+  "$SKILLS_DIR"/knowject-prd-to-mock/references/examples/*-input.yaml
+  "$SKILLS_DIR"/knowject-read-design/references/examples/*-input.yaml
+)
+for f in "${context_fixtures[@]}"; do
   if ! python3 "$SKILLS_DIR/_shared/schema.py" "$f" >/dev/null 2>&1; then
-    fail "example fails schema: $(basename "$f")"
+    fail "example fails schema: ${f#$SKILLS_DIR/}"
     all_ok=0
   fi
 done
