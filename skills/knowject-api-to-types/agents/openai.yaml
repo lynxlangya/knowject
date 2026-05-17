@@ -1,4 +1,6 @@
+# skills/knowject-api-to-types/agents/openai.yaml
+# Codex adapter for knowject-api-to-types Skill.
 interface:
   display_name: "Knowject API to Types"
-  short_description: "Temporary scaffold for generating TypeScript declarations from OpenAPI and wiring them into knowject-read-api output."
-  default_prompt: "Use $knowject-api-to-types after the full Skill body lands; this temporary scaffold exists only to keep manifest registration verify-green."
+  short_description: "Generate TypeScript types from OpenAPI and rewrite knowject-read-api's typed client to use them. Day-1 input: OpenAPI 3 only; other formats are refused with per-framework OpenAPI exposure recommendations."
+  default_prompt: "Use $knowject-api-to-types to read knowject/context.yaml#api.sources[*] (format=openapi only — refuse other formats per references/non-openapi-refusal.md), run extract-types-from-openapi.py to produce a <module>.types.ts plus operations mapping, write the .types.ts under api.client.output_dir, then if a read-api typed client exists in the same directory, run rewrite-typed-client.py to replace request<unknown>(...) with request<X>(...) and add type imports. Always show diffs and require confirmation before writing or modifying files."
