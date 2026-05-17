@@ -45,18 +45,36 @@ your-project/
 
 ## 安装
 
-### 环境要求
+### 推荐：让 AI 帮你安装
+
+把这句话复制给 Claude Code 或 Codex：
+
+```text
+根据指引安装 Knowject AI toolkit：https://github.com/lynxlangya/knowject/blob/main/skills/install.md
+```
+
+AI 会读取 [`skills/install.md`](./skills/install.md)，使用稳定的本地 checkout，运行现有安装脚本，并验证 Claude Code + Codex 的 Skill 链接。
+
+### 手动安装兜底
+
+#### 环境要求
 
 - Claude Code 或 Codex
 - macOS / Linux，或 Windows + WSL
 - `bash`、`python3` 3.8+、`git`
-- 用于验证的 Python `PyYAML`
+- 完整验证需要 Python `PyYAML`
 
 ```bash
-pip install pyyaml
 git clone https://github.com/lynxlangya/knowject.git
 cd knowject
 bash skills/scripts/install.sh
+```
+
+`install.sh` 本身不依赖 PyYAML。完整验证 `skills/scripts/verify.sh` 需要：
+
+```bash
+pip install pyyaml
+bash skills/scripts/verify.sh
 ```
 
 安装脚本会把所有 `knowject-*` Skill 软链接到：
@@ -207,6 +225,7 @@ pnpm knowject:help
 `docs/` 是文档事实源。`docs/exports/` 是派生导出层，不是主事实面。
 
 - [Skills README](./skills/README.md)
+- [AI 安装指引](./skills/install.md)
 - [Skills Schema](./skills/_shared/context-yaml-schema.md)
 - [项目规则](./AGENTS.md)
 - [文档索引](./docs/README.md)

@@ -74,18 +74,39 @@ your-project/
 
 ## Install
 
-### Requirements
+### Recommended: ask your AI agent
+
+Copy this prompt into Claude Code or Codex:
+
+```text
+根据指引安装 Knowject AI toolkit：https://github.com/lynxlangya/knowject/blob/main/skills/install.md
+```
+
+The agent will read [`skills/install.md`](./skills/install.md), use a stable
+local checkout, run the existing installer, and verify the Claude Code + Codex
+Skill links.
+
+### Manual fallback
+
+#### Requirements
 
 - Claude Code or Codex
 - macOS / Linux, or Windows with WSL
 - `bash`, `python3` 3.8+, `git`
-- Python `PyYAML` for validation
+- Python `PyYAML` for full validation
 
 ```bash
-pip install pyyaml
 git clone https://github.com/lynxlangya/knowject.git
 cd knowject
 bash skills/scripts/install.sh
+```
+
+`install.sh` itself does not require PyYAML. Full validation via
+`skills/scripts/verify.sh` does:
+
+```bash
+pip install pyyaml
+bash skills/scripts/verify.sh
 ```
 
 The installer symlinks every `knowject-*` Skill into:
@@ -248,6 +269,7 @@ pnpm knowject:help
 export layer and not the primary fact surface.
 
 - [Skills README](./skills/README.md)
+- [AI Install Guide](./skills/install.md)
 - [Skills Schema](./skills/_shared/context-yaml-schema.md)
 - [Project Rules](./AGENTS.md)
 - [Documentation Index](./docs/README.md)

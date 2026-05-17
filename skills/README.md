@@ -25,20 +25,33 @@ This is not a new agent CLI. It is a pack of Skills that Claude Code and Codex c
 
 ## Install
 
-### Requirements
+### Recommended: ask your AI agent
+
+Copy this prompt into Claude Code or Codex:
+
+```text
+根据指引安装 Knowject AI toolkit：https://github.com/lynxlangya/knowject/blob/main/skills/install.md
+```
+
+The agent will follow [`install.md`](./install.md), use a stable local checkout,
+run `skills/scripts/install.sh`, and verify the Skill links for Claude Code and
+Codex.
+
+### Manual fallback
+
+#### Requirements
 
 - Claude Code or Codex (or both)
 - macOS / Linux (Windows: use WSL)
 - `bash`, `python3` (3.8 or newer), `git`
 - Python `PyYAML`, required by the schema validator and `verify.sh`
 
-Install PyYAML with:
+`install.sh` itself does not require PyYAML, but `verify.sh` and `schema.py` do.
+Install PyYAML before full validation:
 
 ```bash
 pip install pyyaml
 ```
-
-`install.sh` itself does not require PyYAML, but `verify.sh` and `schema.py` do.
 
 ### One-line install
 
