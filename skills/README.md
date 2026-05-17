@@ -127,5 +127,5 @@ See [LICENSE](./LICENSE). Source-available: personal evaluation and non-commerci
 
 - [x] Phase 1: `skills/` scaffold, schema, `knowject-context-init`, install/verify scripts
 - [x] Phase 2: `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`
-- [ ] Phase 3: Tier 2 — `api-to-types`, `mock-to-api`, `prd-validate`, `changelog`
+- [ ] Phase 3: `api-to-types` (Tier 2 narrowed from 4 to 1 on 2026-05-17; see `docs/plans/knowject-skills-spec.md` §4.2)
 - [ ] Phase 4: Claude Code plugin manifest, official marketplace listing

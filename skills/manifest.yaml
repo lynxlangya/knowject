@@ -14,4 +14,6 @@ skills:
   - knowject-prd-to-mock
   - knowject-read-design
 # Tier 2 placeholders (not yet implemented):
-roadmap: []
+# Narrowed from 4 to 1 on 2026-05-17; see docs/plans/knowject-skills-spec.md §4.2.
+roadmap:
+  - knowject-api-to-types
