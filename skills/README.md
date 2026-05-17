@@ -43,7 +43,7 @@ pip install pyyaml
 ### One-line install
 
 ```bash
-git clone https://github.com/langya/knowject.git
+git clone https://github.com/lynxlangya/knowject.git
 cd knowject
 bash skills/scripts/install.sh
 ```

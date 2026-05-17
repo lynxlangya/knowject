@@ -2,82 +2,175 @@
 
 [English](./README.md)
 
-让项目知识，真正为团队所用。
+<p align="center">
+  <img src="https://img.wangyun.fan/kj_skills.png" alt="Knowject Skills 能力图" width="100%" />
+</p>
 
-Knowject 是一个面向开发团队的项目级 AI 知识工作台，目标是把代码、文档、设计资产与项目上下文沉淀成可持续复用的项目记忆，让搜索、协作与决策建立在真实仓库语境之上。
+<p align="center">
+  <strong>让项目知识，真正为团队所用。</strong>
+</p>
 
-当前仓库处于“主链路已打通、核心 AI 工作流持续收口”的阶段：产品壳、鉴权、项目与成员主数据链路、项目资源绑定正式持久化、项目对话读写与默认流式链路、全局知识库 / 技能治理链路、工作区设置中心，以及 Docker 部署基线已经具备；更完整的引用体验、运行时编排与 `global_code` 仍在持续实现中。
+Knowject 现在以 Skill 为核心。
 
-## 当前状态
+它是一个面向 Claude Code 与 Codex 的项目级 Skill 包，也是一套围绕项目知识持续演进的 AI 工作台。第一可用入口是 [`skills/`](./skills/README.md)：一组可以安装到本机 agent 工具里的 Knowject Skills，用真实项目上下文驱动 PRD、设计稿、API 文档与代码交接。
 
-- `apps/platform` 已提供登录后产品壳、项目路由、成员管理界面、全局知识库 / 技能正式管理页，以及 `/settings` 工作区设置中心；独立 `/agents` 路由在第一版当前暂时隐藏。
-- `apps/api` 已提供 `health`、`auth`、`members`、`projects`、`memberships`、知识库 CRUD / 上传 / 检索接口、Skill 正式资产 CRUD / 绑定校验接口、正式 `agents` CRUD / 绑定接口，以及演示性质的 `memory` 接口。
-- 项目列表、项目基础信息、成员 roster、项目资源绑定、项目对话列表 / 详情 / 写入与全局成员总览已经接入 `/api/projects*` 与 `/api/members`。
-- `knowject_project_resource_bindings` 现在只保留为历史本地数据的一次性迁移来源，运行时项目资源绑定已经持久化到后端项目模型。
-- 项目概览仍保留成员协作快照与部分展示文案的本地补充数据；项目资源页当前已经同时消费全局资产目录与项目私有知识目录。
-- `/knowledge`、`/skills` 已切到正式后端资产接口；其中 live `/skills` 页面当前已收口为最小管理面：只展示现有团队 Skill，并支持状态流转与删除，不再暴露创建、查看、编辑抽屉，也不再展示预设 Skill。项目资源页也已通过统一“接入知识库”弹层和知识库详情抽屉正式区分“全局绑定知识 / 项目私有知识”。`/agents` 的独立全局路由在第一版暂时隐藏，项目创建/编辑与项目资源页也不再暴露 Agent 相关入口，等待后续产品形态明确后再开放。
-- `/settings` 已切到正式 `/api/settings/*` 链路，支持向量模型、对话模型、索引参数与工作区信息配置；本期访问控制固定为“登录即可访问”，API Key 在服务端加密存储。
-- `GET /api/projects/:projectId/conversations`、`GET /api/projects/:projectId/conversations/:conversationId`、`POST /api/projects/:projectId/conversations/:conversationId/messages/stream` 已组成当前项目对话读写主链路。
-- `pnpm verify:global-assets-foundation` 已作为 Week 3-4 最小自动验证入口，统一执行 API 测试、Python indexer 测试与前端类型检查。
-- `pnpm verify:index-ops-project-consumption` 已作为 Week 5-6 最小自动验证入口，统一执行项目知识 / 索引运维相关 API 测试、Python indexer 测试与前端类型检查。
-- 仓库已经提供本地与线上风格的 Docker Compose 基线，覆盖 `platform + api + indexer-py + mongodb + chroma`。
-- MongoDB 是当前正式主存储；Chroma 当前只承担索引 / 检索层，但已从“固定 collection 名”升级为“稳定 namespace key + versioned collection + active pointer”模式，用于支撑 `global_docs` 与项目私有知识的模型切换；`global_code` 仍只保留命名空间预留。
+核心目标很直接：降低跨角色交接成本。PRD 不应该停在文字里，设计稿不应该只靠人工拆组件，OpenAPI 不应该还要手写 `unknown` client。Knowject Skills 让这些输入变成可检查、可继续改的工程初稿。
+
+## Knowject Skills 能做什么
+
+| 输入 | Skill | 输出 |
+| --- | --- | --- |
+| 现有项目仓库 | `knowject-context-init` | 记录技术栈、品牌、API 与设计路径的 `knowject/context.yaml` |
+| 文字 PRD | `knowject-prd-to-mock` | 贴合项目品牌的一页式 HTML 原型 |
+| UI 截图、PDF 页面或 Figma 导出 | `knowject-read-design` | 组件拆解计划与组件骨架文件 |
+| Express 路由或 OpenAPI 文档 | `knowject-read-api` | Endpoint 清单与 typed-client 初稿 |
+| OpenAPI 3 文档 | `knowject-api-to-types` | 写入生成 client 的 TypeScript response types |
+
+这些不是泛泛的头脑风暴或代码审查 prompt。每个 Skill 都对应一个跨角色交接场景，并且依赖项目自己的 `knowject/context.yaml`。
+
+## 工作方式
+
+1. 在目标项目里运行一次 `knowject-context-init`。
+2. 提交 `knowject/context.yaml`，把它作为项目上下文锚点。
+3. 用其他 Knowject Skills 把 PRD、设计稿、API 文档转成可继续交付的产物。
+
+`knowject/context.yaml` 是共享合同。它记录项目类型、前后端技术栈、设计稿路径、API 源路径、client 输出目录与品牌 token。它不应该包含 secrets、base URL、API key 或环境配置。
+
+```text
+your-project/
+  knowject/
+    context.yaml
+    README.md
+```
+
+## 安装
+
+### 环境要求
+
+- Claude Code 或 Codex
+- macOS / Linux，或 Windows + WSL
+- `bash`、`python3` 3.8+、`git`
+- 用于验证的 Python `PyYAML`
+
+```bash
+pip install pyyaml
+git clone https://github.com/lynxlangya/knowject.git
+cd knowject
+bash skills/scripts/install.sh
+```
+
+安装脚本会把所有 `knowject-*` Skill 软链接到：
+
+```text
+~/.claude/skills/
+~/.codex/skills/
+```
+
+安装后重启 Claude Code 或 Codex。
+
+## 使用
+
+在任意项目中输入：
+
+```text
+/knowject init
+```
+
+或：
+
+```text
+帮我在这个项目里启用 knowject
+```
+
+初始化后可以直接使用：
+
+```text
+/knowject mock
+/knowject design
+/knowject api
+/knowject types
+```
+
+自然语言也可以触发对应 Skill：
+
+```text
+把这段 PRD 出一个高保真 HTML 原型。
+把这张设计稿拆成 React + Antd 组件骨架。
+找一下用户列表 endpoint，并生成 typed client。
+把这个 OpenAPI 文档转成 TypeScript response types。
+```
+
+## Skill 边界
+
+| Skill | 适合做 | 刻意不做 |
+| --- | --- | --- |
+| `knowject-context-init` | 项目初始化与上下文检测 | 不猜测 secrets 或环境配置 |
+| `knowject-prd-to-mock` | 从需求文字生成静态 HTML 原型 | 不实现运行时交互 |
+| `knowject-read-design` | UI 拆解与组件骨架 | 不接状态、路由、测试或真实数据 |
+| `knowject-read-api` | API 发现与 typed-client 初稿 | Phase 2 仅支持 Express 与 OpenAPI |
+| `knowject-api-to-types` | 为生成的 client 补 OpenAPI 3 response types | Day-1 只处理 response type，不做完整 request typing |
+
+这个边界是故意的。Knowject Skills 应该产出有用的一版初稿，而不是悄悄改动生产代码。
+
+## 验证 Skill 包
+
+```bash
+bash skills/scripts/verify.sh
+bash skills/scripts/test-install.sh
+```
+
+`verify.sh` 会检查 manifest、Skill frontmatter、Codex adapter、`context.yaml` 示例、路由提取器、OpenAPI 提取器、品牌提取、框架提取、类型提取与 client rewrite fixtures。
+
+## Skill 背后的平台
+
+Knowject 仍然包含一套产品工作台。这套工作台是 Skills 未来继续生长的系统底座：
+
+- 登录后产品壳、项目路由、全局资产页、成员与设置
+- `auth`、`projects`、`members`、`knowledge`、`skills`、`agents`、`settings` 等 Express API 模块
+- 项目对话读写、SSE streaming、replay/edit、source seeds 与 citation patch events
+- 全局知识与项目私有知识的上传、诊断、重试、重建与搜索
+- 结构化 Skill 治理、绑定校验与项目对话 Skill 注入
+- Python 索引运行时，负责解析、分块、embedding 与 Chroma 编排
+- 本地与生产风格的 Docker Compose 基线
+
+Skill 包是当前主展示面。工作台则是更长期的项目记忆、团队 Skill、知识资产与项目对话系统。
 
 ## 仓库结构
 
 ```text
+skills/        面向 Claude Code 与 Codex 的可安装 Knowject Skills
 apps/
-  platform/   React + Vite + Ant Design 前端
-  api/        Express + TypeScript API
-  indexer-py/ Python 索引服务（文档解析 / 分块 / 向量写入）
+  platform/    React 前端产品壳
+  api/         Express 业务 API
+  indexer-py/  Python 索引运行时
 packages/
-  request/    共享请求包（@knowject/request）
-  ui/         共享 UI 包（@knowject/ui）
-docker/       Compose、镜像构建、反向代理与初始化脚本
-scripts/      统一命令入口
-docs/         文档主根目录（事实源）
-.agents/      项目级 Skill live 根目录
-.codex/       Codex 项目级配置目录
+  request/     共享 HTTP client 包
+  ui/          共享 UI 组件
+docs/          项目文档事实源
+.agents/       仓库内部治理 Skill
+.codex/        项目级 Codex 配置
 ```
-
-## 产品信息架构
-
-### 全局路由
-
-- `/login`
-- `/home`
-- `/knowledge`
-- `/skills`
-- `/members`
-- `/analytics`
-- `/settings`
-
-### 项目路由
-
-- `/project/:projectId/overview`
-- `/project/:projectId/chat`
-- `/project/:projectId/chat/:chatId`
-- `/project/:projectId/resources`
-- `/project/:projectId/members`
 
 ## 技术栈
 
+- Skills：Markdown Skill specs、Codex adapters、Python validation scripts
 - 前端：React 19、Vite 7、Ant Design 6、Tailwind CSS 4
 - API：Express 4、TypeScript、MongoDB Node.js Driver
+- 索引：Python 3.12+、`uv`、Chroma
 - 鉴权：JWT + `argon2id`
 - 工具链：pnpm workspace、Turborepo、ESLint、Prettier
 - 基础设施：Docker Compose、MongoDB、Chroma、Caddy
 
-## 快速开始
+## 开发快速开始
 
 ### 环境要求
 
 - Node.js >= 22
 - pnpm 10
 - Python 3.12+
-- `uv`（`pnpm dev` / `pnpm test` 会通过 `apps/indexer-py` 使用它）
+- `uv`
 
-### 本地开发
+### 宿主机开发
 
 ```bash
 cp .env.example .env.local
@@ -85,65 +178,57 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` 现在会通过 workspace 一起启动 `platform + api + indexer-py`，默认宿主机开发流里不再需要手动另开 Python 索引服务。
-如果走宿主机开发流，请先安装 `uv`；现在 `apps/indexer-py` 通过 `uv run` 启动，Docker 开发流则把这层依赖收在容器内。
+`pnpm dev` 会通过 workspace 一起启动 `platform + api + indexer-py`。
 
-在 `development` 环境下，如果本地没有配置 `OPENAI_API_KEY`，但已经提供 `CHROMA_URL`，当前 `md / txt` 上传会自动降级到 deterministic 本地 embedding，保证上传与索引状态流先跑通；正式检索质量和 `/api/knowledge/search` 仍建议使用真实 OpenAI-compatible embedding 配置。
-
-如果希望使用仓库推荐的本地工作流，由 Docker 托管依赖服务：
+### Docker 托管依赖
 
 ```bash
 pnpm dev:init
 pnpm dev:up
 ```
 
-`pnpm dev:init` / `pnpm dev:up` 现在也会把 `SETTINGS_ENCRYPTION_KEY_FILE` 一并回写到 `.env.local`，和 MongoDB / JWT 的本地 secrets 保持同一套宿主机开发流，避免设置中心上线后首次启动仍因缺少加密密钥而阻塞。
-
 ### 常用命令
 
 ```bash
 pnpm dev:web
 pnpm dev:api
-pnpm --filter indexer-py dev
 pnpm test
-pnpm verify:global-assets-foundation
-pnpm verify:index-ops-project-consumption
 pnpm check-types
 pnpm build
-pnpm host:up
-pnpm docker:local:up
+pnpm verify:global-assets-foundation
+pnpm verify:index-ops-project-consumption
+pnpm verify:core-loop-readiness
 pnpm docker:local:health
-```
-
-统一命令入口：
-
-```bash
-./scripts/knowject.sh help
 pnpm knowject:help
 ```
 
 ## 文档入口
 
-当前仓库以 `docs/` 作为文档主根目录，`docs/exports/` 作为派生导出目录；`.agents/skills/` 是项目级 Skill live 根目录，`.codex/` 仅保留 `config.toml` 等项目级配置。
+`docs/` 是文档事实源。`docs/exports/` 是派生导出层，不是主事实面。
 
+- [Skills README](./skills/README.md)
+- [Skills Schema](./skills/_shared/context-yaml-schema.md)
 - [项目规则](./AGENTS.md)
 - [文档索引](./docs/README.md)
 - [架构事实](./docs/current/architecture.md)
 - [项目对话 source/citation 事实](./docs/current/project-chat-sources.md)
-- [Docker 使用现状](./docs/current/docker-usage.md)
-- [Docker 操作清单](./docs/current/docker-operation-checklist.md)
-- [认证与环境契约](./docs/contracts/auth-contract.md)
-- [Chroma 决策说明](./docs/contracts/chroma-decision.md)
-- [快速接手指南](./docs/handoff/handoff-guide.md)
-- [ChatGPT / 外部模型项目说明](./docs/handoff/chatgpt-project-brief.md)
-- [ChatGPT Projects 导出包说明](./docs/exports/chatgpt-projects/README.md)
+- [Skills Governance](./docs/current/skills-governance.md)
+- [Contracts Index](./docs/contracts/README.md)
+- [Chat Contract](./docs/contracts/chat-contract.md)
+- [Skills Contract](./docs/contracts/skills-contract.md)
 - [前端说明](./apps/platform/README.md)
 - [API 说明](./apps/api/README.md)
 - [Docker 说明](./docker/README.md)
 
+## 当前状态
+
+- 已发布 Skill 包：`knowject-context-init`、`knowject-read-api`、`knowject-prd-to-mock`、`knowject-read-design`、`knowject-api-to-types`
+- 当前包版本：`0.1.0`
+- 下一步分发工作：Claude Code plugin manifest 与 marketplace listing
+
 ## 参与贡献
 
-贡献前请先阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)，其中包含开发准备、提交流程、最小验证与文档同步约定。
+贡献前请先阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)。如果要新增 Skill，请遵循 [skills/_shared/contributing-skills.md](./skills/_shared/contributing-skills.md)。
 
 ## 安全说明
 
@@ -153,6 +238,5 @@ pnpm knowject:help
 
 当前仓库内容采用
 [Knowject Proprietary Source-Available License](./LICENSE)。
-允许个人非商业场景下的学习、私下研究、评估与非生产实验。
-任何商业使用、公司使用、客户项目、部署托管、SaaS、再分发或盈利性衍生使用，
-都必须事先获得许可方的书面授权。
+
+允许个人非商业场景下的学习、私下研究、评估与非生产实验。任何商业使用、公司使用、客户项目、部署托管、SaaS、再分发或盈利性衍生使用，都必须事先获得许可方的书面授权。
