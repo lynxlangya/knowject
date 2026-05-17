@@ -56,7 +56,7 @@ def main() -> int:
         print(f"not a file: {p}", file=sys.stderr)
         return 2
     result = extract(p.read_text(), p.name)
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0
 
 

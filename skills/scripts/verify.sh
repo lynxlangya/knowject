@@ -166,8 +166,8 @@ if [ -f "$SKILLS_DIR/knowject-read-api/scripts/extract-express-routes.py" ]; the
   inp_file="$SKILLS_DIR/knowject-read-api/references/examples/express-input.routes.ts"
   if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
     actual_norm=$(python3 "$SKILLS_DIR/knowject-read-api/scripts/extract-express-routes.py" "$inp_file" \
-      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True))")
-    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True))")
+      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True, ensure_ascii=False))")
+    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True, ensure_ascii=False))")
     if [ "$actual_norm" = "$expected_norm" ]; then
       pass "express extractor matches expected"
     else
@@ -187,8 +187,8 @@ if [ -f "$SKILLS_DIR/knowject-read-api/scripts/extract-openapi-endpoints.py" ]; 
   inp_file="$SKILLS_DIR/knowject-read-api/references/examples/openapi-input.yaml"
   if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
     actual_norm=$(python3 "$SKILLS_DIR/knowject-read-api/scripts/extract-openapi-endpoints.py" "$inp_file" \
-      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True))")
-    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True))")
+      | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin), indent=2, sort_keys=True, ensure_ascii=False))")
+    expected_norm=$(python3 -c "import json; print(json.dumps(json.load(open('$exp_file')), indent=2, sort_keys=True, ensure_ascii=False))")
     if [ "$actual_norm" = "$expected_norm" ]; then
       pass "openapi extractor matches expected"
     else

@@ -74,7 +74,7 @@ def main() -> int:
     if not isinstance(doc, dict):
         print("OpenAPI document must be a mapping at the top level", file=sys.stderr)
         return 2
-    print(json.dumps(extract(doc, p.name), indent=2))
+    print(json.dumps(extract(doc, p.name), indent=2, ensure_ascii=False))
     return 0
 
 
