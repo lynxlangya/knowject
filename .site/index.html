@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="知项 · Knowject 是面向 Claude Code 与 Codex 的项目上下文 Skill pack，让项目知识真正为团队所用。"
+    />
+    <title>知项 · Knowject</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #171412;
+        --muted: #6e655d;
+        --paper: #fbfaf7;
+        --panel: #ffffff;
+        --line: #ded7cc;
+        --accent: #145c54;
+        --accent-ink: #f3fffb;
+        --warm: #f1c15b;
+        --sage: #d7e7dd;
+        --rose: #ead3c7;
+        --shadow: 0 24px 80px rgba(51, 42, 32, 0.14);
+        font-family:
+          Charter, "Iowan Old Style", "Palatino Linotype", "Noto Serif SC",
+          Georgia, serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(rgba(23, 20, 18, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(23, 20, 18, 0.03) 1px, transparent 1px),
+          var(--paper);
+        background-size: 28px 28px;
+        color: var(--ink);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .shell {
+        width: min(1160px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 24px 0;
+      }
+
+      .mark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 800;
+      }
+
+      .mark-icon {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 1px solid var(--ink);
+        background: var(--warm);
+        box-shadow: 4px 4px 0 var(--ink);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 18px;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+      }
+
+      .nav-links a {
+        border-bottom: 1px solid transparent;
+      }
+
+      .nav-links a:hover {
+        border-color: var(--ink);
+        color: var(--ink);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.02fr) minmax(320px, 0.98fr);
+        gap: 44px;
+        align-items: center;
+        min-height: calc(100vh - 140px);
+        padding: 34px 0 70px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 22px;
+        border: 1px solid var(--ink);
+        background: var(--sage);
+        padding: 7px 12px;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .eyebrow::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--accent);
+        content: "";
+      }
+
+      h1 {
+        max-width: 780px;
+        margin: 0;
+        font-size: clamp(56px, 8vw, 118px);
+        line-height: 0.9;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 680px;
+        margin: 26px 0 0;
+        color: #403a35;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: clamp(18px, 2vw, 22px);
+        line-height: 1.72;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 34px;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        border: 1px solid var(--ink);
+        padding: 0 18px;
+        font-weight: 800;
+        transition:
+          transform 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: var(--accent-ink);
+        box-shadow: 5px 5px 0 var(--ink);
+      }
+
+      .button.secondary {
+        background: var(--panel);
+      }
+
+      .button:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 7px 7px 0 var(--ink);
+      }
+
+      .visual {
+        border: 1px solid var(--ink);
+        background: var(--panel);
+        padding: 14px;
+        box-shadow: var(--shadow);
+      }
+
+      .visual img {
+        display: block;
+        width: 100%;
+        border: 1px solid var(--line);
+      }
+
+      .caption {
+        margin-top: 14px;
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .section {
+        border-top: 1px solid var(--ink);
+        padding: 62px 0;
+      }
+
+      .section-head {
+        display: grid;
+        grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
+        gap: 28px;
+        align-items: start;
+        margin-bottom: 28px;
+      }
+
+      .section-kicker {
+        color: var(--accent);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(34px, 5vw, 66px);
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .skill {
+        min-height: 192px;
+        border: 1px solid var(--ink);
+        background: var(--panel);
+        padding: 18px;
+      }
+
+      .skill:nth-child(2n) {
+        background: #f7efe5;
+      }
+
+      .skill:nth-child(3n) {
+        background: #eef5ef;
+      }
+
+      .skill strong {
+        display: block;
+        margin-bottom: 10px;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 15px;
+      }
+
+      .skill p {
+        margin: 0;
+        color: #4e4741;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+        line-height: 1.62;
+      }
+
+      .proof {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .proof-item {
+        border-left: 4px solid var(--accent);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 6px 0 6px 18px;
+      }
+
+      .proof-item span {
+        display: block;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .proof-item p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        line-height: 1.65;
+      }
+
+      .install {
+        display: grid;
+        grid-template-columns: minmax(0, 0.8fr) minmax(280px, 1fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      pre {
+        margin: 0;
+        overflow-x: auto;
+        border: 1px solid var(--ink);
+        background: #151513;
+        color: #fff9e8;
+        padding: 20px;
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .note {
+        border: 1px solid var(--ink);
+        background: var(--rose);
+        padding: 22px;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        line-height: 1.7;
+      }
+
+      footer {
+        border-top: 1px solid var(--ink);
+        padding: 26px 0 40px;
+        color: var(--muted);
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+      }
+
+      @media (max-width: 880px) {
+        .hero,
+        .section-head,
+        .install {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          min-height: auto;
+          padding-top: 22px;
+        }
+
+        .grid,
+        .proof {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 560px) {
+        .shell {
+          width: min(100% - 28px, 1160px);
+        }
+
+        .nav {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .grid,
+        .proof {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 54px;
+        }
+
+        .button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="shell nav" aria-label="Main navigation">
+      <a class="mark" href="#">
+        <span class="mark-icon">知</span>
+        <span>知项 · Knowject</span>
+      </a>
+      <nav class="nav-links" aria-label="Project links">
+        <a href="https://github.com/lynxlangya/knowject">GitHub</a>
+        <a href="https://github.com/lynxlangya/knowject/tree/main/skills">Skills</a>
+        <a href="https://github.com/lynxlangya/knowject/blob/main/skills/install.md">Install</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="shell hero">
+        <div>
+          <div class="eyebrow">Claude Code + Codex Skill Pack</div>
+          <h1>让项目知识，真正为团队所用。</h1>
+          <p class="lead">
+            Knowject 把 PRD、设计稿、API、项目文档和交接上下文变成可审阅的 AI
+            协作产物。它不是又一个泛用聊天入口，而是一组以真实项目上下文为锚点的
+            Skills。
+          </p>
+          <div class="actions">
+            <a class="button primary" href="https://github.com/lynxlangya/knowject">查看仓库</a>
+            <a class="button secondary" href="https://github.com/lynxlangya/knowject/blob/main/skills/install.md">安装指引</a>
+          </div>
+        </div>
+
+        <figure class="visual">
+          <img
+            src="https://img.wangyun.fan/kj_skills.png"
+            alt="Knowject Skills capability map"
+          />
+          <figcaption class="caption">
+            当前主交付面是可安装的 Knowject Skills。每个 Skill 都从
+            <code>knowject/context.yaml</code> 读取项目事实，输出文件化、可复核的结果。
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="shell section">
+        <div class="section-head">
+          <div class="section-kicker">Capabilities</div>
+          <h2>从项目事实出发，而不是从空白 prompt 出发。</h2>
+        </div>
+        <div class="grid" aria-label="Knowject Skill list">
+          <article class="skill">
+            <strong>Context Init</strong>
+            <p>扫描项目栈、路径、品牌和 API 源，生成所有 Skill 共用的上下文锚点。</p>
+          </article>
+          <article class="skill">
+            <strong>PRD to Mock</strong>
+            <p>把需求文档转成品牌化单页 HTML mock，用于产品讨论和视觉对齐。</p>
+          </article>
+          <article class="skill">
+            <strong>Read Design</strong>
+            <p>把截图、PDF 或 Figma 导出拆成组件计划，再生成符合项目栈的骨架代码。</p>
+          </article>
+          <article class="skill">
+            <strong>Read API</strong>
+            <p>从 Express 或 OpenAPI 中发现 endpoint，并生成 typed client scaffold。</p>
+          </article>
+          <article class="skill">
+            <strong>API to Types</strong>
+            <p>把 OpenAPI 3 response schema 转成 TypeScript 类型，并接入生成客户端。</p>
+          </article>
+          <article class="skill">
+            <strong>Memory Capture</strong>
+            <p>把项目事实、决策和交接沉淀成 source-cited durable memory。</p>
+          </article>
+          <article class="skill">
+            <strong>RAG Eval</strong>
+            <p>生成带来源证据的 RAG 和引用质量评测用例，避免事实与 roadmap 混淆。</p>
+          </article>
+          <article class="skill">
+            <strong>MCP Tool Designer</strong>
+            <p>把 API surface 设计成 MCP tool candidates，标注风险、确认 gate 和回滚说明。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="shell section">
+        <div class="section-head">
+          <div class="section-kicker">Guardrails</div>
+          <h2>把 AI 产物做成可交付工程，而不是一次性回答。</h2>
+        </div>
+        <div class="proof">
+          <div class="proof-item">
+            <span>Source cited</span>
+            <p>记忆、评测和工具设计都要求来源证据，降低 agent 幻觉和旧文档漂移。</p>
+          </div>
+          <div class="proof-item">
+            <span>Diff confirmed</span>
+            <p>写文件前先展示 diff，并要求用户确认，避免静默改动生产项目。</p>
+          </div>
+          <div class="proof-item">
+            <span>Secret safe</span>
+            <p>context、memory、eval 和 mock 都明确禁止复制 token、DB URL、base URL 等环境值。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="shell section">
+        <div class="section-head">
+          <div class="section-kicker">Install</div>
+          <h2>先安装 Skill pack，再让 agent 读真实项目。</h2>
+        </div>
+        <div class="install">
+          <pre><code>git clone https://github.com/lynxlangya/knowject.git
+cd knowject
+bash skills/scripts/install.sh</code></pre>
+          <div class="note">
+            安装后，在任意项目里运行 <strong>/knowject init</strong>，生成
+            <code>knowject/context.yaml</code>。之后 Claude Code 或 Codex 就可以按项目
+            的真实栈、路径和约束使用这些 Skills。
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell">
+      Source-available. Personal evaluation and non-commercial use permitted.
+    </footer>
+  </body>
+</html>
