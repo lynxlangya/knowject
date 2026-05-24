@@ -37,8 +37,8 @@ Claude Code and Codex can consume directly.
 The goal is simple: make handoff work cheaper. A PRD should become a usable
 HTML mock. A design screenshot should become a component decomposition plan. An
 OpenAPI file should become a typed client scaffold. A project should carry its
-own context and source-cited memory so the next agent run does not start from
-zero.
+own context, source-cited memory, and review artifacts so the next agent run
+does not start from zero.
 
 ## What Knowject Skills Do
 
@@ -50,6 +50,8 @@ zero.
 | Express routes or OpenAPI document | `knowject-read-api` | Endpoint inventory and typed-client scaffold |
 | OpenAPI 3 document | `knowject-api-to-types` | TypeScript response types wired into the generated client |
 | Project artifacts, handoff notes, diffs, or decisions | `knowject-memory-capture` | Source-cited durable project memory under `knowject/memory/` |
+| Project knowledge sources | `knowject-rag-eval` | Source-cited RAG and citation eval cases under `knowject/evals/` |
+| API surfaces or endpoint inventories | `knowject-mcp-tool-designer` | MCP tool design artifacts under `knowject/tools/` |
 
 These Skills are intentionally not generic brainstorming or code-review
 prompts. Each one is scoped to a cross-role handoff where project context
@@ -61,8 +63,8 @@ matters.
 2. Commit `knowject/context.yaml` as the project anchor.
 3. Optionally run `knowject-memory-capture` to preserve source-cited project
    facts, decisions, workflows, risks, and lessons under `knowject/memory/`.
-4. Use the other Skills to turn PRDs, UI mocks, and API specs into concrete
-   artifacts.
+4. Use the other Skills to turn PRDs, UI mocks, API specs, knowledge sources,
+   and endpoint inventories into concrete review artifacts.
 
 `knowject/context.yaml` is the shared contract. It records the project type,
 frontend and backend stack, design source paths, API source paths, client output
@@ -77,6 +79,15 @@ your-project/
     memory/
       README.md
       project-memory.yaml
+    evals/
+      README.md
+      rag-eval-cases.yaml
+      rag-eval-report.md
+    tools/
+      README.md
+      mcp-tools.plan.md
+      mcp-tools.schema.json
+      tool-risk-report.md
 ```
 
 ## Install
@@ -147,6 +158,8 @@ After that, use the Skills directly:
 /knowject api
 /knowject types
 /knowject memory
+/knowject rag eval
+/knowject mcp tools
 ```
 
 Natural-language requests work too, as long as the intent matches the Skill:
@@ -157,6 +170,8 @@ Natural-language requests work too, as long as the intent matches the Skill:
 找一下用户列表 endpoint，并生成 typed client。
 把这个 OpenAPI 文档转成 TypeScript response types。
 把这次交接总结成项目记忆。
+基于这些知识库文档生成 RAG 引用评测用例。
+把这些 endpoint 设计成带风险 gate 的 MCP tools。
 ```
 
 ## Skill Boundaries
@@ -169,6 +184,8 @@ Natural-language requests work too, as long as the intent matches the Skill:
 | `knowject-read-api` | API discovery and typed-client scaffold | Phase 2 supports Express and OpenAPI sources |
 | `knowject-api-to-types` | OpenAPI 3 response types for generated clients | Day-1 scope is response types, not full request typing |
 | `knowject-memory-capture` | Source-cited file-based project memory | No DB, vector store, platform UI, daemon, secrets, or uncited facts |
+| `knowject-rag-eval` | Source-cited RAG and citation eval artifacts | No live model calls, Chroma, MongoDB, platform UI, network scoring, or external eval dependency |
+| `knowject-mcp-tool-designer` | API-to-MCP tool design with risk labels and confirmation gates | Does not implement an MCP server, runtime handlers, auth code, API routes, or UI |
 
 This makes the output reviewable. A Skill should produce a useful first pass,
 not silently mutate a production codebase.
@@ -183,8 +200,9 @@ bash skills/scripts/test-install.sh
 `verify.sh` checks the manifest, Skill frontmatter, Codex adapters, per-Skill
 README coverage, `context.yaml` examples, route extractors, OpenAPI extractors,
 typed-client generation, brand extraction, framework extraction, type
-extraction, client rewrite fixtures, and the memory validator. `test-install.sh`
-checks installer idempotency and installed shared-file references.
+extraction, client rewrite fixtures, the memory validator, RAG eval validator,
+and MCP tool schema fixture. `test-install.sh` checks installer idempotency and
+installed shared-file references.
 
 ## The Platform Behind the Skills
 
