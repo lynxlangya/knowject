@@ -14,7 +14,7 @@ Knowject 现在以 Skill 为核心。
 
 它是一个面向 Claude Code 与 Codex 的项目级 Skill 包，也是一套围绕项目知识持续演进的 AI 工作台。第一可用入口是 [`skills/`](./skills/README.md)：一组可以安装到本机 agent 工具里的 Knowject Skills，用真实项目上下文驱动 PRD、设计稿、API 文档与代码交接。
 
-核心目标很直接：降低跨角色交接成本。PRD 不应该停在文字里，设计稿不应该只靠人工拆组件，OpenAPI 不应该还要手写 `unknown` client。Knowject Skills 让这些输入变成可检查、可继续改的工程初稿。
+核心目标很直接：降低跨角色交接成本。PRD 不应该停在文字里，设计稿不应该只靠人工拆组件，OpenAPI 不应该还要手写 `unknown` client，项目经验也不应该散落在临时对话里。Knowject Skills 让这些输入变成可检查、可继续改的工程初稿、带来源的项目记忆和评审产物。
 
 ## Knowject Skills 能做什么
 
@@ -25,6 +25,9 @@ Knowject 现在以 Skill 为核心。
 | UI 截图、PDF 页面或 Figma 导出 | `knowject-read-design` | 组件拆解计划与组件骨架文件 |
 | Express 路由或 OpenAPI 文档 | `knowject-read-api` | Endpoint 清单与 typed-client 初稿 |
 | OpenAPI 3 文档 | `knowject-api-to-types` | 写入生成 client 的 TypeScript response types |
+| 项目文档、交接记录、diff 或决策 | `knowject-memory-capture` | 写入 `knowject/memory/` 的带来源项目记忆 |
+| 项目知识源 | `knowject-rag-eval` | 写入 `knowject/evals/` 的带来源 RAG / 引用评测用例 |
+| API 表面或 endpoint 清单 | `knowject-mcp-tool-designer` | 写入 `knowject/tools/` 的 MCP tool 设计产物 |
 
 这些不是泛泛的头脑风暴或代码审查 prompt。每个 Skill 都对应一个跨角色交接场景，并且依赖项目自己的 `knowject/context.yaml`。
 
@@ -32,7 +35,8 @@ Knowject 现在以 Skill 为核心。
 
 1. 在目标项目里运行一次 `knowject-context-init`。
 2. 提交 `knowject/context.yaml`，把它作为项目上下文锚点。
-3. 用其他 Knowject Skills 把 PRD、设计稿、API 文档转成可继续交付的产物。
+3. 可选运行 `knowject-memory-capture`，把项目事实、决策、流程、风险和经验写成带来源的 `knowject/memory/` 文件。
+4. 用其他 Knowject Skills 把 PRD、设计稿、API 文档、知识源和 endpoint 清单转成可继续交付的评审产物。
 
 `knowject/context.yaml` 是共享合同。它记录项目类型、前后端技术栈、设计稿路径、API 源路径、client 输出目录与品牌 token。它不应该包含 secrets、base URL、API key 或环境配置。
 
@@ -41,6 +45,18 @@ your-project/
   knowject/
     context.yaml
     README.md
+    memory/
+      README.md
+      project-memory.yaml
+    evals/
+      README.md
+      rag-eval-cases.yaml
+      rag-eval-report.md
+    tools/
+      README.md
+      mcp-tools.plan.md
+      mcp-tools.schema.json
+      tool-risk-report.md
 ```
 
 ## 安装
@@ -77,7 +93,7 @@ pip install pyyaml
 bash skills/scripts/verify.sh
 ```
 
-安装脚本会把所有 `knowject-*` Skill 软链接到：
+安装脚本会把所有 `knowject-*` Skill 和共享支持目录 `_shared` 软链接到：
 
 ```text
 ~/.claude/skills/
@@ -107,6 +123,9 @@ bash skills/scripts/verify.sh
 /knowject design
 /knowject api
 /knowject types
+/knowject memory
+/knowject rag eval
+/knowject mcp tools
 ```
 
 自然语言也可以触发对应 Skill：
@@ -116,6 +135,9 @@ bash skills/scripts/verify.sh
 把这张设计稿拆成 React + Antd 组件骨架。
 找一下用户列表 endpoint，并生成 typed client。
 把这个 OpenAPI 文档转成 TypeScript response types。
+把这次交接总结成项目记忆。
+基于这些知识库文档生成 RAG 引用评测用例。
+把这些 endpoint 设计成带风险 gate 的 MCP tools。
 ```
 
 ## Skill 边界
@@ -127,6 +149,9 @@ bash skills/scripts/verify.sh
 | `knowject-read-design` | UI 拆解与组件骨架 | 不接状态、路由、测试或真实数据 |
 | `knowject-read-api` | API 发现与 typed-client 初稿 | Phase 2 仅支持 Express 与 OpenAPI |
 | `knowject-api-to-types` | 为生成的 client 补 OpenAPI 3 response types | Day-1 只处理 response type，不做完整 request typing |
+| `knowject-memory-capture` | 带来源的文件型项目记忆 | 不做 DB、向量库、平台 UI、daemon，不写 secrets 或无来源事实 |
+| `knowject-rag-eval` | 带来源的 RAG / 引用评测产物 | 不做 live model call、Chroma、MongoDB、平台 UI、联网评分或外部 eval 依赖 |
+| `knowject-mcp-tool-designer` | 带风险标签和确认 gate 的 API-to-MCP tool 设计 | 不实现 MCP server、runtime handler、auth 代码、API 路由或 UI |
 
 这个边界是故意的。Knowject Skills 应该产出有用的一版初稿，而不是悄悄改动生产代码。
 
@@ -137,7 +162,7 @@ bash skills/scripts/verify.sh
 bash skills/scripts/test-install.sh
 ```
 
-`verify.sh` 会检查 manifest、Skill frontmatter、Codex adapter、`context.yaml` 示例、路由提取器、OpenAPI 提取器、品牌提取、框架提取、类型提取与 client rewrite fixtures。
+`verify.sh` 会检查 manifest、Skill frontmatter、Codex adapter、各 Skill README 覆盖、`context.yaml` 示例、路由提取器、OpenAPI 提取器、typed-client 生成、品牌提取、框架提取、类型提取、client rewrite fixtures、memory validator、RAG eval validator 与 MCP tool schema fixture。`test-install.sh` 会检查安装幂等性和安装后的共享文件相对路径。
 
 ## Skill 背后的平台
 

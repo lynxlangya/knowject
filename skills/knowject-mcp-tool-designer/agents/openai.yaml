@@ -1,0 +1,6 @@
+# skills/knowject-mcp-tool-designer/agents/openai.yaml
+# Codex adapter for knowject-mcp-tool-designer Skill.
+interface:
+  display_name: "Knowject MCP Tool Designer"
+  short_description: "Design API-to-MCP tool candidates with schemas, risk labels, confirmation gates, auth notes, and audit/rollback notes."
+  default_prompt: "Use $knowject-mcp-tool-designer to read knowject/context.yaml, inspect OpenAPI/Express sources, knowject-read-api endpoint inventories, or explicit endpoint lists, then propose knowject/tools/README.md, knowject/tools/mcp-tools.plan.md, knowject/tools/mcp-tools.schema.json, and knowject/tools/tool-risk-report.md. Include source_endpoint, input_schema, risk_level, requires_confirmation, auth_scope_notes, audit_log_notes, and rollback_notes for each tool candidate. Always show unified diffs and require explicit confirmation before writing. Keep Day-1 scope design-artifact only: no MCP server, runtime handlers, API calls, platform UI, auth code, or external API calls."

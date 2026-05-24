@@ -426,6 +426,94 @@ else
   fail "uncited memory did not report expected source_refs error"
 fi
 
+# 20. validate-rag-eval-cases.py accepts the rag eval example
+note "validate-rag-eval-cases.py accepts rag eval example"
+rag_eval_example="$SKILLS_DIR/knowject-rag-eval/references/examples/rag-eval-cases.expected.yaml"
+if [ -f "$rag_eval_example" ]; then
+  if python3 "$SKILLS_DIR/knowject-rag-eval/scripts/validate-rag-eval-cases.py" "$rag_eval_example" >/dev/null 2>&1; then
+    pass "rag-eval example validates"
+  else
+    fail "rag-eval example YAML invalid"
+  fi
+else
+  fail "rag-eval example missing"
+fi
+
+# 21. validate-rag-eval-cases.py rejects uncited eval cases
+note "validate-rag-eval-cases.py rejects uncited eval cases"
+bad_rag_eval="$TMP_DIR/bad-rag-eval-cases.yaml"
+cat > "$bad_rag_eval" <<'YAML'
+version: "0.1"
+project:
+  name: Demo
+  generated_at: "2026-05-24"
+  source_summary:
+    mode: explicit-files
+    refs:
+      - path: docs/current/architecture.md
+        note: current facts
+cases:
+  - id: rag-20260524-001
+    eval_type: citation_support
+    difficulty: medium
+    question: What supports this claim?
+    expected_answer_points:
+      - The answer should cite source evidence.
+    forbidden_claims: []
+    tags:
+      - citation
+YAML
+if output=$(python3 "$SKILLS_DIR/knowject-rag-eval/scripts/validate-rag-eval-cases.py" "$bad_rag_eval" 2>&1); then
+  fail "uncited rag eval unexpectedly passed validation"
+elif echo "$output" | grep -q "expected_source_refs"; then
+  pass "uncited rag eval reports validation error"
+else
+  fail "uncited rag eval did not report expected source evidence error"
+fi
+
+# 22. mcp-tool-designer schema example parses and covers read/write risks
+note "mcp-tool-designer schema example parses"
+mcp_schema_example="$SKILLS_DIR/knowject-mcp-tool-designer/references/examples/mcp-tools.schema.expected.json"
+if [ -f "$mcp_schema_example" ]; then
+  if python3 -c "
+import json
+doc = json.load(open('$mcp_schema_example'))
+tools = doc.get('tools')
+assert isinstance(tools, list) and tools, 'tools must be non-empty list'
+required = {
+    'tool_name',
+    'description',
+    'source_endpoint',
+    'input_schema',
+    'output_shape_notes',
+    'risk_level',
+    'requires_confirmation',
+    'auth_scope_notes',
+    'audit_log_notes',
+    'rollback_notes',
+}
+risk_levels = set()
+for idx, tool in enumerate(tools):
+    missing = required - set(tool)
+    assert not missing, f'tools[{idx}] missing {sorted(missing)}'
+    src = tool['source_endpoint']
+    assert isinstance(src, dict), f'tools[{idx}].source_endpoint must be object'
+    for key in ('method', 'path', 'source'):
+        assert isinstance(src.get(key), str) and src[key].strip(), f'tools[{idx}].source_endpoint.{key} required'
+    assert isinstance(tool['input_schema'], dict), f'tools[{idx}].input_schema must be object'
+    assert isinstance(tool['requires_confirmation'], bool), f'tools[{idx}].requires_confirmation must be boolean'
+    risk_levels.add(tool['risk_level'])
+assert 'read_only' in risk_levels, 'example needs read_only tool'
+assert risk_levels & {'low_write', 'destructive', 'external_side_effect', 'sensitive_data'}, 'example needs write/destructive/sensitive tool'
+" 2>/dev/null; then
+    pass "mcp-tool-designer schema example validates"
+  else
+    fail "mcp-tool-designer schema example invalid"
+  fi
+else
+  fail "mcp-tool-designer schema example missing"
+fi
+
 # Report
 echo ""
 echo "Checks: $checks | Failures: $failures"
