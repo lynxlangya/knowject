@@ -11,34 +11,63 @@
     <style>
       :root {
         color-scheme: light;
-        --ink: #171412;
-        --muted: #6e655d;
-        --paper: #fbfaf7;
-        --panel: #ffffff;
-        --line: #ded7cc;
-        --accent: #145c54;
-        --accent-ink: #f3fffb;
-        --warm: #f1c15b;
-        --sage: #d7e7dd;
-        --rose: #ead3c7;
-        --shadow: 0 24px 80px rgba(51, 42, 32, 0.14);
+        --ink: oklch(18% 0.015 70);
+        --ink-soft: oklch(34% 0.018 70);
+        --muted: oklch(51% 0.018 70);
+        --line: oklch(84% 0.014 78);
+        --paper: oklch(96% 0.012 82);
+        --paper-deep: oklch(92% 0.018 82);
+        --porcelain: oklch(98% 0.006 85);
+        --night: oklch(16% 0.025 178);
+        --night-2: oklch(20% 0.032 175);
+        --moss: oklch(43% 0.07 174);
+        --moss-light: oklch(84% 0.05 165);
+        --brass: oklch(78% 0.11 82);
+        --clay: oklch(72% 0.06 42);
+        --radius: 8px;
+        --shadow-soft: 0 18px 50px rgba(34, 28, 20, 0.13);
+        --shadow-deep: 0 28px 90px rgba(7, 22, 21, 0.28);
         font-family:
-          Charter, "Iowan Old Style", "Palatino Linotype", "Noto Serif SC",
-          Georgia, serif;
+          Optima, "Avenir Next", "Noto Sans SC", "PingFang SC",
+          "Hiragino Sans GB", system-ui, sans-serif;
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html {
+        scroll-behavior: smooth;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
       body {
         margin: 0;
-        background:
-          linear-gradient(rgba(23, 20, 18, 0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(23, 20, 18, 0.03) 1px, transparent 1px),
-          var(--paper);
-        background-size: 28px 28px;
+        background: var(--paper);
         color: var(--ink);
+      }
+
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        background:
+          radial-gradient(circle at 14% 18%, rgba(209, 184, 123, 0.18), transparent 25%),
+          radial-gradient(circle at 86% 4%, rgba(89, 132, 123, 0.2), transparent 22%),
+          linear-gradient(180deg, var(--paper), var(--porcelain) 44%, var(--paper-deep));
+        content: "";
+      }
+
+      body::after {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background-image: linear-gradient(rgba(40, 35, 28, 0.045) 1px, transparent 1px);
+        background-size: 100% 12px;
+        mix-blend-mode: multiply;
+        content: "";
       }
 
       a {
@@ -46,453 +75,1032 @@
         text-decoration: none;
       }
 
+      code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+
+      .skip-link {
+        position: absolute;
+        left: 18px;
+        top: 12px;
+        z-index: 30;
+        transform: translateY(-140%);
+        border-radius: 999px;
+        background: var(--brass);
+        color: var(--ink);
+        padding: 10px 14px;
+        font-size: 14px;
+        font-weight: 700;
+        transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .skip-link:focus-visible {
+        transform: translateY(0);
+      }
+
       .shell {
-        width: min(1160px, calc(100% - 40px));
+        width: min(1180px, calc(100% - 48px));
         margin: 0 auto;
       }
 
       .nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+        background: rgba(16, 30, 29, 0.88);
+      }
+
+      .nav-inner {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 20px;
-        padding: 24px 0;
+        min-height: 68px;
+        gap: 22px;
+        color: rgba(255, 255, 255, 0.88);
       }
 
-      .mark {
-        display: flex;
+      .brand {
+        display: inline-flex;
         align-items: center;
+        min-height: 44px;
         gap: 12px;
-        font-weight: 800;
+        font-weight: 750;
       }
 
-      .mark-icon {
+      .brand-mark {
         display: grid;
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         place-items: center;
-        border: 1px solid var(--ink);
-        background: var(--warm);
-        box-shadow: 4px 4px 0 var(--ink);
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 18px;
+        border-radius: 7px;
+        background: var(--brass);
+        color: var(--night);
+        font-family: "Songti SC", "Noto Serif SC", serif;
+        font-size: 17px;
+        font-weight: 900;
       }
 
       .nav-links {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        color: var(--muted);
-        font-family: ui-sans-serif, system-ui, sans-serif;
+        align-items: center;
+        gap: 6px;
         font-size: 14px;
       }
 
       .nav-links a {
-        border-bottom: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        border-radius: 999px;
+        padding: 0 12px;
+        color: rgba(255, 255, 255, 0.72);
+        transition:
+          background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+          color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+          transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      .nav-links a:hover {
-        border-color: var(--ink);
-        color: var(--ink);
+      .nav-links a:focus-visible,
+      .button:focus-visible {
+        outline: 2px solid var(--brass);
+        outline-offset: 3px;
+      }
+
+      @media (hover: hover) {
+        .nav-links a:hover {
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+          transform: translateY(-1px);
+        }
       }
 
       .hero {
-        display: grid;
-        grid-template-columns: minmax(0, 1.02fr) minmax(320px, 0.98fr);
-        gap: 44px;
-        align-items: center;
-        min-height: calc(100vh - 140px);
-        padding: 34px 0 70px;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(180deg, var(--night), var(--night-2));
+        color: rgba(255, 255, 255, 0.9);
       }
 
-      .eyebrow {
-        display: inline-flex;
-        width: fit-content;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 22px;
-        border: 1px solid var(--ink);
-        background: var(--sage);
-        padding: 7px 12px;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 13px;
-        font-weight: 700;
-      }
-
-      .eyebrow::before {
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: var(--accent);
+      .hero::before {
+        position: absolute;
+        inset: auto 0 0;
+        height: 42%;
+        background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.26));
+        pointer-events: none;
         content: "";
       }
 
-      h1 {
-        max-width: 780px;
+      .hero-inner {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 0.82fr) minmax(420px, 1fr);
+        align-items: end;
+        gap: 44px;
+        min-height: 710px;
+        padding: 92px 0 70px;
+      }
+
+      .hero-copy {
+        min-width: 0;
+        align-self: center;
+        padding-bottom: 36px;
+      }
+
+      .label {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 24px;
+        color: var(--moss-light);
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .label::before {
+        width: 34px;
+        height: 1px;
+        background: currentColor;
+        content: "";
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
         margin: 0;
-        font-size: clamp(56px, 8vw, 118px);
-        line-height: 0.9;
-        letter-spacing: 0;
       }
 
-      .lead {
+      h1 {
         max-width: 680px;
-        margin: 26px 0 0;
-        color: #403a35;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: clamp(18px, 2vw, 22px);
-        line-height: 1.72;
+        color: #fffaf1;
+        font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+        font-size: 86px;
+        font-weight: 700;
+        line-height: 0.98;
+        letter-spacing: 0;
+        text-wrap: balance;
       }
 
-      .actions {
+      h1 span {
+        display: block;
+      }
+
+      .hero-subtitle {
+        max-width: 440px;
+        margin-top: 28px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 21px;
+        line-height: 1.78;
+        text-wrap: pretty;
+      }
+
+      .hero-actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 14px;
+        gap: 12px;
         margin-top: 34px;
-        font-family: ui-sans-serif, system-ui, sans-serif;
       }
 
       .button {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 48px;
-        border: 1px solid var(--ink);
+        min-height: 46px;
+        border-radius: 999px;
         padding: 0 18px;
+        font-size: 15px;
         font-weight: 800;
+        touch-action: manipulation;
         transition:
-          transform 160ms ease,
-          box-shadow 160ms ease;
+          background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+          color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+          transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+          box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .button:active {
+        transform: scale(0.97);
       }
 
       .button.primary {
-        background: var(--accent);
-        color: var(--accent-ink);
-        box-shadow: 5px 5px 0 var(--ink);
+        background: var(--brass);
+        color: var(--night);
+        box-shadow: 0 12px 28px rgba(217, 183, 100, 0.2);
       }
 
       .button.secondary {
-        background: var(--panel);
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.86);
       }
 
-      .button:hover {
-        transform: translate(-2px, -2px);
-        box-shadow: 7px 7px 0 var(--ink);
+      @media (hover: hover) {
+        .button:hover {
+          transform: translateY(-2px);
+        }
+
+        .button.primary:hover {
+          background: oklch(84% 0.12 82);
+          box-shadow: 0 16px 34px rgba(217, 183, 100, 0.25);
+        }
+
+        .button.secondary:hover {
+          background: rgba(255, 255, 255, 0.13);
+          color: #fff;
+        }
       }
 
-      .visual {
-        border: 1px solid var(--ink);
-        background: var(--panel);
-        padding: 14px;
-        box-shadow: var(--shadow);
+      .hero-evidence {
+        position: relative;
+        min-width: 0;
+        align-self: stretch;
+        min-height: 560px;
       }
 
-      .visual img {
+      .artifact {
+        position: absolute;
+        right: -46px;
+        bottom: -20px;
+        width: min(760px, 58vw);
+        overflow: hidden;
+        border-radius: var(--radius);
+        background: var(--porcelain);
+        box-shadow: var(--shadow-deep);
+        transform: rotate(-1.4deg);
+        animation: arrive 720ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+      }
+
+      .artifact-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 46px;
+        border-bottom: 1px solid oklch(86% 0.016 82);
+        padding: 0 16px;
+        color: var(--ink-soft);
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .artifact-dots {
+        display: flex;
+        gap: 7px;
+      }
+
+      .artifact-dots span {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--clay);
+      }
+
+      .artifact-dots span:nth-child(2) {
+        background: var(--brass);
+      }
+
+      .artifact-dots span:nth-child(3) {
+        background: var(--moss);
+      }
+
+      .artifact img {
         display: block;
         width: 100%;
-        border: 1px solid var(--line);
+        height: auto;
+        outline: 1px solid rgba(0, 0, 0, 0.08);
+        outline-offset: -1px;
       }
 
-      .caption {
-        margin-top: 14px;
-        color: var(--muted);
-        font-family: ui-sans-serif, system-ui, sans-serif;
+      .artifact-note {
+        position: absolute;
+        left: 8px;
+        bottom: 42px;
+        width: 260px;
+        border-radius: var(--radius);
+        background: rgba(255, 250, 241, 0.96);
+        box-shadow: var(--shadow-soft);
+        padding: 18px;
+        color: var(--ink);
+        animation: arrive 720ms cubic-bezier(0.16, 1, 0.3, 1) 250ms both;
+      }
+
+      .artifact-note span {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--moss);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .artifact-note p {
+        color: var(--ink-soft);
+        font-size: 15px;
+        line-height: 1.68;
+      }
+
+      .metrics {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .metric {
+        background: rgba(14, 28, 27, 0.92);
+        padding: 22px 24px;
+      }
+
+      .metric strong {
+        display: block;
+        color: #fffaf1;
+        font-family: "Songti SC", "Noto Serif SC", serif;
+        font-size: 38px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 9px;
+        color: rgba(255, 255, 255, 0.62);
         font-size: 14px;
-        line-height: 1.6;
+        line-height: 1.45;
       }
 
       .section {
-        border-top: 1px solid var(--ink);
-        padding: 62px 0;
+        padding: 92px 0;
       }
 
       .section-head {
         display: grid;
-        grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
-        gap: 28px;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 44px;
         align-items: start;
-        margin-bottom: 28px;
+        margin-bottom: 42px;
       }
 
       .section-kicker {
-        color: var(--accent);
-        font-family: ui-sans-serif, system-ui, sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--moss);
         font-size: 13px;
         font-weight: 900;
-        letter-spacing: 0.08em;
         text-transform: uppercase;
       }
 
-      h2 {
-        margin: 0;
-        font-size: clamp(34px, 5vw, 66px);
-        line-height: 1;
-        letter-spacing: 0;
+      .section-kicker::after {
+        width: 42px;
+        height: 1px;
+        background: currentColor;
+        content: "";
       }
 
-      .grid {
+      h2 {
+        max-width: 850px;
+        font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+        font-size: 58px;
+        font-weight: 700;
+        line-height: 1.08;
+        letter-spacing: 0;
+        text-wrap: balance;
+      }
+
+      .section-copy {
+        max-width: 760px;
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.85;
+        text-wrap: pretty;
+      }
+
+      .flow {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 14px;
+        gap: 16px;
       }
 
-      .skill {
-        min-height: 192px;
-        border: 1px solid var(--ink);
-        background: var(--panel);
-        padding: 18px;
+      .flow-step {
+        min-height: 250px;
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+        padding: 24px;
       }
 
-      .skill:nth-child(2n) {
-        background: #f7efe5;
-      }
-
-      .skill:nth-child(3n) {
-        background: #eef5ef;
-      }
-
-      .skill strong {
+      .flow-step em {
         display: block;
-        margin-bottom: 10px;
-        font-family: ui-sans-serif, system-ui, sans-serif;
+        color: var(--moss);
+        font-style: normal;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .flow-step h3 {
+        margin-top: 18px;
+        font-size: 22px;
+        line-height: 1.22;
+      }
+
+      .flow-step p {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.75;
+      }
+
+      .matrix {
+        display: grid;
+        grid-template-columns: 0.88fr 1.12fr;
+        gap: 44px;
+        align-items: start;
+      }
+
+      .matrix-list {
+        display: grid;
+        gap: 1px;
+        overflow: hidden;
+        border-radius: var(--radius);
+        background: var(--line);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .matrix-item {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        gap: 20px;
+        align-items: baseline;
+        background: rgba(255, 255, 255, 0.82);
+        padding: 19px 22px;
+      }
+
+      .matrix-item strong {
         font-size: 15px;
       }
 
-      .skill p {
-        margin: 0;
-        color: #4e4741;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 14px;
-        line-height: 1.62;
-      }
-
-      .proof {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 14px;
-      }
-
-      .proof-item {
-        border-left: 4px solid var(--accent);
-        background: rgba(255, 255, 255, 0.72);
-        padding: 6px 0 6px 18px;
-      }
-
-      .proof-item span {
-        display: block;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 14px;
-        font-weight: 800;
-      }
-
-      .proof-item p {
-        margin: 8px 0 0;
+      .matrix-item span {
         color: var(--muted);
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        line-height: 1.65;
+        font-size: 15px;
+        line-height: 1.6;
       }
 
-      .install {
+      .principles {
         display: grid;
-        grid-template-columns: minmax(0, 0.8fr) minmax(280px, 1fr);
         gap: 18px;
-        align-items: stretch;
+      }
+
+      .principle {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .principle-mark {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--night);
+        color: var(--brass);
+        font-weight: 900;
+      }
+
+      .principle h3 {
+        font-size: 20px;
+        line-height: 1.3;
+      }
+
+      .principle p {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.75;
+      }
+
+      .install-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 0.88fr) minmax(300px, 0.72fr);
+        gap: 1px;
+        overflow: hidden;
+        border-radius: var(--radius);
+        background: var(--line);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .terminal,
+      .install-note {
+        background: var(--night);
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      .terminal {
+        min-height: 250px;
+        padding: 28px;
+      }
+
+      .terminal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 26px;
+        color: rgba(255, 255, 255, 0.54);
+        font-size: 13px;
       }
 
       pre {
         margin: 0;
         overflow-x: auto;
-        border: 1px solid var(--ink);
-        background: #151513;
-        color: #fff9e8;
-        padding: 20px;
-        font-family: "SFMono-Regular", Consolas, monospace;
+        color: #fffaf1;
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
         font-size: 14px;
-        line-height: 1.7;
+        line-height: 1.8;
       }
 
-      .note {
-        border: 1px solid var(--ink);
-        background: var(--rose);
-        padding: 22px;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        line-height: 1.7;
+      .install-note {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 250px;
+        padding: 28px;
+        background: oklch(20% 0.032 175);
       }
 
-      footer {
-        border-top: 1px solid var(--ink);
-        padding: 26px 0 40px;
+      .install-note p {
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 17px;
+        line-height: 1.8;
+      }
+
+      .install-note code {
+        color: var(--brass);
+      }
+
+      .footer {
+        padding: 34px 0 48px;
+      }
+
+      .footer-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 22px;
+        border-top: 1px solid var(--line);
+        padding-top: 24px;
         color: var(--muted);
-        font-family: ui-sans-serif, system-ui, sans-serif;
         font-size: 14px;
       }
 
-      @media (max-width: 880px) {
-        .hero,
-        .section-head,
-        .install {
-          grid-template-columns: 1fr;
-        }
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
 
-        .hero {
-          min-height: auto;
-          padding-top: 22px;
-        }
+      .footer-links a {
+        color: var(--ink-soft);
+      }
 
-        .grid,
-        .proof {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+      .reveal {
+        animation: arrive 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      .reveal.delay-1 {
+        animation-delay: 80ms;
+      }
+
+      .reveal.delay-2 {
+        animation-delay: 160ms;
+      }
+
+      @keyframes arrive {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
       }
 
-      @media (max-width: 560px) {
-        .shell {
-          width: min(100% - 28px, 1160px);
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
         }
 
-        .nav {
-          align-items: flex-start;
-          flex-direction: column;
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition-duration: 0.01ms !important;
         }
+      }
 
-        .grid,
-        .proof {
+      @media (max-width: 980px) {
+        .hero-inner {
           grid-template-columns: 1fr;
+          min-height: auto;
+          padding: 72px 0 58px;
+        }
+
+        .hero-copy {
+          padding-bottom: 0;
         }
 
         h1 {
-          font-size: 54px;
+          font-size: 64px;
+        }
+
+        .hero-evidence {
+          min-height: 470px;
+        }
+
+        .artifact {
+          right: 0;
+          width: min(700px, 100%);
+        }
+
+        .artifact-note {
+          left: 18px;
+        }
+
+        .metrics,
+        .flow,
+        .matrix,
+        .install-panel {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .section-head {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        h2 {
+          font-size: 44px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .shell {
+          width: min(100% - 30px, 1180px);
+        }
+
+        .nav-inner {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 14px 0;
+        }
+
+        .nav-links {
+          width: 100%;
+        }
+
+        .nav-links a {
+          padding: 0 10px;
+        }
+
+        h1 {
+          font-size: 48px;
+        }
+
+        .hero-subtitle {
+          font-size: 18px;
+        }
+
+        .hero-actions {
+          flex-direction: column;
         }
 
         .button {
           width: 100%;
         }
+
+        .hero-evidence {
+          min-height: auto;
+        }
+
+        .artifact {
+          position: relative;
+          right: 0;
+          bottom: 0;
+          width: 100%;
+          transform: none;
+        }
+
+        .artifact-note {
+          position: relative;
+          left: auto;
+          bottom: auto;
+          width: 100%;
+          margin-top: 16px;
+        }
+
+        .metrics,
+        .flow,
+        .matrix,
+        .matrix-item,
+        .principle,
+        .install-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .section {
+          padding: 68px 0;
+        }
+
+        h2 {
+          font-size: 36px;
+        }
+
+        .matrix-item {
+          gap: 7px;
+        }
+
+        .footer-inner {
+          align-items: flex-start;
+          flex-direction: column;
+        }
       }
     </style>
   </head>
   <body>
-    <header class="shell nav" aria-label="Main navigation">
-      <a class="mark" href="#">
-        <span class="mark-icon">知</span>
-        <span>知项 · Knowject</span>
-      </a>
-      <nav class="nav-links" aria-label="Project links">
-        <a href="https://github.com/lynxlangya/knowject">GitHub</a>
-        <a href="https://github.com/lynxlangya/knowject/tree/main/skills">Skills</a>
-        <a href="https://github.com/lynxlangya/knowject/blob/main/skills/install.md">Install</a>
-      </nav>
+    <a class="skip-link" href="#main-content">跳到正文</a>
+
+    <header class="nav" aria-label="Main navigation">
+      <div class="shell nav-inner">
+        <a class="brand" href="#">
+          <span class="brand-mark">知</span>
+          <span>知项 · Knowject</span>
+        </a>
+        <nav class="nav-links" aria-label="Project links">
+          <a href="#capabilities">能力</a>
+          <a href="#principles">边界</a>
+          <a href="#install">安装</a>
+          <a href="https://github.com/lynxlangya/knowject">GitHub</a>
+        </nav>
+      </div>
     </header>
 
-    <main>
-      <section class="shell hero">
-        <div>
-          <div class="eyebrow">Claude Code + Codex Skill Pack</div>
-          <h1>让项目知识，真正为团队所用。</h1>
-          <p class="lead">
-            Knowject 把 PRD、设计稿、API、项目文档和交接上下文变成可审阅的 AI
-            协作产物。它不是又一个泛用聊天入口，而是一组以真实项目上下文为锚点的
-            Skills。
-          </p>
-          <div class="actions">
-            <a class="button primary" href="https://github.com/lynxlangya/knowject">查看仓库</a>
-            <a class="button secondary" href="https://github.com/lynxlangya/knowject/blob/main/skills/install.md">安装指引</a>
+    <main id="main-content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="shell hero-inner">
+          <div class="hero-copy">
+            <div class="label reveal">Claude Code + Codex Skill Pack</div>
+            <h1 id="hero-title" class="reveal delay-1">知项 · <span>Knowject</span></h1>
+            <p class="hero-subtitle reveal delay-2">
+              面向团队项目协作的 AI 知识系统。把 PRD、设计稿、API、项目记忆和评测证据，
+              变成 Claude Code 与 Codex 能直接消费的项目上下文。
+            </p>
+            <div class="hero-actions reveal delay-2">
+              <a class="button primary" href="https://github.com/lynxlangya/knowject">
+                查看 GitHub
+              </a>
+              <a
+                class="button secondary"
+                href="https://github.com/lynxlangya/knowject/blob/main/skills/install.md"
+              >
+                安装 Skills
+              </a>
+            </div>
+          </div>
+
+          <div class="hero-evidence" aria-label="Knowject capability evidence">
+            <figure class="artifact">
+              <div class="artifact-top">
+                <span>knowject skills map</span>
+                <span class="artifact-dots" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
+              </div>
+              <img
+                src="https://img.wangyun.fan/kj_skills.png"
+                alt="Knowject Skills capability map"
+                width="1280"
+                height="768"
+              />
+            </figure>
+            <aside class="artifact-note">
+              <span>Project anchored</span>
+              <p>
+                每个 Skill 都先读取 <code>knowject/context.yaml</code>，
+                再输出可审阅、可提交、可追溯的文件化产物。
+              </p>
+            </aside>
           </div>
         </div>
 
-        <figure class="visual">
-          <img
-            src="https://img.wangyun.fan/kj_skills.png"
-            alt="Knowject Skills capability map"
-          />
-          <figcaption class="caption">
-            当前主交付面是可安装的 Knowject Skills。每个 Skill 都从
-            <code>knowject/context.yaml</code> 读取项目事实，输出文件化、可复核的结果。
-          </figcaption>
-        </figure>
+        <div class="metrics" aria-label="Knowject delivery metrics">
+          <div class="metric">
+            <strong>8</strong>
+            <span>shipped Skills 覆盖产品、设计、API、记忆、评测和 MCP 设计</span>
+          </div>
+          <div class="metric">
+            <strong>50</strong>
+            <span>verification checks 覆盖 manifest、adapter、fixture 和引用证据</span>
+          </div>
+          <div class="metric">
+            <strong>0</strong>
+            <span>runtime services required，Day-1 交付保持静态和可审阅</span>
+          </div>
+          <div class="metric">
+            <strong>1</strong>
+            <span>context anchor，让 agent 不从空白 prompt 开始</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="capabilities" class="shell section">
+        <div class="section-head">
+          <div class="section-kicker">Workflow</div>
+          <div>
+            <h2>把一次 AI 对话，收敛成团队可复用的工程资产。</h2>
+            <p class="section-copy">
+              Knowject 不追求无边界的自动化。它把高频交接动作拆成明确的 Skill，
+              每个 Skill 都有输入、输出、失败模式和确认门禁。
+            </p>
+          </div>
+        </div>
+
+        <div class="flow">
+          <article class="flow-step">
+            <em>01</em>
+            <h3>初始化项目上下文</h3>
+            <p>
+              扫描技术栈、品牌、API 源和设计路径，生成
+              <code>knowject/context.yaml</code> 作为所有 Skill 的事实锚点。
+            </p>
+          </article>
+          <article class="flow-step">
+            <em>02</em>
+            <h3>翻译跨角色产物</h3>
+            <p>
+              PRD 变 HTML mock，设计稿变组件骨架，OpenAPI 变 typed client 和响应类型。
+            </p>
+          </article>
+          <article class="flow-step">
+            <em>03</em>
+            <h3>沉淀可追溯上下文</h3>
+            <p>
+              项目记忆、RAG eval 和工具设计都要求 source evidence，避免旧计划覆盖当前事实。
+            </p>
+          </article>
+          <article class="flow-step">
+            <em>04</em>
+            <h3>先审阅，再写入</h3>
+            <p>
+              产物写入前展示 diff，用户确认后才落盘，保持 AI 协作可控、可回滚。
+            </p>
+          </article>
+        </div>
       </section>
 
       <section class="shell section">
         <div class="section-head">
-          <div class="section-kicker">Capabilities</div>
-          <h2>从项目事实出发，而不是从空白 prompt 出发。</h2>
+          <div class="section-kicker">Skill system</div>
+          <div>
+            <h2>不是泛用 prompt，而是一套带边界的项目工作台。</h2>
+            <p class="section-copy">
+              这些能力被组织成清晰的目录、文档和验证脚本，既能被 Claude Code 使用，
+              也能被 Codex 以 adapter 形式消费。
+            </p>
+          </div>
         </div>
-        <div class="grid" aria-label="Knowject Skill list">
-          <article class="skill">
-            <strong>Context Init</strong>
-            <p>扫描项目栈、路径、品牌和 API 源，生成所有 Skill 共用的上下文锚点。</p>
-          </article>
-          <article class="skill">
-            <strong>PRD to Mock</strong>
-            <p>把需求文档转成品牌化单页 HTML mock，用于产品讨论和视觉对齐。</p>
-          </article>
-          <article class="skill">
-            <strong>Read Design</strong>
-            <p>把截图、PDF 或 Figma 导出拆成组件计划，再生成符合项目栈的骨架代码。</p>
-          </article>
-          <article class="skill">
-            <strong>Read API</strong>
-            <p>从 Express 或 OpenAPI 中发现 endpoint，并生成 typed client scaffold。</p>
-          </article>
-          <article class="skill">
-            <strong>API to Types</strong>
-            <p>把 OpenAPI 3 response schema 转成 TypeScript 类型，并接入生成客户端。</p>
-          </article>
-          <article class="skill">
-            <strong>Memory Capture</strong>
-            <p>把项目事实、决策和交接沉淀成 source-cited durable memory。</p>
-          </article>
-          <article class="skill">
-            <strong>RAG Eval</strong>
-            <p>生成带来源证据的 RAG 和引用质量评测用例，避免事实与 roadmap 混淆。</p>
-          </article>
-          <article class="skill">
-            <strong>MCP Tool Designer</strong>
-            <p>把 API surface 设计成 MCP tool candidates，标注风险、确认 gate 和回滚说明。</p>
-          </article>
+
+        <div class="matrix">
+          <div class="matrix-list" aria-label="Knowject Skills">
+            <div class="matrix-item">
+              <strong>context-init</strong>
+              <span>建立项目事实锚点，检测技术栈、路径、品牌和 API 源。</span>
+            </div>
+            <div class="matrix-item">
+              <strong>prd-to-mock</strong>
+              <span>把需求文字转成品牌化静态 HTML，用于产品和视觉讨论。</span>
+            </div>
+            <div class="matrix-item">
+              <strong>read-design</strong>
+              <span>把设计源拆成组件计划，再输出符合项目栈的骨架代码。</span>
+            </div>
+            <div class="matrix-item">
+              <strong>read-api</strong>
+              <span>发现 Express 或 OpenAPI endpoint，并生成 typed client scaffold。</span>
+            </div>
+            <div class="matrix-item">
+              <strong>api-to-types</strong>
+              <span>从 OpenAPI 3 生成 TypeScript response types，并接入生成客户端。</span>
+            </div>
+            <div class="matrix-item">
+              <strong>memory-capture</strong>
+              <span>把事实、决策、工作流和风险沉淀成 source-cited memory。</span>
+            </div>
+            <div class="matrix-item">
+              <strong>rag-eval</strong>
+              <span>生成可审阅的 RAG 引用评测用例，覆盖 source recall 和 unsupported claims。</span>
+            </div>
+            <div class="matrix-item">
+              <strong>mcp-tool-designer</strong>
+              <span>把 API surface 设计成 MCP tool candidates，标注风险和确认 gate。</span>
+            </div>
+          </div>
+
+          <div id="principles" class="principles" aria-label="Knowject principles">
+            <article class="principle">
+              <span class="principle-mark">证</span>
+              <div>
+                <h3>证据优先</h3>
+                <p>
+                  memory、eval 和 tool design 都要求来源路径、line range 或明确 source note。
+                </p>
+              </div>
+            </article>
+            <article class="principle">
+              <span class="principle-mark">界</span>
+              <div>
+                <h3>边界清楚</h3>
+                <p>
+                  Day-1 不伪装成数据库、向量检索、MCP server 或生产级 agent runtime。
+                </p>
+              </div>
+            </article>
+            <article class="principle">
+              <span class="principle-mark">控</span>
+              <div>
+                <h3>写入可控</h3>
+                <p>
+                  所有会落盘的 Skill 都先展示 diff，再要求确认，避免静默修改项目。
+                </p>
+              </div>
+            </article>
+            <article class="principle">
+              <span class="principle-mark">密</span>
+              <div>
+                <h3>不碰密钥</h3>
+                <p>
+                  context、memory、eval 和 mock 都明确避开 token、base URL、DB URL 和环境值。
+                </p>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
-      <section class="shell section">
-        <div class="section-head">
-          <div class="section-kicker">Guardrails</div>
-          <h2>把 AI 产物做成可交付工程，而不是一次性回答。</h2>
-        </div>
-        <div class="proof">
-          <div class="proof-item">
-            <span>Source cited</span>
-            <p>记忆、评测和工具设计都要求来源证据，降低 agent 幻觉和旧文档漂移。</p>
-          </div>
-          <div class="proof-item">
-            <span>Diff confirmed</span>
-            <p>写文件前先展示 diff，并要求用户确认，避免静默改动生产项目。</p>
-          </div>
-          <div class="proof-item">
-            <span>Secret safe</span>
-            <p>context、memory、eval 和 mock 都明确禁止复制 token、DB URL、base URL 等环境值。</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="shell section">
+      <section id="install" class="shell section">
         <div class="section-head">
           <div class="section-kicker">Install</div>
-          <h2>先安装 Skill pack，再让 agent 读真实项目。</h2>
+          <div>
+            <h2>安装一次，把项目上下文交给 agent。</h2>
+            <p class="section-copy">
+              Skill pack 通过 symlink 安装到 Claude Code 和 Codex。目标项目只需要提交
+              <code>knowject/context.yaml</code>，后续产物都从这个锚点展开。
+            </p>
+          </div>
         </div>
-        <div class="install">
-          <pre><code>git clone https://github.com/lynxlangya/knowject.git
+
+        <div class="install-panel">
+          <div class="terminal">
+            <div class="terminal-head">
+              <span>terminal</span>
+              <span>static install path</span>
+            </div>
+            <pre><code>git clone https://github.com/lynxlangya/knowject.git
 cd knowject
 bash skills/scripts/install.sh</code></pre>
-          <div class="note">
-            安装后，在任意项目里运行 <strong>/knowject init</strong>，生成
-            <code>knowject/context.yaml</code>。之后 Claude Code 或 Codex 就可以按项目
-            的真实栈、路径和约束使用这些 Skills。
+          </div>
+          <div class="install-note">
+            <p>
+              然后在任意项目中运行 <code>/knowject init</code>。
+              让 Knowject 先理解项目，再让 AI 参与需求、设计、API 和知识交接。
+            </p>
+            <a
+              class="button primary"
+              href="https://github.com/lynxlangya/knowject/blob/main/skills/README.md"
+            >
+              阅读 Skills 文档
+            </a>
           </div>
         </div>
       </section>
     </main>
 
-    <footer class="shell">
-      Source-available. Personal evaluation and non-commercial use permitted.
+    <footer class="footer">
+      <div class="shell footer-inner">
+        <span>知项 · Knowject, 让项目知识，真正为团队所用。</span>
+        <div class="footer-links">
+          <a href="https://github.com/lynxlangya/knowject">GitHub</a>
+          <a href="https://github.com/lynxlangya/knowject/tree/main/skills">Skills</a>
+          <a href="https://github.com/lynxlangya/knowject/blob/main/LICENSE">License</a>
+        </div>
+      </div>
     </footer>
   </body>
 </html>
