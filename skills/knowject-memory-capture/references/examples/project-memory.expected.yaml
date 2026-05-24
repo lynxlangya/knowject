@@ -1,0 +1,69 @@
+version: "0.1"
+project:
+  name: "Example Project"
+  captured_at: "2026-05-24"
+  source_summary:
+    mode: "conversation-summary"
+    refs:
+      - path: "AGENTS.md"
+        note: "project collaboration rules"
+      - path: "docs/current/architecture.md"
+        note: "current architecture facts"
+      - path: "docs/standards/document-sync-governance.md"
+        note: "documentation sync workflow"
+items:
+  - id: "mem-20260524-001"
+    type: "preference"
+    title: "Prefer source-verified minimal changes"
+    summary: "Agents should make minimal, source-verified changes and validate behavior before summarizing the result."
+    source_refs:
+      - path: "AGENTS.md"
+        line_start: 28
+        line_end: 45
+    confidence: "high"
+    status: "active"
+    tags:
+      - "collaboration"
+      - "validation"
+    related_files:
+      - "AGENTS.md"
+    created_at: "2026-05-24"
+    updated_at: "2026-05-24"
+  - id: "mem-20260524-002"
+    type: "workflow"
+    title: "Run document sync checks for boundary changes"
+    summary: "Route, data-flow, Docker, contract, and docs export changes require a documentation sync check before delivery."
+    source_refs:
+      - path: "docs/standards/document-sync-governance.md"
+        line_start: 18
+        line_end: 36
+    confidence: "high"
+    status: "active"
+    tags:
+      - "docs"
+      - "governance"
+    related_files:
+      - "docs/standards/document-sync-governance.md"
+    created_at: "2026-05-24"
+    updated_at: "2026-05-24"
+  - id: "mem-20260524-003"
+    type: "risk"
+    title: "Roadmap and handoff notes can lag current facts"
+    summary: "Roadmap or handoff notes may be useful context, but current architecture facts and source code should override them when they conflict."
+    source_refs:
+      - path: "docs/handoff/release-note.md"
+        line_start: 8
+        line_end: 16
+      - path: "docs/current/architecture.md"
+        line_start: 12
+        line_end: 30
+    confidence: "medium"
+    status: "active"
+    tags:
+      - "staleness"
+      - "current-facts"
+    related_files:
+      - "docs/handoff/release-note.md"
+      - "docs/current/architecture.md"
+    created_at: "2026-05-24"
+    updated_at: "2026-05-24"

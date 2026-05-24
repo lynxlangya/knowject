@@ -13,6 +13,7 @@ Canonical product roadmap for the `skills/` distribution. The Active catalog, de
 | `knowject-prd-to-mock` | Phase 2 — Tier 1 | `docs/plans/tasks-knowject-skills-prd-to-mock.md` |
 | `knowject-read-design` | Phase 2 — Tier 1 | `docs/plans/tasks-knowject-skills-read-design.md` |
 | `knowject-api-to-types` | Phase 3 | `docs/plans/tasks-knowject-skills-api-to-types.md` |
+| `knowject-memory-capture` | Phase 4 — memory | GitHub issue #1 |
 
 ## Deferred (2026-05-17 narrowing)
 
@@ -24,7 +25,7 @@ Three Tier 2 candidates from the original brainstorming failed re-evaluation aft
 | `knowject-prd-validate` | PRD ↔ UI ↔ API consistency check | "Consistency" is subjective — over-strict produces noise, lax produces silent drift; equivalent value via a PR review checklist under `docs/standards/*` at far lower maintenance cost; no testable contract. | PR review checklist proves insufficient AND a deterministic subset (e.g., "every API path param appears in at least one PRD field") becomes definable. |
 | `knowject-changelog` | commit/PR → user-facing release notes | Already covered by `semantic-release` / `git-cliff` / `release-please` / GitHub auto-notes; only `brand.voice` differentiation, insufficient to justify a Skill; spec §3 rejection rule "已被 X 覆盖好" applies. | A brand-voice differentiation case appears that existing tooling cannot serve AND `brand.voice` proves load-bearing for user reception. |
 
-## Phase 4
+## Next
 
 - Claude Code plugin manifest + official marketplace listing.
 
@@ -33,12 +34,42 @@ Three Tier 2 candidates from the original brainstorming failed re-evaluation aft
 Catalog changes (ship / promote to Active / defer / deprecate) require:
 
 1. **An entry in the Decision log section below** with date, trigger, rationale, and reopen / sunset conditions where applicable.
-2. **Sync into `skills/manifest.yaml`** — `#skills` for shipped, `#roadmap` for Phase 3 active. Deferred Skills are intentionally **not** listed in manifest (they are not pending implementation; promoting them requires a fresh Active decision).
+2. **Sync into `skills/manifest.yaml`** — `#skills` for shipped, `#roadmap` for active / pending implementation. Deferred Skills are intentionally **not** listed in manifest (they are not pending implementation; promoting them requires a fresh Active decision).
 3. **README banner + status checklist update** to reflect the new state.
 
 Versioning is on the whole product (`manifest.yaml#version`), not per-Skill.
 
 ## Decision log
+
+### 2026-05-24 — Phase 4 shipped: memory-capture
+
+**Trigger:** Hangzhou AI Agent / AI application market scan shows
+Memory and Context Engineering as high-signal JD requirements.
+Existing Knowject Skills cover project anchoring and cross-role
+handoff, but not durable project memory.
+
+**Outcome:** `knowject-memory-capture` shipped as the next
+highest-priority Skill. It captures, classifies, verifies, and
+refreshes source-cited project memory for future Claude Code and
+Codex runs.
+
+**Day-1 scope:** file-based, source-cited project memory under
+`knowject/memory/`, with `project-memory.yaml` as the canonical
+machine-readable artifact and `README.md` as the folder guide.
+The Skill requires `knowject/context.yaml`, requires evidence for
+every memory item, avoids secrets and environment values, gives
+current facts precedence over roadmap / old plans / handoff docs,
+and uses a diff-confirm write gate.
+
+**Deliberate non-goals:** no database, no MongoDB / Chroma /
+vector store, no server API, no platform UI, no background watcher
+or daemon, no automatic commit, no `.codex` / `.claude` / shell
+history / browser history ingestion, no generic brainstorming
+memory without project evidence, and no full semantic deduplication
+engine.
+
+**Resume signal:** project memory, context engineering,
+source-cited agent context, safe memory governance.
 
 ### 2026-05-17 — Phase 3 shipped: api-to-types
 

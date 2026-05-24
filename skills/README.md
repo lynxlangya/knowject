@@ -2,22 +2,25 @@
 
 Cross-role collaboration Skills for Claude Code and Codex. Project-anchored. Opinionated.
 
-> Status: Phase 3 complete. Shipped: `knowject-context-init`, `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`, `knowject-api-to-types`. Next: Phase 4 — Claude Code plugin marketplace.
+> Status: Phase 4 Day-1 complete. Shipped: `knowject-context-init`, `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`, `knowject-api-to-types`, `knowject-memory-capture`. Next: Claude Code plugin marketplace.
 
 ---
 
 ## What this gives you
 
-Three audiences, three core scenarios:
+Four collaboration jobs, one project anchor:
 
 | Audience | Scenario | Skill |
 |---|---|---|
+| Everyone | Anchor the Skills to your project (stack, brand, paths) | `knowject-context-init` |
 | Product / PM | Turn a written requirement into a high-fidelity HTML mock | `knowject-prd-to-mock` |
 | Frontend + Backend | Discover API endpoints during integration; generate a typed client (with full TS types from OpenAPI) | `knowject-read-api` + `knowject-api-to-types` |
 | Design -> Frontend | Turn a UI mock into component code | `knowject-read-design` |
-| Everyone | Anchor the Skills to your project (stack, brand, paths) | `knowject-context-init` |
+| Everyone | Capture source-cited durable project memory from repo artifacts, handoff notes, diffs, and decisions | `knowject-memory-capture` |
 
 Each Skill reads `knowject/context.yaml` in your project to ground its output in your brand, your tech stack, and your conventions instead of producing generic AI output.
+
+`knowject-memory-capture` turns project artifacts, handoff notes, diffs, and decisions into source-cited durable memory under `knowject/memory/`, so Claude Code and Codex can reuse stable context across sessions without guessing.
 
 This is not a new agent CLI. It is a pack of Skills that Claude Code and Codex consume directly, similar to the `longbridge` or `superpowers` skill packs.
 
@@ -109,6 +112,18 @@ Never put secrets, base URLs, API keys, or per-environment config in `context.ya
 
 Full schema reference: [`_shared/context-yaml-schema.md`](./_shared/context-yaml-schema.md).
 
+After running `knowject-memory-capture`, the same folder also contains file-based project memory:
+
+```text
+your-project/
+  knowject/
+    memory/
+      README.md
+      project-memory.yaml  # source-cited durable memory (commit this after review)
+```
+
+Every memory item must cite source evidence. Do not put secrets, environment values, tokens, DB URLs, cookies, auth headers, or private credentials in `knowject/memory/`.
+
 ---
 
 ## Contribute
@@ -141,4 +156,5 @@ See [LICENSE](./LICENSE). Source-available: personal evaluation and non-commerci
 - [x] Phase 1: `skills/` scaffold, schema, `knowject-context-init`, install/verify scripts
 - [x] Phase 2: `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`
 - [x] Phase 3: `knowject-api-to-types`
-- [ ] Phase 4: Claude Code plugin manifest, official marketplace listing
+- [x] Phase 4: `knowject-memory-capture`
+- [ ] Next: Claude Code plugin manifest, official marketplace listing

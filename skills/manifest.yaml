@@ -14,6 +14,7 @@ skills:
   - knowject-prd-to-mock
   - knowject-read-design
   - knowject-api-to-types
+  - knowject-memory-capture
 # Roadmap entries land here when promoted to Active in ROADMAP.md.
 # See ROADMAP.md for the Active / Deferred catalog and the decision log.
 roadmap: []

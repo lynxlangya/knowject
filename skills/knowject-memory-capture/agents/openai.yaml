@@ -1,0 +1,6 @@
+# skills/knowject-memory-capture/agents/openai.yaml
+# Codex adapter for knowject-memory-capture Skill.
+interface:
+  display_name: "Knowject Memory Capture"
+  short_description: "Capture durable, source-cited project memory from repo artifacts, handoff notes, diffs, or summaries into knowject/memory/."
+  default_prompt: "Use $knowject-memory-capture to read knowject/context.yaml, select project-stable sources, classify candidates as fact/decision/preference/workflow/risk/lesson, require source_refs for every item, avoid secrets and environment values, then propose updates to knowject/memory/README.md and knowject/memory/project-memory.yaml. Always show unified diffs and require explicit confirmation before writing. Keep Day-1 scope file-based only: no API, database, vector store, UI, watcher, daemon, or runtime service."

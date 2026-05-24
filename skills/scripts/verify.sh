@@ -306,6 +306,39 @@ else
   fail "rewrite-typed-client.py missing"
 fi
 
+# 15. knowject-memory-capture example YAML parses and carries source evidence
+note "knowject-memory-capture project-memory example parses"
+memory_example="$SKILLS_DIR/knowject-memory-capture/references/examples/project-memory.expected.yaml"
+if [ -f "$memory_example" ]; then
+  if python3 -c "
+import yaml
+doc = yaml.safe_load(open('$memory_example'))
+assert isinstance(doc, dict), 'top-level must be mapping'
+assert doc.get('version') == '0.1', 'version must be 0.1'
+assert isinstance(doc.get('project'), dict), 'project missing'
+assert isinstance(doc.get('items'), list) and doc['items'], 'items missing'
+allowed_types = {'fact', 'decision', 'preference', 'workflow', 'risk', 'lesson'}
+allowed_confidence = {'high', 'medium', 'low'}
+allowed_status = {'active', 'stale', 'superseded'}
+for idx, item in enumerate(doc['items']):
+    assert item.get('type') in allowed_types, f'items[{idx}].type invalid'
+    assert item.get('confidence') in allowed_confidence, f'items[{idx}].confidence invalid'
+    assert item.get('status') in allowed_status, f'items[{idx}].status invalid'
+    refs = item.get('source_refs')
+    assert isinstance(refs, list) and refs, f'items[{idx}].source_refs missing'
+    for ridx, ref in enumerate(refs):
+        assert ref.get('path'), f'items[{idx}].source_refs[{ridx}].path missing'
+        has_lines = 'line_start' in ref and 'line_end' in ref
+        assert has_lines or ref.get('note'), f'items[{idx}].source_refs[{ridx}] needs lines or note'
+" 2>/dev/null; then
+    pass "memory-capture example parses and cites sources"
+  else
+    fail "memory-capture example YAML invalid or missing required source evidence"
+  fi
+else
+  fail "memory-capture example missing"
+fi
+
 # Report
 echo ""
 echo "Checks: $checks | Failures: $failures"
