@@ -39,6 +39,7 @@ SCALAR = {
     "boolean": "boolean",
     "null": "null",
 }
+TS_IDENTIFIER_RE = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*$")
 
 
 def ref_name(ref: str) -> str:
@@ -77,12 +78,19 @@ def object_body(schema: dict, discovered: set) -> str:
     lines = ["{"]
     for name, prop in props.items():
         opt = "" if name in required else "?"
+        ts_name = ts_property_name(str(name))
         ts = schema_to_ts(prop, discovered)
         if "\n" in ts:
             ts = ts.replace("\n", "\n  ")
-        lines.append(f"  {name}{opt}: {ts};")
+        lines.append(f"  {ts_name}{opt}: {ts};")
     lines.append("}")
     return "\n".join(lines)
+
+
+def ts_property_name(name: str) -> str:
+    if TS_IDENTIFIER_RE.match(name):
+        return name
+    return json.dumps(name, ensure_ascii=False)
 
 
 def emits_interface(schema: dict) -> bool:

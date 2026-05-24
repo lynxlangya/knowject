@@ -73,7 +73,9 @@ If symlinks are not viable in your setup:
 
 ```bash
 cp -r skills/knowject-* ~/.claude/skills/
+cp -r skills/_shared ~/.claude/skills/
 cp -r skills/knowject-* ~/.codex/skills/
+cp -r skills/_shared ~/.codex/skills/
 ```
 
 You will need to re-copy on every update.
