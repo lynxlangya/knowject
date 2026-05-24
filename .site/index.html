@@ -5,34 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="知项 · Knowject 是面向 Claude Code 与 Codex 的项目上下文 Skill pack，让项目知识真正为团队所用。"
+      content="知项 · Knowject 是面向 Claude Code 与 Codex 的项目上下文 Skill pack，把 PRD、设计稿、API、项目记忆与评测证据，变成 agent 能直接消费的工程资产。"
     />
-    <title>知项 · Knowject</title>
+    <title>知项 · Knowject — 让项目知识，真正为团队所用。</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,0..100;1,9..144,300..900,0..100&family=Newsreader:ital,opsz,wght@0,6..72,200..700;1,6..72,200..700&family=Noto+Serif+SC:wght@200..900&family=Noto+Sans+SC:wght@300..700&family=JetBrains+Mono:wght@300..600&display=swap"
+    />
     <style>
       :root {
         color-scheme: light;
-        --ink: oklch(18% 0.015 70);
-        --ink-soft: oklch(34% 0.018 70);
-        --muted: oklch(51% 0.018 70);
-        --line: oklch(84% 0.014 78);
-        --paper: oklch(96% 0.012 82);
-        --paper-deep: oklch(92% 0.018 82);
-        --porcelain: oklch(98% 0.006 85);
-        --night: oklch(16% 0.025 178);
-        --night-2: oklch(20% 0.032 175);
-        --moss: oklch(43% 0.07 174);
-        --moss-light: oklch(84% 0.05 165);
-        --brass: oklch(78% 0.11 82);
-        --clay: oklch(72% 0.06 42);
-        --radius: 8px;
-        --shadow-soft: 0 18px 50px rgba(34, 28, 20, 0.13);
-        --shadow-deep: 0 28px 90px rgba(7, 22, 21, 0.28);
-        font-family:
-          Optima, "Avenir Next", "Noto Sans SC", "PingFang SC",
-          "Hiragino Sans GB", system-ui, sans-serif;
+
+        /* Paper — warm, slightly aged */
+        --paper: oklch(94.5% 0.020 84);
+        --paper-soft: oklch(92.5% 0.024 82);
+        --paper-deep: oklch(89.5% 0.028 80);
+        --paper-warm: oklch(91% 0.034 78);
+        --porcelain: oklch(97% 0.010 86);
+
+        /* Ink — five gradations like a brush */
+        --ink: oklch(17% 0.012 60);
+        --ink-2: oklch(26% 0.014 60);
+        --ink-soft: oklch(44% 0.014 65);
+        --ink-muted: oklch(58% 0.012 70);
+        --ink-faint: oklch(72% 0.012 72);
+
+        /* Vermillion — the only true color, for seals and chapter marks */
+        --seal: oklch(50% 0.165 28);
+        --seal-deep: oklch(42% 0.165 28);
+        --seal-soft: oklch(58% 0.130 30);
+
+        /* Hairlines */
+        --rule: oklch(80% 0.018 78);
+        --rule-faint: oklch(86% 0.020 80);
+        --rule-strong: oklch(50% 0.014 65);
+
+        /* Bronze — secondary accent */
+        --bronze: oklch(66% 0.090 78);
+        --bronze-deep: oklch(52% 0.080 75);
+
+        /* Night — only for terminal & deep moments */
+        --night: oklch(15% 0.018 50);
+        --night-2: oklch(19% 0.020 55);
+        --night-rule: oklch(34% 0.012 60);
+
+        /* Type — Fraunces (English display) + Noto Serif SC (Chinese) + Newsreader (English body) + JetBrains Mono */
+        --font-display:
+          "Fraunces", "Noto Serif SC", "STSong", "Songti SC", serif;
+        --font-cn:
+          "Noto Serif SC", "STSong", "Songti SC", "Source Han Serif SC", serif;
+        --font-body:
+          "Newsreader", "Noto Serif SC", "Songti SC", "STSong", serif;
+        --font-sans:
+          "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC",
+          "Hiragino Sans GB", sans-serif;
+        --font-mono:
+          "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+
+        /* Type scale */
+        --display-2xl: clamp(96px, 17vw, 264px);
+        --display-xl: clamp(54px, 7.6vw, 116px);
+        --display-lg: clamp(38px, 5.2vw, 84px);
+        --display-md: clamp(30px, 4vw, 60px);
+
+        /* Spacing */
+        --space-section: clamp(104px, 12vh, 176px);
+        --shell-px: clamp(24px, 5vw, 56px);
+
+        /* Misc */
+        --radius: 5px;
+        --shadow-paper:
+          0 1px 2px rgba(50, 35, 20, 0.05),
+          0 18px 38px rgba(40, 28, 14, 0.13);
+        --shadow-deep: 0 24px 70px rgba(18, 12, 8, 0.24);
+
+        font-family: var(--font-body);
+        font-size: 17px;
+        line-height: 1.7;
+        color: var(--ink);
       }
 
-      * {
+      *,
+      *::before,
+      *::after {
         box-sizing: border-box;
       }
 
@@ -40,34 +97,47 @@
         scroll-behavior: smooth;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
       }
 
       body {
         margin: 0;
         background: var(--paper);
         color: var(--ink);
+        overflow-x: hidden;
+        font-feature-settings: "kern", "liga", "calt";
       }
 
+      /* Paper grain — subtle multiply noise */
       body::before {
+        content: "";
         position: fixed;
         inset: 0;
         z-index: -2;
         background:
-          radial-gradient(circle at 14% 18%, rgba(209, 184, 123, 0.18), transparent 25%),
-          radial-gradient(circle at 86% 4%, rgba(89, 132, 123, 0.2), transparent 22%),
-          linear-gradient(180deg, var(--paper), var(--porcelain) 44%, var(--paper-deep));
-        content: "";
+          radial-gradient(
+            ellipse 90% 60% at 20% -10%,
+            oklch(96% 0.022 80) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse 70% 70% at 100% 100%,
+            oklch(90% 0.030 76) 0%,
+            transparent 55%
+          ),
+          var(--paper);
+        pointer-events: none;
       }
 
       body::after {
+        content: "";
         position: fixed;
         inset: 0;
         z-index: -1;
-        pointer-events: none;
-        background-image: linear-gradient(rgba(40, 35, 28, 0.045) 1px, transparent 1px);
-        background-size: 100% 12px;
+        background-image: url("data:image/svg+xml;utf8,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.07 0 0 0 0 0.05 0 0 0 0 0.03 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        opacity: 0.55;
         mix-blend-mode: multiply;
-        content: "";
+        pointer-events: none;
       }
 
       a {
@@ -75,619 +145,1366 @@
         text-decoration: none;
       }
 
-      code {
-        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      h1,
+      h2,
+      h3,
+      h4,
+      p,
+      ol,
+      ul,
+      dl,
+      dt,
+      dd,
+      figure {
+        margin: 0;
       }
 
-      .skip-link {
+      ol,
+      ul {
+        padding: 0;
+        list-style: none;
+      }
+
+      code,
+      .mono {
+        font-family: var(--font-mono);
+        font-size: 0.9em;
+        letter-spacing: 0;
+      }
+
+      ::selection {
+        background: var(--seal);
+        color: var(--paper);
+      }
+
+      .skip {
         position: absolute;
+        top: 14px;
         left: 18px;
-        top: 12px;
-        z-index: 30;
-        transform: translateY(-140%);
-        border-radius: 999px;
-        background: var(--brass);
-        color: var(--ink);
-        padding: 10px 14px;
-        font-size: 14px;
-        font-weight: 700;
-        transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 50;
+        padding: 10px 16px;
+        background: var(--ink);
+        color: var(--paper);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        transform: translateY(-160%);
+        transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      .skip-link:focus-visible {
+      .skip:focus-visible {
         transform: translateY(0);
       }
 
       .shell {
-        width: min(1180px, calc(100% - 48px));
+        width: min(1240px, calc(100% - var(--shell-px) * 2));
         margin: 0 auto;
       }
 
-      .nav {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
-        background: rgba(16, 30, 29, 0.88);
+      /* —————————————— Masthead —————————————— */
+
+      .masthead {
+        position: relative;
+        z-index: 10;
+        padding-top: 26px;
       }
 
-      .nav-inner {
+      .masthead-rule {
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          var(--rule-strong) 8%,
+          var(--rule-strong) 92%,
+          transparent
+        );
+        margin-top: 22px;
+      }
+
+      .masthead-inner {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        min-height: 68px;
-        gap: 22px;
-        color: rgba(255, 255, 255, 0.88);
+        gap: 24px;
       }
 
       .brand {
         display: inline-flex;
         align-items: center;
-        min-height: 44px;
-        gap: 12px;
-        font-weight: 750;
+        gap: 14px;
+        font-family: var(--font-cn);
       }
 
-      .brand-mark {
+      .brand-seal {
+        position: relative;
         display: grid;
-        width: 32px;
-        height: 32px;
         place-items: center;
-        border-radius: 7px;
-        background: var(--brass);
-        color: var(--night);
-        font-family: "Songti SC", "Noto Serif SC", serif;
-        font-size: 17px;
-        font-weight: 900;
+        width: 38px;
+        height: 38px;
+        background: var(--seal);
+        color: var(--paper);
+        font-family: var(--font-cn);
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1;
+        transform: rotate(-3deg);
+        box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.12);
       }
 
-      .nav-links {
+      .brand-seal::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at 28% 30%,
+            rgba(255, 255, 255, 0.22),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at 75% 80%,
+            rgba(0, 0, 0, 0.22),
+            transparent 55%
+          );
+        mix-blend-mode: overlay;
+        pointer-events: none;
+      }
+
+      .brand-name {
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 6px;
-        font-size: 14px;
+        flex-direction: column;
+        gap: 2px;
+        line-height: 1.1;
       }
 
-      .nav-links a {
+      .brand-name strong {
+        font-family: var(--font-cn);
+        font-size: 19px;
+        font-weight: 700;
+        color: var(--ink);
+        letter-spacing: 0.04em;
+      }
+
+      .brand-name em {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 300;
+        font-size: 13px;
+        color: var(--ink-soft);
+        font-variation-settings: "opsz" 14, "SOFT" 100;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .masthead-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-sans);
+        font-size: 13.5px;
+      }
+
+      .masthead-nav a {
+        position: relative;
         display: inline-flex;
         align-items: center;
-        min-height: 40px;
-        border-radius: 999px;
-        padding: 0 12px;
-        color: rgba(255, 255, 255, 0.72);
+        gap: 8px;
+        padding: 10px 14px;
+        color: var(--ink-soft);
         transition:
-          background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
-          color 180ms cubic-bezier(0.16, 1, 0.3, 1),
-          transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+          color 180ms ease,
+          transform 180ms ease;
       }
 
-      .nav-links a:focus-visible,
-      .button:focus-visible {
-        outline: 2px solid var(--brass);
-        outline-offset: 3px;
+      .masthead-nav a .num {
+        font-family: var(--font-cn);
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--seal);
+        opacity: 0.75;
       }
 
       @media (hover: hover) {
-        .nav-links a:hover {
-          background: rgba(255, 255, 255, 0.08);
-          color: #fff;
+        .masthead-nav a:hover {
+          color: var(--ink);
+          transform: translateY(-1px);
+        }
+        .masthead-nav a:hover .num {
+          opacity: 1;
+        }
+      }
+
+      .masthead-nav .external {
+        margin-left: 10px;
+        padding: 9px 14px 9px 16px;
+        border: 1px solid var(--rule-strong);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-size: 13px;
+        transition:
+          background-color 180ms ease,
+          color 180ms ease;
+      }
+
+      @media (hover: hover) {
+        .masthead-nav .external:hover {
+          background: var(--ink);
+          color: var(--paper);
           transform: translateY(-1px);
         }
       }
 
+      /* —————————————— Hero —————————————— */
+
       .hero {
         position: relative;
-        overflow: hidden;
-        background: linear-gradient(180deg, var(--night), var(--night-2));
-        color: rgba(255, 255, 255, 0.9);
+        padding: clamp(72px, 12vh, 144px) 0 clamp(64px, 8vh, 112px);
       }
 
       .hero::before {
+        content: "卷 首";
         position: absolute;
-        inset: auto 0 0;
-        height: 42%;
-        background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.26));
-        pointer-events: none;
-        content: "";
+        top: clamp(40px, 6vh, 72px);
+        right: var(--shell-px);
+        font-family: var(--font-cn);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 1.6em;
+        color: var(--ink-faint);
+        writing-mode: vertical-rl;
+        text-orientation: upright;
+        opacity: 0.85;
       }
 
-      .hero-inner {
-        position: relative;
+      .hero-grid {
         display: grid;
-        grid-template-columns: minmax(0, 0.82fr) minmax(420px, 1fr);
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.9fr);
+        gap: clamp(40px, 6vw, 96px);
         align-items: end;
-        gap: 44px;
-        min-height: 710px;
-        padding: 92px 0 70px;
       }
 
-      .hero-copy {
-        min-width: 0;
-        align-self: center;
-        padding-bottom: 36px;
-      }
-
-      .label {
-        display: inline-flex;
+      .hero-meta {
+        display: flex;
         align-items: center;
-        gap: 10px;
-        margin-bottom: 24px;
-        color: var(--moss-light);
-        font-size: 13px;
-        font-weight: 800;
+        gap: 16px;
+        margin-bottom: 32px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.22em;
         text-transform: uppercase;
+        color: var(--seal);
       }
 
-      .label::before {
-        width: 34px;
-        height: 1px;
-        background: currentColor;
+      .hero-meta::before {
         content: "";
+        width: 36px;
+        height: 1px;
+        background: var(--seal);
       }
 
-      h1,
-      h2,
-      h3,
-      p {
-        margin: 0;
+      .hero-meta span:nth-child(2) {
+        color: var(--ink-soft);
+        letter-spacing: 0.18em;
       }
 
-      h1 {
-        max-width: 680px;
-        color: #fffaf1;
-        font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
-        font-size: 86px;
+      .hero-title {
+        font-family: var(--font-cn);
         font-weight: 700;
-        line-height: 0.98;
-        letter-spacing: 0;
+        font-size: var(--display-2xl);
+        line-height: 0.82;
+        letter-spacing: -0.015em;
+        color: var(--ink);
         text-wrap: balance;
       }
 
-      h1 span {
+      .hero-title .cn {
         display: block;
+        position: relative;
+      }
+
+      .hero-title .cn::after {
+        content: "";
+        position: absolute;
+        right: -0.42em;
+        top: 0.1em;
+        width: 0.22em;
+        height: 0.22em;
+        background: var(--seal);
+        transform: rotate(45deg);
+      }
+
+      .hero-title .en {
+        display: block;
+        margin-top: 0.18em;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 300;
+        font-size: 0.32em;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        color: var(--seal-deep);
+        font-variation-settings: "opsz" 144, "SOFT" 100;
+      }
+
+      .hero-tagline {
+        margin-top: clamp(28px, 4vh, 44px);
+        max-width: 520px;
+        font-family: var(--font-cn);
+        font-weight: 500;
+        font-size: clamp(20px, 1.9vw, 26px);
+        line-height: 1.55;
+        color: var(--ink-2);
+        text-wrap: balance;
+        letter-spacing: 0.02em;
+      }
+
+      .hero-tagline::before {
+        content: "「";
+        margin-right: 0;
+        color: var(--seal);
+        font-weight: 600;
+      }
+
+      .hero-tagline::after {
+        content: "」";
+        color: var(--seal);
+        font-weight: 600;
       }
 
       .hero-subtitle {
-        max-width: 440px;
-        margin-top: 28px;
-        color: rgba(255, 255, 255, 0.72);
-        font-size: 21px;
-        line-height: 1.78;
+        margin-top: 24px;
+        max-width: 540px;
+        font-family: var(--font-body);
+        font-size: 17px;
+        line-height: 1.85;
+        color: var(--ink-soft);
         text-wrap: pretty;
       }
 
       .hero-actions {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 34px;
+        align-items: center;
+        gap: 14px;
+        margin-top: 36px;
       }
 
-      .button {
+      .btn {
+        position: relative;
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        min-height: 46px;
-        border-radius: 999px;
-        padding: 0 18px;
-        font-size: 15px;
-        font-weight: 800;
-        touch-action: manipulation;
+        gap: 10px;
+        padding: 14px 22px;
+        font-family: var(--font-sans);
+        font-size: 14.5px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
         transition:
-          background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
-          color 180ms cubic-bezier(0.16, 1, 0.3, 1),
-          transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
-          box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+          background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+          color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+          transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+          border-color 200ms cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      .button:active {
-        transform: scale(0.97);
+      .btn-primary {
+        background: var(--ink);
+        color: var(--paper);
+        border: 1px solid var(--ink);
       }
 
-      .button.primary {
-        background: var(--brass);
-        color: var(--night);
-        box-shadow: 0 12px 28px rgba(217, 183, 100, 0.2);
+      .btn-primary .arrow {
+        font-family: var(--font-mono);
+        font-weight: 300;
+        font-size: 16px;
       }
 
-      .button.secondary {
-        background: rgba(255, 255, 255, 0.08);
-        color: rgba(255, 255, 255, 0.86);
+      .btn-ghost {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--rule-strong);
+      }
+
+      .btn-ghost .arrow {
+        color: var(--seal);
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--seal);
+        outline-offset: 4px;
       }
 
       @media (hover: hover) {
-        .button:hover {
+        .btn-primary:hover {
+          background: var(--seal-deep);
+          border-color: var(--seal-deep);
           transform: translateY(-2px);
         }
-
-        .button.primary:hover {
-          background: oklch(84% 0.12 82);
-          box-shadow: 0 16px 34px rgba(217, 183, 100, 0.25);
+        .btn-ghost:hover {
+          background: var(--ink);
+          color: var(--paper);
+          border-color: var(--ink);
+          transform: translateY(-2px);
         }
-
-        .button.secondary:hover {
-          background: rgba(255, 255, 255, 0.13);
-          color: #fff;
+        .btn-ghost:hover .arrow {
+          color: var(--paper);
         }
       }
 
-      .hero-evidence {
+      .hero-right {
         position: relative;
-        min-width: 0;
-        align-self: stretch;
-        min-height: 560px;
+        min-height: 480px;
+      }
+
+      .hero-marginalia {
+        position: absolute;
+        top: -20px;
+        right: 8px;
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+      }
+
+      .hero-marginalia::after {
+        content: "";
+        display: block;
+        margin-top: 14px;
+        width: 1px;
+        height: 60px;
+        background: var(--rule-strong);
       }
 
       .artifact {
-        position: absolute;
-        right: -46px;
-        bottom: -20px;
-        width: min(760px, 58vw);
-        overflow: hidden;
-        border-radius: var(--radius);
+        position: relative;
+        margin: 36px 36px 0 0;
+        padding: 18px 18px 56px;
         background: var(--porcelain);
-        box-shadow: var(--shadow-deep);
-        transform: rotate(-1.4deg);
-        animation: arrive 720ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+        box-shadow: var(--shadow-paper);
+        transform: rotate(-1.2deg);
+        animation: arrive 800ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
       }
 
-      .artifact-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 46px;
-        border-bottom: 1px solid oklch(86% 0.016 82);
-        padding: 0 16px;
-        color: var(--ink-soft);
-        font-size: 13px;
-        font-weight: 750;
-      }
-
-      .artifact-dots {
-        display: flex;
-        gap: 7px;
-      }
-
-      .artifact-dots span {
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: var(--clay);
-      }
-
-      .artifact-dots span:nth-child(2) {
-        background: var(--brass);
-      }
-
-      .artifact-dots span:nth-child(3) {
-        background: var(--moss);
+      .artifact::before {
+        /* washi tape */
+        content: "";
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%) rotate(-2deg);
+        width: 90px;
+        height: 24px;
+        background: oklch(80% 0.06 65 / 0.78);
+        box-shadow: 0 1px 0 oklch(70% 0.05 65 / 0.4) inset;
       }
 
       .artifact img {
         display: block;
         width: 100%;
         height: auto;
-        outline: 1px solid rgba(0, 0, 0, 0.08);
+        outline: 1px solid oklch(85% 0.02 80);
         outline-offset: -1px;
       }
 
-      .artifact-note {
+      .artifact figcaption {
         position: absolute;
-        left: 8px;
-        bottom: 42px;
-        width: 260px;
-        border-radius: var(--radius);
-        background: rgba(255, 250, 241, 0.96);
-        box-shadow: var(--shadow-soft);
-        padding: 18px;
-        color: var(--ink);
-        animation: arrive 720ms cubic-bezier(0.16, 1, 0.3, 1) 250ms both;
-      }
-
-      .artifact-note span {
-        display: block;
-        margin-bottom: 8px;
-        color: var(--moss);
-        font-size: 12px;
-        font-weight: 900;
-        text-transform: uppercase;
-      }
-
-      .artifact-note p {
+        bottom: 18px;
+        left: 22px;
+        right: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-family: var(--font-body);
+        font-style: italic;
+        font-size: 13px;
         color: var(--ink-soft);
-        font-size: 15px;
-        line-height: 1.68;
       }
 
-      .metrics {
-        position: relative;
+      .artifact figcaption .meta {
+        font-family: var(--font-mono);
+        font-style: normal;
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+      }
+
+      .seal-mark {
+        position: absolute;
+        right: -8px;
+        bottom: -8px;
         z-index: 2;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1px;
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.08);
-      }
-
-      .metric {
-        background: rgba(14, 28, 27, 0.92);
-        padding: 22px 24px;
-      }
-
-      .metric strong {
-        display: block;
-        color: #fffaf1;
-        font-family: "Songti SC", "Noto Serif SC", serif;
-        font-size: 38px;
-        font-weight: 700;
+        place-items: center;
+        width: 84px;
+        height: 84px;
+        background: var(--seal);
+        color: var(--paper);
+        font-family: var(--font-cn);
+        font-weight: 800;
+        font-size: 32px;
         line-height: 1;
+        letter-spacing: 0.05em;
+        text-align: center;
+        transform: rotate(6deg);
+        box-shadow:
+          inset 0 0 0 2px rgba(255, 255, 255, 0.16),
+          0 6px 22px rgba(140, 30, 21, 0.32);
+        animation: stamp 760ms cubic-bezier(0.16, 1, 0.3, 1) 540ms both;
       }
 
-      .metric span {
+      .seal-mark span {
         display: block;
-        margin-top: 9px;
-        color: rgba(255, 255, 255, 0.62);
-        font-size: 14px;
-        line-height: 1.45;
       }
+
+      .seal-mark span:first-child {
+        font-size: 26px;
+      }
+
+      .seal-mark span:last-child {
+        font-size: 26px;
+        margin-top: 1px;
+      }
+
+      .seal-mark::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at 24% 24%,
+            rgba(255, 255, 255, 0.28),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at 76% 80%,
+            rgba(0, 0, 0, 0.26),
+            transparent 55%
+          ),
+          url("data:image/svg+xml;utf8,%3Csvg viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.45 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        mix-blend-mode: overlay;
+        opacity: 0.85;
+      }
+
+      /* —————————————— Hero metrics ledger —————————————— */
+
+      .ledger {
+        margin-top: clamp(72px, 9vh, 120px);
+        padding-top: 36px;
+        border-top: 1px solid var(--rule);
+      }
+
+      .ledger-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 28px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+      }
+
+      .ledger-head em {
+        font-style: italic;
+        font-family: var(--font-display);
+        font-weight: 300;
+        letter-spacing: 0.04em;
+        text-transform: none;
+        color: var(--seal);
+        font-variation-settings: "opsz" 14, "SOFT" 100;
+      }
+
+      .ledger-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0;
+      }
+
+      .ledger-item {
+        position: relative;
+        padding: 10px clamp(20px, 2.6vw, 36px) 4px 0;
+      }
+
+      .ledger-item + .ledger-item {
+        border-left: 1px solid var(--rule-faint);
+        padding-left: clamp(20px, 2.6vw, 36px);
+      }
+
+      .ledger-item dt {
+        font-family: var(--font-display);
+        font-weight: 400;
+        font-size: clamp(48px, 5vw, 76px);
+        line-height: 0.95;
+        color: var(--ink);
+        letter-spacing: -0.02em;
+        font-variation-settings: "opsz" 144, "SOFT" 30;
+      }
+
+      .ledger-item dt sup {
+        display: inline-block;
+        margin-left: 4px;
+        font-family: var(--font-mono);
+        font-weight: 400;
+        font-size: 14px;
+        color: var(--seal);
+        vertical-align: top;
+        letter-spacing: 0;
+      }
+
+      .ledger-item dd {
+        margin-top: 12px;
+        font-family: var(--font-cn);
+        font-size: 13.5px;
+        line-height: 1.65;
+        color: var(--ink-soft);
+        max-width: 230px;
+      }
+
+      /* —————————————— Section frame —————————————— */
 
       .section {
-        padding: 92px 0;
+        position: relative;
+        padding: var(--space-section) 0;
+      }
+
+      .section + .section {
+        border-top: 1px solid var(--rule);
+      }
+
+      .section-mark {
+        position: absolute;
+        top: var(--space-section);
+        right: var(--shell-px);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 18px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        pointer-events: none;
+      }
+
+      .section-mark .ch {
+        font-family: var(--font-cn);
+        font-weight: 700;
+        font-size: 56px;
+        line-height: 1;
+        color: var(--seal);
+        letter-spacing: 0;
+        opacity: 0.92;
+      }
+
+      .section-mark .ch::after {
+        content: "";
+        display: block;
+        margin-top: 14px;
+        width: 1px;
+        height: 60px;
+        background: var(--seal);
+        opacity: 0.4;
+        margin-left: auto;
       }
 
       .section-head {
         display: grid;
-        grid-template-columns: 220px minmax(0, 1fr);
-        gap: 44px;
-        align-items: start;
-        margin-bottom: 42px;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.92fr);
+        gap: clamp(32px, 5vw, 80px);
+        align-items: end;
+        margin-bottom: clamp(60px, 8vh, 96px);
       }
 
       .section-kicker {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 12px;
-        color: var(--moss);
-        font-size: 13px;
-        font-weight: 900;
+        margin-bottom: 26px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.24em;
         text-transform: uppercase;
+        color: var(--seal);
       }
 
-      .section-kicker::after {
-        width: 42px;
+      .section-kicker::before {
+        content: "";
+        width: 28px;
         height: 1px;
         background: currentColor;
-        content: "";
+      }
+
+      .section-kicker em {
+        font-style: italic;
+        font-family: var(--font-display);
+        font-weight: 300;
+        text-transform: none;
+        letter-spacing: 0.04em;
+        color: var(--ink-soft);
+        font-variation-settings: "opsz" 14, "SOFT" 100;
       }
 
       h2 {
-        max-width: 850px;
-        font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
-        font-size: 58px;
+        font-family: var(--font-cn);
         font-weight: 700;
-        line-height: 1.08;
-        letter-spacing: 0;
+        font-size: var(--display-lg);
+        line-height: 1.04;
+        letter-spacing: -0.005em;
+        color: var(--ink);
         text-wrap: balance;
+        max-width: 12ch;
       }
 
-      .section-copy {
-        max-width: 760px;
-        margin-top: 18px;
-        color: var(--muted);
-        font-size: 18px;
-        line-height: 1.85;
+      h2 .accent {
+        position: relative;
+        color: var(--seal);
+      }
+
+      .section-lead {
+        max-width: 460px;
+        font-family: var(--font-body);
+        font-size: 17px;
+        line-height: 1.88;
+        color: var(--ink-soft);
         text-wrap: pretty;
       }
 
-      .flow {
+      .section-lead .pull {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 400;
+        font-size: 19px;
+        color: var(--ink);
+        font-variation-settings: "opsz" 60, "SOFT" 60;
+      }
+
+      /* —————————————— Capabilities — editorial index —————————————— */
+
+      .skills {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .skills-rule-top {
+        height: 2px;
+        background: var(--ink);
+      }
+
+      .skill {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1.4fr) minmax(0, 2.3fr) auto;
+        gap: clamp(16px, 3vw, 48px);
+        align-items: baseline;
+        padding: 30px 0 28px;
+        border-bottom: 1px solid var(--rule-faint);
+        transition:
+          padding 240ms cubic-bezier(0.16, 1, 0.3, 1),
+          background-color 240ms ease;
+      }
+
+      .skill .num {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        color: var(--seal);
+      }
+
+      .skill .name {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .skill .name strong {
+        font-family: var(--font-mono);
+        font-size: 18px;
+        font-weight: 500;
+        color: var(--ink);
+        letter-spacing: -0.005em;
+        line-height: 1.2;
+      }
+
+      .skill .name em {
+        font-family: var(--font-cn);
+        font-style: normal;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--ink-muted);
+        letter-spacing: 0.08em;
+      }
+
+      .skill .desc {
+        font-family: var(--font-cn);
+        font-size: 15.5px;
+        line-height: 1.75;
+        color: var(--ink-soft);
+        text-wrap: pretty;
+      }
+
+      .skill .tag {
+        justify-self: end;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        white-space: nowrap;
+        opacity: 0.78;
+      }
+
+      @media (hover: hover) {
+        .skill:hover {
+          background:
+            linear-gradient(
+              to right,
+              transparent,
+              oklch(96% 0.020 80 / 0.6) 14%,
+              oklch(96% 0.020 80 / 0.6) 86%,
+              transparent
+            );
+          padding-left: 8px;
+        }
+        .skill:hover .tag {
+          color: var(--seal);
+          opacity: 1;
+        }
+      }
+
+      /* —————————————— Workflow — four movements —————————————— */
+
+      .workflow {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
+        gap: 0;
+        border-top: 1px solid var(--rule);
+        border-bottom: 1px solid var(--rule);
       }
 
-      .flow-step {
-        min-height: 250px;
-        border-radius: var(--radius);
-        background: rgba(255, 255, 255, 0.72);
-        box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
-        padding: 24px;
+      .step {
+        position: relative;
+        padding: 36px clamp(20px, 2.4vw, 32px) 40px;
+        border-right: 1px solid var(--rule-faint);
       }
 
-      .flow-step em {
+      .step:last-child {
+        border-right: none;
+      }
+
+      .step .num {
         display: block;
-        color: var(--moss);
+        margin-bottom: 28px;
+        font-family: var(--font-display);
+        font-weight: 300;
+        font-size: 56px;
+        line-height: 1;
+        color: var(--seal);
+        letter-spacing: -0.02em;
+        font-variation-settings: "opsz" 144, "SOFT" 60;
+        font-style: italic;
+      }
+
+      .step .num sub {
+        display: inline-block;
+        margin-left: 6px;
+        font-family: var(--font-cn);
         font-style: normal;
-        font-size: 13px;
-        font-weight: 900;
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--ink-soft);
+        letter-spacing: 0.04em;
+        vertical-align: baseline;
       }
 
-      .flow-step h3 {
-        margin-top: 18px;
+      .step h3 {
+        font-family: var(--font-cn);
         font-size: 22px;
-        line-height: 1.22;
+        font-weight: 700;
+        line-height: 1.35;
+        color: var(--ink);
+        margin-bottom: 14px;
+        text-wrap: balance;
       }
 
-      .flow-step p {
-        margin-top: 14px;
-        color: var(--muted);
+      .step p {
+        font-family: var(--font-body);
         font-size: 15px;
-        line-height: 1.75;
+        line-height: 1.78;
+        color: var(--ink-soft);
+        text-wrap: pretty;
       }
 
-      .matrix {
-        display: grid;
-        grid-template-columns: 0.88fr 1.12fr;
-        gap: 44px;
-        align-items: start;
+      .step code {
+        color: var(--ink-2);
+        background: oklch(90% 0.030 78 / 0.7);
+        padding: 1px 6px;
+        border-radius: 3px;
       }
 
-      .matrix-list {
-        display: grid;
-        gap: 1px;
-        overflow: hidden;
-        border-radius: var(--radius);
-        background: var(--line);
-        box-shadow: var(--shadow-soft);
-      }
-
-      .matrix-item {
-        display: grid;
-        grid-template-columns: 150px minmax(0, 1fr);
-        gap: 20px;
-        align-items: baseline;
-        background: rgba(255, 255, 255, 0.82);
-        padding: 19px 22px;
-      }
-
-      .matrix-item strong {
-        font-size: 15px;
-      }
-
-      .matrix-item span {
-        color: var(--muted);
-        font-size: 15px;
-        line-height: 1.6;
-      }
+      /* —————————————— Principles — four seals —————————————— */
 
       .principles {
         display: grid;
-        gap: 18px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: clamp(20px, 3vw, 40px);
       }
 
       .principle {
-        display: grid;
-        grid-template-columns: 42px minmax(0, 1fr);
-        gap: 16px;
-        align-items: start;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        padding: 36px 28px 32px;
+        background: var(--porcelain);
+        border: 1px solid var(--rule-faint);
+        position: relative;
+        transition:
+          transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+          box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1);
       }
 
-      .principle-mark {
+      @media (hover: hover) {
+        .principle:hover {
+          transform: translateY(-4px);
+          box-shadow: var(--shadow-paper);
+        }
+      }
+
+      .stamp {
+        position: relative;
         display: grid;
-        width: 42px;
-        height: 42px;
         place-items: center;
-        border-radius: 999px;
-        background: var(--night);
-        color: var(--brass);
-        font-weight: 900;
+        width: 78px;
+        height: 78px;
+        background: var(--seal);
+        color: var(--paper);
+        font-family: var(--font-cn);
+        font-weight: 800;
+        font-size: 40px;
+        line-height: 1;
+        transform: rotate(-3deg);
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.18);
+      }
+
+      .stamp::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at 28% 28%,
+            rgba(255, 255, 255, 0.22),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at 75% 78%,
+            rgba(0, 0, 0, 0.22),
+            transparent 55%
+          ),
+          url("data:image/svg+xml;utf8,%3Csvg viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        mix-blend-mode: overlay;
+        opacity: 0.9;
       }
 
       .principle h3 {
-        font-size: 20px;
-        line-height: 1.3;
+        font-family: var(--font-cn);
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 1.35;
+        color: var(--ink);
+      }
+
+      .principle h3 em {
+        display: block;
+        margin-top: 4px;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 300;
+        font-size: 13px;
+        color: var(--seal);
+        font-variation-settings: "opsz" 14, "SOFT" 100;
+        letter-spacing: 0.04em;
       }
 
       .principle p {
-        margin-top: 7px;
-        color: var(--muted);
-        font-size: 15px;
-        line-height: 1.75;
+        font-family: var(--font-body);
+        font-size: 14.5px;
+        line-height: 1.78;
+        color: var(--ink-soft);
+        text-wrap: pretty;
       }
 
-      .install-panel {
+      .principle-no {
+        position: absolute;
+        top: 18px;
+        right: 22px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        color: var(--ink-faint);
+      }
+
+      /* —————————————— Install —————————————— */
+
+      .install-grid {
         display: grid;
-        grid-template-columns: minmax(0, 0.88fr) minmax(300px, 0.72fr);
-        gap: 1px;
-        overflow: hidden;
-        border-radius: var(--radius);
-        background: var(--line);
-        box-shadow: var(--shadow-soft);
-      }
-
-      .terminal,
-      .install-note {
-        background: var(--night);
-        color: rgba(255, 255, 255, 0.86);
+        grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
+        gap: 0;
+        border: 1px solid var(--rule);
+        box-shadow: var(--shadow-paper);
       }
 
       .terminal {
-        min-height: 250px;
-        padding: 28px;
+        position: relative;
+        padding: 32px clamp(28px, 3vw, 44px) 36px;
+        background: var(--night);
+        color: oklch(92% 0.020 80);
+      }
+
+      .terminal::before {
+        content: "";
+        position: absolute;
+        top: 18px;
+        left: 22px;
+        display: flex;
+        gap: 6px;
       }
 
       .terminal-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 26px;
-        color: rgba(255, 255, 255, 0.54);
+        padding-bottom: 22px;
+        margin-bottom: 22px;
+        border-bottom: 1px solid var(--night-rule);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: oklch(70% 0.018 60);
+      }
+
+      .terminal-head .dots {
+        display: flex;
+        gap: 6px;
+      }
+
+      .terminal-head .dots span {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: oklch(40% 0.014 60);
+      }
+
+      .terminal-head .dots span:nth-child(1) {
+        background: oklch(60% 0.16 32);
+      }
+
+      .terminal-head .dots span:nth-child(2) {
+        background: oklch(76% 0.14 78);
+      }
+
+      .terminal-head .dots span:nth-child(3) {
+        background: oklch(70% 0.12 150);
+      }
+
+      .terminal pre {
+        margin: 0;
+        font-family: var(--font-mono);
+        font-size: 14.5px;
+        line-height: 1.95;
+        color: oklch(93% 0.020 80);
+        overflow-x: auto;
+      }
+
+      .terminal pre .prompt {
+        color: var(--seal-soft);
+        user-select: none;
+        margin-right: 12px;
+      }
+
+      .terminal pre .comment {
+        color: oklch(58% 0.012 60);
+        font-style: italic;
+      }
+
+      .terminal pre .out {
+        display: block;
+        margin-left: 26px;
+        color: oklch(72% 0.014 65);
         font-size: 13px;
       }
 
-      pre {
-        margin: 0;
-        overflow-x: auto;
-        color: #fffaf1;
-        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-        font-size: 14px;
-        line-height: 1.8;
+      .terminal pre .kw {
+        color: oklch(82% 0.10 78);
       }
 
       .install-note {
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        min-height: 250px;
-        padding: 28px;
-        background: oklch(20% 0.032 175);
+        padding: clamp(32px, 4vw, 48px);
+        background: var(--paper-soft);
+        gap: 32px;
       }
 
       .install-note p {
-        color: rgba(255, 255, 255, 0.72);
-        font-size: 17px;
+        font-family: var(--font-cn);
+        font-size: 18px;
         line-height: 1.8;
+        color: var(--ink-2);
+        text-wrap: pretty;
+      }
+
+      .install-note p strong {
+        font-weight: 700;
+        color: var(--ink);
       }
 
       .install-note code {
-        color: var(--brass);
+        background: var(--paper-warm);
+        color: var(--seal-deep);
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.86em;
       }
 
-      .footer {
-        padding: 34px 0 48px;
+      .install-note .footnote {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        margin-top: 6px;
       }
 
-      .footer-inner {
+      /* —————————————— Colophon —————————————— */
+
+      .colophon {
+        margin-top: var(--space-section);
+        padding: 64px 0 56px;
+        border-top: 2px solid var(--ink);
+        position: relative;
+      }
+
+      .colophon::before {
+        content: "";
+        position: absolute;
+        top: -2px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80px;
+        height: 6px;
+        background: var(--seal);
+      }
+
+      .colophon-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.9fr);
+        gap: clamp(28px, 4vw, 64px);
+        align-items: start;
+      }
+
+      .colophon-brand {
+        font-family: var(--font-cn);
+      }
+
+      .colophon-brand h4 {
+        font-family: var(--font-cn);
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.2;
+        color: var(--ink);
+        margin-bottom: 14px;
+        letter-spacing: 0.02em;
+      }
+
+      .colophon-brand h4 em {
+        display: block;
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 300;
+        font-size: 18px;
+        color: var(--seal);
+        margin-top: 4px;
+        letter-spacing: 0.04em;
+        font-variation-settings: "opsz" 30, "SOFT" 80;
+      }
+
+      .colophon-brand p {
+        font-family: var(--font-body);
+        font-style: italic;
+        font-size: 15px;
+        color: var(--ink-soft);
+        line-height: 1.8;
+        max-width: 320px;
+      }
+
+      .colophon-list {
+        font-family: var(--font-sans);
+      }
+
+      .colophon-list h5 {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        margin-bottom: 18px;
+      }
+
+      .colophon-list ul {
+        display: grid;
+        gap: 10px;
+      }
+
+      .colophon-list a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14.5px;
+        color: var(--ink-2);
+        transition: color 180ms ease;
+      }
+
+      .colophon-list a .arrow {
+        font-family: var(--font-mono);
+        color: var(--seal);
+        font-size: 13px;
+        transition: transform 180ms ease;
+      }
+
+      @media (hover: hover) {
+        .colophon-list a:hover {
+          color: var(--seal-deep);
+        }
+        .colophon-list a:hover .arrow {
+          transform: translateX(3px);
+        }
+      }
+
+      .colophon-meta {
+        text-align: right;
+      }
+
+      .colophon-meta dl {
+        display: grid;
+        gap: 14px;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+      }
+
+      .colophon-meta dt {
+        color: var(--ink-faint);
+        margin-bottom: 4px;
+      }
+
+      .colophon-meta dd {
+        font-family: var(--font-display);
+        font-style: italic;
+        font-weight: 400;
+        font-size: 17px;
+        letter-spacing: 0.02em;
+        text-transform: none;
+        color: var(--ink);
+        font-variation-settings: "opsz" 30, "SOFT" 60;
+      }
+
+      .colophon-bottom {
+        margin-top: 60px;
+        padding-top: 22px;
+        border-top: 1px solid var(--rule-faint);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 22px;
-        border-top: 1px solid var(--line);
-        padding-top: 24px;
-        color: var(--muted);
-        font-size: 14px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
       }
 
-      .footer-links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
+      .colophon-bottom .stamp-small {
+        display: inline-grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        background: var(--seal);
+        color: var(--paper);
+        font-family: var(--font-cn);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1;
+        transform: rotate(-4deg);
+        margin-right: 10px;
       }
 
-      .footer-links a {
-        color: var(--ink-soft);
+      .colophon-bottom span {
+        display: inline-flex;
+        align-items: center;
       }
+
+      /* —————————————— Animations —————————————— */
 
       .reveal {
-        animation: arrive 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        opacity: 0;
+        transform: translateY(18px);
+        transition:
+          opacity 720ms cubic-bezier(0.16, 1, 0.3, 1),
+          transform 720ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .reveal.is-in {
+        opacity: 1;
+        transform: translateY(0);
       }
 
       .reveal.delay-1 {
-        animation-delay: 80ms;
+        transition-delay: 80ms;
       }
-
       .reveal.delay-2 {
-        animation-delay: 160ms;
+        transition-delay: 160ms;
+      }
+      .reveal.delay-3 {
+        transition-delay: 240ms;
+      }
+      .reveal.delay-4 {
+        transition-delay: 320ms;
       }
 
       @keyframes arrive {
         from {
           opacity: 0;
-          transform: translateY(14px);
+          transform: translateY(20px) rotate(-2deg);
         }
         to {
           opacity: 1;
-          transform: translateY(0);
+          transform: translateY(0) rotate(-1.2deg);
+        }
+      }
+
+      @keyframes stamp {
+        0% {
+          opacity: 0;
+          transform: scale(1.6) rotate(14deg);
+        }
+        60% {
+          opacity: 1;
+          transform: scale(0.94) rotate(7deg);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1) rotate(6deg);
         }
       }
 
@@ -695,412 +1512,692 @@
         html {
           scroll-behavior: auto;
         }
-
         *,
         *::before,
         *::after {
-          animation: none !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
           transition-duration: 0.01ms !important;
         }
-      }
-
-      @media (max-width: 980px) {
-        .hero-inner {
-          grid-template-columns: 1fr;
-          min-height: auto;
-          padding: 72px 0 58px;
-        }
-
-        .hero-copy {
-          padding-bottom: 0;
-        }
-
-        h1 {
-          font-size: 64px;
-        }
-
-        .hero-evidence {
-          min-height: 470px;
-        }
-
-        .artifact {
-          right: 0;
-          width: min(700px, 100%);
-        }
-
-        .artifact-note {
-          left: 18px;
-        }
-
-        .metrics,
-        .flow,
-        .matrix,
-        .install-panel {
-          grid-template-columns: 1fr 1fr;
-        }
-
-        .section-head {
-          grid-template-columns: 1fr;
-          gap: 16px;
-        }
-
-        h2 {
-          font-size: 44px;
-        }
-      }
-
-      @media (max-width: 640px) {
-        .shell {
-          width: min(100% - 30px, 1180px);
-        }
-
-        .nav-inner {
-          align-items: flex-start;
-          flex-direction: column;
-          padding: 14px 0;
-        }
-
-        .nav-links {
-          width: 100%;
-        }
-
-        .nav-links a {
-          padding: 0 10px;
-        }
-
-        h1 {
-          font-size: 48px;
-        }
-
-        .hero-subtitle {
-          font-size: 18px;
-        }
-
-        .hero-actions {
-          flex-direction: column;
-        }
-
-        .button {
-          width: 100%;
-        }
-
-        .hero-evidence {
-          min-height: auto;
-        }
-
-        .artifact {
-          position: relative;
-          right: 0;
-          bottom: 0;
-          width: 100%;
+        .reveal {
+          opacity: 1;
           transform: none;
         }
+      }
 
-        .artifact-note {
-          position: relative;
-          left: auto;
-          bottom: auto;
-          width: 100%;
-          margin-top: 16px;
+      /* —————————————— Responsive —————————————— */
+
+      @media (max-width: 1080px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+          gap: 56px;
         }
-
-        .metrics,
-        .flow,
-        .matrix,
-        .matrix-item,
-        .principle,
-        .install-panel {
+        .hero-right {
+          min-height: 420px;
+        }
+        .hero::before {
+          display: none;
+        }
+        .section-head {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+        .section-mark {
+          position: relative;
+          top: auto;
+          right: auto;
+          flex-direction: row;
+          align-items: baseline;
+          margin-bottom: 28px;
+        }
+        .section-mark .ch {
+          font-size: 42px;
+        }
+        .section-mark .ch::after {
+          display: none;
+        }
+        h2 {
+          max-width: 18ch;
+        }
+        .principles {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .workflow {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .step:nth-child(2) {
+          border-right: none;
+        }
+        .step:nth-child(1),
+        .step:nth-child(2) {
+          border-bottom: 1px solid var(--rule-faint);
+        }
+        .install-grid {
           grid-template-columns: 1fr;
         }
-
-        .section {
-          padding: 68px 0;
+        .colophon-grid {
+          grid-template-columns: 1fr 1fr;
         }
-
-        h2 {
-          font-size: 36px;
+        .colophon-meta {
+          text-align: left;
         }
+      }
 
-        .matrix-item {
-          gap: 7px;
-        }
-
-        .footer-inner {
-          align-items: flex-start;
+      @media (max-width: 760px) {
+        .masthead-inner {
           flex-direction: column;
+          align-items: flex-start;
+          gap: 18px;
+        }
+        .masthead-nav {
+          flex-wrap: wrap;
+          gap: 2px;
+        }
+        .masthead-nav a {
+          padding: 8px 10px;
+        }
+        .masthead-nav .external {
+          margin-left: 0;
+        }
+        .ledger-grid {
+          grid-template-columns: 1fr 1fr;
+          gap: 0;
+        }
+        .ledger-item {
+          padding: 20px clamp(14px, 4vw, 24px) 24px;
+          border-bottom: 1px solid var(--rule-faint);
+        }
+        .ledger-item + .ledger-item {
+          padding-left: clamp(14px, 4vw, 24px);
+        }
+        .ledger-item:nth-child(2) {
+          border-left: 1px solid var(--rule-faint);
+        }
+        .ledger-item:nth-child(3) {
+          border-left: none;
+        }
+        .ledger-item:nth-child(3),
+        .ledger-item:nth-child(4) {
+          border-bottom: none;
+        }
+        .ledger-item:nth-child(4) {
+          border-left: 1px solid var(--rule-faint);
+        }
+        .principles {
+          grid-template-columns: 1fr;
+        }
+        .workflow {
+          grid-template-columns: 1fr;
+        }
+        .step {
+          border-right: none;
+          border-bottom: 1px solid var(--rule-faint);
+        }
+        .step:last-child {
+          border-bottom: none;
+        }
+        .skill {
+          grid-template-columns: 1fr;
+          gap: 10px;
+          padding: 24px 0;
+        }
+        .skill .tag {
+          justify-self: start;
+        }
+        .colophon-grid {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+        .colophon-bottom {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        .hero-actions .btn {
+          flex: 1 1 auto;
+          justify-content: center;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .hero-title .cn::after {
+          right: -0.25em;
+        }
+        .ledger-grid {
+          grid-template-columns: 1fr;
+        }
+        .ledger-item,
+        .ledger-item + .ledger-item {
+          padding: 18px 0;
+          border-left: none !important;
+          border-bottom: 1px solid var(--rule-faint);
+        }
+        .ledger-item:last-child {
+          border-bottom: none;
+        }
+        .artifact {
+          margin-right: 12px;
         }
       }
     </style>
   </head>
   <body>
-    <a class="skip-link" href="#main-content">跳到正文</a>
+    <a class="skip" href="#main">跳到正文 · Skip to content</a>
 
-    <header class="nav" aria-label="Main navigation">
-      <div class="shell nav-inner">
-        <a class="brand" href="#">
-          <span class="brand-mark">知</span>
-          <span>知项 · Knowject</span>
+    <header class="masthead" role="banner">
+      <div class="shell masthead-inner">
+        <a class="brand" href="#" aria-label="知项 · Knowject 首页">
+          <span class="brand-seal" aria-hidden="true">知</span>
+          <span class="brand-name">
+            <strong>知项</strong>
+            <em>Knowject</em>
+          </span>
         </a>
-        <nav class="nav-links" aria-label="Project links">
-          <a href="#capabilities">能力</a>
-          <a href="#principles">边界</a>
-          <a href="#install">安装</a>
-          <a href="https://github.com/lynxlangya/knowject">GitHub</a>
+        <nav class="masthead-nav" aria-label="Section navigation">
+          <a href="#capabilities"><span class="num">壹</span>Capabilities</a>
+          <a href="#workflow"><span class="num">贰</span>Workflow</a>
+          <a href="#principles"><span class="num">叁</span>Principles</a>
+          <a href="#install"><span class="num">肆</span>Install</a>
+          <a
+            class="external"
+            href="https://github.com/lynxlangya/knowject"
+            >GitHub →</a
+          >
         </nav>
+      </div>
+      <div class="shell">
+        <div class="masthead-rule" aria-hidden="true"></div>
       </div>
     </header>
 
-    <main id="main-content">
+    <main id="main">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="shell hero-inner">
+        <div class="shell hero-grid">
           <div class="hero-copy">
-            <div class="label reveal">Claude Code + Codex Skill Pack</div>
-            <h1 id="hero-title" class="reveal delay-1">知项 · <span>Knowject</span></h1>
-            <p class="hero-subtitle reveal delay-2">
-              面向团队项目协作的 AI 知识系统。把 PRD、设计稿、API、项目记忆和评测证据，
-              变成 Claude Code 与 Codex 能直接消费的项目上下文。
+            <p class="hero-meta reveal">
+              <span>Skill Pack · MMXXVI</span>
+              <span>For Claude Code &amp; Codex</span>
             </p>
-            <div class="hero-actions reveal delay-2">
-              <a class="button primary" href="https://github.com/lynxlangya/knowject">
-                查看 GitHub
+            <h1 id="hero-title" class="hero-title reveal delay-1">
+              <span class="cn">知项</span>
+              <span class="en">Knowject</span>
+            </h1>
+            <p class="hero-tagline reveal delay-2">
+              让项目知识，真正为团队所用。
+            </p>
+            <p class="hero-subtitle reveal delay-3">
+              面向 Claude Code 与 Codex 的项目上下文 Skill pack。把 PRD、设计稿、API、
+              项目记忆与评测证据，沉淀成 agent 能直接消费、人能审阅、git 能追溯的工程资产。
+            </p>
+            <div class="hero-actions reveal delay-4">
+              <a
+                class="btn btn-primary"
+                href="https://github.com/lynxlangya/knowject"
+              >
+                查看 GitHub <span class="arrow">→</span>
               </a>
               <a
-                class="button secondary"
+                class="btn btn-ghost"
                 href="https://github.com/lynxlangya/knowject/blob/main/skills/install.md"
               >
-                安装 Skills
+                安装 Skills <span class="arrow">↗</span>
               </a>
             </div>
           </div>
-
-          <div class="hero-evidence" aria-label="Knowject capability evidence">
+          <aside class="hero-right" aria-label="知项 capability map">
+            <span class="hero-marginalia" aria-hidden="true"
+              >A Skill Pack · Claude Code · Codex</span
+            >
             <figure class="artifact">
-              <div class="artifact-top">
-                <span>knowject skills map</span>
-                <span class="artifact-dots" aria-hidden="true">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </span>
-              </div>
               <img
                 src="https://img.wangyun.fan/kj_skills.png"
-                alt="Knowject Skills capability map"
+                alt="Knowject Skills 能力图谱"
                 width="1280"
                 height="768"
+                loading="lazy"
               />
+              <figcaption>
+                <span>Knowject Skills 能力图谱</span>
+                <span class="meta">Fig. 01 · 2026</span>
+              </figcaption>
             </figure>
-            <aside class="artifact-note">
-              <span>Project anchored</span>
-              <p>
-                每个 Skill 都先读取 <code>knowject/context.yaml</code>，
-                再输出可审阅、可提交、可追溯的文件化产物。
+            <div class="seal-mark" aria-label="知项 印">
+              <span>知</span>
+              <span>项</span>
+            </div>
+          </aside>
+        </div>
+
+        <div class="shell ledger" aria-label="Knowject 现状">
+          <div class="ledger-head">
+            <span>Ledger · 当前状态</span>
+            <em>Edition 0.1 · Day-1 static, fully reviewable</em>
+          </div>
+          <dl class="ledger-grid">
+            <div class="ledger-item reveal">
+              <dt>8<sup>＋</sup></dt>
+              <dd>Shipped Skills，覆盖产品、设计、API、记忆、评测与 MCP 工具设计。</dd>
+            </div>
+            <div class="ledger-item reveal delay-1">
+              <dt>50<sup>×</sup></dt>
+              <dd>Verification checks，跨 manifest、adapter、fixture 与引用证据。</dd>
+            </div>
+            <div class="ledger-item reveal delay-2">
+              <dt>0<sup>°</sup></dt>
+              <dd>Runtime services required，Day-1 交付保持静态、可审阅。</dd>
+            </div>
+            <div class="ledger-item reveal delay-3">
+              <dt>1<sup>·</sup></dt>
+              <dd>Context anchor，让 agent 不再从空白 prompt 开始一切。</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section id="capabilities" class="section" aria-labelledby="cap-title">
+        <div class="shell">
+          <div class="section-mark" aria-hidden="true">
+            <span class="ch">壹</span>
+            <span>Volume One</span>
+          </div>
+          <header class="section-head">
+            <div>
+              <p class="section-kicker">
+                目录 / Index <em>—— eight shipped skills</em>
               </p>
+              <h2 id="cap-title" class="reveal">
+                不是泛用 prompt，<br />
+                而是一套<span class="accent">带边界</span>的项目工作台。
+              </h2>
+            </div>
+            <p class="section-lead reveal delay-1">
+              <span class="pull">每个 Skill 都先读取 </span
+              ><code>knowject/context.yaml</code>，再输出可审阅、可提交、可追溯的文件化产物。
+              它们能被 Claude Code 直接调用，也能被 Codex 以 adapter 形式消费。
+            </p>
+          </header>
+
+          <ol class="skills" aria-label="Knowject Skills 索引">
+            <div class="skills-rule-top" aria-hidden="true"></div>
+            <li class="skill reveal">
+              <span class="num">01</span>
+              <div class="name">
+                <strong>context-init</strong>
+                <em>项目锚点</em>
+              </div>
+              <p class="desc">
+                扫描技术栈、品牌、API 源与设计路径，生成 <code>knowject/context.yaml</code>
+                作为所有 Skill 的事实锚点。
+              </p>
+              <span class="tag">Project Anchor</span>
+            </li>
+            <li class="skill reveal">
+              <span class="num">02</span>
+              <div class="name">
+                <strong>prd-to-mock</strong>
+                <em>需求成稿</em>
+              </div>
+              <p class="desc">
+                把需求文字转成品牌化静态 HTML mock，用于产品评审与视觉讨论。
+              </p>
+              <span class="tag">PRD → HTML</span>
+            </li>
+            <li class="skill reveal">
+              <span class="num">03</span>
+              <div class="name">
+                <strong>read-design</strong>
+                <em>设计落码</em>
+              </div>
+              <p class="desc">
+                把设计源拆成组件计划，再输出符合项目栈的骨架代码与样式契约。
+              </p>
+              <span class="tag">Design → Code</span>
+            </li>
+            <li class="skill reveal">
+              <span class="num">04</span>
+              <div class="name">
+                <strong>read-api</strong>
+                <em>接口探查</em>
+              </div>
+              <p class="desc">
+                发现 Express 或 OpenAPI 端点，并生成 typed client scaffold 与请求样例。
+              </p>
+              <span class="tag">API Discovery</span>
+            </li>
+            <li class="skill reveal">
+              <span class="num">05</span>
+              <div class="name">
+                <strong>api-to-types</strong>
+                <em>类型生成</em>
+              </div>
+              <p class="desc">
+                从 OpenAPI 3 生成 TypeScript response types，并直接接入生成客户端。
+              </p>
+              <span class="tag">Typed Client</span>
+            </li>
+            <li class="skill reveal">
+              <span class="num">06</span>
+              <div class="name">
+                <strong>memory-capture</strong>
+                <em>记忆沉淀</em>
+              </div>
+              <p class="desc">
+                把事实、决策、工作流与风险沉淀成 source-cited memory，可被未来对话复用。
+              </p>
+              <span class="tag">Cited Memory</span>
+            </li>
+            <li class="skill reveal">
+              <span class="num">07</span>
+              <div class="name">
+                <strong>rag-eval</strong>
+                <em>证据评测</em>
+              </div>
+              <p class="desc">
+                生成可审阅的 RAG 引用评测用例，覆盖 source recall 与 unsupported claims。
+              </p>
+              <span class="tag">RAG Eval</span>
+            </li>
+            <li class="skill reveal">
+              <span class="num">08</span>
+              <div class="name">
+                <strong>mcp-tool-designer</strong>
+                <em>工具设计</em>
+              </div>
+              <p class="desc">
+                把 API surface 设计成 MCP tool candidates，标注风险、副作用与确认 gate。
+              </p>
+              <span class="tag">MCP Design</span>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="workflow" class="section" aria-labelledby="flow-title">
+        <div class="shell">
+          <div class="section-mark" aria-hidden="true">
+            <span class="ch">贰</span>
+            <span>Volume Two</span>
+          </div>
+          <header class="section-head">
+            <div>
+              <p class="section-kicker">
+                工序 / Workflow <em>—— four movements</em>
+              </p>
+              <h2 id="flow-title" class="reveal">
+                把一次 AI 对话，<br />
+                收敛成<span class="accent">可复用</span>的工程资产。
+              </h2>
+            </div>
+            <p class="section-lead reveal delay-1">
+              Knowject 不追求无边界的自动化。<span class="pull"
+                >它把高频交接动作拆成明确的 Skill</span
+              >，每个都有输入、输出、失败模式与确认门禁。
+            </p>
+          </header>
+
+          <ol class="workflow" aria-label="Knowject 工序四章">
+            <li class="step reveal">
+              <span class="num">01<sub>·识</sub></span>
+              <h3>建立项目上下文</h3>
+              <p>
+                扫描技术栈、品牌、API 源与设计路径，生成 <code>context.yaml</code>
+                作为后续 Skill 的事实锚点。
+              </p>
+            </li>
+            <li class="step reveal delay-1">
+              <span class="num">02<sub>·译</sub></span>
+              <h3>翻译跨角色产物</h3>
+              <p>
+                PRD 变 HTML mock，设计稿变组件骨架，OpenAPI 变 typed client 与响应类型。
+              </p>
+            </li>
+            <li class="step reveal delay-2">
+              <span class="num">03<sub>·沉</sub></span>
+              <h3>沉淀可追溯上下文</h3>
+              <p>
+                项目记忆、RAG eval 与工具设计都要求 source evidence，避免旧计划覆盖当前事实。
+              </p>
+            </li>
+            <li class="step reveal delay-3">
+              <span class="num">04<sub>·审</sub></span>
+              <h3>先审阅，再写入</h3>
+              <p>
+                产物写入前展示 diff，用户确认后才落盘，保持 AI 协作可控、可回滚、可解释。
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="principles" class="section" aria-labelledby="prin-title">
+        <div class="shell">
+          <div class="section-mark" aria-hidden="true">
+            <span class="ch">叁</span>
+            <span>Volume Three</span>
+          </div>
+          <header class="section-head">
+            <div>
+              <p class="section-kicker">
+                印章 / Principles <em>—— four seals</em>
+              </p>
+              <h2 id="prin-title" class="reveal">
+                四枚印章，<br />
+                约束 AI 协作的<span class="accent">边界</span>。
+              </h2>
+            </div>
+            <p class="section-lead reveal delay-1">
+              四个汉字，<span class="pull">约束 Knowject 在何处停下、在何处必须留痕</span>，
+              让 agent 的产物可以被审阅、可以被回滚、不会越界。
+            </p>
+          </header>
+
+          <ol class="principles" aria-label="Knowject 四枚印章">
+            <li class="principle reveal">
+              <span class="principle-no">No. 01</span>
+              <span class="stamp" aria-hidden="true">证</span>
+              <h3>
+                证据优先
+                <em>Evidence First</em>
+              </h3>
+              <p>
+                memory、eval 与 tool design 都要求来源路径、line range 或明确 source note，
+                让推断可以被回溯到原始事实。
+              </p>
+            </li>
+            <li class="principle reveal delay-1">
+              <span class="principle-no">No. 02</span>
+              <span class="stamp" aria-hidden="true">界</span>
+              <h3>
+                边界清楚
+                <em>Bounded Scope</em>
+              </h3>
+              <p>
+                Day-1 不伪装成数据库、向量检索、MCP server 或生产级 agent runtime，
+                只在静态产物层做扎实工作。
+              </p>
+            </li>
+            <li class="principle reveal delay-2">
+              <span class="principle-no">No. 03</span>
+              <span class="stamp" aria-hidden="true">控</span>
+              <h3>
+                写入可控
+                <em>Reviewable Writes</em>
+              </h3>
+              <p>
+                所有会落盘的 Skill 都先展示 diff，再要求确认，避免静默修改项目，
+                保留人工把关的最后一关。
+              </p>
+            </li>
+            <li class="principle reveal delay-3">
+              <span class="principle-no">No. 04</span>
+              <span class="stamp" aria-hidden="true">密</span>
+              <h3>
+                不碰密钥
+                <em>Secret-Aware</em>
+              </h3>
+              <p>
+                context、memory、eval 与 mock 都明确避开 token、base URL、DB URL
+                与环境值，绝不写入产物。
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="install" class="section" aria-labelledby="install-title">
+        <div class="shell">
+          <div class="section-mark" aria-hidden="true">
+            <span class="ch">肆</span>
+            <span>Volume Four</span>
+          </div>
+          <header class="section-head">
+            <div>
+              <p class="section-kicker">
+                安装 / Install <em>—— one anchor, then begin</em>
+              </p>
+              <h2 id="install-title" class="reveal">
+                安装一次，<br />
+                把<span class="accent">项目上下文</span>交给 agent。
+              </h2>
+            </div>
+            <p class="section-lead reveal delay-1">
+              Skill pack 通过 symlink 安装到 Claude Code 与 Codex。
+              <span class="pull">目标项目只需要提交 </span
+              ><code>knowject/context.yaml</code>，后续产物都从这个锚点展开。
+            </p>
+          </header>
+
+          <div class="install-grid reveal">
+            <div class="terminal" role="region" aria-label="安装命令">
+              <div class="terminal-head">
+                <span class="dots" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </span>
+                <span>~ / knowject · install</span>
+              </div>
+              <pre><code><span class="prompt">$</span> git clone https://github.com/lynxlangya/knowject.git
+<span class="out">Cloning into 'knowject' ...</span>
+<span class="prompt">$</span> cd knowject
+<span class="prompt">$</span> bash skills/scripts/install.sh
+<span class="out">✓ linked → ~/.claude/skills/knowject</span>
+<span class="out">✓ linked → ~/.codex/skills/knowject</span>
+
+<span class="comment"># 在任意项目根目录</span>
+<span class="prompt">$</span> <span class="kw">/knowject</span> init</code></pre>
+            </div>
+            <aside class="install-note">
+              <div>
+                <p>
+                  让 Knowject 先<strong>理解项目</strong>，
+                  再让 AI 参与需求、设计、API 与知识交接 ——
+                  从锚点开始，每一步都留下可审阅的痕迹。
+                </p>
+                <p class="footnote">Node ≥ 22 · pnpm 10 · Python 3.12+</p>
+              </div>
+              <a
+                class="btn btn-primary"
+                href="https://github.com/lynxlangya/knowject/blob/main/skills/README.md"
+              >
+                阅读 Skills 文档 <span class="arrow">→</span>
+              </a>
             </aside>
-          </div>
-        </div>
-
-        <div class="metrics" aria-label="Knowject delivery metrics">
-          <div class="metric">
-            <strong>8</strong>
-            <span>shipped Skills 覆盖产品、设计、API、记忆、评测和 MCP 设计</span>
-          </div>
-          <div class="metric">
-            <strong>50</strong>
-            <span>verification checks 覆盖 manifest、adapter、fixture 和引用证据</span>
-          </div>
-          <div class="metric">
-            <strong>0</strong>
-            <span>runtime services required，Day-1 交付保持静态和可审阅</span>
-          </div>
-          <div class="metric">
-            <strong>1</strong>
-            <span>context anchor，让 agent 不从空白 prompt 开始</span>
-          </div>
-        </div>
-      </section>
-
-      <section id="capabilities" class="shell section">
-        <div class="section-head">
-          <div class="section-kicker">Workflow</div>
-          <div>
-            <h2>把一次 AI 对话，收敛成团队可复用的工程资产。</h2>
-            <p class="section-copy">
-              Knowject 不追求无边界的自动化。它把高频交接动作拆成明确的 Skill，
-              每个 Skill 都有输入、输出、失败模式和确认门禁。
-            </p>
-          </div>
-        </div>
-
-        <div class="flow">
-          <article class="flow-step">
-            <em>01</em>
-            <h3>初始化项目上下文</h3>
-            <p>
-              扫描技术栈、品牌、API 源和设计路径，生成
-              <code>knowject/context.yaml</code> 作为所有 Skill 的事实锚点。
-            </p>
-          </article>
-          <article class="flow-step">
-            <em>02</em>
-            <h3>翻译跨角色产物</h3>
-            <p>
-              PRD 变 HTML mock，设计稿变组件骨架，OpenAPI 变 typed client 和响应类型。
-            </p>
-          </article>
-          <article class="flow-step">
-            <em>03</em>
-            <h3>沉淀可追溯上下文</h3>
-            <p>
-              项目记忆、RAG eval 和工具设计都要求 source evidence，避免旧计划覆盖当前事实。
-            </p>
-          </article>
-          <article class="flow-step">
-            <em>04</em>
-            <h3>先审阅，再写入</h3>
-            <p>
-              产物写入前展示 diff，用户确认后才落盘，保持 AI 协作可控、可回滚。
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section class="shell section">
-        <div class="section-head">
-          <div class="section-kicker">Skill system</div>
-          <div>
-            <h2>不是泛用 prompt，而是一套带边界的项目工作台。</h2>
-            <p class="section-copy">
-              这些能力被组织成清晰的目录、文档和验证脚本，既能被 Claude Code 使用，
-              也能被 Codex 以 adapter 形式消费。
-            </p>
-          </div>
-        </div>
-
-        <div class="matrix">
-          <div class="matrix-list" aria-label="Knowject Skills">
-            <div class="matrix-item">
-              <strong>context-init</strong>
-              <span>建立项目事实锚点，检测技术栈、路径、品牌和 API 源。</span>
-            </div>
-            <div class="matrix-item">
-              <strong>prd-to-mock</strong>
-              <span>把需求文字转成品牌化静态 HTML，用于产品和视觉讨论。</span>
-            </div>
-            <div class="matrix-item">
-              <strong>read-design</strong>
-              <span>把设计源拆成组件计划，再输出符合项目栈的骨架代码。</span>
-            </div>
-            <div class="matrix-item">
-              <strong>read-api</strong>
-              <span>发现 Express 或 OpenAPI endpoint，并生成 typed client scaffold。</span>
-            </div>
-            <div class="matrix-item">
-              <strong>api-to-types</strong>
-              <span>从 OpenAPI 3 生成 TypeScript response types，并接入生成客户端。</span>
-            </div>
-            <div class="matrix-item">
-              <strong>memory-capture</strong>
-              <span>把事实、决策、工作流和风险沉淀成 source-cited memory。</span>
-            </div>
-            <div class="matrix-item">
-              <strong>rag-eval</strong>
-              <span>生成可审阅的 RAG 引用评测用例，覆盖 source recall 和 unsupported claims。</span>
-            </div>
-            <div class="matrix-item">
-              <strong>mcp-tool-designer</strong>
-              <span>把 API surface 设计成 MCP tool candidates，标注风险和确认 gate。</span>
-            </div>
-          </div>
-
-          <div id="principles" class="principles" aria-label="Knowject principles">
-            <article class="principle">
-              <span class="principle-mark">证</span>
-              <div>
-                <h3>证据优先</h3>
-                <p>
-                  memory、eval 和 tool design 都要求来源路径、line range 或明确 source note。
-                </p>
-              </div>
-            </article>
-            <article class="principle">
-              <span class="principle-mark">界</span>
-              <div>
-                <h3>边界清楚</h3>
-                <p>
-                  Day-1 不伪装成数据库、向量检索、MCP server 或生产级 agent runtime。
-                </p>
-              </div>
-            </article>
-            <article class="principle">
-              <span class="principle-mark">控</span>
-              <div>
-                <h3>写入可控</h3>
-                <p>
-                  所有会落盘的 Skill 都先展示 diff，再要求确认，避免静默修改项目。
-                </p>
-              </div>
-            </article>
-            <article class="principle">
-              <span class="principle-mark">密</span>
-              <div>
-                <h3>不碰密钥</h3>
-                <p>
-                  context、memory、eval 和 mock 都明确避开 token、base URL、DB URL 和环境值。
-                </p>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section id="install" class="shell section">
-        <div class="section-head">
-          <div class="section-kicker">Install</div>
-          <div>
-            <h2>安装一次，把项目上下文交给 agent。</h2>
-            <p class="section-copy">
-              Skill pack 通过 symlink 安装到 Claude Code 和 Codex。目标项目只需要提交
-              <code>knowject/context.yaml</code>，后续产物都从这个锚点展开。
-            </p>
-          </div>
-        </div>
-
-        <div class="install-panel">
-          <div class="terminal">
-            <div class="terminal-head">
-              <span>terminal</span>
-              <span>static install path</span>
-            </div>
-            <pre><code>git clone https://github.com/lynxlangya/knowject.git
-cd knowject
-bash skills/scripts/install.sh</code></pre>
-          </div>
-          <div class="install-note">
-            <p>
-              然后在任意项目中运行 <code>/knowject init</code>。
-              让 Knowject 先理解项目，再让 AI 参与需求、设计、API 和知识交接。
-            </p>
-            <a
-              class="button primary"
-              href="https://github.com/lynxlangya/knowject/blob/main/skills/README.md"
-            >
-              阅读 Skills 文档
-            </a>
           </div>
         </div>
       </section>
     </main>
 
-    <footer class="footer">
-      <div class="shell footer-inner">
-        <span>知项 · Knowject, 让项目知识，真正为团队所用。</span>
-        <div class="footer-links">
-          <a href="https://github.com/lynxlangya/knowject">GitHub</a>
-          <a href="https://github.com/lynxlangya/knowject/tree/main/skills">Skills</a>
-          <a href="https://github.com/lynxlangya/knowject/blob/main/LICENSE">License</a>
+    <footer class="colophon" role="contentinfo">
+      <div class="shell">
+        <div class="colophon-grid">
+          <div class="colophon-brand">
+            <h4>
+              知项
+              <em>Knowject</em>
+            </h4>
+            <p>
+              让项目知识，真正为团队所用。<br />
+              A Skill pack that turns project lore into typed, reviewable artifacts.
+            </p>
+          </div>
+          <div class="colophon-list">
+            <h5>Source · 资源</h5>
+            <ul>
+              <li>
+                <a href="https://github.com/lynxlangya/knowject"
+                  >GitHub Repository <span class="arrow">→</span></a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://github.com/lynxlangya/knowject/tree/main/skills"
+                  >Skills Catalog <span class="arrow">→</span></a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://github.com/lynxlangya/knowject/blob/main/skills/README.md"
+                  >Documentation <span class="arrow">→</span></a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://github.com/lynxlangya/knowject/blob/main/LICENSE"
+                  >License <span class="arrow">→</span></a
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="colophon-meta">
+            <dl>
+              <div>
+                <dt>Edition</dt>
+                <dd>0.1 · Day-1</dd>
+              </div>
+              <div>
+                <dt>Anno</dt>
+                <dd>MMXXVI</dd>
+              </div>
+              <div>
+                <dt>Bound for</dt>
+                <dd>Claude Code &amp; Codex</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+        <div class="colophon-bottom">
+          <span>
+            <span class="stamp-small" aria-hidden="true">知</span>
+            © 2026 Knowject · Made with care
+          </span>
+          <span>知 项 · 让 项 目 知 识 · 真 正 为 团 队 所 用</span>
         </div>
       </div>
     </footer>
+
+    <script>
+      (function () {
+        if (typeof window === "undefined") return;
+        const reduce = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        const targets = document.querySelectorAll(".reveal");
+        if (reduce || !("IntersectionObserver" in window)) {
+          targets.forEach((el) => el.classList.add("is-in"));
+          return;
+        }
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("is-in");
+                io.unobserve(entry.target);
+              }
+            });
+          },
+          { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
+        );
+        targets.forEach((el) => io.observe(el));
+      })();
+    </script>
   </body>
 </html>
