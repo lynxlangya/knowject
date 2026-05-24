@@ -145,6 +145,7 @@ We do not accept:
 - Pure template generators that do not read project context.
 
 See [`_shared/contributing-skills.md`](./_shared/contributing-skills.md) for the full PR checklist.
+GitHub Actions runs `skills/scripts/verify.sh`, `skills/scripts/test-install.sh`, and `git diff --check` on pull requests and pushes to `main`.
 
 ---
 
