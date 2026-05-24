@@ -426,6 +426,51 @@ else
   fail "uncited memory did not report expected source_refs error"
 fi
 
+# 20. validate-rag-eval-cases.py accepts the rag eval example
+note "validate-rag-eval-cases.py accepts rag eval example"
+rag_eval_example="$SKILLS_DIR/knowject-rag-eval/references/examples/rag-eval-cases.expected.yaml"
+if [ -f "$rag_eval_example" ]; then
+  if python3 "$SKILLS_DIR/knowject-rag-eval/scripts/validate-rag-eval-cases.py" "$rag_eval_example" >/dev/null 2>&1; then
+    pass "rag-eval example validates"
+  else
+    fail "rag-eval example YAML invalid"
+  fi
+else
+  fail "rag-eval example missing"
+fi
+
+# 21. validate-rag-eval-cases.py rejects uncited eval cases
+note "validate-rag-eval-cases.py rejects uncited eval cases"
+bad_rag_eval="$TMP_DIR/bad-rag-eval-cases.yaml"
+cat > "$bad_rag_eval" <<'YAML'
+version: "0.1"
+project:
+  name: Demo
+  generated_at: "2026-05-24"
+  source_summary:
+    mode: explicit-files
+    refs:
+      - path: docs/current/architecture.md
+        note: current facts
+cases:
+  - id: rag-20260524-001
+    eval_type: citation_support
+    difficulty: medium
+    question: What supports this claim?
+    expected_answer_points:
+      - The answer should cite source evidence.
+    forbidden_claims: []
+    tags:
+      - citation
+YAML
+if output=$(python3 "$SKILLS_DIR/knowject-rag-eval/scripts/validate-rag-eval-cases.py" "$bad_rag_eval" 2>&1); then
+  fail "uncited rag eval unexpectedly passed validation"
+elif echo "$output" | grep -q "expected_source_refs"; then
+  pass "uncited rag eval reports validation error"
+else
+  fail "uncited rag eval did not report expected source evidence error"
+fi
+
 # Report
 echo ""
 echo "Checks: $checks | Failures: $failures"

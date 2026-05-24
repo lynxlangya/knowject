@@ -1,0 +1,48 @@
+version: "0.1"
+project:
+  name: Knowject
+  generated_at: "2026-05-24"
+  source_summary:
+    mode: explicit-files
+    refs:
+      - path: docs/current/architecture.md
+        note: current architecture facts
+      - path: docs/roadmap/agent-workspace.md
+        note: roadmap facts used only for fact-vs-plan contrast
+cases:
+  - id: rag-20260524-001
+    eval_type: source_recall
+    difficulty: easy
+    question: Which service owns project knowledge indexing in Knowject?
+    expected_source_refs:
+      - path: docs/current/architecture.md
+        line_start: 42
+        line_end: 58
+    expected_answer_points:
+      - Project knowledge indexing is handled by the Python indexing runtime, not by the platform UI.
+      - The answer should cite the current architecture source.
+    forbidden_claims:
+      - The frontend directly writes embeddings.
+      - A roadmap document is enough to prove current indexing ownership.
+    tags:
+      - architecture
+      - source_recall
+  - id: rag-20260524-002
+    eval_type: fact_vs_plan
+    difficulty: hard
+    question: Is Knowject already a fully implemented multi-step agent orchestration system?
+    expected_source_refs:
+      - path: docs/current/architecture.md
+        note: current implementation facts
+      - path: docs/roadmap/agent-workspace.md
+        note: roadmap plans that must not override current facts
+    expected_answer_points:
+      - The answer should distinguish shipped current capabilities from roadmap plans.
+      - The answer should avoid calling roadmap ideas current implementation.
+    forbidden_claims:
+      - Knowject has fully shipped multi-tool orchestration today.
+      - Roadmap-only multi-tool orchestration is already shipped.
+    tags:
+      - fact_vs_plan
+      - roadmap
+      - unsupported_claim

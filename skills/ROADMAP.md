@@ -14,6 +14,7 @@ Canonical product roadmap for the `skills/` distribution. The Active catalog, de
 | `knowject-read-design` | Phase 2 — Tier 1 | `docs/plans/tasks-knowject-skills-read-design.md` |
 | `knowject-api-to-types` | Phase 3 | `docs/plans/tasks-knowject-skills-api-to-types.md` |
 | `knowject-memory-capture` | Phase 4 — memory | GitHub issue #1 |
+| `knowject-rag-eval` | Phase 5 — RAG eval | GitHub issue #8 |
 
 ## Deferred (2026-05-17 narrowing)
 
@@ -40,6 +41,34 @@ Catalog changes (ship / promote to Active / defer / deprecate) require:
 Versioning is on the whole product (`manifest.yaml#version`), not per-Skill.
 
 ## Decision log
+
+### 2026-05-24 — Phase 5 shipped: rag-eval
+
+**Trigger:** Hangzhou AI Agent / AI application market scan shows
+RAG, Eval, citation traceability, knowledge bases, vector retrieval,
+and verifiable output as high-signal requirements. Existing Knowject
+Skills cover project anchoring, cross-role handoff, API-to-types, and
+durable memory, but not lightweight RAG/citation quality evaluation.
+
+**Outcome:** `knowject-rag-eval` shipped as a Day-1 Skill for creating
+reviewable RAG and citation evaluation artifacts from project knowledge
+sources.
+
+**Day-1 scope:** file-based, source-cited eval artifacts under
+`knowject/evals/`: `README.md`, `rag-eval-cases.yaml`, and
+`rag-eval-report.md`. The Skill requires `knowject/context.yaml`,
+requires source evidence for every eval case, documents source recall,
+citation support, unsupported-claim, fact-vs-plan, and conflict
+resolution eval types, avoids secrets and environment values, and uses
+a diff-confirm write gate.
+
+**Deliberate non-goals:** no live model calls, no Chroma queries, no
+MongoDB / API / UI changes, no RAGAS or external eval dependency, no
+automated scoring against a running chatbot, and no CI that requires
+network.
+
+**Resume signal:** source-cited RAG evaluation, citation support checks,
+unsupported-claim review, and fact-vs-roadmap conflict cases.
 
 ### 2026-05-24 — Phase 4 shipped: memory-capture
 

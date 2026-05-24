@@ -2,7 +2,7 @@
 
 Cross-role collaboration Skills for Claude Code and Codex. Project-anchored. Opinionated.
 
-> Status: Phase 4 Day-1 complete. Shipped: `knowject-context-init`, `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`, `knowject-api-to-types`, `knowject-memory-capture`. Next: Claude Code plugin marketplace.
+> Status: Phase 5 Day-1 complete. Shipped: `knowject-context-init`, `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`, `knowject-api-to-types`, `knowject-memory-capture`, `knowject-rag-eval`. Next: Claude Code plugin marketplace.
 
 ---
 
@@ -18,10 +18,13 @@ Skill catalog:
 | `knowject-api-to-types` | Generate TypeScript response types from OpenAPI and wire them into generated clients. | [`README`](./knowject-api-to-types/README.md) |
 | `knowject-read-design` | Turn UI design sources into component decomposition plans and skeleton code. | [`README`](./knowject-read-design/README.md) |
 | `knowject-memory-capture` | Capture source-cited durable project memory from artifacts, handoffs, diffs, and decisions. | [`README`](./knowject-memory-capture/README.md) |
+| `knowject-rag-eval` | Generate source-cited RAG and citation evaluation cases and reports. | [`README`](./knowject-rag-eval/README.md) |
 
 Each Skill reads `knowject/context.yaml` in your project to ground its output in your brand, your tech stack, and your conventions instead of producing generic AI output.
 
 `knowject-memory-capture` turns project artifacts, handoff notes, diffs, and decisions into source-cited durable memory under `knowject/memory/`, so Claude Code and Codex can reuse stable context across sessions without guessing.
+
+`knowject-rag-eval` turns project knowledge sources into reviewable eval cases under `knowject/evals/` for retrieval, citation support, unsupported claims, and fact-vs-plan conflicts.
 
 This is not a new agent CLI. It is a pack of Skills that Claude Code and Codex consume directly, similar to the `longbridge` or `superpowers` skill packs.
 
@@ -127,6 +130,19 @@ your-project/
 
 Every memory item must cite source evidence. Do not put secrets, environment values, tokens, DB URLs, cookies, auth headers, or private credentials in `knowject/memory/`.
 
+After running `knowject-rag-eval`, the same folder can also contain file-based RAG and citation eval artifacts:
+
+```text
+your-project/
+  knowject/
+    evals/
+      README.md
+      rag-eval-cases.yaml  # source-cited eval cases
+      rag-eval-report.md   # human review report
+```
+
+Every eval case must cite source evidence. Day-1 evals are review artifacts: no live model calls, vector-store queries, platform API calls, or external scoring.
+
 ---
 
 ## Contribute
@@ -161,4 +177,5 @@ See [LICENSE](./LICENSE). Source-available: personal evaluation and non-commerci
 - [x] Phase 2: `knowject-read-api`, `knowject-prd-to-mock`, `knowject-read-design`
 - [x] Phase 3: `knowject-api-to-types`
 - [x] Phase 4: `knowject-memory-capture`
+- [x] Phase 5: `knowject-rag-eval`
 - [ ] Next: Claude Code plugin manifest, official marketplace listing

@@ -1,0 +1,6 @@
+# skills/knowject-rag-eval/agents/openai.yaml
+# Codex adapter for knowject-rag-eval Skill.
+interface:
+  display_name: "Knowject RAG Eval"
+  short_description: "Create source-cited RAG and citation evaluation cases from project knowledge artifacts under knowject/evals/."
+  default_prompt: "Use $knowject-rag-eval to read knowject/context.yaml, select stable project knowledge sources, generate source-cited RAG/citation eval cases, and propose knowject/evals/README.md, knowject/evals/rag-eval-cases.yaml, and knowject/evals/rag-eval-report.md. Validate proposed rag-eval-cases.yaml with scripts/validate-rag-eval-cases.py. Always show unified diffs and require explicit confirmation before writing. Keep Day-1 scope file-based only: no live model calls, Chroma, MongoDB, API, UI, network scoring, or external eval dependencies."
