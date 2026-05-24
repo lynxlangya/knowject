@@ -471,6 +471,49 @@ else
   fail "uncited rag eval did not report expected source evidence error"
 fi
 
+# 22. mcp-tool-designer schema example parses and covers read/write risks
+note "mcp-tool-designer schema example parses"
+mcp_schema_example="$SKILLS_DIR/knowject-mcp-tool-designer/references/examples/mcp-tools.schema.expected.json"
+if [ -f "$mcp_schema_example" ]; then
+  if python3 -c "
+import json
+doc = json.load(open('$mcp_schema_example'))
+tools = doc.get('tools')
+assert isinstance(tools, list) and tools, 'tools must be non-empty list'
+required = {
+    'tool_name',
+    'description',
+    'source_endpoint',
+    'input_schema',
+    'output_shape_notes',
+    'risk_level',
+    'requires_confirmation',
+    'auth_scope_notes',
+    'audit_log_notes',
+    'rollback_notes',
+}
+risk_levels = set()
+for idx, tool in enumerate(tools):
+    missing = required - set(tool)
+    assert not missing, f'tools[{idx}] missing {sorted(missing)}'
+    src = tool['source_endpoint']
+    assert isinstance(src, dict), f'tools[{idx}].source_endpoint must be object'
+    for key in ('method', 'path', 'source'):
+        assert isinstance(src.get(key), str) and src[key].strip(), f'tools[{idx}].source_endpoint.{key} required'
+    assert isinstance(tool['input_schema'], dict), f'tools[{idx}].input_schema must be object'
+    assert isinstance(tool['requires_confirmation'], bool), f'tools[{idx}].requires_confirmation must be boolean'
+    risk_levels.add(tool['risk_level'])
+assert 'read_only' in risk_levels, 'example needs read_only tool'
+assert risk_levels & {'low_write', 'destructive', 'external_side_effect', 'sensitive_data'}, 'example needs write/destructive/sensitive tool'
+" 2>/dev/null; then
+    pass "mcp-tool-designer schema example validates"
+  else
+    fail "mcp-tool-designer schema example invalid"
+  fi
+else
+  fail "mcp-tool-designer schema example missing"
+fi
+
 # Report
 echo ""
 echo "Checks: $checks | Failures: $failures"

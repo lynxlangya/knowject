@@ -15,6 +15,7 @@ Canonical product roadmap for the `skills/` distribution. The Active catalog, de
 | `knowject-api-to-types` | Phase 3 | `docs/plans/tasks-knowject-skills-api-to-types.md` |
 | `knowject-memory-capture` | Phase 4 — memory | GitHub issue #1 |
 | `knowject-rag-eval` | Phase 5 — RAG eval | GitHub issue #8 |
+| `knowject-mcp-tool-designer` | Phase 6 — MCP tool design | GitHub issue #9 |
 
 ## Deferred (2026-05-17 narrowing)
 
@@ -41,6 +42,36 @@ Catalog changes (ship / promote to Active / defer / deprecate) require:
 Versioning is on the whole product (`manifest.yaml#version`), not per-Skill.
 
 ## Decision log
+
+### 2026-05-24 — Phase 6 shipped: mcp-tool-designer
+
+**Trigger:** Hangzhou AI Agent / AI application market scan repeatedly
+mentions MCP, tool calling, function calling, OpenAPI, agent tool
+ecosystems, and permission / confirmation gates. `knowject-read-api`
+and `knowject-api-to-types` already discover and type API surfaces;
+the next conservative step is tool design, not runtime execution.
+
+**Outcome:** `knowject-mcp-tool-designer` shipped as a Day-1 Skill for
+mapping API endpoints into MCP tool candidates with input schema, risk
+labels, confirmation gates, auth notes, audit notes, and rollback
+notes.
+
+**Day-1 scope:** design artifacts only under `knowject/tools/`:
+`README.md`, `mcp-tools.plan.md`, `mcp-tools.schema.json`, and
+`tool-risk-report.md`. The Skill requires `knowject/context.yaml`,
+supports OpenAPI sources, Express route sources, `knowject-read-api`
+endpoint inventories, and explicit endpoint lists, labels risks as
+`read_only`, `low_write`, `destructive`, `external_side_effect`, or
+`sensitive_data`, and requires confirmation gates for destructive,
+external, sensitive, and bulk operations.
+
+**Deliberate non-goals:** no MCP server, no runtime tool handlers, no
+external API calls, no app route changes, no platform UI, no
+auth/permission code, and no `knowject-read-api` behavior changes.
+
+**Resume signal:** API-to-MCP tool design with input schema, risk
+labels, confirmation gates, auth notes, audit notes, and rollback
+considerations.
 
 ### 2026-05-24 — Phase 5 shipped: rag-eval
 
