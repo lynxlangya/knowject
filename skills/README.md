@@ -8,15 +8,16 @@ Cross-role collaboration Skills for Claude Code and Codex. Project-anchored. Opi
 
 ## What this gives you
 
-Four collaboration jobs, one project anchor:
+Skill catalog:
 
-| Audience | Scenario | Skill |
+| Skill | What it does | Docs |
 |---|---|---|
-| Everyone | Anchor the Skills to your project (stack, brand, paths) | `knowject-context-init` |
-| Product / PM | Turn a written requirement into a high-fidelity HTML mock | `knowject-prd-to-mock` |
-| Frontend + Backend | Discover API endpoints during integration; generate a typed client (with full TS types from OpenAPI) | `knowject-read-api` + `knowject-api-to-types` |
-| Design -> Frontend | Turn a UI mock into component code | `knowject-read-design` |
-| Everyone | Capture source-cited durable project memory from repo artifacts, handoff notes, diffs, and decisions | `knowject-memory-capture` |
+| `knowject-context-init` | Initialize project context (`knowject/context.yaml`) for all Knowject Skills. | [`README`](./knowject-context-init/README.md) |
+| `knowject-prd-to-mock` | Turn written requirements into a branded single-page HTML mock. | [`README`](./knowject-prd-to-mock/README.md) |
+| `knowject-read-api` | Discover API endpoints and generate typed client stubs. | [`README`](./knowject-read-api/README.md) |
+| `knowject-api-to-types` | Generate TypeScript response types from OpenAPI and wire them into generated clients. | [`README`](./knowject-api-to-types/README.md) |
+| `knowject-read-design` | Turn UI design sources into component decomposition plans and skeleton code. | [`README`](./knowject-read-design/README.md) |
+| `knowject-memory-capture` | Capture source-cited durable project memory from artifacts, handoffs, diffs, and decisions. | [`README`](./knowject-memory-capture/README.md) |
 
 Each Skill reads `knowject/context.yaml` in your project to ground its output in your brand, your tech stack, and your conventions instead of producing generic AI output.
 

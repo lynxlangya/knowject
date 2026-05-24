@@ -94,7 +94,42 @@ assert '\$$s' in iface['default_prompt'], f\"default_prompt should reference \$$
   fi
 done
 
-# 5. context.yaml schema validates all examples (self-contained, no apps/indexer-py)
+# 5. Each declared and discovered knowject-* skill has a practical README.md
+readme_skills=$(
+  {
+    printf '%s\n' "$skills_list"
+    find "$SKILLS_DIR" -maxdepth 1 -type d -name 'knowject-*' -exec basename {} \;
+  } | sort -u
+)
+for s in $readme_skills; do
+  note "README.md coverage: $s"
+  readme="$SKILLS_DIR/$s/README.md"
+  if [ -f "$readme" ]; then
+    if python3 -c "
+from pathlib import Path
+content = Path('$readme').read_text()
+for heading in (
+    '## What It Does',
+    '## When To Use',
+    '## Inputs',
+    '## Outputs',
+    '## Example',
+    '## Safety Rules',
+):
+    assert heading in content, f'missing {heading}'
+assert 'SKILL.md' in content, 'missing SKILL.md link'
+assert 'agents/openai.yaml' in content, 'missing agents/openai.yaml link'
+" 2>/dev/null; then
+      pass "$s/README.md coverage"
+    else
+      fail "$s/README.md missing required headings or related file links"
+    fi
+  else
+    fail "$s/README.md missing"
+  fi
+done
+
+# 6. context.yaml schema validates all examples (self-contained, no apps/indexer-py)
 note "context.yaml schema validates all examples"
 all_ok=1
 context_fixtures=(
@@ -110,7 +145,7 @@ for f in "${context_fixtures[@]}"; do
 done
 [ "$all_ok" -eq 1 ] && pass "all example yamls validate"
 
-# 6. context.yaml schema rejects malformed project blocks without traceback
+# 7. context.yaml schema rejects malformed project blocks without traceback
 note "context.yaml schema rejects non-mapping project"
 bad_project="$TMP_DIR/bad-project.yaml"
 cat > "$bad_project" <<'YAML'
@@ -129,7 +164,7 @@ else
   fail "bad project did not report expected project mapping error"
 fi
 
-# 7. context.yaml schema rejects forbidden env/secret fields
+# 8. context.yaml schema rejects forbidden env/secret fields
 note "context.yaml schema rejects forbidden env fields"
 forbidden_fields="$TMP_DIR/forbidden-fields.yaml"
 cat > "$forbidden_fields" <<'YAML'
@@ -159,7 +194,7 @@ else
   fail "forbidden env fields did not report expected validation errors"
 fi
 
-# 8. extract-express-routes.py - fixture round-trip
+# 9. extract-express-routes.py - fixture round-trip
 note "extract-express-routes.py matches fixture"
 if [ -f "$SKILLS_DIR/knowject-read-api/scripts/extract-express-routes.py" ]; then
   exp_file="$SKILLS_DIR/knowject-read-api/references/examples/express-expected.json"
@@ -180,7 +215,7 @@ else
   fail "extract-express-routes.py missing"
 fi
 
-# 9. extract-openapi-endpoints.py - fixture round-trip
+# 10. extract-openapi-endpoints.py - fixture round-trip
 note "extract-openapi-endpoints.py matches fixture"
 if [ -f "$SKILLS_DIR/knowject-read-api/scripts/extract-openapi-endpoints.py" ]; then
   exp_file="$SKILLS_DIR/knowject-read-api/references/examples/openapi-expected.json"
@@ -201,7 +236,7 @@ else
   fail "extract-openapi-endpoints.py missing"
 fi
 
-# 10. extract-brand-brief.py - fixture round-trip
+# 11. extract-brand-brief.py - fixture round-trip
 note "extract-brand-brief.py matches fixture"
 if [ -f "$SKILLS_DIR/knowject-prd-to-mock/scripts/extract-brand-brief.py" ]; then
   exp_file="$SKILLS_DIR/knowject-prd-to-mock/references/examples/brand-brief-expected.json"
@@ -222,7 +257,7 @@ else
   fail "extract-brand-brief.py missing"
 fi
 
-# 11. extract-framework-profile.py - antd fixture round-trip
+# 12. extract-framework-profile.py - antd fixture round-trip
 note "extract-framework-profile.py matches antd fixture"
 if [ -f "$SKILLS_DIR/knowject-read-design/scripts/extract-framework-profile.py" ]; then
   exp_file="$SKILLS_DIR/knowject-read-design/references/examples/antd-profile-expected.json"
@@ -243,7 +278,7 @@ else
   fail "extract-framework-profile.py missing"
 fi
 
-# 12. extract-framework-profile.py - shadcn fixture round-trip
+# 13. extract-framework-profile.py - shadcn fixture round-trip
 note "extract-framework-profile.py matches shadcn fixture"
 if [ -f "$SKILLS_DIR/knowject-read-design/scripts/extract-framework-profile.py" ]; then
   exp_file="$SKILLS_DIR/knowject-read-design/references/examples/shadcn-profile-expected.json"
@@ -264,7 +299,7 @@ else
   fail "extract-framework-profile.py missing"
 fi
 
-# 13. extract-types-from-openapi.py - fixture round-trip
+# 14. extract-types-from-openapi.py - fixture round-trip
 note "extract-types-from-openapi.py matches fixture"
 if [ -f "$SKILLS_DIR/knowject-api-to-types/scripts/extract-types-from-openapi.py" ]; then
   exp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/types-extraction-expected.json"
@@ -285,7 +320,7 @@ else
   fail "extract-types-from-openapi.py missing"
 fi
 
-# 14. rewrite-typed-client.py - fixture round-trip
+# 15. rewrite-typed-client.py - fixture round-trip
 note "rewrite-typed-client.py matches fixture"
 if [ -f "$SKILLS_DIR/knowject-api-to-types/scripts/rewrite-typed-client.py" ]; then
   exp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/client-rewritten-expected.ts"
@@ -306,7 +341,7 @@ else
   fail "rewrite-typed-client.py missing"
 fi
 
-# 15. knowject-memory-capture example YAML parses and carries source evidence
+# 16. knowject-memory-capture example YAML parses and carries source evidence
 note "knowject-memory-capture project-memory example parses"
 memory_example="$SKILLS_DIR/knowject-memory-capture/references/examples/project-memory.expected.yaml"
 if [ -f "$memory_example" ]; then
