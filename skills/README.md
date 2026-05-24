@@ -65,7 +65,7 @@ cd knowject
 bash skills/scripts/install.sh
 ```
 
-`install.sh` symlinks every `knowject-*` Skill into `~/.claude/skills/` and `~/.codex/skills/`. Re-run anytime to refresh.
+`install.sh` symlinks every `knowject-*` Skill plus the shared support folder `_shared` into `~/.claude/skills/` and `~/.codex/skills/`. Re-run anytime to refresh.
 
 ### Fallback: copy instead of symlink
 

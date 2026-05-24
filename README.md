@@ -109,7 +109,7 @@ pip install pyyaml
 bash skills/scripts/verify.sh
 ```
 
-The installer symlinks every `knowject-*` Skill into:
+The installer symlinks every `knowject-*` Skill plus the shared support folder `_shared` into:
 
 ```text
 ~/.claude/skills/

@@ -11,7 +11,7 @@ User-facing prompt:
 ## Goal
 
 Install the Knowject Skills pack for both Claude Code and Codex by linking all
-`knowject-*` Skill directories into:
+`knowject-*` Skill directories and the shared support folder `_shared` into:
 
 ```text
 ~/.claude/skills/
@@ -83,6 +83,9 @@ Check that the core Skill is available for both clients:
 ```bash
 test -f ~/.claude/skills/knowject-context-init/SKILL.md
 test -f ~/.codex/skills/knowject-context-init/SKILL.md
+test -f ~/.claude/skills/_shared/schema.py
+test -f ~/.codex/skills/_shared/schema.py
+test -f ~/.codex/skills/knowject-context-init/../_shared/context-yaml-schema.md
 ```
 
 If PyYAML is available, run the full Skill pack validation from the Knowject
