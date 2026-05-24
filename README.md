@@ -1,7 +1,7 @@
 # 知项 · Knowject
 
 <p align="center">
-  <img src="https://img.wangyun.fan/kj_skills.png" alt="Knowject Skills capability map" width="100%" />
+  <img src="https://img.wangyun.fan/github/knowject.jpg" alt="Knowject Skills capability map" width="100%" />
 </p>
 
 <p align="center">
