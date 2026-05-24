@@ -34,6 +34,7 @@ For each property under `properties`:
 
 - If the property name appears in the schema's `required` array → emit `<name>: <type>;`
 - Otherwise → emit `<name>?: <type>;` (TypeScript optional marker)
+- If the property name is not a valid TypeScript identifier, emit it as a string-literal property, e.g. `"display-name": string;`.
 
 Nested inline object schemas are indented one level relative to their parent.
 

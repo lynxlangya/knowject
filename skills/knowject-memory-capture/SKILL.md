@@ -138,6 +138,15 @@ Before writing:
 4. On `yes`, write the files.
 5. On `cancel`, stop without writing anything.
 
+Before writing `project-memory.yaml`, validate the proposed YAML with:
+
+```bash
+python3 <SKILLS_ROOT>/knowject-memory-capture/scripts/validate-project-memory.py \
+  <proposed-project-memory.yaml>
+```
+
+If validation fails, show the validation errors and fix the proposal before asking for confirmation.
+
 ### Step 8 - Summarize
 
 After writing, report:
@@ -174,6 +183,7 @@ After writing, report:
 - Taxonomy: [`references/memory-taxonomy.md`](./references/memory-taxonomy.md)
 - File contract: [`references/memory-file-contract.md`](./references/memory-file-contract.md)
 - Source selection: [`references/source-selection.md`](./references/source-selection.md)
+- Memory validator: [`scripts/validate-project-memory.py`](./scripts/validate-project-memory.py)
 - Examples: [`references/examples/`](./references/examples/)
 - Context setup: [`../knowject-context-init/SKILL.md`](../knowject-context-init/SKILL.md)
 - Schema reference: [`../_shared/context-yaml-schema.md`](../_shared/context-yaml-schema.md)

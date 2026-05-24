@@ -236,7 +236,27 @@ else
   fail "extract-openapi-endpoints.py missing"
 fi
 
-# 11. extract-brand-brief.py - fixture round-trip
+# 11. generate-typed-client.py - fixture round-trip
+note "generate-typed-client.py matches fixture"
+if [ -f "$SKILLS_DIR/knowject-read-api/scripts/generate-typed-client.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-read-api/references/examples/typed-client-expected.ts"
+  inp_file="$SKILLS_DIR/knowject-read-api/references/examples/express-expected.json"
+  if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
+    actual=$(python3 "$SKILLS_DIR/knowject-read-api/scripts/generate-typed-client.py" "$inp_file" --wrapper "@knowject/request")
+    expected=$(cat "$exp_file")
+    if [ "$actual" = "$expected" ]; then
+      pass "typed client generator matches expected"
+    else
+      fail "typed client generator output differs from expected (see references/examples/typed-client-expected.ts)"
+    fi
+  else
+    fail "typed client generator fixture or expected file missing"
+  fi
+else
+  fail "generate-typed-client.py missing"
+fi
+
+# 12. extract-brand-brief.py - fixture round-trip
 note "extract-brand-brief.py matches fixture"
 if [ -f "$SKILLS_DIR/knowject-prd-to-mock/scripts/extract-brand-brief.py" ]; then
   exp_file="$SKILLS_DIR/knowject-prd-to-mock/references/examples/brand-brief-expected.json"
@@ -257,7 +277,7 @@ else
   fail "extract-brand-brief.py missing"
 fi
 
-# 12. extract-framework-profile.py - antd fixture round-trip
+# 13. extract-framework-profile.py - antd fixture round-trip
 note "extract-framework-profile.py matches antd fixture"
 if [ -f "$SKILLS_DIR/knowject-read-design/scripts/extract-framework-profile.py" ]; then
   exp_file="$SKILLS_DIR/knowject-read-design/references/examples/antd-profile-expected.json"
@@ -278,7 +298,7 @@ else
   fail "extract-framework-profile.py missing"
 fi
 
-# 13. extract-framework-profile.py - shadcn fixture round-trip
+# 14. extract-framework-profile.py - shadcn fixture round-trip
 note "extract-framework-profile.py matches shadcn fixture"
 if [ -f "$SKILLS_DIR/knowject-read-design/scripts/extract-framework-profile.py" ]; then
   exp_file="$SKILLS_DIR/knowject-read-design/references/examples/shadcn-profile-expected.json"
@@ -299,7 +319,7 @@ else
   fail "extract-framework-profile.py missing"
 fi
 
-# 14. extract-types-from-openapi.py - fixture round-trip
+# 15. extract-types-from-openapi.py - fixture round-trip
 note "extract-types-from-openapi.py matches fixture"
 if [ -f "$SKILLS_DIR/knowject-api-to-types/scripts/extract-types-from-openapi.py" ]; then
   exp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/types-extraction-expected.json"
@@ -320,7 +340,28 @@ else
   fail "extract-types-from-openapi.py missing"
 fi
 
-# 15. rewrite-typed-client.py - fixture round-trip
+# 16. extract-types-from-openapi.py quotes invalid property names
+note "extract-types-from-openapi.py quotes invalid property names"
+if [ -f "$SKILLS_DIR/knowject-api-to-types/scripts/extract-types-from-openapi.py" ]; then
+  exp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/types-invalid-property-expected.ts"
+  inp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/openapi-invalid-property-input.yaml"
+  if [ -f "$exp_file" ] && [ -f "$inp_file" ]; then
+    actual=$(python3 "$SKILLS_DIR/knowject-api-to-types/scripts/extract-types-from-openapi.py" "$inp_file" --module users \
+      | python3 -c "import json,sys; print(json.load(sys.stdin)['types_ts'], end='')")
+    expected=$(cat "$exp_file")
+    if [ "$actual" = "$expected" ]; then
+      pass "invalid property names are quoted"
+    else
+      fail "invalid property name output differs from expected (see references/examples/types-invalid-property-expected.ts)"
+    fi
+  else
+    fail "invalid property fixture or expected file missing"
+  fi
+else
+  fail "extract-types-from-openapi.py missing"
+fi
+
+# 17. rewrite-typed-client.py - fixture round-trip
 note "rewrite-typed-client.py matches fixture"
 if [ -f "$SKILLS_DIR/knowject-api-to-types/scripts/rewrite-typed-client.py" ]; then
   exp_file="$SKILLS_DIR/knowject-api-to-types/references/examples/client-rewritten-expected.ts"
@@ -341,37 +382,48 @@ else
   fail "rewrite-typed-client.py missing"
 fi
 
-# 16. knowject-memory-capture example YAML parses and carries source evidence
-note "knowject-memory-capture project-memory example parses"
+# 18. validate-project-memory.py accepts the memory example
+note "validate-project-memory.py accepts memory example"
 memory_example="$SKILLS_DIR/knowject-memory-capture/references/examples/project-memory.expected.yaml"
 if [ -f "$memory_example" ]; then
-  if python3 -c "
-import yaml
-doc = yaml.safe_load(open('$memory_example'))
-assert isinstance(doc, dict), 'top-level must be mapping'
-assert doc.get('version') == '0.1', 'version must be 0.1'
-assert isinstance(doc.get('project'), dict), 'project missing'
-assert isinstance(doc.get('items'), list) and doc['items'], 'items missing'
-allowed_types = {'fact', 'decision', 'preference', 'workflow', 'risk', 'lesson'}
-allowed_confidence = {'high', 'medium', 'low'}
-allowed_status = {'active', 'stale', 'superseded'}
-for idx, item in enumerate(doc['items']):
-    assert item.get('type') in allowed_types, f'items[{idx}].type invalid'
-    assert item.get('confidence') in allowed_confidence, f'items[{idx}].confidence invalid'
-    assert item.get('status') in allowed_status, f'items[{idx}].status invalid'
-    refs = item.get('source_refs')
-    assert isinstance(refs, list) and refs, f'items[{idx}].source_refs missing'
-    for ridx, ref in enumerate(refs):
-        assert ref.get('path'), f'items[{idx}].source_refs[{ridx}].path missing'
-        has_lines = 'line_start' in ref and 'line_end' in ref
-        assert has_lines or ref.get('note'), f'items[{idx}].source_refs[{ridx}] needs lines or note'
-" 2>/dev/null; then
-    pass "memory-capture example parses and cites sources"
+  if python3 "$SKILLS_DIR/knowject-memory-capture/scripts/validate-project-memory.py" "$memory_example" >/dev/null 2>&1; then
+    pass "memory-capture example validates"
   else
-    fail "memory-capture example YAML invalid or missing required source evidence"
+    fail "memory-capture example YAML invalid"
   fi
 else
   fail "memory-capture example missing"
+fi
+
+# 19. validate-project-memory.py rejects uncited memory items
+note "validate-project-memory.py rejects uncited memory"
+bad_memory="$TMP_DIR/bad-project-memory.yaml"
+cat > "$bad_memory" <<'YAML'
+version: "0.1"
+project:
+  name: Demo
+  captured_at: "2026-05-24"
+  source_summary:
+    mode: default-scan
+    refs:
+      - path: AGENTS.md
+        note: project rules
+items:
+  - id: mem-20260524-001
+    type: fact
+    title: Missing evidence
+    summary: This item has no source refs.
+    confidence: high
+    status: active
+    created_at: "2026-05-24"
+    updated_at: "2026-05-24"
+YAML
+if output=$(python3 "$SKILLS_DIR/knowject-memory-capture/scripts/validate-project-memory.py" "$bad_memory" 2>&1); then
+  fail "uncited memory unexpectedly passed validation"
+elif echo "$output" | grep -q "source_refs"; then
+  pass "uncited memory reports validation error"
+else
+  fail "uncited memory did not report expected source_refs error"
 fi
 
 # Report

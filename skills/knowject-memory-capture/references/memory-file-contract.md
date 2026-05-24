@@ -103,3 +103,15 @@ When memory exists:
 - Show the full diff before writing.
 
 If existing YAML does not parse, stop and ask whether to repair it before adding new memory.
+
+## Validation
+
+Validate generated memory before writing or committing:
+
+```bash
+python3 <SKILLS_ROOT>/knowject-memory-capture/scripts/validate-project-memory.py \
+  knowject/memory/project-memory.yaml
+```
+
+The validator checks the top-level contract, required item fields, enum values,
+date shapes, source evidence, line ranges, and secret-looking keys.

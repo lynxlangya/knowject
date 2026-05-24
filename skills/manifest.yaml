@@ -7,7 +7,7 @@ description: |
   Cross-role collaboration Skills for Claude Code and Codex.
   Project-anchored via knowject/context.yaml. Opinionated for product/dev/design handoff.
 license: SEE LICENSE
-homepage: https://github.com/langya/knowject
+homepage: https://github.com/lynxlangya/knowject
 skills:
   - knowject-context-init
   - knowject-read-api

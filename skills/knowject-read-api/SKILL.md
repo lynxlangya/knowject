@@ -55,7 +55,7 @@ Merge endpoint lists in source-declaration order, prepending mount prefixes per 
 
 **Mode A:** Filter the inventory by the user's query (method / path substring / param). Answer in the user's language with `<repo-relative-path>:<line>` citations from the extractor output. End with "Want me to generate a typed client for any of these? Tell me the module name."
 
-**Mode B:** Follow [`references/typed-client-generation.md`](./references/typed-client-generation.md). Output target is `<api.client.output_dir>/<module-name>.ts`. If the file exists, show a diff to the user and ask before writing. After writing, output a one-line summary plus a hint to wire the new module into the project's existing client barrel file if one exists (do not modify the barrel automatically).
+**Mode B:** Follow [`references/typed-client-generation.md`](./references/typed-client-generation.md). Run [`scripts/generate-typed-client.py`](./scripts/generate-typed-client.py) against the endpoint inventory, `api.client.wrapper`, and the selected module name. Output target is `<api.client.output_dir>/<module-name>.ts`. If the file exists, show a diff to the user and ask before writing. After writing, output a one-line summary plus a hint to wire the new module into the project's existing client barrel file if one exists (do not modify the barrel automatically).
 
 ## Failure modes
 
@@ -72,6 +72,7 @@ Merge endpoint lists in source-declaration order, prepending mount prefixes per 
 - Mode dispatcher: [`references/discovery-vs-generation.md`](./references/discovery-vs-generation.md)
 - Express recipe: [`references/express-detection.md`](./references/express-detection.md)
 - OpenAPI recipe: [`references/openapi-detection.md`](./references/openapi-detection.md)
+- Client generator: [`scripts/generate-typed-client.py`](./scripts/generate-typed-client.py)
 - Codegen: [`references/typed-client-generation.md`](./references/typed-client-generation.md)
 - Examples: [`references/examples/`](./references/examples/)
 - Schema reference: [`../_shared/context-yaml-schema.md`](../_shared/context-yaml-schema.md)

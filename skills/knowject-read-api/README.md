@@ -55,6 +55,7 @@ The Skill reads configured API sources, extracts endpoints, and reports the matc
 - [`agents/openai.yaml`](./agents/openai.yaml)
 - [`scripts/extract-express-routes.py`](./scripts/extract-express-routes.py)
 - [`scripts/extract-openapi-endpoints.py`](./scripts/extract-openapi-endpoints.py)
+- [`scripts/generate-typed-client.py`](./scripts/generate-typed-client.py)
 - [`references/discovery-vs-generation.md`](./references/discovery-vs-generation.md)
 - [`references/express-detection.md`](./references/express-detection.md)
 - [`references/openapi-detection.md`](./references/openapi-detection.md)

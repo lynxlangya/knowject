@@ -59,4 +59,5 @@ The Skill extracts source-cited facts, workflows, risks, or decisions, proposes 
 - [`references/memory-taxonomy.md`](./references/memory-taxonomy.md)
 - [`references/memory-file-contract.md`](./references/memory-file-contract.md)
 - [`references/source-selection.md`](./references/source-selection.md)
+- [`scripts/validate-project-memory.py`](./scripts/validate-project-memory.py)
 - [`references/examples/`](./references/examples/)

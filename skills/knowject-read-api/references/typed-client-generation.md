@@ -9,6 +9,17 @@ Triggered when the user asks "generate typed client for module X" or equivalent,
 3. `api.client.output_dir` - where the file goes.
 4. (Optional) `api.client.module_name` if the user supplies one, otherwise derive from the source filename.
 
+## Deterministic generator
+
+Run:
+
+```bash
+python3 <SKILLS_ROOT>/knowject-read-api/scripts/generate-typed-client.py \
+  <endpoint-inventory.json> --wrapper <api.client.wrapper>
+```
+
+The script writes the TypeScript client to stdout. The Skill body is responsible for showing the diff and writing it to `<api.client.output_dir>/<module-name>.ts` after confirmation.
+
 ## Output contract
 
 One TypeScript file at `<api.client.output_dir>/<module-name>.ts`. Header comment must include the source file + Skill name + the wrapper. One exported function per endpoint, named via the rule below.
